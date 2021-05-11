@@ -1,0 +1,677 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.svi.service.dao.GroupSalesReviewDAO">
+
+    <!-- 목록 갯수  -->
+    <select id="selectGroupSalesReviewByConditionCnt" parameterType="GroupSalesReviewSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM (SELECT AA.*
+                     , CASE WHEN REQ_NO = 0 AND AA.RSLT_YN IS NULL THEN 'B'
+                            WHEN REQ_NO = #{sUsrEvalGrade} -1 AND AA.RSLT_YN = 'Y' THEN 'B'
+                            WHEN REQ_NO = #{sUsrEvalGrade} AND AA.RSLT_YN = 'Y' THEN 'C'
+                            WHEN REQ_NO = #{sUsrEvalGrade} AND AA.RSLT_YN = 'N' THEN 'D' END EVAL_RSLT_YN
+                FROM(  SELECT A.USR_ID || LPAD(A.REQ_SEQ, 4, 0) AS APPLY_NO,
+                               MAX(F.OFF_NM) AS DIST_CD,
+                               A.CUST_NM AS CUST_NM,
+                               A.ATC_DSTIN_CD AS ATC_DSTIN_CD,
+                               SUM(NVL(B.REQ_QTY, 0)) AS REQ_QTY,
+                               A.APPLY_DT AS APPLY_DT,
+                               A.APPROVE_CD AS APPROVE_CD,
+                               NVL(SUM(C.CNT), 0) AS ASSIGN_QTY,
+                               A.DLR_CD AS DLR_CD,
+                               A.USR_ID AS USR_ID,
+                               A.REQ_SEQ AS REQ_SEQ,
+                               NVL(MAX(D.REQ_NO), 0) AS REQ_NO,
+                               CASE
+                                 WHEN NVL(MAX(D.REQ_NO), 0) = 3 - 1 THEN
+                                  '02'
+                                 ELSE
+                                  '01'
+                               END AS EVAL_YN,
+                               MAX(D.PEVAL_ID) AS PEVAL_ID,
+                               COUNT(1) OVER() AS TOT_CNT,
+                               MAX(D.EVAL_RSLT_YN) AS RSLT_YN,
+                               MAX(D.REMARK) AS REMARK,
+                               MAX(D.EVAL_DT) AS EVAL_DT,
+                               A.RETL_AMT,
+                               A.CONTRACT_DOC_SEQ,
+                               A.CRN_DOC_SEQ,
+                               A.ETC_DOC_SEQ,
+                               A.ADD_FILE_SEQ,
+                               A.TEL_NO,
+                              (SELECT (SELECT OFF_NM
+                                         FROM CM_2601T
+                                        WHERE OFF_CD = O.DIST_OFFICE_CD
+                                          AND DIVI_CD = O.SDPT_CD)
+                                 FROM CM_0101T O
+                                WHERE O.DLR_CD = #{sDlrCd}) AS OFFICE_NM,
+                               (SELECT DLR_NM
+                                  FROM CM_0101T Q
+                                 WHERE Q.DLR_CD = #{sDlrCd}) AS DLR_NM,
+                               NVL(DC_RATE, 0) AS DC_RATE,
+                               NVL(AAMT, 0) AS AAMT,
+                               NVL(DAMT, 0) AS DCMT
+                  FROM SA_0414T A
+                     , SA_0415T B
+                     , ((SELECT X.DLR_CD,
+                                 X.USR_ID,
+                                 X.REQ_SEQ,
+                                 X.REQ_LOWER_SEQ,
+                                 SUM(Y.ORD_QTY) AS CNT,
+                                 SUM(Y.DAMT) AS DAMT,
+                                 SUM(Y.AAMT) AS AAMT,
+                                 DECODE(SUM(Y.DAMT), NULL, 0, (NVL(SUM(Y.DAMT),0)+NVL(SUM(Y.AAMT),0))/SUM(Y.DAMT)) AS DC_RATE
+                              FROM (
+                                SELECT DLR_CD,
+                                       USR_ID,
+                                       REQ_SEQ,
+                                       REQ_LOWER_SEQ,
+                                       ORD_NO,
+                                       ORD_YY_MM_DT,
+                                       ORD_PRID,
+                                       CARLINE_CD,
+                                       MODEL_CD,
+                                       OCN_CD,
+                                       EXT_COLOR_CD,
+                                       INT_COLOR_CD,
+                                       ORD_TP,
+                                       SEQ_NO,
+                                       T0417_YYMM,
+                                       T0417_WEEK,
+                                       T0414_YYMM,
+                                       T0414_WEEK,
+                                       STOCK_VIN_NO1,
+                                       STOCK_VIN_NO2
+                                 FROM (SELECT G.DLR_CD,
+                                              G.USR_ID,
+                                              G.REQ_SEQ,
+                                              G.REQ_LOWER_SEQ,
+                                              G.ORD_NO,
+                                              SUBSTR(H.ORD_YY_MM_DT,3,6) AS ORD_YY_MM_DT,
+                                              H.ORD_PRID,
+                                              CASE WHEN SUBSTR(H.ORD_YY_MM_DT,3,6) = SUBSTR(FN_GET_ORD_WEEK('YYMM',H.ORD_YY_MM_DT),3,6)
+                                                   THEN SUBSTR(H.ORD_YY_MM_DT,3,6)
+                                                   ELSE SUBSTR(FN_GET_ORD_WEEK('YYMM',H.ORD_YY_MM_DT),3,6) END AS T0417_YYMM,
+                                              CASE WHEN H.ORD_PRID = FN_GET_ORD_WEEK('WEEK',H.ORD_YY_MM_DT)
+                                                   THEN H.ORD_PRID
+                                                   ELSE FN_GET_ORD_WEEK('WEEK',H.ORD_YY_MM_DT) END AS T0417_WEEK,
+                                              G.CARLINE_CD,
+                                              G.MODEL_CD,
+                                              G.OCN_CD,
+                                              G.EXT_COLOR_CD,
+                                              G.INT_COLOR_CD,
+                                              H.ORD_TP,
+                                              G.USR_ID || LPAD(G.REQ_SEQ,4,0) AS SEQ_NO ,
+                                              (SELECT SUBSTR(FN_GET_ORD_WEEK('YYMM',TO_CHAR(G.LAST_APPROVE_DT,'YYYYMMDD')),3,6)
+                                                 FROM SA_0414T I
+                                                WHERE I.DLR_CD  = G.DLR_CD
+                                                  AND I.USR_ID  = G.USR_ID
+                                                  AND I.REQ_SEQ  = G.REQ_SEQ) AS T0414_YYMM,
+                                              (SELECT FN_GET_ORD_WEEK('WEEK',TO_CHAR(G.LAST_APPROVE_DT,'YYYYMMDD'))
+                                                 FROM SA_0414T  J
+                                                WHERE J.DLR_CD  = G.DLR_CD
+                                                  AND J.USR_ID  = G.USR_ID
+                                                  AND J.REQ_SEQ  = G.REQ_SEQ) AS T0414_WEEK,
+                                             G.STOCK_VIN_NO1,
+                                             G.STOCK_VIN_NO2
+                                     FROM SA_0413T G,
+                                          SA_0417T H
+                                    WHERE G.DLR_CD = H.DLR_CD
+                                      AND G.ORD_NO = H.ORD_NO
+                                      AND G.CARLINE_CD = H.CARLINE_CD
+                                      AND G.MODEL_CD = H.MODEL_CD
+                                      AND G.OCN_CD = H.OCN_CD
+                                      AND G.EXT_COLOR_CD = H.EXT_COLOR_CD
+                                      AND G.INT_COLOR_CD = H.INT_COLOR_CD
+                                      AND H.ORD_STAT_CD <![CDATA[ <> ]]> '1A'
+                                    GROUP BY G.DLR_CD, G.USR_ID, G.REQ_SEQ, G.REQ_LOWER_SEQ,
+                                             G.ORD_NO, H.ORD_YY_MM_DT, H.ORD_PRID, G.CARLINE_CD,
+                                             G.MODEL_CD, G.OCN_CD, G.EXT_COLOR_CD, G.INT_COLOR_CD,
+                                             H.ORD_TP, G.LAST_APPROVE_DT, G.STOCK_VIN_NO1, G.STOCK_VIN_NO2
+                                    )WHERE T0414_YYMM = T0417_YYMM
+                                       AND T0414_WEEK = T0417_WEEK
+                             )X ,
+                             SA_0416T Y
+                            WHERE X.DLR_CD = Y.DLR_CD
+                              AND X.STOCK_VIN_NO1 = Y.VIN_NO1
+                              AND X.STOCK_VIN_NO2 = Y.VIN_NO2
+                              AND Y.ORD_STS IN ('C','F','D')
+                             GROUP BY X.DLR_CD, X.USR_ID, X.REQ_SEQ, X.REQ_LOWER_SEQ, X.SEQ_NO
+                              UNION ALL
+                            SELECT O.DLR_CD, O.USR_ID, O.REQ_LOWER_SEQ, O.REQ_SEQ,  SUM(P.ORD_QTY) AS CNT, SUM(P.DAMT) AS DAMT,SUM(P.AAMT) AS AAMT,
+                                   DECODE(SUM(P.DAMT), NULL, 0, (NVL(SUM(P.DAMT),0)+NVL(SUM(P.AAMT),0))/SUM(P.DAMT)) AS DC_RATE
+                             FROM SA_0413T O,
+                                  SA_0416T P
+                            WHERE O.DLR_CD = P.DLR_CD
+                              AND O.STOCK_VIN_NO1 = P.VIN_NO1
+                              AND O.STOCK_VIN_NO2 = P.VIN_NO2
+                              AND P.ORD_STS IN ('C','F','D')
+                            GROUP BY O.DLR_CD, O.USR_ID, O.REQ_SEQ, O.REQ_LOWER_SEQ
+                            )
+                         ) C
+                        ,(SELECT SA412.DLR_CD
+                               , SA412.USR_ID
+                               , SA412.REQ_SEQ
+                               , SA412.REQ_NO
+                               , SA412.EVAL_RSLT_YN
+                               , SA412.EVAL_DT
+                               , SA412.REMARK
+                               , SA412.PEVAL_ID
+                            FROM SA_0412T SA412
+                               , (SELECT DLR_CD
+                                       , USR_ID
+                                       , REQ_SEQ
+                                       , MAX(REQ_NO) AS REQ_NO
+                                    FROM SA_0412T
+                                   GROUP BY DLR_CD, USR_ID, REQ_SEQ) DD
+                          WHERE SA412.DLR_CD = DD.DLR_CD
+                            AND SA412.USR_ID = DD.USR_ID
+                            AND SA412.REQ_SEQ = DD.REQ_SEQ
+                            AND SA412.REQ_NO = DD.REQ_NO) D
+                     , CM_0101T E
+                     , (SELECT CM2601.DIVI_CD,CM2601.OFF_CD,CM2601.OFF_NM,CM0101.DLR_CD,CM0101.DIST_CD,CM0101.DLR_NM
+                          FROM CM_2601T CM2601,CM_0101T CM0101
+                         WHERE 1=1
+                           AND CM2601.DIVI_CD = CM0101.SDPT_CD
+                           AND CM2601.OFF_CD = CM0101.DIST_OFFICE_CD
+                       ) F
+                 WHERE A.APPROVE_CD != 'A'
+                   AND A.DLR_CD  = B.DLR_CD(+)
+                   AND A.USR_ID  = B.USR_ID(+)
+                   AND A.REQ_SEQ  = B.REQ_SEQ(+)
+                   AND B.DLR_CD  = C.DLR_CD(+)
+                   AND B.USR_ID  = C.USR_ID(+)
+                   AND B.REQ_SEQ  = C.REQ_SEQ(+)
+                   AND B.REQ_LOWER_SEQ  = C.REQ_LOWER_SEQ(+)
+                   AND A.DLR_CD = D.DLR_CD (+)
+                   AND A.USR_ID = D.USR_ID (+)
+                   AND A.REQ_SEQ = D.REQ_SEQ(+)
+                   AND A.DLR_CD = E.DLR_CD
+                   AND A.DLR_CD = F.DLR_CD
+                   AND A.DEL_YN='N'
+
+                <if test='sDiviCd != null and sDiviCd != ""'>
+                    AND E.SDPT_CD = #{sDiviCd}
+                </if>
+                <if test='sOffCd != null and sOffCd != ""'>
+                    AND E.DIST_OFFICE_CD = #{sOffCd}
+                </if>
+                <if test='sSungCd != null and sSungCd != ""'>
+                  AND E.SALE_DLR_SUNG_CD = #{sSungCd}
+                </if>
+                <if test='sCityCd != null and sCityCd != ""'>
+                  AND E.SALE_DLR_CITY_CD = #{sCityCd}
+                </if>
+                <if test='sApplyNo != null and sApplyNo != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sApplyNo,"*")'>
+                        <bind name='sApplyNo' value='@org.apache.commons.lang3.StringUtils@replace(sApplyNo, "*", "%")' />
+                   AND A.USR_ID||LPAD(A.REQ_SEQ,4,0) LIKE #{sApplyNo}
+                    </when>
+                    <otherwise>
+                   AND A.USR_ID||LPAD(A.REQ_SEQ,4,0) = #{sApplyNo}
+                    </otherwise>
+                </choose>
+                </if>
+
+                <if test='sDistCd != null and sDistCd != ""'>
+                --   AND F.OFF_CD = #{sDistCd}
+                </if>
+
+                <if test='sDlrCd != null and sDlrCd != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sDlrCd,"*")'>
+                        <bind name='sDlrCd' value='@org.apache.commons.lang3.StringUtils@replace(sDlrCd, "*", "%")' />
+                   AND A.DLR_CD LIKE #{sDlrCd}
+                    </when>
+                    <otherwise>
+                   AND A.DLR_CD = #{sDlrCd}
+                    </otherwise>
+                </choose>
+                </if>
+                <if test='sCustNm != null and sCustNm != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sCustNm,"*")'>
+                        <bind name='sCustNm' value='@org.apache.commons.lang3.StringUtils@replace(sCustNm, "*", "%")' />
+                   AND A.CUST_NM LIKE #{sCustNm}
+                    </when>
+                    <otherwise>
+                   AND A.CUST_NM = #{sCustNm}
+                    </otherwise>
+                </choose>
+                </if>
+                <if test='sApproveCd != null and sApproveCd != ""'>
+                   AND A.APPROVE_CD = #{sApproveCd}
+                </if>
+                <if test='sAtcDstinCd != null and sAtcDstinCd != ""'>
+                   AND A.ATC_DSTIN_CD = #{sAtcDstinCd}
+                </if>
+                <if test='sApplyDtS != null and sApplyDtE != null' >
+                   AND TO_CHAR(A.APPLY_DT, 'YYYY-MM-DD') BETWEEN TO_CHAR(#{sApplyDtS}, 'YYYY-MM-DD') AND TO_CHAR(#{sApplyDtE}, 'YYYY-MM-DD')
+                </if>
+                <if test='sLastStartUpdt != null' >
+                   AND A.UPDT_DT <![CDATA[>=]]> TRUNC(#{sLastStartUpdt},'DD')
+                </if>
+                <if test='sLastEndUpdt != null' >
+                   AND A.UPDT_DT <![CDATA[<]]> TRUNC(#{sLastEndUpdt},'DD')+1
+                </if>
+                    GROUP BY SUBSTR(A.APPLY_DT, 1, 4)||LPAD(A.REQ_SEQ, 5, 0),
+                          A.CUST_NM,
+                          A.ATC_DSTIN_CD,
+                          A.APPLY_DT,
+                          A.APPROVE_CD,
+                          A.DLR_CD,
+                          A.USR_ID,
+                          A.REQ_SEQ,
+                          A.RETL_AMT,
+                          A.CONTRACT_DOC_SEQ,
+                          A.CRN_DOC_SEQ,
+                          A.ETC_DOC_SEQ,
+                          A.ADD_FILE_SEQ,
+                          A.TEL_NO,
+                          C.DC_RATE,
+                          C.AAMT,
+                          C.DAMT
+                ) AA
+                WHERE 1=1
+                <if test='sEvalRsltYn != null and sEvalRsltYn != ""'>
+                  AND AA.EVAL_YN = #{sEvalRsltYn}
+                </if>
+                  AND ((AA.REQ_NO = #{sUsrEvalGrade} -1 AND (AA.RSLT_YN != 'N' OR AA.RSLT_YN IS NULL))
+                   OR (AA.PEVAL_ID = #{sLoginUsrId} AND AA.REQ_NO = #{sUsrEvalGrade}))
+            )
+    </select>
+
+    <!-- 조회 목록  -->
+    <select id="selectGroupSalesReviewByCondition" parameterType="GroupSalesReviewSearchVO" resultType="GroupSalesReviewVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT AA.*
+                     , CASE WHEN REQ_NO = 0 AND AA.RSLT_YN IS NULL THEN 'B'
+                            WHEN REQ_NO = #{sUsrEvalGrade} -1 AND AA.RSLT_YN = 'Y' THEN 'B'
+                            WHEN REQ_NO = #{sUsrEvalGrade} AND AA.RSLT_YN = 'Y' THEN 'C'
+                            WHEN REQ_NO = #{sUsrEvalGrade} AND AA.RSLT_YN = 'N' THEN 'D' END EVAL_RSLT_YN
+                FROM(  SELECT A.USR_ID || LPAD(A.REQ_SEQ, 4, 0) AS APPLY_NO,
+                               MAX(F.OFF_NM) AS DIST_CD,
+                               A.CUST_NM AS CUST_NM,
+                               A.ATC_DSTIN_CD AS ATC_DSTIN_CD,
+                               SUM(NVL(B.REQ_QTY, 0)) AS REQ_QTY,
+                               A.APPLY_DT AS APPLY_DT,
+                               A.APPROVE_CD AS APPROVE_CD,
+                               NVL(SUM(C.CNT), 0) AS ASSIGN_QTY,
+                               A.DLR_CD AS DLR_CD,
+                               A.USR_ID AS USR_ID,
+                               A.REQ_SEQ AS REQ_SEQ,
+                               NVL(MAX(D.REQ_NO), 0) AS REQ_NO,
+                               CASE
+                                 WHEN NVL(MAX(D.REQ_NO), 0) = 3 - 1 THEN
+                                  '02'
+                                 ELSE
+                                  '01'
+                               END AS EVAL_YN,
+                               MAX(D.PEVAL_ID) AS PEVAL_ID,
+                               COUNT(1) OVER() AS TOT_CNT,
+                               MAX(D.EVAL_RSLT_YN) AS RSLT_YN,
+                               MAX(D.REMARK) AS REMARK,
+                               MAX(D.EVAL_DT) AS EVAL_DT,
+                               A.RETL_AMT,
+                               A.CONTRACT_DOC_SEQ,
+                               A.CRN_DOC_SEQ,
+                               A.ETC_DOC_SEQ,
+                               A.ADD_FILE_SEQ,
+                               A.TEL_NO,
+                              (SELECT (SELECT OFF_NM
+                                         FROM CM_2601T
+                                        WHERE OFF_CD = O.DIST_OFFICE_CD
+                                          AND DIVI_CD = O.SDPT_CD)
+                                 FROM CM_0101T O
+                                WHERE O.DLR_CD = #{sDlrCd}) AS OFFICE_NM,
+                               (SELECT DLR_NM
+                                  FROM CM_0101T Q
+                                 WHERE Q.DLR_CD = #{sDlrCd}) AS DLR_NM,
+                               NVL(DC_RATE, 0) AS DC_RATE,
+                               NVL(AAMT, 0) AS AAMT,
+                               NVL(DAMT, 0) AS DCMT,
+                               (SELECT NVL(MAX(WH_PRC),0) FROM SA_0110T WHERE MODEL_CD = C.MODEL_CD AND OCN_CD = C.OCN_CD AND END_DT >= SYSDATE)*SUM(NVL(B.REQ_QTY, 1)) AS WH_PRC
+                  FROM SA_0414T A
+                     , SA_0415T B
+                     , ((SELECT X.DLR_CD,
+                                 X.USR_ID,
+                                 X.REQ_SEQ,
+                                 X.REQ_LOWER_SEQ,
+                                 SUM(Y.ORD_QTY) AS CNT,
+                                 SUM(Y.DAMT) AS DAMT,
+                                 SUM(Y.AAMT) AS AAMT,
+                                 DECODE(SUM(Y.DAMT), NULL, 0, (NVL(SUM(Y.DAMT),0)+NVL(SUM(Y.AAMT),0))/SUM(Y.DAMT)) AS DC_RATE,
+                                 X.MODEL_CD,
+                                 X.OCN_CD
+                              FROM (
+                                SELECT DLR_CD,
+                                       USR_ID,
+                                       REQ_SEQ,
+                                       REQ_LOWER_SEQ,
+                                       ORD_NO,
+                                       ORD_YY_MM_DT,
+                                       ORD_PRID,
+                                       CARLINE_CD,
+                                       MODEL_CD,
+                                       OCN_CD,
+                                       EXT_COLOR_CD,
+                                       INT_COLOR_CD,
+                                       ORD_TP,
+                                       SEQ_NO,
+                                       T0417_YYMM,
+                                       T0417_WEEK,
+                                       T0414_YYMM,
+                                       T0414_WEEK,
+                                       STOCK_VIN_NO1,
+                                       STOCK_VIN_NO2
+                                 FROM (SELECT G.DLR_CD,
+                                              G.USR_ID,
+                                              G.REQ_SEQ,
+                                              G.REQ_LOWER_SEQ,
+                                              G.ORD_NO,
+                                              SUBSTR(H.ORD_YY_MM_DT,3,6) AS ORD_YY_MM_DT,
+                                              H.ORD_PRID,
+                                              CASE WHEN SUBSTR(H.ORD_YY_MM_DT,3,6) = SUBSTR(FN_GET_ORD_WEEK('YYMM',H.ORD_YY_MM_DT),3,6)
+                                                   THEN SUBSTR(H.ORD_YY_MM_DT,3,6)
+                                                   ELSE SUBSTR(FN_GET_ORD_WEEK('YYMM',H.ORD_YY_MM_DT),3,6) END AS T0417_YYMM,
+                                              CASE WHEN H.ORD_PRID = FN_GET_ORD_WEEK('WEEK',H.ORD_YY_MM_DT)
+                                                   THEN H.ORD_PRID
+                                                   ELSE FN_GET_ORD_WEEK('WEEK',H.ORD_YY_MM_DT) END AS T0417_WEEK,
+                                              G.CARLINE_CD,
+                                              G.MODEL_CD,
+                                              G.OCN_CD,
+                                              G.EXT_COLOR_CD,
+                                              G.INT_COLOR_CD,
+                                              H.ORD_TP,
+                                              G.USR_ID || LPAD(G.REQ_SEQ,4,0) AS SEQ_NO ,
+                                              (SELECT SUBSTR(FN_GET_ORD_WEEK('YYMM',TO_CHAR(G.LAST_APPROVE_DT,'YYYYMMDD')),3,6)
+                                                 FROM SA_0414T I
+                                                WHERE I.DLR_CD  = G.DLR_CD
+                                                  AND I.USR_ID  = G.USR_ID
+                                                  AND I.REQ_SEQ  = G.REQ_SEQ) AS T0414_YYMM,
+                                              (SELECT FN_GET_ORD_WEEK('WEEK',TO_CHAR(G.LAST_APPROVE_DT,'YYYYMMDD'))
+                                                 FROM SA_0414T  J
+                                                WHERE J.DLR_CD  = G.DLR_CD
+                                                  AND J.USR_ID  = G.USR_ID
+                                                  AND J.REQ_SEQ  = G.REQ_SEQ) AS T0414_WEEK,
+                                             G.STOCK_VIN_NO1,
+                                             G.STOCK_VIN_NO2
+                                     FROM SA_0413T G,
+                                          SA_0417T H
+                                    WHERE G.DLR_CD = H.DLR_CD
+                                      AND G.ORD_NO = H.ORD_NO
+                                      AND G.CARLINE_CD = H.CARLINE_CD
+                                      AND G.MODEL_CD = H.MODEL_CD
+                                      AND G.OCN_CD = H.OCN_CD
+                                      AND G.EXT_COLOR_CD = H.EXT_COLOR_CD
+                                      AND G.INT_COLOR_CD = H.INT_COLOR_CD
+                                      AND H.ORD_STAT_CD <![CDATA[ <> ]]> '1A'
+                                    GROUP BY G.DLR_CD, G.USR_ID, G.REQ_SEQ, G.REQ_LOWER_SEQ,
+                                             G.ORD_NO, H.ORD_YY_MM_DT, H.ORD_PRID, G.CARLINE_CD,
+                                             G.MODEL_CD, G.OCN_CD, G.EXT_COLOR_CD, G.INT_COLOR_CD,
+                                             H.ORD_TP, G.LAST_APPROVE_DT, G.STOCK_VIN_NO1, G.STOCK_VIN_NO2
+                                    )WHERE T0414_YYMM = T0417_YYMM
+                                       AND T0414_WEEK = T0417_WEEK
+                             )X ,
+                             SA_0416T Y
+                            WHERE X.DLR_CD = Y.DLR_CD
+                              AND X.STOCK_VIN_NO1 = Y.VIN_NO1
+                              AND X.STOCK_VIN_NO2 = Y.VIN_NO2
+                              AND Y.ORD_STS IN ('C','F','D')
+                             GROUP BY X.DLR_CD, X.USR_ID, X.REQ_SEQ, X.REQ_LOWER_SEQ, X.SEQ_NO, X.MODEL_CD, X.OCN_CD
+                              UNION ALL
+                            SELECT O.DLR_CD, O.USR_ID, O.REQ_LOWER_SEQ, O.REQ_SEQ,  SUM(P.ORD_QTY) AS CNT, SUM(P.DAMT) AS DAMT,SUM(P.AAMT) AS AAMT,
+                                   DECODE(SUM(P.DAMT), NULL, 0, (NVL(SUM(P.DAMT),0)+NVL(SUM(P.AAMT),0))/SUM(P.DAMT)) AS DC_RATE, O.MODEL_CD, O.OCN_CD
+                             FROM SA_0413T O,
+                                  SA_0416T P
+                            WHERE O.DLR_CD = P.DLR_CD
+                              AND O.STOCK_VIN_NO1 = P.VIN_NO1
+                              AND O.STOCK_VIN_NO2 = P.VIN_NO2
+                              AND P.ORD_STS IN ('C','F','D')
+                            GROUP BY O.DLR_CD, O.USR_ID, O.REQ_SEQ, O.REQ_LOWER_SEQ, O.MODEL_CD, O.OCN_CD
+                            )
+                         ) C
+                        ,(SELECT SA412.DLR_CD
+                               , SA412.USR_ID
+                               , SA412.REQ_SEQ
+                               , SA412.REQ_NO
+                               , SA412.EVAL_RSLT_YN
+                               , SA412.EVAL_DT
+                               , SA412.REMARK
+                               , SA412.PEVAL_ID
+                            FROM SA_0412T SA412
+                               , (SELECT DLR_CD
+                                       , USR_ID
+                                       , REQ_SEQ
+                                       , MAX(REQ_NO) AS REQ_NO
+                                    FROM SA_0412T
+                                   GROUP BY DLR_CD, USR_ID, REQ_SEQ) DD
+                          WHERE SA412.DLR_CD = DD.DLR_CD
+                            AND SA412.USR_ID = DD.USR_ID
+                            AND SA412.REQ_SEQ = DD.REQ_SEQ
+                            AND SA412.REQ_NO = DD.REQ_NO) D
+                     , CM_0101T E
+                     , (SELECT CM2601.DIVI_CD,CM2601.OFF_CD,CM2601.OFF_NM,CM0101.DLR_CD,CM0101.DIST_CD,CM0101.DLR_NM
+                          FROM CM_2601T CM2601,CM_0101T CM0101
+                         WHERE 1=1
+                           AND CM2601.DIVI_CD = CM0101.SDPT_CD
+                           AND CM2601.OFF_CD = CM0101.DIST_OFFICE_CD
+                       ) F
+                 WHERE A.APPROVE_CD != 'A'
+                   AND A.DLR_CD  = B.DLR_CD(+)
+                   AND A.USR_ID  = B.USR_ID(+)
+                   AND A.REQ_SEQ  = B.REQ_SEQ(+)
+                   AND B.DLR_CD  = C.DLR_CD(+)
+                   AND B.USR_ID  = C.USR_ID(+)
+                   AND B.REQ_SEQ  = C.REQ_SEQ(+)
+                   AND B.REQ_LOWER_SEQ  = C.REQ_LOWER_SEQ(+)
+                   AND A.DLR_CD = D.DLR_CD (+)
+                   AND A.USR_ID = D.USR_ID (+)
+                   AND A.REQ_SEQ = D.REQ_SEQ(+)
+                   AND A.DLR_CD = E.DLR_CD
+                   AND A.DLR_CD = F.DLR_CD
+                   AND A.DEL_YN='N'
+
+                <if test='sDiviCd != null and sDiviCd != ""'>
+                    AND E.SDPT_CD = #{sDiviCd}
+                </if>
+                <if test='sOffCd != null and sOffCd != ""'>
+                    AND E.DIST_OFFICE_CD = #{sOffCd}
+                </if>
+                <if test='sSungCd != null and sSungCd != ""'>
+                  AND E.SALE_DLR_SUNG_CD = #{sSungCd}
+                </if>
+                <if test='sCityCd != null and sCityCd != ""'>
+                  AND E.SALE_DLR_CITY_CD = #{sCityCd}
+                </if>
+                <if test='sApplyNo != null and sApplyNo != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sApplyNo,"*")'>
+                        <bind name='sApplyNo' value='@org.apache.commons.lang3.StringUtils@replace(sApplyNo, "*", "%")' />
+                   AND A.USR_ID||LPAD(A.REQ_SEQ,4,0) LIKE #{sApplyNo}
+                    </when>
+                    <otherwise>
+                   AND A.USR_ID||LPAD(A.REQ_SEQ,4,0) = #{sApplyNo}
+                    </otherwise>
+                </choose>
+                </if>
+                <if test='sDistCd != null and sDistCd != ""'>
+                   AND F.OFF_CD = #{sDistCd}
+                </if>
+                <if test='sDlrCd != null and sDlrCd != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sDlrCd,"*")'>
+                        <bind name='sDlrCd' value='@org.apache.commons.lang3.StringUtils@replace(sDlrCd, "*", "%")' />
+                   AND A.DLR_CD LIKE #{sDlrCd}
+                    </when>
+                    <otherwise>
+                   AND A.DLR_CD = #{sDlrCd}
+                    </otherwise>
+                </choose>
+                </if>
+                <if test='sCustNm != null and sCustNm != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sCustNm,"*")'>
+                        <bind name='sCustNm' value='@org.apache.commons.lang3.StringUtils@replace(sCustNm, "*", "%")' />
+                   AND A.CUST_NM LIKE #{sCustNm}
+                    </when>
+                    <otherwise>
+                   AND A.CUST_NM = #{sCustNm}
+                    </otherwise>
+                </choose>
+                </if>
+                <if test='sApproveCd != null and sApproveCd != ""'>
+                   AND A.APPROVE_CD = #{sApproveCd}
+                </if>
+                <if test='sAtcDstinCd != null and sAtcDstinCd != ""'>
+                   AND A.ATC_DSTIN_CD = #{sAtcDstinCd}
+                </if>
+                <if test='sApplyDtS != null and sApplyDtE != null' >
+                   AND TO_CHAR(A.APPLY_DT, 'YYYY-MM-DD') BETWEEN TO_CHAR(#{sApplyDtS}, 'YYYY-MM-DD') AND TO_CHAR(#{sApplyDtE}, 'YYYY-MM-DD')
+                </if>
+                <if test='sLastStartUpdt != null' >
+                   AND A.UPDT_DT <![CDATA[>=]]> TRUNC(#{sLastStartUpdt},'DD')
+                </if>
+                <if test='sLastEndUpdt != null' >
+                   AND A.UPDT_DT <![CDATA[<]]> TRUNC(#{sLastEndUpdt},'DD')+1
+                </if>
+                    GROUP BY SUBSTR(A.APPLY_DT, 1, 4)||LPAD(A.REQ_SEQ, 5, 0),
+                          A.CUST_NM,
+                          A.ATC_DSTIN_CD,
+                          A.APPLY_DT,
+                          A.APPROVE_CD,
+                          A.DLR_CD,
+                          A.USR_ID,
+                          A.REQ_SEQ,
+                          A.RETL_AMT,
+                          A.CONTRACT_DOC_SEQ,
+                          A.CRN_DOC_SEQ,
+                          A.ETC_DOC_SEQ,
+                          A.ADD_FILE_SEQ,
+                          A.TEL_NO,
+                          C.DC_RATE,
+                          C.AAMT,
+                          C.DAMT,
+                          C.MODEL_CD,
+                          C.OCN_CD
+                ) AA
+                WHERE 1=1
+                <if test='sEvalRsltYn != null and sEvalRsltYn != ""'>
+                  AND AA.EVAL_YN = #{sEvalRsltYn}
+                </if>
+                  AND ((AA.REQ_NO = #{sUsrEvalGrade} -1 AND (AA.RSLT_YN != 'N' OR AA.RSLT_YN IS NULL))
+                   OR (AA.PEVAL_ID = #{sLoginUsrId} AND AA.REQ_NO = #{sUsrEvalGrade}))
+
+
+            ) T1
+                <where>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        ROWNUM <![CDATA[<=]]> #{lastIndex}
+                    </if>
+                </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+         ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "applyNo"'>APPLY_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "distCd"'>DIST_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "dlrNm"'>DLR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "atcDstinCd"'>ATC_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "custNm"'>CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "reqQty"'>REQ_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "assignQty"'>ASSIGN_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "applyDt"'>APPLY_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "evalDt"'>EVAL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "approveCd"'>APPROVE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "evalRsltYn"'>EVAL_RSLT_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                           DLR_CD ASC, APPLY_DT DESC NULLS LAST, APPROVE_CD ASC, REQ_SEQ ASC
+                        </otherwise>
+                    </choose>
+                 </foreach>
+            </when>
+            <otherwise>
+                DLR_CD ASC, APPLY_DT DESC NULLS LAST, APPROVE_CD ASC, REQ_SEQ ASC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 법인 - 집단판매 심사 저장 -->
+    <insert id="insertGroupSalesReview" parameterType="GroupSalesReviewVO">
+        INSERT
+          INTO SA_0412T(
+               DLR_CD
+             , USR_ID
+             , REQ_SEQ
+             , REQ_NO
+             , EVAL_RSLT_YN
+             , PEVAL_ID
+             , EVAL_DT
+             , REMARK
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+         )VALUES(
+               #{dlrCd}
+             , #{usrId}
+             , #{reqSeq}
+             , (SELECT NVL(MAX(REQ_NO), 0) + 1 FROM SA_0412T
+                 WHERE DLR_CD = #{dlrCd}
+                   AND USR_ID = #{usrId}
+                   AND REQ_SEQ = #{reqSeq})
+             , #{evalRsltYn}
+             , #{regUsrId}
+             , SYSDATE
+             , #{remark}
+             , #{regUsrId}
+             , SYSDATE
+             , #{updtUsrId}
+             , SYSDATE
+        )
+       <selectKey resultType="int" keyProperty="reqNo" order="AFTER">
+           SELECT MAX(REQ_NO) AS reqNo FROM SA_0412T WHERE DLR_CD = #{dlrCd} AND USR_ID = #{usrId} AND REQ_SEQ = #{reqSeq}
+       </selectKey>
+    </insert>
+
+
+
+
+    <!-- 법인 - 집단판매 심사 확정(B:신청 , C:통과 , D:거부) -->
+    <update id="updateGroupSalesReview" parameterType="GroupSalesReviewVO">
+        UPDATE SA_0414T
+           SET APPROVE_CD = #{approveCd}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE 1=1
+           AND DLR_CD = #{dlrCd}
+           AND USR_ID = #{usrId}
+           AND REQ_SEQ = #{reqSeq}
+    </update>
+
+
+
+    <!-- 집단판매신청심사결과 송신 프로시져  -->
+    <update id="procPackageReview" parameterType="GroupSalesReviewVO" statementType="CALLABLE">
+        {CALL SP_SAL_DCS_P_0412T_IF(
+              'SAL090'
+            , #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{usrId, mode=IN, jdbcType=VARCHAR}
+            , #{reqSeq, mode=IN, jdbcType=NUMERIC}
+            , #{reqNo, mode=IN, jdbcType=VARCHAR}
+        )}
+    </update>
+
+</mapper>

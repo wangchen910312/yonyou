@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="SA_0001" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[
+SELECT Y.* FROM (
+SELECT X.*, NVL(ROUND((X.STOCK_CNT/NULLIF(X.SALES_CNT,0)),2),0) AS STOCK_RATE 
+,(X.STOCK_CNT+X.STOCK_6CNT+X.STOCK_3CNT+X.SALES_CNT) AS X_SUM
+FROM (
+SELECT
+	 Z.CARLINE_CD
+	,FN_GET_CARLINE_NM(Z.CARLINE_CD) AS CARLINE_NM
+	,Z.MODEL_CD
+	,FN_GET_MODEL_NM(Z.MODEL_CD) AS MODEL_NM
+	,Z.EXT_COLOR_CD
+	,FN_GET_EXT_COLOR_NM(Z.EXT_COLOR_CD) AS EXT_COLOR_NM
+	,Z.INT_COLOR_CD
+	,FN_GET_INT_COLOR_NM(Z.INT_COLOR_CD) AS INT_COLOR_NM
+	,NVL((SELECT COUNT(*)
+	FROM SA_0121T A
+	WHERE A.CARLINE_CD = Z.CARLINE_CD
+	AND A.MODEL_CD = Z.MODEL_CD
+	AND A.EXT_COLOR_CD = Z.EXT_COLOR_CD
+	AND A.INT_COLOR_CD = Z.INT_COLOR_CD
+	AND A.CAR_STAT_CD IN ('50', '60')
+	AND A.DLR_CD = '${sDlrCd}'), 0) AS STOCK_CNT
+	,NVL((SELECT COUNT(*)
+	FROM SA_0121T A
+	WHERE A.CARLINE_CD = Z.CARLINE_CD
+	AND A.MODEL_CD = Z.MODEL_CD
+	AND A.EXT_COLOR_CD = Z.EXT_COLOR_CD
+	AND A.INT_COLOR_CD = Z.INT_COLOR_CD
+	AND A.CAR_STAT_CD IN ('50', '60')
+	AND A.DLR_CD = '${sDlrCd}'
+	AND TO_CHAR(A.PLT_GI_DT, 'YYYYMMDD') <= TO_CHAR(ADD_MONTHS(TO_DATE(TO_CHAR(SYSDATE, 'YYYYMMDD'), 'YYYYMMDD'), -6), 'YYYYMMDD') ), 0) AS STOCK_6CNT
+	,NVL((SELECT COUNT(*)
+	FROM SA_0121T A
+	WHERE A.CARLINE_CD = Z.CARLINE_CD
+	AND A.MODEL_CD = Z.MODEL_CD
+	AND A.EXT_COLOR_CD = Z.EXT_COLOR_CD
+	AND A.INT_COLOR_CD = Z.INT_COLOR_CD
+	AND A.CAR_STAT_CD IN ('50', '60')
+	AND A.DLR_CD = '${sDlrCd}'
+	AND TO_CHAR(A.PLT_GI_DT, 'YYYYMMDD') BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(TO_CHAR(SYSDATE, 'YYYYMMDD'), 'YYYYMMDD'), -6), 'YYYYMMDD') and TO_CHAR(ADD_MONTHS(TO_DATE(TO_CHAR(SYSDATE, 'YYYYMMDD'), 'YYYYMMDD'), -3), 'YYYYMMDD')),0) AS STOCK_3CNT
+	,NVL((SELECT 
+	 ROUND(COUNT(*), 2)
+	FROM SA_0121T A
+	WHERE A.CARLINE_CD = Z.CARLINE_CD
+	AND A.MODEL_CD = Z.MODEL_CD
+	AND A.EXT_COLOR_CD = Z.EXT_COLOR_CD
+	AND A.INT_COLOR_CD = Z.INT_COLOR_CD
+	AND A.CAR_STAT_CD IN ('70')
+	AND A.DLR_CD = '${sDlrCd}'
+	AND A.CUST_SALE_DT BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(TO_CHAR(SYSDATE, 'YYYYMMDD'), 'YYYYMMDD'), -3), 'YYYYMMDD') AND TO_CHAR(SYSDATE, 'YYYYMMDD')),0) AS SALES_CNT
+	FROM SA_0121T Z
+	GROUP BY Z.CARLINE_CD, Z.MODEL_CD, Z.EXT_COLOR_CD, Z.INT_COLOR_CD) X
+	 ) Y
+	WHERE Y.X_SUM > 0
+	ORDER BY Y.CARLINE_CD, Y.MODEL_CD, Y.EXT_COLOR_CD, Y.INT_COLOR_CD]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="库存统计表_재고통계표">
+<ReportPageAttr>
+<HR F="0" T="2"/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[833628,227076,1152000,1152000,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[5760000,10080000,4320000,4320000,4320000,3888000,3888000,5328000,3733800,2743200,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" cs="9" rs="2" s="0">
+<O>
+<![CDATA[库存（含订单+在途）]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="2" s="1">
+<O>
+<![CDATA[车种]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="2" s="1">
+<O>
+<![CDATA[车款]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="2" s="1">
+<O>
+<![CDATA[外色]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="2" s="1">
+<O>
+<![CDATA[内色]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="2" s="1">
+<O>
+<![CDATA[库存（含在途）]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="2" s="1">
+<O>
+<![CDATA[6个月以上]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="2" s="1">
+<O>
+<![CDATA[3个月以上]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="2" s="1">
+<O>
+<![CDATA[近三个月的平均销量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="2" s="1">
+<O>
+<![CDATA[库存深度]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="CARLINE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="MODEL_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="EXT_COLOR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="3" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="INT_COLOR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="4" r="3" s="3">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="STOCK_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="5" r="3" s="3">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="STOCK_6CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="6" r="3" s="3">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="STOCK_3CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="7" r="3" s="3">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="SALES_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="8" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="STOCK_RATE"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="144000" footerHeight="144000">
+<PaperSetting>
+<PaperSize width="46368000" height="64080000"/>
+<Margin top="144000" left="144000" bottom="144000" right="144000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" textStyle="1" imageLayout="1">
+<FRFont name="微软雅黑" style="1" size="88"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.0]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

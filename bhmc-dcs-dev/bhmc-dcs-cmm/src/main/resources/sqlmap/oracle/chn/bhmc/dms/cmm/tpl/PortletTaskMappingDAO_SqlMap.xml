@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : PortletTaskMappingDao_SqlMap.xml
+    Description : 포틀릿-직무 매핑 데이터처리
+    author Kang Seok Han
+    since 2017. 3. 8.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2017. 3. 8.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.ptl.service.dao.PortletTaskMappingDAO">
+
+    <!-- 포틀릿 정보를 등록한다. -->
+    <insert id="insertPortletTaskMapping" parameterType="PortletTaskMappingVO">
+        /* [chn.bhmc.dms.cmm.ptl.service.dao.PortletTaskMappingDAO.insertPortletTaskMapping] */
+        INSERT INTO CM_0706T(
+             PORTLET_ID
+            ,TSK_CD
+            ,REG_USR_ID
+            ,REG_DT
+        )VALUES(
+            #{portletId}
+            ,#{tskCd}
+            ,#{regUsrId}
+            ,SYSDATE
+        )
+    </insert>
+
+    <!-- 포틀릿-직무 매핑 목록을 삭제한다. -->
+    <delete id="deletePortletTaskMappingByTskCd" parameterType="string">
+        /* [chn.bhmc.dms.cmm.ptl.service.dao.PortletTaskMappingDAO.deletePortletTaskMappingByTskCd] */
+        DELETE FROM CM_0706T
+        WHERE TSK_CD = #{value}
+    </delete>
+
+    <!-- 직무코드에 해당하는 포틀릿-직무 매핑 목록을 조회한다. -->
+    <select id="selectPortletTaskMappingsByTskCd" parameterType="string" resultType="PortletTaskMappingVO">
+        /* [chn.bhmc.dms.cmm.ptl.service.dao.PortletTaskMappingDAO.selectPortletTaskMappingsByTskCd] */
+        SELECT
+            T1.PORTLET_ID
+            ,T1.PORTLET_NM
+        FROM CM_0704T T1
+        LEFT JOIN CM_0706T T2 ON T1.PORTLET_ID = T2.PORTLET_ID
+        WHERE T2.TSK_CD = #{value}
+    </select>
+
+    <!-- 포틀릿-직무 매핑 목록을 조회한다. -->
+    <select id="selectPortletTaskMappingByCondition" parameterType="PortletTaskMappingSearchVO" resultType="PortletTaskMappingVO">
+        /* [chn.bhmc.dms.cmm.ptl.service.dao.PortletTaskMappingDAO.selectPortletTaskMappingByConditionCnt] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM,T1.* FROM (
+                SELECT
+                    V1.PORTLET_ID
+                    ,V1.PORTLET_NM
+                FROM CM_0704T V1
+                LEFT JOIN CM_0706T V2 ON V1.PORTLET_ID = V2.PORTLET_ID
+                <where>
+                    <if test='sPortletId != null and sPortletId != ""'>
+                        V1.PORTLET_ID = #{sPortletId}
+                    </if>
+                    <if test='sPortletNm != null and sPortletNm != ""'>
+                        AND V1.PORTLET_NM LIKE '%'||#{sPortletNm}||'%'
+                    </if>
+                    <if test='sDisplayYn != null and sDisplayYn != ""'>
+                        AND V1.DISPLAY_YN = #{sDisplayYn}
+                    </if>
+                    <if test='sTskCd != null and sTskCd != ""'>
+                        AND V2.TSK_CD = #{sTskCd}
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "portletId"'>V1.PORTLET_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "portletNm"'>V1.PORTLET_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    V1.PORTLET_NM ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        V1.PORTLET_NM ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 포틀릿-직무 매핑 목록수를 조회한다. -->
+    <select id="selectPortletTaskMappingByConditionCnt" parameterType="PortletTaskMappingSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.ptl.service.dao.PortletTaskMappingDAO.selectPortletTaskMappingByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CM_0704T V1
+        LEFT JOIN CM_0706T V2 ON V1.PORTLET_ID = V2.PORTLET_ID
+        <where>
+            <if test='sPortletId != null and sPortletId != ""'>
+                V1.PORTLET_ID = #{sPortletId}
+            </if>
+            <if test='sPortletNm != null and sPortletNm != ""'>
+                AND V1.PORTLET_NM LIKE '%'||#{sPortletNm}||'%'
+            </if>
+            <if test='sDisplayYn != null and sDisplayYn != ""'>
+                AND V1.DISPLAY_YN = #{sDisplayYn}
+            </if>
+            <if test='sTskCd != null and sTskCd != ""'>
+                AND V2.TSK_CD = #{sTskCd}
+            </if>
+        </where>
+    </select>
+
+    <!-- 전체 포틀릿 목록을 조회한다. -->
+    <select id="selectPortlets" resultType="PortletTaskMappingVO">
+        /* [chn.bhmc.dms.cmm.ptl.service.dao.PortletTaskMappingDAO.selectPortlets] */
+        SELECT ROWNUM AS RNUM, T1.*
+        FROM (
+            SELECT
+                PORTLET_ID
+                ,PORTLET_NM
+            FROM CM_0704T
+            ORDER BY
+            <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "portletId"'>PORTLET_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "portletNm"'>PORTLET_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <otherwise>
+                                PORTLET_NM ASC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                    PORTLET_NM ASC
+                </otherwise>
+            </choose>
+        ) T1
+    </select>
+</mapper>

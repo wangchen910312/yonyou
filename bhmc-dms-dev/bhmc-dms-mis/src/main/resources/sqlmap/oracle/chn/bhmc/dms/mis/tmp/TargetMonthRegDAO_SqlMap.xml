@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : TargetMonthRegDAO_SqlMap.xml
+    Description : [제조사] 월간 목표 등록
+    author chibeom.song
+    since 2016. 7. 21.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 7. 21.   chibeom.song     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO">
+
+    <!-- 사업부 자료를 조회한다. -->
+    <select id="selectSdptList" parameterType="TargetMonthRegSearchVO" resultType="TargetMonthRegSearchVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.selectSdptList] */
+        SELECT DIVI_CD AS sdptCd, DIVI_NM AS sdptNm FROM CM_2501T
+    </select>
+
+    <!-- 사무소 자료를  조회한다. -->
+    <select id="selectOfficeList" parameterType="TargetMonthRegSearchVO" resultType="TargetMonthRegSearchVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.selectOfficeList] */
+        SELECT OFF_CD AS officeCd, OFF_NM AS officeNm FROM CM_2601T ORDER BY OFF_CD
+    </select>
+
+    <!-- 딜러사 자료를 조회한다. -->
+    <select id="selectDealerList" parameterType="TargetMonthRegSearchVO" resultType="TargetMonthRegSearchVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.selectDealerList] */
+        SELECT DLR_CD AS dlrCd, DLR_NM AS dlrNm FROM CM_0101T ORDER BY DLR_CD
+    </select>
+
+    <!-- 사업부에 따른 사무소 조회 -->
+    <select id="selectOfficeListCnt" parameterType="TargetMonthRegSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.selectOfficeListCnt] */
+        SELECT COUNT(*) AS VALUE FROM CM_2601T
+        <where>
+            <if test='sSdptCd != null and sSdptCd != ""'>
+                DIVI_CD = #{sSdptCd}
+            </if>
+        </where>
+    </select>
+
+    <!-- 사무소 자료를  조회한다. -->
+    <select id="selectMonthOfficeList" parameterType="TargetMonthRegSearchVO" resultType="TargetMonthRegSearchVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.selectMonthOfficeList] */
+        SELECT OFF_CD AS officeCd, OFF_NM AS officeNm FROM CM_2601T
+        <where>
+            <if test='sSdptCd != null and sSdptCd != ""'>
+                DIVI_CD = #{sSdptCd}
+            </if>
+        </where>
+        ORDER BY OFF_CD
+    </select>
+
+    <!-- 사무소에 따른 딜러사 조회 -->
+    <select id="selectDealerListCnt" parameterType="TargetMonthRegSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.selectDealerListCnt] */
+        SELECT COUNT(*) AS VALUE FROM CM_0101T
+        <where>
+            <if test='sOfficeCd != null and sOfficeCd != ""'>
+                DIST_OFFICE_CD = #{sOfficeCd}
+            </if>
+        </where>
+    </select>
+
+    <!-- 딜러사 자료를  조회한다. -->
+    <select id="selectMonthDealerList" parameterType="TargetMonthRegSearchVO" resultType="TargetMonthRegSearchVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.selectMonthDealerList] */
+        SELECT DLR_CD AS dlrCd, DLR_NM AS dlrNm FROM CM_0101T
+        <where>
+            <if test='sOfficeCd != null and sOfficeCd != ""'>
+                DIST_OFFICE_CD = #{sOfficeCd}
+            </if>
+        </where>
+        ORDER BY DLR_CD
+    </select>
+
+
+    <!-- [제조사] 월간 목표를 조회한다. -->
+    <select id="selectTargetMonthAllRegByKey" parameterType="map" resultType="TargetMonthAllRegVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.selectTargetMonthAllRegByKey] */
+        SELECT * FROM MS_0102T
+        WHERE GOAL_YY = SUBSTR(#{goalYyMm}, 1, 4)
+            AND GOAL_MM = SUBSTR(#{goalYyMm}, 5, 2)
+            AND DLR_CD = #{dlrCd}
+            AND CARLINE_CD = #{carLineCd}
+    </select>
+
+    <!-- [제조사] 월간 목표 정보 목록수를 조회한다. -->
+    <select id="selectTargetMonthAllRegByConditionCnt" parameterType="TargetMonthRegSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.selectTargetMonthAllRegByConditionCnt] */
+        SELECT COUNT(*) AS VALUE FROM MS_0102T
+        <where>
+                GOAL_YY = SUBSTR(#{sGoalYyMm}, 1, 4) AND GOAL_MM  = SUBSTR(#{sGoalYyMm}, 5, 2)
+            <if test='sSdptCd != null and sSdptCd != ""'>
+                AND SDPT_CD = #{sSdptCd}
+            </if>
+            <if test='sOfficeCd != null and sOfficeCd != ""'>
+                AND OFFICE_CD = #{sOfficeCd}
+            </if>
+            <if test='sDealerCd != null and sDealerCd != ""'>
+                AND DLR_CD = #{sDealerCd}
+            </if>
+        </where>
+    </select>
+
+    <!-- [제조사] 월간 목표 정보 목록을 조회한다. -->
+    <select id="selectTargetMonthAllRegByCondition" parameterType="TargetMonthRegSearchVO" resultType="TargetMonthAllRegVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.selectTargetMonthAllRegByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT
+                       A.GOAL_YY          AS goalYy                                         -- 목표년도
+                      ,A.GOAL_MM          AS goalMm                                         -- 목표월
+                      ,A.SDPT_CD          AS sdptCd                                         -- 사업부코드
+                      ,(SELECT DIVI_NM FROM CM_2501T WHERE DIVI_CD = A.SDPT_CD) AS sdptNm   -- 사업부명
+                      ,A.OFFICE_CD        AS officeCd                                       -- 사무소코드
+                      ,(SELECT OFF_NM FROM CM_2601T WHERE OFF_CD = A.OFFICE_CD) AS officeNm -- 사무소명
+                      ,A.DLR_CD           AS dlrCd                                          -- 딜러코드
+                      ,B.DLR_NM           AS dlrNm                                          -- 딜러명
+                      ,A.CARLINE_CD       AS carLineCd                                      -- 차종코드
+                      ,C.CARLINE_NM       AS carLineNm                                      -- 차종명
+                      ,A.GOAL_PREF_VAL    AS goalPrefVal                                    -- 목표설정값
+                      ,A.PREF_TP          AS prefTp                                         -- 설정유형
+                      ,DECODE(A.PREF_TP, '1', 'T','C')  AS prefTpNm                         -- 설정유형
+                      ,A.DEL_YN           AS delYn                                          -- 삭제여부
+                      ,A.REG_USR_ID       AS regUsrId                                       -- 등록자ID
+                      ,A.REG_DT           AS regDt                                          -- 등록일자
+                      ,A.UPDT_USR_ID      AS updtUsrId                                      -- 수정자ID
+                      ,A.UPDT_DT          AS updtDt                                         -- 수정일자
+                    FROM MS_0102T A, CM_0101T B, SA_0101T C
+                    <where>
+                            A.DLR_CD = B.DLR_CD
+                            AND A.CARLINE_CD = C.CARLINE_CD
+                            AND A.GOAL_YY = SUBSTR(#{sGoalYyMm}, 1, 4) AND A.GOAL_MM  = SUBSTR(#{sGoalYyMm}, 5, 2)
+                        <if test='sSdptCd != null and sSdptCd != ""'>
+                            AND A.SDPT_CD = #{sSdptCd}
+                        </if>
+                        <if test='sOfficeCd != null and sOfficeCd != ""'>
+                            AND A.OFFICE_CD = #{sOfficeCd}
+                        </if>
+                        <if test='sDealerCd != null and sDealerCd != ""'>
+                            AND A.DLR_CD = #{sDealerCd}
+                        </if>
+                    </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "goalYy"'>A.GOAL_YY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "goalMm"'>A.GOAL_MM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "sdptCd"'>A.SDPT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "officeCd"'>A.OFFICE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlrCd"'>A.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                     A.GOAL_YY DESC, A.GOAL_MM DESC, A.SDPT_CD DESC, A.OFFICE_CD DESC, A.DLR_CD DESC, A.CARLINE_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.GOAL_YY DESC, A.GOAL_MM DESC, A.SDPT_CD DESC, A.OFFICE_CD DESC, A.DLR_CD DESC, A.CARLINE_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- [제조사] 월간 목표를 등록한다. -->
+    <insert id="insertTargetMonthAllReg" parameterType="TargetMonthAllRegVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.insertTargetMonthAllReg] */
+        INSERT INTO MS_0102T(
+              GOAL_YY
+            , GOAL_MM
+            , SDPT_CD
+            , OFFICE_CD
+            , DLR_CD
+            , CARLINE_CD
+            , GOAL_PREF_VAL
+            , PREF_TP
+            , DEL_YN
+            , REG_USR_ID
+            , REG_DT
+            , UPDT_USR_ID
+            , UPDT_DT
+        )VALUES(
+              SUBSTR(#{goalYyMm}, 1, 4)
+            , SUBSTR(#{goalYyMm}, 5, 2)
+            , (SELECT DISTINCT SDPT_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+            , (SELECT DISTINCT DIST_OFFICE_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+            , #{dlrCd}
+            , #{carLineCd}
+            , #{goalPrefVal}
+            , '1'
+            , 'N'
+            , #{regUsrId}
+            , SYSDATE
+            , #{regUsrId}
+            , SYSDATE
+        )
+    </insert>
+
+    <!-- [제조사] 월간 목표를 수정한다. -->
+    <update id="updateTargetMonthAllReg" parameterType="TargetMonthAllRegVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.updateTargetMonthAllReg] */
+        UPDATE MS_0102T SET
+            GOAL_PREF_VAL = #{goalPrefVal}
+            , UPDT_USR_ID = #{updtUsrId}
+            , UPDT_DT = SYSDATE
+        WHERE GOAL_YY = #{goalYy}
+            AND GOAL_MM = #{goalMm}
+            AND SDPT_CD = #{sdptCd}
+            AND OFFICE_CD = #{officeCd}
+            AND DLR_CD = #{dlrCd}
+            AND CARLINE_CD = #{carLineCd}
+    </update>
+
+    <!-- [제조사] 월간 목표를 삭제한다. -->
+    <delete id="deleteTargetMonthAllReg" parameterType="TargetMonthAllRegVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.deleteTargetMonthAllReg] */
+        DELETE FROM MS_0102T
+        WHERE GOAL_YY = #{goalYy}
+            AND GOAL_MM = #{goalMm}
+            AND SDPT_CD = #{sdptCd}
+            AND OFFICE_CD = #{officeCd}
+            AND DLR_CD = #{dlrCd}
+            AND CARLINE_CD = #{carLineCd}
+    </delete>
+
+    <!-- [제조사] 월간 목표를 확정한다. -->
+    <update id="multiTargetMonthRegCompleteSave" parameterType="TargetMonthAllRegVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetYearRegDAO.multiTargetMonthRegCompleteSave] */
+        UPDATE MS_0102T SET
+              PREF_TP = '2'
+            , UPDT_USR_ID = #{updtUsrId}
+            , UPDT_DT = SYSDATE
+        WHERE GOAL_YY = SUBSTR(#{sGoalYyMm}, 1, 4) AND GOAL_MM  = SUBSTR(#{sGoalYyMm}, 5, 2)
+    </update>
+
+    <!-- [제조사] 월간 목표를 조회한다. -->
+    <select id="selectTargetMonthPartRegByKey" parameterType="map" resultType="TargetMonthPartRegVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetYearRegDAO.selectTargetMonthPartRegByKey] */
+        SELECT * FROM MS_0102T
+        WHERE GOAL_YY = #{goalYy}
+            AND GOAL_MM = #{goalMm}
+            AND SDPT_CD = (SELECT DISTINCT SDPT_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+            AND OFFICE_CD = (SELECT DISTINCT DIST_OFFICE_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+            AND DLR_CD = #{dlrCd}
+            AND CARLINE_CD = #{carLineCd}
+    </select>
+
+    <!-- [제조사] 월간 목표를 등록한다. -->
+    <insert id="insertTargetMonthPartReg" parameterType="TargetMonthPartRegVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.insertTargetMonthPartReg] */
+        INSERT INTO MS_0102T(
+              GOAL_YY
+            , GOAL_MM
+            , SDPT_CD
+            , OFFICE_CD
+            , DLR_CD
+            , CARLINE_CD
+            , GOAL_PREF_VAL
+            , PREF_TP
+            , DEL_YN
+            , REG_USR_ID
+            , REG_DT
+            , UPDT_USR_ID
+            , UPDT_DT
+        )VALUES(
+              #{goalYy}
+            , #{goalMm}
+            , (SELECT DISTINCT SDPT_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+            , (SELECT DISTINCT DIST_OFFICE_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+            , #{dlrCd}
+            , #{carLineCd}
+            , #{goalPrefVal}
+            , '1'
+            , 'N'
+            , #{regUsrId}
+            , SYSDATE
+            , #{regUsrId}
+            , SYSDATE
+        )
+    </insert>
+
+    <!-- [제조사] 월간 목표를 수정한다. -->
+    <update id="updateTargetMonthPartReg" parameterType="TargetMonthPartRegVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMonthRegDAO.updateTargetMonthPartReg] */
+        UPDATE MS_0102T SET
+              GOAL_PREF_VAL = #{goalPrefVal}
+            , UPDT_USR_ID = #{regUsrId}
+            , UPDT_DT = SYSDATE
+        WHERE GOAL_YY = #{goalYy}
+            AND GOAL_MM = #{goalMm}
+            AND SDPT_CD = #{sdptCd}
+            AND OFFICE_CD = #{officeCd}
+            AND DLR_CD = #{dlrCd}
+            AND CARLINE_CD = #{carLineCd}
+    </update>
+
+
+</mapper>

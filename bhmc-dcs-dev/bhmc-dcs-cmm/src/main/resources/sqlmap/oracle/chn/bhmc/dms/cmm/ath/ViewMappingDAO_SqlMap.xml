@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : ViewMappingDAO_SqlMap.xml
+    Description : 화면-사용자/직무/부서 매핑에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 1. 18.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 18.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.ath.service.dao.ViewMappingDAO">
+
+    <!-- 화면-사용자/직무/부서 매핑 정보를 등록한다. -->
+    <insert id="insertViewMapping" parameterType="ViewMappingVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewMappingDAO.insertViewMapping] */
+        INSERT INTO CM_0810T(
+            SYS_CD
+            ,VIEW_ID
+            ,REF_TP
+            ,REF_ID
+            ,MASK
+            ,PERMISSIONS
+            ,REG_DT
+            ,REG_USR_ID
+        )VALUES(
+            #{sysCd}
+            ,#{viewId}
+            ,#{refTp}
+            ,#{refId}
+            ,#{mask}
+            ,#{permissions}
+            ,SYSDATE
+            ,#{regUsrId}
+        )
+    </insert>
+
+    <!-- 화면-역할/사용자 매핑 정보를 삭제한다. -->
+    <delete id="deleteViewMapping" parameterType="ViewMappingVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewMappingDAO.deleteViewMapping] */
+        DELETE FROM CM_0810T
+        WHERE SYS_CD = #{sysCd}
+            AND VIEW_ID = #{viewId}
+            AND REF_ID = #{refId}
+            AND REF_TP = #{refTp}
+    </delete>
+
+    <!-- 화면-사용자/직무/부서 매핑 정보를 삭제한다. -->
+    <delete id="deleteViewMappingAll" parameterType="map">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewMappingDAO.deleteViewMapping] */
+        DELETE FROM CM_0810T T1
+        WHERE EXISTS(
+            SELECT 1
+            FROM CM_0809T T2
+            WHERE T1.VIEW_ID = T2.VIEW_ID
+                AND T1.SYS_CD = #{sysCd}
+                AND T2.WEB_MOBILE_DSTIN_CD = #{webMobileDstinCd}
+                AND T1.REF_TP = #{refTp}
+                AND T1.REF_ID = #{refId}
+                <if test='viewTp != null and viewTp != ""'>
+                AND T2.VIEW_TP = #{viewTp}
+                </if>
+        )
+    </delete>
+
+    <!-- 화면ID에 해당하는 화면-사용자/직무/부서 매핑 정보를 삭제한다. -->
+    <update id="deleteViewMappingByViewId" parameterType="map">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewMappingDAO.deleteAuthoritiesByViewId] */
+        UPDATE CM_0810T SET USE_YN = 'N'
+        WHERE SYS_CD = #{sysCd}
+            AND VIEW_ID = #{viewId}
+    </update>
+
+    <!-- 참조유형/참조ID에 해당하는 화면-사용자/직무/부서 매핑 정보를 삭제한다. -->
+    <delete id="deleteViewMappingByRefTpAndRefId" parameterType="map">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewMappingDAO.deleteViewMappingByRefTpAndRefId] */
+        DELETE FROM CM_0810T
+        WHERE SYS_CD = #{sysCd}
+            AND REF_TP = #{refTp}
+            AND REF_ID = #{refId}
+    </delete>
+    
+    <!-- 메뉴권한이 없는 버튼 권한 정보를 삭제한다. -->
+    <delete id="deleteViewMappingWithoutViewPermission" parameterType="map">
+    	DELETE FROM CM_0810T 
+		WHERE
+			REF_TP = #{refTp}
+			AND REF_ID = #{refId} 
+			AND VIEW_ID IN (
+				SELECT M1.VIEW_ID
+				FROM (
+					<!-- 해닫 유저에 부여된 버튼 목록 -->
+					SELECT T1.VIEW_ID
+					FROM CM_0810T T1
+					INNER JOIN CM_0809T T2 ON T1.VIEW_ID = T2.VIEW_ID
+					WHERE 
+						T1.REF_TP = #{refTp}
+						AND T1.REF_ID = #{refId}
+						AND T2.VIEW_TP = '02'
+						AND T2.WEB_MOBILE_DSTIN_CD = #{webMobileDstinCd}
+				) M1 LEFT JOIN (
+					<!-- 해당 유저에 부여된 화면의 하위 버튼 목록 -->
+					SELECT K1.CHILD_VIEW_ID AS VIEW_ID
+					FROM CM_0808T K1
+					INNER JOIN (
+						SELECT T1.VIEW_ID
+						FROM CM_0810T T1
+						INNER JOIN CM_0809T T2 ON T1.VIEW_ID = T2.VIEW_ID
+						WHERE 
+							T1.REF_TP = #{refTp}
+							AND T1.REF_ID = #{refId}
+							AND T2.VIEW_TP = '01'
+							AND T2.WEB_MOBILE_DSTIN_CD = #{webMobileDstinCd}
+					) K2 ON K1.PARENT_VIEW_ID = K2.VIEW_ID
+				) M2 ON M1.VIEW_ID = M2.VIEW_ID
+				WHERE M2.VIEW_ID IS NULL
+			)
+    </delete>
+    
+    <!-- 화면 하위의 모든 버튼에 권한을 부여한다. -->
+    <update id="mergeChildViewMappingInit" parameterType="ViewMappingVO">
+    	/* [chn.bhmc.dms.cmm.ath.service.dao.ViewMappingDAO.mergeChildViewMappingInit] */
+    	MERGE INTO CM_0810T T1
+	    USING (
+	        SELECT
+	            CHILD_VIEW_ID AS VIEW_ID
+	            ,SYS_CD
+	        FROM CM_0808T
+	        WHERE PARENT_VIEW_ID = #{viewId}
+	    ) T2 ON (
+	        T1.VIEW_ID = T2.VIEW_ID
+	        AND T1.SYS_CD = T2.SYS_CD
+	        AND T1.REF_TP = #{refTp}
+	        AND T1.REF_ID = #{refId}        
+	    )
+	    WHEN MATCHED THEN
+	        UPDATE SET
+	             T1.MASK = 1
+	            ,T1.PERMISSIONS = 'READ'
+	            ,T1.UPDT_USR_ID = #{regUsrId}
+	            ,T1.UPDT_DT = SYSDATE
+	            ,T1.USE_YN = 'Y'
+	    WHEN NOT MATCHED THEN
+	        INSERT(
+	             T1.VIEW_ID
+	            ,T1.REF_ID
+	            ,T1.REF_TP
+	            ,T1.MASK
+	            ,T1.PERMISSIONS
+	            ,T1.REG_USR_ID
+	            ,T1.REG_DT
+	            ,T1.SYS_CD
+	            ,T1.USE_YN
+	        )VALUES(
+	             T2.VIEW_ID
+	            ,#{refId}
+	            ,#{refTp}
+	            ,1
+	            ,'READ'
+	            ,#{regUsrId}
+	            ,SYSDATE
+	            ,T2.SYS_CD
+	            ,'Y'
+	        )
+    </update>
+
+    <!-- 화면-사용자/직무/부서 매핑 정보를 복사하여 등록한다. -->
+    <insert id="selectAndInsertViewMapping" parameterType="map">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewMappingDAO.selectAndInsertViewMapping] */
+        INSERT INTO CM_0810T(
+            SYS_CD
+            ,VIEW_ID
+            ,REF_TP
+            ,REF_ID
+            ,MASK
+            ,PERMISSIONS
+            ,USE_YN
+            ,REG_USR_ID
+            ,REG_DT
+        )
+        SELECT
+            SYS_CD
+            ,VIEW_ID
+            ,REF_TP
+            ,#{destRefId}
+            ,MASK
+            ,PERMISSIONS
+            ,'Y'
+            ,#{regUsrId}
+            ,SYSDATE
+        FROM CM_0810T
+        WHERE SYS_CD = #{sysCd}
+            AND REF_TP = #{srcRefTp}
+            AND REF_ID = #{srcRefId}
+    </insert>
+
+    <!-- 화면-역할/사용자 매핑 정보를 조회한다. -->
+    <select id="selectViewMappingByKey" parameterType="ViewMappingVO" resultType="ViewMappingVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewMappingDAO.selectViewMappingByKey] */
+        SELECT * FROM CM_0810T
+        WHERE SYS_CD = #{sysCd}
+            AND VIEW_ID = #{viewId}
+            AND REF_ID = #{refId}
+            AND REF_TP = #{refTp}
+    </select>
+
+    <!-- 화면-사용자/직무/부서 매핑 목록을 조회한다. -->
+    <select id="selectViewMappingsByCondition" parameterType="ViewMappingSearchVO" resultType="ViewMappingVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewMappingDAO.selectViewMappingsByCondition] */
+        SELECT
+            T1.SYS_CD
+            ,T1.VIEW_ID
+            ,T1.REF_TP
+            ,T1.REF_ID
+            ,T1.MASK
+            ,T1.PERMISSIONS
+        FROM CM_0810T T1
+        INNER JOIN CM_0809T T2 ON T1.VIEW_ID = T2.VIEW_ID
+        WHERE
+            T1.USE_YN = 'Y'
+            AND T1.SYS_CD = #{sSysCd}
+            AND T2.WEB_MOBILE_DSTIN_CD = #{sWebMobileDstinCd}
+            <if test='sViewId != null and sViewId != ""'>
+            AND T1.VIEW_ID = #{sViewId}
+            </if>
+            <if test='sRefTp != null and sRefTp != ""'>
+            AND T1.REF_TP = #{sRefTp}
+            </if>
+            <if test='sRefId != null and sRefId != ""'>
+            AND T1.REF_ID = #{sRefId}
+            </if>
+    </select>
+
+    <!-- 퍼미션 정보를 포함하는 화면-사용자/직무/부서 매핑 목록을 조회한다. -->
+    <select id="selectViewMappingsWithPermission" parameterType="ViewMappingSearchVO" resultType="ViewMappingVO">
+         /* [chn.bhmc.dms.cmm.ath.service.dao.ViewMappingDAO.selectViewMappingsWithPermission] */
+        SELECT
+            T1.VIEW_ID
+            ,FN_GET_BTN_NM(T1.MESG_KEY,#{sLangCd}) AS VIEW_NM
+            ,T1.MESG_KEY
+            ,T3.PERMISSIONS
+        FROM CM_0809T T1
+        INNER JOIN CM_0808T T2 ON T1.VIEW_ID = T2.CHILD_VIEW_ID
+        LEFT JOIN CM_0810T T3 ON T1.VIEW_ID = T3.VIEW_ID AND T1.SYS_CD = T3.SYS_CD AND T3.REF_TP = #{sRefTp} AND T3.REF_ID = #{sRefId}
+        WHERE
+            T1.USE_YN = 'Y'
+            AND T1.SYS_CD = #{sSysCd}
+            AND T1.WEB_MOBILE_DSTIN_CD = #{sWebMobileDstinCd}
+            AND T2.PARENT_VIEW_ID = #{sParentViewId}
+            AND T1.VIEW_TP = #{sViewTp}
+            AND T1.DISPLAY_YN = #{sDisplayYn}
+        ORDER BY T1.SORT_ORDER ASC
+    </select>
+
+    <!-- 화면-사용자 매핑 정보가 있는 사용자 정보 목록을 조회한다. -->
+    <select id="selectViewMappingUsersByViewId" parameterType="map" resultType="ViewMappingUserVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewMappingDAO.selectViewMappingUsersByViewId] */
+        SELECT
+            T2.USR_ID
+            --,T2.USR_NM
+            ,CASE WHEN DEL_YN = 'Y' then USR_NM ||'(离职)' ELSE USR_NM
+			end
+			USR_NM           --    2019.05.22 田佳兴将负责人中离职人员特殊标明
+            ,T2.EMP_NO
+            ,T2.DLR_CD
+            ,T1.MASK
+            ,NVL(T2.SYS_USER_YN,'N') AS SYS_USER_YN
+        FROM CM_0810T T1
+        INNER JOIN CM_0801T T2 ON T1.REF_ID = T2.USR_ID
+        WHERE
+            T1.VIEW_ID = #{viewId}
+            AND T1.SYS_CD = #{sysCd}
+            AND T1.REF_TP = 'U'
+            AND T1.USE_YN = 'Y'
+            AND T2.DLR_CD = #{dlrCd}
+           -- AND T2.DEL_YN = 'N'        --2019.05.22 田佳兴商机管理负责人筛选条件包含离职人员
+    </select>
+</mapper>

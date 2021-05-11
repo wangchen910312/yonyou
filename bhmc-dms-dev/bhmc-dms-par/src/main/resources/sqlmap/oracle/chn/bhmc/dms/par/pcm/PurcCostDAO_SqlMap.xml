@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : PurcCostDAO_SqlMap.xml
+    Description : 구매소요량.
+    author In Bo Shim
+    since 2016. 1. 29.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 29.     In Bo Shim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.par.pcm.service.dao.PurcCostDAO">
+
+    <!-- 구매소요량 정보 목록을 조회한다. -->
+    <select id="selectPurcCostesByCondition" parameterType="PurcCostSearchVO" resultType="PurcCostVO">
+        /* [chn.bhmc.dms.par.pcm.service.dao.PurcCostDAO.selectPurcCostesByCondition] */
+        SELECT
+          ROWNUM AS RNUM
+          , A.DLR_CD                        -- 딜러코드
+          , A.ITEM_CD                       -- 품목코드
+          , NVL(B.ITEM_CD,'N') AS ITEM_CD_SGST       -- 구매제시품목코드
+          , A.ITEM_NM                       -- 품목명
+          , A.END_YN                        -- 종료여부
+          , NVL(A.STOCK_UNIT_CD,' ') AS UNIT_CD      -- 재고단위코드
+          , A.PURC_CQTY_CALC_YN             -- 구매소요량계산 여부
+          , NVL(A.BP_CD,'N') AS BP_CD       -- 공급처코드
+          , NVL(D.BP_NM,'-') AS BP_NM       -- 공급처명
+          , #{sStdDt} AS STD_DT             -- 기준일자
+          <if test='sStockNowYn != null and sStockNowYn != "" and sStockInYn != null and sStockInYn != "" and sStockOutYn != null and sStockOutYn != ""'>
+            <choose>
+                <when test='sStockNowYn == "Y" and sStockInYn == "N" and sStockOutYn == "N"'>
+                    , CASE WHEN (NVL(A.SFTY_STOCK_QTY, 0) - NVL(C.AVLB_STOCK_QTY, 0)) > NVL(A.MIN_PURC_QTY,0) THEN (NVL(A.SFTY_STOCK_QTY, 0) - NVL(C.AVLB_STOCK_QTY, 0))
+                    ELSE NVL(A.MIN_PURC_QTY,0)
+                    END PURC_SGST_QTY -- 구매제시수량
+                    , NVL(C.AVLB_STOCK_QTY,0) AS PSNT_STOCK_QTY       -- 현재고수량
+                    , 0 AS GR_SCHE_QTY                                -- 입고예정수량
+                    , 0 AS GI_SCHE_QTY                                -- 출고예정수량
+                </when>
+                <when test='sStockNowYn == "Y" and sStockInYn == "Y" and sStockOutYn == "N"'>
+                     , CASE WHEN (NVL(A.SFTY_STOCK_QTY, 0) - NVL(C.AVLB_STOCK_QTY, 0) - NVL(C.GR_SCHE_QTY, 0)) > NVL(A.MIN_PURC_QTY,0) THEN (NVL(A.SFTY_STOCK_QTY, 0) - NVL(C.AVLB_STOCK_QTY, 0) - NVL(C.GR_SCHE_QTY, 0))
+                    ELSE NVL(A.MIN_PURC_QTY,0)
+                    END PURC_SGST_QTY -- 구매제시수량
+                    , NVL(C.AVLB_STOCK_QTY,0) AS PSNT_STOCK_QTY       -- 현재고수량
+                    , NVL(C.GR_SCHE_QTY,0) AS GR_SCHE_QTY             -- 입고예정수량
+                    , 0 AS GI_SCHE_QTY                                -- 출고예정수량
+                </when>
+                <when test='sStockNowYn == "N" and sStockInYn == "Y" and sStockOutYn == "N"'>
+                     , CASE WHEN (NVL(A.SFTY_STOCK_QTY, 0) - NVL(C.GR_SCHE_QTY, 0)) > NVL(A.MIN_PURC_QTY,0) THEN (NVL(A.SFTY_STOCK_QTY, 0) - NVL(C.GR_SCHE_QTY, 0))
+                    ELSE NVL(A.MIN_PURC_QTY,0)
+                    END PURC_SGST_QTY -- 구매제시수량
+                    , 0 AS PSNT_STOCK_QTY                             -- 현재고수량
+                    , NVL(C.GR_SCHE_QTY,0) AS GR_SCHE_QTY             -- 입고예정수량
+                    , 0 AS GI_SCHE_QTY                                -- 출고예정수량
+                </when>
+                <when test='sStockNowYn == "N" and sStockInYn == "N" and sStockOutYn == "Y"'>
+                    , CASE WHEN (NVL(A.SFTY_STOCK_QTY, 0) + NVL(C.GI_SCHE_QTY, 0)) > NVL(A.MIN_PURC_QTY,0) THEN (NVL(A.SFTY_STOCK_QTY, 0) + NVL(C.GI_SCHE_QTY, 0))
+                    ELSE NVL(A.MIN_PURC_QTY,0)
+                    END PURC_SGST_QTY -- 구매제시수량
+                    , 0 AS PSNT_STOCK_QTY                             -- 현재고수량
+                    , 0 AS GR_SCHE_QTY                                -- 입고예정수량
+                    , NVL(C.GI_SCHE_QTY,0) AS GI_SCHE_QTY             -- 출고예정수량
+                </when>
+                <otherwise>
+                     , CASE WHEN (NVL(A.SFTY_STOCK_QTY, 0) - NVL(C.AVLB_STOCK_QTY, 0) - NVL(C.GR_SCHE_QTY, 0) + NVL(C.GI_SCHE_QTY, 0)) > NVL(A.MIN_PURC_QTY,0) THEN (NVL(A.SFTY_STOCK_QTY, 0) - NVL(C.AVLB_STOCK_QTY, 0) - NVL(C.GR_SCHE_QTY, 0) + NVL(C.GI_SCHE_QTY, 0))
+                    ELSE NVL(A.MIN_PURC_QTY,0)
+                    END PURC_SGST_QTY -- 구매제시수량
+                    , NVL(C.AVLB_STOCK_QTY,0) AS PSNT_STOCK_QTY       -- 현재고수량
+                    , NVL(C.GR_SCHE_QTY,0) AS GR_SCHE_QTY             -- 입고예정수량
+                    , NVL(C.GI_SCHE_QTY,0) AS GI_SCHE_QTY             -- 출고예정수량
+                </otherwise>
+           </choose>
+          </if>
+
+          , NVL(A.SFTY_STOCK_QTY,0) AS SFTY_STOCK_QTY       -- 안전재고수량
+          , NVL(A.MIN_PURC_QTY,0) AS MIN_PURC_QTY           -- 최소구매수량
+          , 0 AS TRSF_QTY                                   -- 운송중수량
+          , 'N' AS PURC_ORD_REG_YN                          --구매오더등록여부
+          , 'Y' AS TARG_YN                                  --대상여부
+        FROM PT_0201T A
+        LEFT OUTER JOIN (
+                      SELECT   DLR_CD
+                              ,ITEM_CD
+                              ,MAX(PRC_TP) AS PRC_TP
+                              ,MAX(LINE_NO) AS LINE_NO
+                              ,MAX(NVL(SALE_PRC_AMT,0)) AS PURC_PRC
+                        FROM   PT_0214T
+                       WHERE   DLR_CD = #{sDlrCd}
+                         AND   DEL_YN != 'Y'
+                      GROUP BY DLR_CD, ITEM_CD) B
+                   ON A.DLR_CD = B.DLR_CD
+                  AND A.ITEM_CD= B.ITEM_CD
+        LEFT JOIN PT_0301T C ON A.DLR_CD = C.DLR_CD AND A.ITEM_CD = C.ITEM_CD
+        LEFT JOIN PT_0211T D ON A.DLR_CD = D.DLR_CD AND A.BP_CD = D.BP_CD
+        WHERE A.DLR_CD = #{sDlrCd}
+        AND A.PURC_CQTY_CALC_YN = #{sPurcCqtyCalcYn}
+        AND A.END_YN = #{sEndYn}
+        <if test='sBpCd != null and sBpCd != ""'> AND A.BP_CD = #{sBpCd} </if>
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+            </when>
+            <otherwise>
+                DLR_CD ASC
+            </otherwise>
+        </choose>
+
+    </select>
+
+    <!-- 구매소요량 정보 카운트를 조회한다. -->
+    <select id="selectPurcCostesByConditionCnt" parameterType="PurcCostSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.pcm.service.dao.PurcCostDAO.selectPurcCostesByConditionCnt] */
+        SELECT
+          count(0)
+        FROM PT_0201T A
+        LEFT OUTER JOIN (
+                      SELECT   DLR_CD
+                              ,ITEM_CD
+                              ,MAX(PRC_TP) AS PRC_TP
+                              ,MAX(LINE_NO) AS LINE_NO
+                              ,MAX(NVL(SALE_PRC_AMT,0)) AS PURC_PRC
+                        FROM   PT_0214T
+                       WHERE   DLR_CD = #{sDlrCd}
+                         AND   DEL_YN != 'Y'
+                      GROUP BY DLR_CD, ITEM_CD) B
+                   ON A.DLR_CD = B.DLR_CD
+                  AND A.ITEM_CD= B.ITEM_CD
+        LEFT JOIN PT_0301T C ON A.DLR_CD = C.DLR_CD AND A.ITEM_CD = C.ITEM_CD
+        LEFT JOIN PT_0211T D ON A.DLR_CD = D.DLR_CD AND A.BP_CD = D.BP_CD
+        WHERE A.DLR_CD = #{sDlrCd}
+        AND A.PURC_CQTY_CALC_YN = #{sPurcCqtyCalcYn}
+        AND A.END_YN = #{sEndYn}
+        <if test='sBpCd != null and sBpCd != ""'> AND A.BP_CD = #{sBpCd} </if>
+    </select>
+
+</mapper>

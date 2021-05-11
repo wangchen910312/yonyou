@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : MarketingCampaignDAO_SqlMap.xml
+    Description : 마케팅 캠페인에 관한 데이터처리
+    author hyoung jun an
+    since 2016. 03. 04.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016.03.04     hyoung jun an    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.crm.dao.CrmMarketingCampaignDAO">
+	
+	<sql id="searchMarketingCampaigns">
+
+        LEFT OUTER JOIN CM_0304T HOST_NM ON HOST_NM.CMM_GRP_CD = 'CRM708' AND HOST_NM.LANG_CD = #{langCd} AND HOST_NM.CMM_CD = CR_0701T.HOST_CD
+        LEFT OUTER JOIN CM_0304T MAK_TP_NM ON MAK_TP_NM.CMM_GRP_CD = 'CRM702' AND MAK_TP_NM.LANG_CD = #{langCd} AND MAK_TP_NM.CMM_CD = CR_0701T.MAK_TP_CD
+        LEFT OUTER JOIN (SELECT B.CMM_GRP_CD, B.CMM_CD, B.CMM_CD_TXT, B.LANG_CD, A.REMARK1
+                         FROM CM_0303T A
+                              INNER JOIN CM_0304T B ON A.CMM_GRP_CD = B.CMM_GRP_CD AND A.CMM_CD = B.CMM_CD
+                      ) MAK_TP_SUB_TP_NM ON MAK_TP_SUB_TP_NM.CMM_GRP_CD IN ('CRM703','CRM704','CRM705')
+                                        AND MAK_TP_SUB_TP_NM.LANG_CD = #{langCd}
+                                        AND MAK_TP_SUB_TP_NM.CMM_CD = CR_0701T.MAK_SUB_TP_CD
+                                        AND MAK_TP_SUB_TP_NM.REMARK1 = CR_0701T.MAK_TP_CD
+        LEFT OUTER JOIN CM_0304T STAT_NM ON STAT_NM.CMM_GRP_CD = 'CRM701' AND STAT_NM.LANG_CD = #{langCd} AND STAT_NM.CMM_CD = CR_0701T.STAT_CD
+
+        <where>
+            AND CR_0701T.DEL_YN = 'N'
+            AND CR_0701T.DLR_CD = #{sDlrCd}
+
+            <if test='sMakNm != null and sMakNm != ""'>
+                AND CR_0701T.MAK_NM LIKE '%' || #{sMakNm} || '%'
+            </if>
+
+            <if test='sMakCd != null and sMakCd != ""'>
+                AND CR_0701T.MAK_CD LIKE '%' || #{sMakCd} || '%'
+            </if>
+
+            <if test='sHostCd != null and sHostCd != ""'>
+                AND CR_0701T.HOST_CD = #{sHostCd}
+            </if>
+
+            <if test='sHostTeamCd != null and sHostTeamCd != ""'>
+                AND CR_0701T.HOST_TEAM_CD = #{sHostTeamCd}
+            </if>
+
+            <if test='sMakTpCd != null and sMakTpCd != ""'>
+                AND CR_0701T.MAK_TP_CD = #{sMakTpCd}
+            </if>
+
+            <if test='sMakSubTpCd != null and sMakSubTpCd != ""'>
+                AND CR_0701T.MAK_SUB_TP_CD = #{sMakSubTpCd}
+            </if>
+
+            <choose>
+                <when test='sStatCd != null and sStatCd != "" and sStatCd =="01"'>
+                    AND CR_0701T.STAT_CD = #{sStatCd}
+                </when>
+                <when test='sStatCd != null and sStatCd != "" and sStatCd =="02"'>
+                    AND CR_0701T.STAT_CD = #{sStatCd}
+                </when>
+                <when test='sStatCd != null and sStatCd != "" and sStatCd =="03"'>
+                    AND CR_0701T.STAT_CD = '03'
+                    AND CR_0701T.END_DT <![CDATA[>]]> SYSDATE
+                </when>
+                <when test='sStatCd != null and sStatCd != "" and sStatCd =="05"'>
+
+                </when>
+                <when test='sStatCd != null and sStatCd != "" and sStatCd =="04"'>
+                    AND CR_0701T.STAT_CD = #{sStatCd}
+                </when>
+                <when test='sStatCd != null and sStatCd != "" and sStatCd =="06"'>
+                    AND CR_0701T.STAT_CD = '03'
+                    AND CR_0701T.END_DT <![CDATA[<]]> SYSDATE
+                </when>
+                <otherwise>
+                    AND CR_0701T.STAT_CD != '05'
+                </otherwise>
+            </choose>
+            <if test='sStartDt != null and sEndDt != null'>
+                AND CR_0701T.END_DT <![CDATA[>=]]> #{sStartDt}
+                AND CR_0701T.START_DT <![CDATA[<=]]> #{sEndDt}
+            </if>
+        </where>
+    </sql>
+	
+    <!-- 마케팅 캠페인 정보 목록수를 조회한다. -->
+    <select id="selectMarketingCampaignsByConditionCnt" parameterType="MarketingCampaignSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.mcm.service.dao.MarketingCampaignDAO.selectMarketingCampaignsByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_0701T CR_0701T
+        <include refid="searchMarketingCampaigns" />
+    </select>
+
+
+    <!-- 마케팅 캠페인 정보 목록을 조회한다. -->
+    <select id="selectMarketingCampaignsByCondition" parameterType="MarketingCampaignSearchVO" resultType="chn.bhmc.dms.mob.api.crm.vo.MarketingCampaignVO">
+        /* [chn.bhmc.dms.crm.mcm.service.dao.MarketingCampaignDAO.selectMarketingCampaignsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT F.*
+                    ,(SELECT CMM_CD_TXT FROM CM_0304T WHERE CMM_GRP_CD = 'CRM701' AND LANG_CD = #{langCd} AND CMM_CD = F.STAT_CD) AS STAT_NM
+                  FROM (
+                    SELECT
+                          CR_0701T.DLR_CD                    --딜러코드
+                         ,CR_0701T.MAK_CD                    --마케팅코드
+                         ,CR_0701T.MAK_NM                    --마케팅명
+                         ,CR_0701T.HOST_CD                   --주최코드
+                         ,HOST_NM.CMM_CD_TXT AS HOST_NM      --주최명
+                         ,CR_0701T.HOST_TEAM_CD              --주최팀코드
+                         ,CR_0701T.MAK_TP_CD                 --마케팅유형코드
+                         ,CR_0701T.MAK_SUB_TP_CD             --마케팅서브유형코드
+                         ,MAK_TP_NM.CMM_CD_TXT || '/' || MAK_TP_SUB_TP_NM.CMM_CD_TXT AS MAK_TP_SUB_TP_NM --마케팅유형/마케팅서브유형명
+                         ,CR_0701T.RCPE_NM                   --대상자명
+                         ,CR_0701T.START_DT                  --시작일자
+                         ,CR_0701T.END_DT                    --종료일자
+                         ,CR_0701T.PRID                      --기간
+                         ,CR_0701T.PLACE_NM                  --장소명
+                         ,CR_0701T.RCPE_AUTO_YN              --대상자자동추출여부
+                         ,CR_0701T.AAP_CMP_NM                --대행업체명
+                         ,(SELECT NVL(SUM(BUDGET_AMT), 0) FROM CR_0705T
+                            WHERE DLR_CD = #{sDlrCd}
+                              AND MAK_CD = CR_0701T.MAK_CD) AS BUDGET_AMT --예산금액
+                         ,(CASE WHEN CR_0701T.STAT_CD = '03' AND TO_CHAR(CR_0701T.END_DT,'YYYYMMDD') <![CDATA[<]]> TO_CHAR(SYSDATE,'YYYYMMDD') THEN '06' ELSE CR_0701T.STAT_CD END) AS STAT_CD    --상태코드
+                         ,CR_0701T.TARG_CUST_CNT             --목표고객수
+                         ,(SELECT COUNT(*)
+                             FROM CR_0710T
+                            WHERE DLR_CD = CR_0701T.DLR_CD
+                              AND MAK_CD = CR_0701T.MAK_CD)
+                          AS REAL_CUST_CNT
+                         ,CR_0701T.PGSS_RATE                 --진도율
+                         ,CR_0701T.ACTIVE_NM                 --활동명
+                         ,CR_0701T.ACTIVE_CONT               --활동내용
+                         ,CR_0701T.ACTIVE_FILE_DOC_NO        --활동첨부문서번호[CM_0901T]
+                         ,CR_0701T.AD_INVT_HM                --광고투자시간
+                         ,CR_0701T.AD_MEDIA_CD               --광고매체코드
+                         ,CR_0701T.AD_COST_AMT               --광고비용금액
+                         ,CR_0701T.AD_START_DT               --광고시작일자
+                         ,CR_0701T.AD_END_DT                 --광고종료일자
+                         ,CR_0701T.APPR_DOC_NO               --결재문서번호[CM_1001T]
+                         ,'CRM-0003' AS SIGN_DOC_ID        --결재양식ID
+                         ,CR_0701T.DEL_YN                    --삭제여부
+                         ,CR_0701T.TALK_PLAN                 --화술방안
+                         ,CR_0701T.MAK_CONT                  --캠페인내용
+                         ,CR_0701T.CRE_START_DT              --생산시작일자
+                         ,CR_0701T.CRE_END_DT                --생산종료일자
+                         ,CR_0701T.SALE_START_DT             --판매시작일자
+                         ,CR_0701T.SALE_END_DT               --판매종료일자
+                         ,CR_0701T.CR_END_TP                 --캠페인리콜종료여부
+                         ,CR_0701T.PC_DSTIN_CD               --승상용구분코드
+                         ,CR_0701T.CR_ISA_NM                 --캠페인리콜시행처명
+                         ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = CR_0701T.REG_USR_ID) AS REG_USR_ID --등록자ID
+                         ,CR_0701T.REG_DT                    --등록일자
+                         ,CR_0701T.UPDT_USR_ID               --수정자ID
+                         ,CR_0701T.UPDT_DT                   --수정일자
+                    FROM CR_0701T CR_0701T
+                    <include refid="searchMarketingCampaigns" />
+               ) F
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "startDt"'>           F.START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                <when test='item.field == "endDt"'>             F.END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                <when test='item.field == "makCd"'>             F.MAK_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                <when test='item.field == "makNm"'>             F.MAK_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                <when test='item.field == "regDtFormat"'>       F.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                <when test='item.field == "hostCd"'>            F.HOST_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "hostNm"'>            F.HOST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                    </when>
+                                <when test='item.field == "hostTeamCd"'>        F.HOST_TEAM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "makTpCd"'>           F.MAK_TP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "makSubTpCd"'>        F.MAK_SUB_TP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "makTpSubTpNm"'>      F.MAK_TP_SUB_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "rcpeNm"'>            F.RCPE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "startDtFormat"'>     F.START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                <when test='item.field == "endDtFormat"'>       F.END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                <when test='item.field == "prid"'>              F.PRID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                                <when test='item.field == "placeNm"'>           F.PLACE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                <when test='item.field == "aapCmpNm"'>          F.AAP_CMP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "budgetAmt"'>         NVL(F.BUDGET_AMT,0) <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "statCd"'>            F.STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "statNm"'>            F.STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                    </when>
+                                <when test='item.field == "targCustCnt"'>       NVL(F.TARG_CUST_CNT, 0) <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                <when test='item.field == "realCustCnt"'>       NVL(F.REAL_CUST_CNT, 0) <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                                <when test='item.field == "pgssRate"'>          F.PGSS_RATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "activeNm"'>          F.ACTIVE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "activeCont"'>        F.ACTIVE_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "activeFileDocNo"'>   F.ACTIVE_FILE_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "adInvtHm"'>          F.AD_INVT_HM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "adMediaCd"'>         F.AD_MEDIA_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "adCostAmt"'>         F.AD_COST_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "adStartDt"'>         F.AD_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "adEndDt"'>           F.AD_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "apprDocNo"'>         F.APPR_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "delYn"'>             F.DEL_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                <when test='item.field == "regUsrId"'>          F.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                                <when test='item.field == "creStartDtFormat"'>  F.CRE_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "creEndDtFormat"'>    F.CRE_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "saleStartDtFormat"'> F.SALE_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "saleEndDtFormat"'>   F.SALE_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "crEndTp"'>           F.CR_END_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <otherwise>
+                                   F.REG_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        F.REG_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+    
+       <!-- 마케팅 캠페인 상세조회. -->
+    <select id="selectMarketingCampaignByKey" parameterType="MarketingCampaignSearchVO" resultType="chn.bhmc.dms.mob.api.crm.vo.MarketingCampaignVO">
+
+        SELECT
+             CR_0701T.DLR_CD                    --딜러코드
+            ,CR_0701T.MAK_CD                    --마케팅코드
+            ,CR_0701T.MAK_NM                    --마케팅명
+            ,CR_0701T.HOST_CD                   --주최코드
+            ,CR_0701T.HOST_TEAM_CD              --주최팀코드
+            ,CR_0701T.MAK_TP_CD                 --마케팅유형코드
+            ,CR_0701T.MAK_SUB_TP_CD             --마케팅서브유형코드
+            ,CR_0701T.RCPE_NM                   --대상자명
+            ,CR_0701T.START_DT                  --시작일자
+            ,CR_0701T.END_DT                    --종료일자
+            ,CR_0701T.PRID                      --기간
+            ,CR_0701T.PLACE_NM                  --장소명
+            ,CR_0701T.RCPE_AUTO_YN              --대상자자동추출여부
+            ,CR_0701T.AAP_CMP_NM                --대행업체명
+            ,(SELECT nvl(sum(BUDGET_AMT), 0) FROM CR_0705T
+            WHERE DLR_CD = #{sDlrCd}
+              AND MAK_CD = CR_0701T.MAK_CD) AS BUDGET_AMT --예산금액
+            ,(CASE WHEN CR_0701T.STAT_CD = '03' AND TO_CHAR(CR_0701T.END_DT,'YYYYMMDD') <![CDATA[<]]> TO_CHAR(SYSDATE,'YYYYMMDD') THEN '06' ELSE CR_0701T.STAT_CD END) AS STAT_CD    --상태코드
+            ,CR_0701T.TARG_CUST_CNT             --목표고객수
+            ,(SELECT COUNT(*)
+             FROM CR_0710T
+            WHERE DLR_CD = CR_0701T.DLR_CD
+              AND MAK_CD = CR_0701T.MAK_CD)
+            AS REAL_CUST_CNT
+            ,CR_0701T.PGSS_RATE                 --진도율
+            ,CR_0701T.ACTIVE_NM                 --활동명
+            ,CR_0701T.ACTIVE_CONT               --활동내용
+            ,CR_0701T.ACTIVE_FILE_DOC_NO        --활동첨부문서번호[CM_0901T]
+            ,CR_0701T.AD_INVT_HM                --광고투자시간
+            ,CR_0701T.AD_MEDIA_CD               --광고매체코드
+            ,CR_0701T.AD_COST_AMT               --광고비용금액
+            ,CR_0701T.AD_START_DT               --광고시작일자
+            ,CR_0701T.AD_END_DT                 --광고종료일자
+            ,CR_0701T.APPR_DOC_NO               --결재문서번호[CM_1001T]
+            ,'CRM-0003' AS SIGN_DOC_ID        --결재양식ID
+            ,CR_0701T.DEL_YN                    --삭제여부
+            ,CR_0701T.TALK_PLAN                 --화술방안
+            ,CR_0701T.MAK_CONT                  --캠페인내용
+            ,CR_0701T.CRE_START_DT              --생산시작일자
+            ,CR_0701T.CRE_END_DT                --생산종료일자
+            ,CR_0701T.SALE_START_DT             --판매시작일자
+            ,CR_0701T.SALE_END_DT               --판매종료일자
+            ,CR_0701T.CR_END_TP                 --캠페인리콜종료여부
+            ,CR_0701T.PC_DSTIN_CD               --승상용구분코드
+            ,CR_0701T.CR_ISA_NM                 --캠페인리콜시행처명
+            ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = CR_0701T.REG_USR_ID) AS REG_USR_ID --등록자ID
+            ,CR_0701T.REG_DT                    --등록일자
+            ,CR_0701T.UPDT_USR_ID               --수정자ID
+            ,CR_0701T.UPDT_DT                   --수정일자
+        FROM CR_0701T CR_0701T                   --마케팅캠페인마스터
+    <if test='sRefKeyNm != null and sRefKeyNm != ""'>
+        INNER JOIN CR_0710T CR_0710T ON CR_0701T.DLR_CD = CR_0710T.DLR_CD AND CR_0701T.MAK_CD = CR_0710T.MAK_CD WHERE CR_0710T.TARG_CUST_SEQ = #{sRefKeyNm}
+    </if>
+        <where>
+    <if test='sMakCd != null and sMakCd != ""'>
+            AND CR_0701T.DLR_CD = #{sDlrCd}               --딜러코드
+            AND CR_0701T.MAK_CD = #{sMakCd}
+    </if>
+        </where>
+
+    </select>
+    
+    <!-- 마케팅 캠페인(목표) 정보 목록을 조회한다. -->
+    <select id="selectGoalsByCondition" parameterType="MarketingCampaignSearchVO" resultType="chn.bhmc.dms.mob.api.crm.vo.MarketingCampaignVO">
+        /* [chn.bhmc.dms.crm.mcm.service.dao.MarketingCampaignDAO.selectGoalsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                       CR_0711T.DLR_CD               --딜러코드
+                      ,CR_0711T.MAK_CD               --마케팅코드
+                      ,CR_0711T.SEQ                  --일련번호
+                      ,CR_0711T.TARG_CD              --목표코드
+                      ,CR_0711T.TARG_NM              --목표명
+                      ,CR_0711T.TARG_CNT_VAL         --목표수치값
+                      ,CR_0711T.TARG_RSLT_VAL        --목표결과값
+                      ,CR_0711T.REG_USR_ID           --등록자ID
+                      ,CR_0711T.REG_DT               --등록일자
+                      ,CR_0711T.UPDT_USR_ID          --수정자ID
+                      ,CR_0711T.UPDT_DT              --수정일자
+                 FROM CR_0711T CR_0711T    --마케팅캠페인목표
+                <where>
+                    AND CR_0711T.DLR_CD = #{sDlrCd}    --딜러코드
+                    AND CR_0711T.MAK_CD = #{sMakCd}
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>        CR_0711T.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "makCd"'>        CR_0711T.MAK_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "seq"'>          CR_0711T.SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                <when test='item.field == "targCd"'>       CR_0711T.TARG_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "targNm"'>       CR_0711T.TARG_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "targCntVal"'>   CR_0711T.TARG_CNT_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "targRsltVal"'>  CR_0711T.TARG_RSLT_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regUsrId"'>     CR_0711T.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                <when test='item.field == "regDt"'>        CR_0711T.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "updtUsrId"'>    CR_0711T.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                <when test='item.field == "updtDt"'>       CR_0711T.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <otherwise>
+                                    CR_0711T.SEQ ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        CR_0711T.SEQ ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 마케팅 캠페인(목표) 정보 목록수를 조회한다. -->
+    <select id="selectGoalsByConditionCnt" parameterType="MarketingCampaignSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.mcm.service.dao.MarketingCampaignDAO.selectGoalsByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_0711T CR_0711T                      --마케팅캠페인목표
+        <where>
+            AND CR_0711T.DLR_CD = #{sDlrCd}               --딜러코드
+            AND CR_0711T.MAK_CD = #{sMakCd}
+        </where>
+    </select>
+    
+    
+    <!-- 유형 Sub 데이터를 조회한다. 공통으로 DropdownList에서 쓰기위함. (중복 모델 display 방지)  -->
+    <select id="selectMakTpCdListByCondition" parameterType="MarketingCampaignSearchVO" resultType="chn.bhmc.dms.mob.api.crm.vo.MarketingCampaignVO">
+        SELECT A.CMM_CD,
+               NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+          FROM CM_0303T A, CM_0304T B
+         WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+           AND A.CMM_CD = B.CMM_CD
+           AND B.LANG_CD = #{langCd}
+           AND A.CMM_GRP_CD IN ('CRM703','CRM704','CRM705')
+           AND A.USE_YN = 'Y'
+           AND A.REMARK1 = #{cmmCd}
+    </select>
+    
+
+</mapper>

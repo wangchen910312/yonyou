@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="selectFinacialUsedResult" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCarlineCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sFromDate"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sToDate"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sContractCustNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT A.DLR_CD
+      ,(SELECT CUST_NM FROM CR_0101T WHERE CUST_NO = A.CONTRACT_CUST_NO) AS CUST_NM
+      ,A.CONTRACT_NO
+      ,A.CONTRACT_DT
+      ,FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+      ,FN_GET_MODEL_NM(A.MODEL_CD) AS MODEL_NM
+      ,A.VIN_NO
+      ,(SELECT CMM_CD_TXT 
+          FROM CM_0304T
+         WHERE LANG_CD = 'zh'
+           AND CMM_GRP_CD = 'SAL042'
+           AND CMM_CD = B.FINC_STAT_CD) AS FINC_STAT_NM --금융상태
+      ,(SELECT CMM_CD_TXT 
+          FROM CM_0304T
+         WHERE LANG_CD = 'zh'
+           AND CMM_GRP_CD = 'SAL055'
+           AND CMM_CD = B.FINC_CMP_CD) AS FINC_CMP_NM --금융사
+      ,(SELECT FINC_ITEM_NM
+          FROM SA_0117T X
+         WHERE X.DLR_CD = A.DLR_CD
+           AND X.FINC_CMP_CD = B.FINC_CMP_CD
+           AND X.FINC_ITEM_CD = B.FINC_ITEM_CD) AS FINC_ITEM_NM --금융상품
+      ,B.FINC_REQ_AMT
+      ,B.FINC_RPAY_PRID
+      ,B.FINC_LOAN_RATE
+      ,B.FINC_REQ_DT
+      ,B.FINC_END_DT
+  FROM SA_0201T A, SA_0233T B
+ WHERE A.DLR_CD = B.DLR_CD
+   AND A.CONTRACT_NO = B.CONTRACT_NO
+   AND A.VIN_NO IS NOT NULL
+   ${IF(LEN(sDlrCd) == 0, ""," AND A.DLR_CD = '"+sDlrCd+"'")}
+   ${IF(LEN(sFromDate) == 0 , ""," AND TO_CHAR(A.CONTRACT_DT,'YYYYMMDD') BETWEEN '"+sFromDate+"' and '"+sToDate+"'")} --계약일
+   ${IF(LEN(sContractCustNo) == 0, ""," AND A.CONTRACT_CUST_NO = '"+sContractCustNo+"'")} --고객번호
+   ${IF(LEN(sCarlineCd) == 0, ""," AND A.CARLINE_CD = '"+sCarlineCd+"'")}  --차종]]></Query>
+</TableData>
+</TableDataMap>
+<ReportWebAttr>
+<ServerPrinter/>
+<WebPageContent>
+<ToolBars>
+<ToolBarManager>
+<Location>
+<Embed position="1"/>
+</Location>
+<ToolBar>
+<Widget class="com.fr.report.web.button.page.First">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-First')}]]></Text>
+<IconName>
+<![CDATA[first]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Previous">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Previous')}]]></Text>
+<IconName>
+<![CDATA[previous]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.PageNavi">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Next">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Next')}]]></Text>
+<IconName>
+<![CDATA[next]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Last">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Last')}]]></Text>
+<IconName>
+<![CDATA[last]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.FlashPrint">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Print[Client]A')}]]></Text>
+<IconName>
+<![CDATA[flashprint]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.Print">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Print')}]]></Text>
+<IconName>
+<![CDATA[print]]></IconName>
+<PrintButtons/>
+</Widget>
+<Widget class="com.fr.report.web.button.Export">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Export')}]]></Text>
+<IconName>
+<![CDATA[export]]></IconName>
+<Buttons pdf="true" excelP="true" excelO="true" excelS="true" word="true" image="true" html="true"/>
+</Widget>
+<Widget class="com.fr.report.web.button.Email">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Email')}]]></Text>
+<IconName>
+<![CDATA[email]]></IconName>
+</Widget>
+<IsDefault>
+<![CDATA[false]]></IsDefault>
+<Background name="ColorBackground" color="-1"/>
+</ToolBar>
+</ToolBarManager>
+</ToolBars>
+<WebPage isPage="false" isShowAsImage="false" isAutoScale="false" isTDHeavy="false"/>
+</WebPageContent>
+</ReportWebAttr>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1152000,1152000,723900,723900,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[5040000,4800600,4320000,5760000,9360000,6480000,3390900,4495800,10515600,4320000,3600000,3600000,4320000,4320000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" s="0">
+<O>
+<![CDATA[客户姓名]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="0">
+<O>
+<![CDATA[合同编号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0" s="0">
+<O>
+<![CDATA[合同日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="0">
+<O>
+<![CDATA[车种]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0" s="0">
+<O>
+<![CDATA[车型]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="0">
+<O>
+<![CDATA[VIN NO]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="0" s="0">
+<O>
+<![CDATA[状态]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="0" s="0">
+<O>
+<![CDATA[金融公司]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="0" s="0">
+<O>
+<![CDATA[贷款商品]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="0" s="0">
+<O>
+<![CDATA[申请金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="0" s="0">
+<O>
+<![CDATA[偿还期间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="0" s="0">
+<O>
+<![CDATA[贷款比率(%)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="0" s="0">
+<O>
+<![CDATA[申请日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="0" s="0">
+<O>
+<![CDATA[到期日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="CUST_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Scope val="1"/>
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="1" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="CONTRACT_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="CONTRACT_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="CARLINE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="MODEL_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="VIN_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="FINC_STAT_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="FINC_CMP_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="FINC_ITEM_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="FINC_REQ_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="10" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="FINC_RPAY_PRID"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="FINC_LOAN_RATE"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="12" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="FINC_REQ_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="13" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="selectFinacialUsedResult" columnName="FINC_END_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="60480000" height="76320000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="false" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[Parameter]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

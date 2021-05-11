@@ -1,0 +1,543 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.sti.service.dao.ConfirmWearingVehicleDAO">
+
+    <!-- 완성차 입고확정 목록 수를 조회한다. -->
+    <select id="selectConfirmWearingVehicleByConditionCnt" parameterType="ConfirmWearingVehicleSearchVO" resultType="int">
+        SELECT COUNT(SA0121.VIN_NO) AS VALUE
+          FROM SA_0121T SA0121
+             , SA_0416T SA0416
+              <!--更改物流公司、板车号 检出方式 贾明  2018-8-31 start -->
+             , (
+                SELECT VIN_NO
+                     , DSTB_CMP_NM
+                FROM (
+                    SELECT
+                        --RANK() OVER(PARTITION BY VIN_NO ORDER BY UPLOAD_SEQ DESC, UPLOAD_TIMESTAMP DESC) AS TPMS_RANK,
+                        --RANK() OVER(PARTITION BY VIN_NO ORDER BY  UPLOAD_TIMESTAMP DESC) AS TPMS_RANK,
+                        RANK() OVER(PARTITION BY VIN_NO ORDER BY UPLOAD_SEQ DESC) AS TPMS_RANK, -- 更改查询方式为板车号 贾明 2018-9-4 R20021000456  在途车入库处理 部分车架号显示两遍 UPLOAD_TIMESTAMP LMS实际上传时间  原因是物流那边给下发数据 SAL230 接口下发的有重复数据。 解决方法用  UPLOAD_SEQ  LMS上传编号 不会有重复递增生成的  
+                        VIN_NO, DSTB_CMP_NM
+                    FROM SA_0425T
+                )
+                WHERE TPMS_RANK = 1
+            ) SA0425 
+            <!-- 更改物流公司、板车号 检出方式 贾明  2018-8-31 end --> 
+         WHERE SA0121.NCAR_DSTIN_CD = 'N'
+           AND SA0121.VIN_NO1 = SA0416.VIN_NO1(+)
+           AND SA0121.VIN_NO2 = SA0416.VIN_NO2(+)
+           AND SA0121.ORD_DLR_CD  = SA0416.DLR_CD(+)
+           AND SA0121.VIN_NO  = SA0425.VIN_NO (+)
+        <if test='sCarStatCd != null and sCarStatCd != "" and sCarStatCd != "50"'>
+            AND SA0121.CAR_STAT_CD IN ('60','70')
+        </if>
+        <if test='sCarStatCd != null and sCarStatCd != "" and sCarStatCd != "60"'>
+            AND SA0121.CAR_STAT_CD = '50'
+        </if>
+        <if test='sOrdTp != null and sOrdTp != ""'>
+           AND SA0121.ORD_TP = #{sOrdTp}
+        </if>
+        <if test='sVinNo != null and sVinNo != ""'>
+            AND SA0121.VIN_NO LIKE '%'||#{sVinNo}||'%'
+        </if>
+        <if test='sOrdDtStart != null and sOrdDtEnd != null'>
+           AND SA0121.DLR_ORD_REQ_DT <![CDATA[>=]]> TRUNC(#{sOrdDtStart},'DD')
+           AND SA0121.DLR_ORD_REQ_DT <![CDATA[<]]> TRUNC(#{sOrdDtEnd},'DD')+1
+        </if>
+        <if test='sGrDtStart != null and sGrDtEnd != null'>
+           AND SA0121.DLR_GR_DT <![CDATA[>=]]> TRUNC(#{sGrDtStart},'DD')
+           AND SA0121.DLR_GR_DT <![CDATA[<]]> TRUNC(#{sGrDtEnd},'DD')+1
+        </if>
+        <if test='sCarlineCd != null and sCarlineCd != ""'>
+           AND SA0121.CARLINE_CD = #{sCarlineCd}
+        </if>
+        <if test='sModelCd != null and sModelCd != ""'>
+           AND SA0121.MODEL_CD = #{sModelCd}
+        </if>
+        <if test='sDlrCd != null and sDlrCd != ""'>
+           AND SA0121.ORD_DLR_CD = #{sDlrCd}
+        </if>
+        <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = SA0121.MODEL_CD AND X.OCN_CD = SA0121.OCN_CD)  = #{sFscCd}
+        </if>
+        <if test='sFscCd == "None"'>
+           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = SA0121.MODEL_CD AND X.OCN_CD = SA0121.OCN_CD) IS NULL
+        </if>
+    </select>
+
+    <!-- 완성차 입고확정 목록 Data  -->
+    <select id="selectConfirmWearingVehicleByCondition" parameterType="ConfirmWearingVehicleSearchVO" resultType="ConfirmWearingVehicleVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_CARLINE_NM_NC(T1.CARLINE_CD) AS CARLINE_NM
+                 , FN_GET_MODEL_TP_NM(T1.MODEL_CD, T1.OCN_CD) AS MODEL_NM
+                 , FN_GET_OCN_NM_NC(T1.MODEL_CD, T1.OCN_CD) AS OCN_NM
+                 , FN_GET_EXT_COLOR_NM_NC(T1.EXT_COLOR_CD) AS EXT_COLOR_NM
+                 , FN_GET_INT_COLOR_NM_NC(T1.INT_COLOR_CD) AS INT_COLOR_NM
+                 , T1.* FROM (
+                SELECT 
+                     FN_CMM_CD_NM('SAL057',SA0121.TRSF_CMP_CD,#{sLangCd},'N') AS DSTB_CMP_NM -- 物流公司只显示sap传过来的 贾明 2018-9-3
+                     , SA0121.CAR_ID AS CAR_ID
+                     --, SA0121.CAR_REG_NO AS CAR_REG_NO
+                     ,SA0425.CAR_REG_NO --车牌号取值更改 贾明 2018-9-3 
+                     -- 在途车入库处理画面的“物流公司交车日期” 字段名和数据有误，应该是物流科excel上传的“预计到店时间”。 lyy 2019-2-12 start
+                     ,TO_CHAR(SA0425.DSTB_CMP_DL_DT, 'YYYY-MM-DD') DSTB_CMP_DL_DT
+                     -- 在途车入库处理画面的“物流公司交车日期” 字段名和数据有误，应该是物流科excel上传的“预计到店时间”。 lyy 2019-2-12 end
+                     , SA0121.ERP_ORD_NO AS ORD_NO
+                     , SA0121.VIN_NO AS VIN_NO
+                     , SA0121.CAR_DUMP_CD AS CAR_DUMP_CD
+                     , SA0121.CARLINE_CD
+                     , SA0121.MODEL_CD
+                     , SA0121.OCN_CD
+                     , SA0121.EXT_COLOR_CD
+                     , SA0121.INT_COLOR_CD
+                     , SA0121.ORD_TP AS ORD_TP
+                     , TO_CHAR(SA0121.SIGNOFF_DT, 'YYYY-MM-DD') AS MANUFACT_YY_MM_DT
+                     , SA0121.PLT_GI_DT AS ASDY
+                     , TO_CHAR(SA0121.PLT_GI_DT, 'YYYY-MM-DD') AS ASDY_XLS
+                     , SA0121.DLR_GR_DT AS GR_DT
+                     , TO_CHAR(SA0121.DLR_GR_DT, 'YYYY-MM-DD') AS GR_DT_XLS
+                     , SA0121.ENGIN_MODEL_CD||SA0121.ENGIN_SERIAL_NO AS ENGIN_NO
+                     , SA0121.CERT_NO AS CERT_NO
+                     , SA0416.CHRG_CD AS CHRG_CD
+                     , SA0121.VIN_NO1
+                     , SA0121.VIN_NO2
+                     , SA0121.CAR_STAT_CD
+                     , SA0121.RFID_NO
+                     , SA0121.CERT_SECU_CD
+                     , SA0121.CMP_CAR_YN
+                     , SA0121.CMP_CAR_DSTIN_CD
+                     , SA0416.AAMT AS WH_PRC
+                     <!-- ,(SELECT B.BANK_NM FROM CM_0101T B WHERE B.DLR_CD = SA0121.ORD_DLR_CD) AS BANK_NM -->
+                     , SA0121.VINM_BKTX AS BANK_NM
+                     ,DECODE(SA0121.CERT_SECU_CD,NULL,'N',SA0121.CERT_SECU_CD) AS USED_AMT_TP
+                     ,FN_GET_USER_NM((SELECT X.REG_USR_ID
+                         FROM SA_0417T X
+                        WHERE X.DLR_CD = SA0416.DLR_CD
+                          AND X.ORD_TP = SA0416.SORD
+                          AND X.ORD_YY_MM_DT = SA0416.ORD_YYMM
+                          AND X.ORD_PRID = SA0416.ORD_WEEK
+                          AND TO_NUMBER(X.ORD_NO) = SA0416.ORD_SEQ)) AS REG_NM
+                     ,SA0121.PLT_GI_DT
+                     ,NVL((SELECT X.CONTRACT_NO FROM SA_0201T X WHERE X.VIN_NO = SA0121.VIN_NO AND ROWNUM = 1),'NONE') AS CONTRACT_NO
+                     ,NVL((SELECT A.VIN_NO
+                            FROM SA_0256T A
+                               , (
+                                  SELECT DLR_CD
+                                       , CAR_ID
+                                       , MAX(CAST(NVL(STR_NO,0) AS INTEGER)) AS STR_NO
+                                    FROM SA_0256T
+                                   GROUP BY DLR_CD, CAR_ID
+                                 ) B
+                           WHERE A.DLR_CD = B.DLR_CD
+                             AND A.CAR_ID = B.CAR_ID
+                             AND A.STR_NO = B.STR_NO
+                             AND A.STR_STAT IN ('A', 'B')   -- 심사중, 통과
+                             AND A.DLR_CD = SA0121.ORD_DLR_CD
+                             AND A.VIN_NO = SA0121.VIN_NO
+                           ), 'NONE') AS VIN_NO_STR         -- 전략출고 진행중 VIN
+                     ,STAT_CD
+                     ,VINM_CPGM
+                     ,NVL(
+                          (SELECT 'Y'
+                             FROM CM_0303T
+                            WHERE CMM_GRP_CD ='SAL220'
+                              AND USE_YN     ='Y'
+                              AND CMM_CD     = SA0121.ORD_TP
+                          )
+                      ,'N') AS SKIP_YN  -- 스캔매핑 없이 입고 가능 여부
+                  FROM SA_0121T SA0121
+                     , SA_0416T SA0416
+                     , (
+                    SELECT
+                         TPMS_RANK
+                        ,VIN_NO
+                        ,DSTB_CMP_NM
+                        ,TRSF_CAR_NO
+                        ,TRSF_LOC_CD
+                        ,TRSF_STAT_CD
+                        ,DRIVER_NM
+                        ,DRIVER_TEL_NO
+                        ,PRE_ALRT_NTCE_CONT
+                        ,CAR_REG_NO
+                        ,DSTB_CMP_DL_DT
+                    FROM (
+                        SELECT
+                            RANK() OVER(PARTITION BY VIN_NO ORDER BY UPLOAD_SEQ DESC) AS TPMS_RANK -- 更改查询方式为板车号 贾明 2018-9-4 R20021000456  在途车入库处理 部分车架号显示两遍 UPLOAD_TIMESTAMP LMS实际上传时间  原因是物流那边给下发数据 SAL230 接口下发的有重复数据。 解决方法用  UPLOAD_SEQ  LMS上传编号 不会有重复递增生成的  
+                            ,VIN_NO
+                            ,DSTB_CMP_NM
+                            ,TRSF_CAR_NO
+                            ,TRSF_LOC_CD
+                            ,TRSF_STAT_CD
+                            ,DRIVER_NM
+                            ,DRIVER_TEL_NO
+                            ,PRE_ALRT_NTCE_CONT
+                            ,CAR_REG_NO
+                            ,DSTB_CMP_DL_DT
+                        FROM SA_0425T
+                    )
+                    WHERE TPMS_RANK = 1
+                )  SA0425
+                 WHERE SA0121.NCAR_DSTIN_CD = 'N'
+                   AND SA0121.VIN_NO1 = SA0416.VIN_NO1(+)
+                   AND SA0121.VIN_NO2 = SA0416.VIN_NO2(+)
+                   AND SA0121.ORD_DLR_CD  = SA0416.DLR_CD(+)
+                   AND SA0121.VIN_NO  = SA0425.VIN_NO (+)
+                <if test='sCarStatCd != null and sCarStatCd != "" and sCarStatCd != "50"'>
+                    AND SA0121.CAR_STAT_CD IN ('60','70')
+                </if>
+                <if test='sCarStatCd != null and sCarStatCd != "" and sCarStatCd != "60"'>
+                    AND SA0121.CAR_STAT_CD = '50'
+                </if>
+                <if test='sOrdTp != null and sOrdTp != ""'>
+                   AND SA0121.ORD_TP = #{sOrdTp}
+                </if>
+                <if test='sVinNo != null and sVinNo != ""'>
+                    AND SA0121.VIN_NO LIKE '%'||#{sVinNo}||'%'
+                </if>
+                <if test='sOrdDtStart != null and sOrdDtEnd != null'>
+                   AND SA0121.DLR_ORD_REQ_DT <![CDATA[>=]]> TRUNC(#{sOrdDtStart},'DD')
+                   AND SA0121.DLR_ORD_REQ_DT <![CDATA[<]]> TRUNC(#{sOrdDtEnd},'DD')+1
+                </if>
+                <if test='sGrDtStart != null and sGrDtEnd != null'>
+                   AND SA0121.DLR_GR_DT <![CDATA[>=]]> TRUNC(#{sGrDtStart},'DD')
+                   AND SA0121.DLR_GR_DT <![CDATA[<]]> TRUNC(#{sGrDtEnd},'DD')+1
+                </if>
+                <if test='sCarlineCd != null and sCarlineCd != ""'>
+                   AND SA0121.CARLINE_CD = #{sCarlineCd}
+                </if>
+                <if test='sModelCd != null and sModelCd != ""'>
+                   AND SA0121.MODEL_CD = #{sModelCd}
+                </if>
+                <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND SA0121.ORD_DLR_CD = #{sDlrCd}
+                </if>
+                <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                   AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = SA0121.MODEL_CD AND X.OCN_CD = SA0121.OCN_CD)  = #{sFscCd}
+                </if>
+                <if test='sFscCd == "None"'>
+                   AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = SA0121.MODEL_CD AND X.OCN_CD = SA0121.OCN_CD) IS NULL
+                </if>
+             ORDER BY
+            <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "carStatCd"'>SA0121.CAR_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "dstbCmpNm"'>DSTB_CMP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "carRegNo"'>CAR_REG_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "ordNo"'>ORD_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "vinNo"'>VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "carDumpCd"'>CAR_DUMP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "carlineNm"'>CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "modelNm"'>MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "ocnNm"'>OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "extColorNm"'>EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "intColorNm"'>INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "rfidNo"'>SA0121.RFID_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "ordTp"'>ORD_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "manufactYyMmDt"'>MANUFACT_YY_MM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "asdyXls"'>ASDY_XLS <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "grDtXls"'>GR_DT_XLS <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "enginNo"'>ENGIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "certNo"'>CERT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "usedAmtTp"'>USED_AMT_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "chrgCd"'>CHRG_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "bankNm"'>BANK_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "regNm"'>REG_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <otherwise>
+                                DLR_GR_DT DESC NULLS LAST, ORD_NO DESC NULLS LAST, VIN_NO ASC NULLS LAST
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                   DLR_GR_DT DESC NULLS LAST, ORD_NO DESC NULLS LAST, VIN_NO ASC NULLS LAST
+                </otherwise>
+            </choose>
+
+
+
+        ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectKmSeqSearch" parameterType="String" resultType="int">
+        SELECT NVL(MAX(KMSEQ), 0) + 1
+          FROM SA_0301T
+         WHERE KMTRDY = TO_CHAR(SYSDATE, 'YYYYMMDD')
+           AND KMDELR = #{sDlrCd}
+    </select>
+
+    <select id="selectContractCnt" parameterType="String" resultType="int">
+        SELECT COUNT(*) FROM SA_0201T WHERE VIN_NO = #{sVinNo}
+    </select>
+
+    <!-- 완성차 입고확정 및 확정취소  -->
+    <update id="updateConfirmWearingVehicle" parameterType="ConfirmWearingVehicleVO">
+        UPDATE SA_0121T
+           SET CAR_STAT_CD = #{carStatCd}
+               <if test='carStatCd == "50"'>
+                   ,GR_RETURN_DT = TO_CHAR(SYSDATE,'YYYYMMDD')
+                   ,DLR_GR_DT    = NULL
+                   ,CMP_CAR_YN = NULL           -- 회사차량여부
+                   ,CMP_CAR_DSTIN_CD = NULL     -- 회사차량구분
+                   ,STAT_CD = 'B'              -- RFID스캔구분
+                   ,VINM_CPGM = NULL            -- RFID스캔일자
+               </if>
+               <if test='carStatCd == "60"'>
+                   ,GR_RETURN_DT = NULL
+                   ,DLR_GR_DT    = SYSDATE
+               </if>
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE VIN_NO = #{vinNo}
+           AND NCAR_DSTIN_CD = 'N'
+           AND ORD_DLR_CD = #{dlrCd}
+    </update>
+
+    <!-- 완성차 입고확정 및 확정취소  -->
+    <update id="updateConfirmWearingVehicle2" parameterType="ConfirmWearingVehicleVO">
+        UPDATE SA_0416T
+           SET PRTY = #{prty}
+               <if test='carStatCd == "50"'>
+                   ,RCV_DT = NULL
+                   ,RCV_CNL_DT = SYSDATE
+               </if>
+               <if test='carStatCd == "60"'>
+                   ,RCV_DT = SYSDATE
+                   ,RCV_CNL_DT = NULL
+               </if>
+         WHERE VIN_NO1 = #{vinNo1}
+           AND VIN_NO2 = #{vinNo2}
+    </update>
+
+    <!-- 입고확정 정보 Data  -->
+    <select id="selectConfirmWearingVehiclePopup" parameterType="ConfirmWearingVehicleSearchVO" resultType="ConfirmWearingVehiclePopupVO">
+        SELECT DSTB_SER_EVAL_VAL
+             , DRIVER_STSF_VAL
+             , CAR_ISSUE_HM_VAL
+             , CAR_ISSUE_MASS_VAL
+             , OTHER_CONT
+          FROM SA_0426T
+         WHERE VIN_NO = #{sVinNo}
+           AND DLR_EVAL_DT = (SELECT MAX(X.DLR_EVAL_DT) FROM SA_0426T X WHERE X.VIN_NO = #{sVinNo})
+    </select>
+
+    <!-- 입고확정 정보 저장 -->
+    <insert id="insertConfirmWearingVehicle" parameterType="ConfirmWearingVehiclePopupVO">
+        MERGE INTO SA_0426T A
+                USING(SELECT #{vinNo} AS VIN_NO
+                            ,SYSDATE AS DLR_EVAL_DT
+                            ,#{dstbSerEvalVal} AS DSTB_SER_EVAL_VAL
+                            ,#{driverStsfVal} AS DRIVER_STSF_VAL
+                            ,#{carIssueHmVal} AS CAR_ISSUE_HM_VAL
+                            ,#{carIssueMassVal} AS CAR_ISSUE_MASS_VAL
+                            ,#{otherCont} AS OTHER_CONT
+                            ,#{regUsrId} AS REG_USR_ID
+                            ,SYSDATE AS REG_DT
+                            ,#{updtUsrId} AS UPDT_USR_ID
+                            ,SYSDATE AS UPDT_DT
+                            ,#{dlrCd} AS DLR_CD
+                        FROM DUAL) B
+                        ON (A.VIN_NO = B.VIN_NO
+                        AND A.DLR_EVAL_DT = SYSDATE)
+        WHEN MATCHED THEN
+            UPDATE SET A.DSTB_SER_EVAL_VAL  = B.DSTB_SER_EVAL_VAL
+                      ,A.DRIVER_STSF_VAL    = B.DRIVER_STSF_VAL
+                      ,A.CAR_ISSUE_HM_VAL   = B.CAR_ISSUE_HM_VAL
+                      ,A.CAR_ISSUE_MASS_VAL = B.CAR_ISSUE_MASS_VAL
+                      ,A.OTHER_CONT         = B.OTHER_CONT
+                      ,A.UPDT_USR_ID        = B.UPDT_USR_ID
+                      ,A.UPDT_DT            = B.UPDT_DT
+                      ,A.DLR_CD             = B.DLR_CD
+        WHEN NOT MATCHED THEN
+            INSERT(A.VIN_NO
+                  ,A.DLR_EVAL_DT
+                  ,A.DSTB_SER_EVAL_VAL
+                  ,A.DRIVER_STSF_VAL
+                  ,A.CAR_ISSUE_HM_VAL
+                  ,A.CAR_ISSUE_MASS_VAL
+                  ,A.OTHER_CONT
+                  ,A.REG_USR_ID
+                  ,A.REG_DT
+                  ,A.UPDT_USR_ID
+                  ,A.UPDT_DT
+                  ,A.DLR_CD
+                  )VALUES(
+                   B.VIN_NO
+                  ,B.DLR_EVAL_DT
+                  ,B.DSTB_SER_EVAL_VAL
+                  ,B.DRIVER_STSF_VAL
+                  ,B.CAR_ISSUE_HM_VAL
+                  ,B.CAR_ISSUE_MASS_VAL
+                  ,B.OTHER_CONT
+                  ,B.REG_USR_ID
+                  ,B.REG_DT
+                  ,B.UPDT_USR_ID
+                  ,B.UPDT_DT
+                  ,B.DLR_CD
+                  )
+    </insert>
+
+    <!-- 입고확정. : 딜러입고정보수신 프로시저  -->
+    <insert id="procDlrArrival" parameterType="ConfirmWearingVehicleVO" statementType="CALLABLE">
+        {CALL SP_SAL_DMS_P_0121T_IF(
+              'SAL063'
+            , #{carId, mode=IN, jdbcType=VARCHAR}
+        )}
+    </insert>
+
+    <!-- 입고확정. : 딜러인수보고수신 프로시져  -->
+    <insert id="procDlrArrival2" parameterType="ConfirmWearingVehicleVO" statementType="CALLABLE">
+        {CALL SP_SAL_DMS_P_0121T_IF(
+              'SAL077'
+            , #{carId, mode=IN, jdbcType=VARCHAR}
+        )}
+    </insert>
+
+
+    <!-- 입고확정. : 딜러평가결과수신 프로시져  -->
+    <insert id="procDlrEvalResult" parameterType="ConfirmWearingVehicleVO" statementType="CALLABLE">
+        {CALL SP_SAL_DMS_P_0426T_IF(
+              'SAL078'
+            , #{vinNo, mode=IN, jdbcType=VARCHAR}
+            , #{dlrEvalDt, mode=IN, jdbcType=DATE}
+        )}
+    </insert>
+
+    <!-- 완성차 입고 - 모바일에서 바코드정보를 넘겨주면, 해당하는 차량정보를 반환해준다. -->
+    <select id="retVehicleInfosByCondition" parameterType="ConfirmWearingVehicleSearchVO" resultType="ConfirmWearingVehicleVO">
+        SELECT SA0416.*
+             , DECODE( (
+                         SELECT A.VIN_NO
+                          FROM SA_0426T A
+                             , (
+                                SELECT VIN_NO
+                                     , MAX(DLR_EVAL_DT) AS DLR_EVAL_DT
+                                  FROM SA_0426T
+                                 GROUP BY VIN_NO
+                                ) B
+                          WHERE A.VIN_NO = B.VIN_NO
+                            AND A.DLR_EVAL_DT = B.DLR_EVAL_DT
+                            AND A.VIN_NO = SA0416.VIN_NO
+                         )
+                       , '','N','Y') AS EVAL_YN
+             , (
+                  SELECT CAR_STAT_CD
+                    FROM SA_0121T
+                   WHERE NCAR_DSTIN_CD = 'N'
+                     AND VIN_NO1 = SA0416.VIN_NO1
+                     AND VIN_NO2 = SA0416.VIN_NO2
+                     AND ORD_DLR_CD  = SA0416.DLR_CD
+               ) AS CAR_STAT_CD
+               , (
+                  SELECT CAR_ID
+                    FROM SA_0121T
+                   WHERE NCAR_DSTIN_CD = 'N'
+                     AND VIN_NO1 = SA0416.VIN_NO1
+                     AND VIN_NO2 = SA0416.VIN_NO2
+                     AND ORD_DLR_CD  = SA0416.DLR_CD
+               ) AS CAR_ID
+          FROM (
+                SELECT Y.DLR_CD
+                     , Y.ORD_YYMM
+                     , Y.ORD_WEEK
+                     , Y.VIN_NO1 || Y.VIN_NO2 AS VIN_NO
+                     , Y.VIN_NO1
+                     , Y.VIN_NO2
+                     , Y.CARLINE_CD
+                     , Y.MODEL_CD
+                     , Y.OCN_CD
+                     , Y.EXT_COLOR_CD
+                     , Y.INT_COLOR_CD
+                     , Y.PRTY
+                     , FN_GET_CARLINE_NM(Y.CARLINE_CD) AS CARLINE_NM
+                     , FN_GET_MODEL_TP_NM(Y.MODEL_CD, Y.OCN_CD) AS MODEL_NM
+                     , FN_GET_OCN_NM(Y.MODEL_CD,Y.OCN_CD) AS OCN_NM
+                     , FN_GET_EXT_COLOR_NM(Y.EXT_COLOR_CD) AS EXT_COLOR_NM
+                     , FN_GET_INT_COLOR_NM(Y.INT_COLOR_CD) AS INT_COLOR_NM
+                     , (SELECT X.REG_USR_ID
+                         FROM SA_0417T X
+                        WHERE X.DLR_CD = Y.DLR_CD
+                          AND X.ORD_TP = Y.SORD
+                          AND X.ORD_YY_MM_DT = Y.ORD_YYMM
+                          AND X.ORD_PRID = Y.ORD_WEEK
+                          AND TO_NUMBER(X.ORD_NO) = Y.ORD_SEQ) AS REG_USR_ID
+                  FROM SA_0416T Y
+                 WHERE Y.VIN_NO1 || Y.VIN_NO2 IN
+                   <foreach item="item" index="index" collection="barcodeList" open="(" separator="," close=")" >
+                   #{item}
+                   </foreach>
+               ) SA0416
+         ORDER BY SA0416.VIN_NO
+    </select>
+    <select id="retVehicleInfosByConditionCnt" parameterType="ConfirmWearingVehicleSearchVO" resultType="int">
+        SELECT COUNT(1)
+          FROM (
+                SELECT SA0416.*
+                     , DECODE( (
+                                 SELECT A.VIN_NO
+                                  FROM SA_0426T A
+                                     , (
+                                        SELECT VIN_NO
+                                             , MAX(DLR_EVAL_DT) AS DLR_EVAL_DT
+                                          FROM SA_0426T
+                                         GROUP BY VIN_NO
+                                        ) B
+                                  WHERE A.VIN_NO = B.VIN_NO
+                                    AND A.DLR_EVAL_DT = B.DLR_EVAL_DT
+                                    AND A.VIN_NO = SA0416.VIN_NO
+                                 )
+                               , '','N','Y') AS EVAL_YN
+                  FROM (
+                        SELECT DLR_CD
+                             , ORD_YYMM
+                             , ORD_WEEK
+                             , VIN_NO1 || VIN_NO2 AS VIN_NO
+                             , VIN_NO1
+                             , VIN_NO2
+                             , CARLINE_CD
+                             , MODEL_CD
+                             , OCN_CD
+                             , EXT_COLOR_CD
+                             , INT_COLOR_CD
+                             , PRTY
+                             , FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_NM
+                             , FN_GET_MODEL_NM(MODEL_CD) AS MODEL_NM
+                             , FN_GET_OCN_NM(MODEL_CD,OCN_CD) AS OCN_NM
+                             , FN_GET_EXT_COLOR_NM(EXT_COLOR_CD) AS EXT_COLOR_NM
+                             , FN_GET_INT_COLOR_NM(INT_COLOR_CD) AS INT_COLOR_NM
+                          FROM SA_0416T
+                         WHERE 1=1
+                           AND VIN_NO1 || VIN_NO2 IN
+                           <foreach item="item" index="index" collection="barcodeList" open="(" separator="," close=")" >
+                           #{item}
+                           </foreach>
+                       ) SA0416
+                )
+    </select>
+
+    <!-- 오더주문한 판매고문 조회 -->
+    <select id="selectCarEmpNo" parameterType="ConfirmWearingVehicleSearchVO" resultType="String">
+        SELECT MAX(BLOCK_SALE_ADV_NO) AS BLOCK_SALE_ADV_NO
+          FROM SA_0121T
+         WHERE ORD_DLR_CD = #{sDlrCd}
+           AND VIN_NO = #{sVinNo}
+    </select>
+
+
+
+</mapper>

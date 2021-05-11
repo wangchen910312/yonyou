@@ -1,0 +1,879 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : VehicleBaseInfoDAO_SqlMap.xml
+    Description : 车辆基础画面查询
+    author Jia Ming
+    since 2019. 1. 9.
+    version 1.0
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cif.service.dao.VehicleBaseInfoDAO">
+
+
+    <!-- 查询数据量 -->
+    <select id="selectVehicleBaseinfoConditionCnt" parameterType="VehicleBaseInfoSearchVO" resultType="int">
+          /* [chn.bhmc.dms.crm.cif.service.dao.selectVehicleBaseinfoConditionCnt] */ 
+             SELECT COUNT(1) AS VALUE FROM (
+					SELECT
+					    CUST.CUST_NO  --客户编号
+					   , CUST.CUST_TP --客户类型
+					   ,CUST.CUST_NM  --客户名
+					   ,CUST.SEX_CD   --性别
+					   ,CUST.BIRTH_DT --生日
+					   ,CUST.AGE_DTL  --客户年龄
+					   , CUST.BLUE_MEMBERSHIP_NO --蓝缤会员
+					   , DMB.CUST_NO AS DLR_MBR_YN --自店会员
+					   , CUST.CUST_CD  --潜客/保客
+					   , CUST.HP_NO    -- 移动电话
+					   , CUST.MATH_DOC_TP --证件类型
+					   , CUST.SSN_CRN_NO  --证件号码
+					   , ADDR.SUNG_NM  --sungNm 省/直辖市
+					   , ADDR.CITY_NM  -- 市
+					   , ADDR.DIST_NM  --distNm 地区
+					   , ADDR.ADDR_DETL_CONT --addrDetlCont  详细地址
+					   , A.VIN_NO  --车辆识别码
+					   , A.CARLINE_CD  --车种名称代码
+					   , FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM --车种名称
+					   , A.MODEL_CD
+					   , A.OCN_CD
+					   , FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD) AS MODEL_NM --车款名称
+					   , A.ENGIN_MODEL_CD  --发动机型号代码
+					   , A.ENGIN_MODEL_CD || A.ENGIN_SERIAL_NO AS ENGIN_SERIAL_NO --发动机号码
+					   , A.CAR_REG_NO --车牌号
+					   , CASE WHEN A.NCAR_DSTIN_CD = 'N' THEN 'BHMC'
+					                            ELSE ( SELECT Z8.CMM_CD_NM
+					                                     FROM (SELECT A.CMM_CD
+					                                                , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+					                                             FROM CM_0303T A
+					                                        LEFT OUTER JOIN CM_0304T B
+					                                                    ON A.CMM_GRP_CD = B.CMM_GRP_CD
+					                                                   AND A.CMM_CD = B.CMM_CD
+					                                                   AND B.LANG_CD = #{sLangCd}
+					                                             WHERE A.CMM_GRP_CD = 'COM019'  
+					                                               AND A.USE_YN = 'Y'
+					                                             ) Z8
+					                                     WHERE A.CAR_BRAND_CD = Z8.CMM_CD
+					                                   ) END CAR_BRAND_CD --车辆品牌
+					     ,  NVL(A.CAR_RUN_DIST_VAL,0) AS CAR_RUN_DIST_VAL --累计行驶里程
+					      , A.ORD_DLR_CD   AS  SALES_SPE_STORE --销售特约店
+					      , A.DLR_CD       AS DLR_CD    --店代码
+					     , A.CUST_SALE_DT --零售日期
+					     , A.GRTE_START_DT --保修开始日期
+					     , A.GRTE_END_DT   --保修结束日期
+					     , CASE WHEN (SELECT COUNT(1) FROM SE_1151T WHERE VIN_NO = A.VIN_NO) > 0 THEN  
+					     ( SELECT ADD_MONTHS(A.GRTE_START_DT,NORM_WARR_PER)-1  FROM (
+					        SELECT S.NORM_WARR_PER FROM SE_1151T S  WHERE S.VIN_NO = A.VIN_NO
+					     ) )  
+				         END  AS SPEC_END_DT --特殊车辆保修结束日期
+				         
+					      ,( SELECT ADD_MONTHS(A.GRTE_START_DT ,CASE WHEN A.CAR_DSTIN_CD ='P' THEN LMT_MM ELSE TAXI_LMT_MM END ) AS WRRNT_END_DT
+					               FROM (SELECT CASE WHEN LMT_MM IS NULL THEN A_LMT_MM ELSE LMT_MM END LMT_MM
+					                     ,CASE WHEN TAXI_LMT_MM IS NULL THEN A_TAXI_LMT_MM ELSE TAXI_LMT_MM END TAXI_LMT_MM
+					                 FROM (SELECT MAX(CASE WHEN M.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(A.VIN_NO) FROM DUAL) THEN LMT_MM END)                AS LMT_MM
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(A.VIN_NO) FROM DUAL) THEN LMT_RUN_DIST_VAL END)      AS LMT_RUN_DIST_VAL
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(A.VIN_NO) FROM DUAL) THEN TAXI_LMT_RUN_DIST_VAL END) AS TAXI_LMT_RUN_DIST_VAL
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(A.VIN_NO) FROM DUAL) THEN TAXI_LMT_MM END)           AS TAXI_LMT_MM
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD ='ALL' THEN LMT_MM END)                          AS A_LMT_MM
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD ='ALL' THEN LMT_RUN_DIST_VAL END)                AS A_LMT_RUN_DIST_VAL
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD ='ALL' THEN TAXI_LMT_RUN_DIST_VAL END)           AS A_TAXI_LMT_RUN_DIST_VAL
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD ='ALL' THEN TAXI_LMT_MM END)                     AS A_TAXI_LMT_MM
+					                         FROM SE_1120T M
+					                        WHERE (M.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(A.VIN_NO) FROM DUAL) OR LTS_MODEL_CD ='ALL' )
+					                          AND TO_DATE( TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+					                          AND WART_RPIR_TP ='W'
+					                )
+					             )
+					           ) AS  WRRNT_END_DTM -- 保修结束日期
+					           /**
+					        ,(
+					           SELECT S.CLAIM_CONFIRM_DT AS CLAIM_CONFIRM_DT FROM SE_0710T S
+					                      WHERE S.CLAIM_TP='K' AND S.CLAIM_STAT_CD ='A' AND S.VIN_NO = A.VIN_NO AND S.DLR_CD=A.DLR_CD
+					        ) AS CLAIM_CONFIRM_DT -- 本店首保承认时间
+					        **/
+					        ,MT.CLAIM_CONFIRM_DT -- 本店首保承认时间
+					        ,(
+					                SELECT 
+					                     CASE WHEN (TO_DATE(S.CALC_DT,'YYYY-MM-DD')-TO_DATE(M.CALC_DT,'YYYY-MM-DD')) = 0 THEN 0
+					                     ELSE 
+										 (S.GI_RUN_DIST_VAL - M.GI_RUN_DIST_VAL) / (TO_DATE(S.CALC_DT,'YYYY-MM-DD')-TO_DATE(M.CALC_DT,'YYYY-MM-DD'))   END --平均日行驶里程 AS  AVE_DAI_MILE
+										FROM
+										   (
+										     
+										        SELECT F.GI_RUN_DIST_VAL,F.CALC_DT FROM ( 
+										                   SELECT 
+										                            C.GI_RUN_DIST_VAL --最后一次交车时行驶里程
+										                            ,D.CALC_DT  --最后一次结算完成时间 
+										                              FROM  SE_0300T C ,SE_0500T D
+										                   WHERE     
+										                          C.DLR_CD    = D.DLR_CD
+										                          AND C.RO_DOC_NO = D.RO_DOC_NO
+										                          AND C.DLR_CD    =  A.DLR_CD      
+										                          AND C.RO_STAT_CD IN ('00','05') 
+										                          AND C.VIN_NO =  A.VIN_NO
+										                          AND  SUBSTR(C.RO_DOC_NO,1,2)  ='RO'
+										                          AND C.RO_DT > A.CUST_SALE_DT -- 工单日期 大于零售日期
+										        ORDER BY D.CALC_DT DESC  --结算日期
+										        ) F WHERE  ROWNUM = 1
+										        
+										   )S,
+										   ( 
+										          SELECT F.GI_RUN_DIST_VAL,F.CALC_DT FROM ( 
+										                   SELECT 
+										                            C.GI_RUN_DIST_VAL --第一次交车时行驶里程
+										                            ,D.CALC_DT  --第一次结算完成时间 
+										                              FROM  SE_0300T C ,SE_0500T D
+										                   WHERE     
+										                          C.DLR_CD    = D.DLR_CD
+										                          AND C.RO_DOC_NO = D.RO_DOC_NO
+										                          AND C.DLR_CD    =  A.DLR_CD   
+										                          AND C.RO_STAT_CD IN ('00','05') 
+										                          AND C.VIN_NO = A.VIN_NO 
+										                          AND   SUBSTR(C.RO_DOC_NO,1,2)  ='RO'
+										                          AND C.RO_DT > A.CUST_SALE_DT  --工单日期 大于零售日期
+										        ORDER BY D.CALC_DT   --结算日期
+										        ) F WHERE  ROWNUM = 1
+										   )M
+					        ) AS AVE_DAI_MILE --平均日行驶里程
+					       ,( SELECT F.RO_DOC_NO FROM ( 
+										                   SELECT 
+										                            C.RO_DOC_NO --首次维修委托号码
+										                            FROM  SE_0300T C ,SE_0500T D
+										                   WHERE     
+										                          C.DLR_CD    = D.DLR_CD
+										                          AND C.RO_DOC_NO = D.RO_DOC_NO
+										                          AND C.DLR_CD    =  #{sDlrCd}   
+										                          AND C.RO_STAT_CD IN ('00','05') 
+										                          AND C.VIN_NO= A.VIN_NO
+										                          AND   SUBSTR(C.RO_DOC_NO,1,2)  ='RO'
+										                          AND C.RO_DT > A.CUST_SALE_DT  --工单日期 大于零售日期
+										        ORDER BY D.CALC_DT   --结算日期
+										        
+										        ) F WHERE  ROWNUM = 1
+										 ) AS FIRST_RO_DOC_NO --首次维修委托号码
+						      , ( SELECT F.CALC_DT FROM ( 
+										                   SELECT 
+										                            D.CALC_DT --首次维修的结算完成时间
+										                            FROM  SE_0300T C ,SE_0500T D
+										                   WHERE     
+										                          C.DLR_CD    = D.DLR_CD
+										                          AND C.RO_DOC_NO = D.RO_DOC_NO
+										                          AND C.DLR_CD    =  #{sDlrCd}   
+										                          AND C.RO_STAT_CD IN ('00','05') 
+										                          AND C.VIN_NO= A.VIN_NO
+										                          AND SUBSTR(C.RO_DOC_NO,1,2)  ='RO'
+										                          AND C.RO_DT > A.CUST_SALE_DT  --工单日期 大于零售日期
+										        ORDER BY D.CALC_DT   --结算日期
+										        
+										        ) F WHERE  ROWNUM = 1
+										 ) AS FIRST_CALC_DT --首次维修的结算完成时间
+										 ,( SELECT F.RO_DOC_NO FROM ( 
+										                   SELECT 
+										                            C.RO_DOC_NO --最近维修委托号码
+										                            FROM  SE_0300T C ,SE_0500T D
+										                   WHERE     
+										                          C.DLR_CD    = D.DLR_CD
+										                          AND C.RO_DOC_NO = D.RO_DOC_NO
+										                          --AND C.RO_TP     = D.RO_TP
+										                          AND C.DLR_CD    =  #{sDlrCd}   
+										                          AND C.RO_STAT_CD IN ('00','05') 
+										                          AND C.VIN_NO= A.VIN_NO 
+										                          AND   SUBSTR(C.RO_DOC_NO,1,2)  ='RO'
+										                          AND C.RO_DT > A.CUST_SALE_DT  --工单日期 大于零售日期
+										        ORDER BY D.CALC_DT DESC  --结算日期
+										        ) F WHERE  ROWNUM = 1
+										 ) AS LATELY_RO_DOC_NO --最近维修委托号码
+						      , ( SELECT F.CALC_DT FROM ( 
+										                   SELECT 
+										                            D.CALC_DT --最近维修的结算完成时间
+										                            FROM  SE_0300T C ,SE_0500T D
+										                   WHERE     
+										                          C.DLR_CD    = D.DLR_CD
+										                          AND C.RO_DOC_NO = D.RO_DOC_NO
+										                          AND C.DLR_CD    =  #{sDlrCd}   
+										                          AND C.RO_STAT_CD IN ('00','05') 
+										                          AND C.VIN_NO= A.VIN_NO
+										                          AND   SUBSTR(C.RO_DOC_NO,1,2)  ='RO'
+										                          AND C.RO_DT > A.CUST_SALE_DT  --工单日期 大于零售日期
+										        ORDER BY D.CALC_DT DESC  --结算日期
+										        ) F WHERE  ROWNUM = 1
+										 ) AS LATELY_CALC_DT --最近维修的结算完成时间
+					        
+					 FROM  CR_0101T CUST 
+					 INNER JOIN
+                            (  SELECT *
+                               FROM ( SELECT 
+                                             CAR.BP_CD
+                                             ,CMST.*
+                                        FROM SA_0123T CAR
+                                       INNER JOIN SA_0121T CMST ON CAR.CAR_ID = CMST.CAR_ID
+                                       AND CMST.CAR_STAT_CD IN('60','70') -- 车辆状态 只查零售和库存的
+                                       WHERE CAR.DLR_CD = #{sDlrCd}
+                                         AND CAR.USE_YN = 'Y'
+                                   <if test='sCustFromSaveDt != null'>
+                                              AND TO_CHAR(CMST.CUST_SALE_DT, 'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(#{sCustFromSaveDt}, 'YYYYMMDD')
+		                           </if>
+		                        
+		                          <if test='sCustToSaveDt != null'>
+		                               AND TO_CHAR(CMST.CUST_SALE_DT, 'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(#{sCustToSaveDt}, 'YYYYMMDD')
+		                           </if>
+                                          
+                                   )
+                                 
+                            ) A ON A.BP_CD = CUST.CUST_NO
+					 
+					  LEFT OUTER JOIN (
+					                 SELECT
+					                      ROW_NUMBER() OVER(PARTITION BY  DLR_CD, REF_TABLE_NM, REF_KEY_NM  ORDER BY NVL(UPDT_DT, REG_DT) DESC ) AS ADDR_NUM
+					                     ,DLR_CD
+					                     ,SEQ
+					                     ,REF_TABLE_NM
+					                     ,REF_KEY_NM
+					                     ,ADDR_TP
+					                     ,SUNG_CD
+					                     ,CITY_CD
+					                     ,DIST_CD
+					                     ,ZIP_CD
+					                     ,SUNG_NM
+					                     ,CITY_NM
+					                     ,DIST_NM
+					                     ,ADDR_DETL_CONT
+					                 FROM CR_0116T
+					                 WHERE DLR_CD = #{sDlrCd}
+					                 AND USE_YN = 'Y'
+					                 AND REF_TABLE_NM = 'CR_0101T'
+					                 AND FLAG_YN = 'Y'    
+					             ) ADDR ON CUST.DLR_CD = ADDR.DLR_CD AND CUST.CUST_NO = ADDR.REF_KEY_NM 
+					        LEFT OUTER JOIN (SELECT *
+					                                   FROM ( SELECT BP_CD AS CUST_NO, 
+					                                                 MB.MEMBERSHIP_NO,
+					                                                 MB.GRADE_CD,
+					                                                 LAST_POINT_VAL,
+					                                                 ROW_NUMBER( ) OVER (PARTITION BY CAR.BP_CD ORDER BY MB.REG_DT DESC ) AS RN
+					                                            FROM CR_0801T MB
+					                                           INNER JOIN SA_0123T CAR ON MB.DLR_CD = CAR.DLR_CD AND MB.VIN_NO = CAR.VIN_NO
+					                                           WHERE MB.DLR_CD = #{sDlrCd}
+					                                             AND CAR.USE_YN = 'Y' )
+					                                  WHERE RN = 1 ) DMB ON DMB.CUST_NO = CUST.CUST_NO  
+					      LEFT OUTER JOIN SE_0710T MT ON MT.VIN_NO = A.VIN_NO AND MT.CLAIM_TP='K' AND MT.CLAIM_STAT_CD ='A' AND MT.VIN_NO = A.VIN_NO
+					                                
+					                                  
+					   <where> 
+					      
+					       <if test='sSalesSpeStore == null or sSalesSpeStore == ""'>
+					            <if test='sDlrCd != null and sDlrCd != ""'>
+                                         A.DLR_CD = #{sDlrCd}
+                                </if>
+                            </if>
+                                 
+                                 <if test='sVinNo != null and sVinNo != ""'>
+                                        AND A.VIN_NO LIKE '%'|| #{sVinNo}||'%'
+                                 </if>
+                                 
+                                 <if test='sCarlineCd != null and sCarlineCd != ""'>
+                                        AND A.CARLINE_CD =  #{sCarlineCd}
+                                 </if>
+                                 
+                                 <if test='sCarRegNo != null and sCarRegNo != ""'>
+                                        AND A.CAR_REG_NO  LIKE  '%'|| #{sCarRegNo}||'%'
+                                 </if>
+                                           
+                                
+		                        
+		                        <if test='sSalesSpeStore != null and sSalesSpeStore != ""'>
+		                               <if test='sSalesSpeStore == "Y"'>
+		                                  AND A.ORD_DLR_CD = #{sDlrCd}
+		                               </if>
+		                                <if test='sSalesSpeStore == "N"'>
+		                                  AND A.ORD_DLR_CD != #{sDlrCd}
+		                               </if>
+		                        </if>
+		                        
+		                        <if test='sCarRunDistVal != null and sCarRunDistVal != ""'>
+		                             AND  A.CAR_RUN_DIST_VAL LIKE '%'|| #{sCarRunDistVal}||'%'
+		                        </if>
+                               
+                                <if test='sCustNo != null and sCustNo != ""'>
+		                             AND  CUST.CUST_NO LIKE '%'|| #{sCustNo}||'%'
+		                        </if>
+		                        
+		                        <if test='sCustTp != null and sCustTp != ""'>
+		                              AND CUST.CUST_TP = #{sCustTp} 
+		                        </if>
+		                        
+		                        <if test='sCustCd != null and sCustCd != ""'>
+		                              AND CUST.CUST_CD = #{sCustCd} 
+		                        </if>
+		                      
+		                        
+		                        <if test='sCustNm != null and sCustNm != ""'>
+		                            AND   CUST.CUST_NM LIKE '%'|| #{sCustNm} ||'%'
+		                        </if>
+		                        
+		                        <if test='sHpNo != null and sHpNo != ""'>
+		                              AND CUST.HP_NO LIKE '%'|| #{sHpNo} ||'%' 
+		                        </if>
+		                        
+		                        <if test='sSsnCrnNo != null and sSsnCrnNo != ""'>
+		                             AND  CUST.SSN_CRN_NO LIKE '%'|| #{sSsnCrnNo} ||'%' 
+		                        </if>
+		                        
+		                        <if test='sBlueMembershipNo != null and sBlueMembershipNo != ""'>
+		                           <if test='sBlueMembershipNo == "Y" '>
+					                   AND CUST.BLUE_MEMBERSHIP_NO  IS NOT NULL
+					               </if>
+					               <if test='sBlueMembershipNo == "N" '>
+					                    AND CUST.BLUE_MEMBERSHIP_NO IS NULL
+					               </if>
+		                        </if>
+		                        
+		                        
+		                        <if test='sBirthFromDt != null'>
+                                  
+                                   AND TO_NUMBER(REPLACE(NVL(CUST.BIRTH_DT,0),'-',''))  <![CDATA[>=]]> TO_NUMBER(#{sBirthFromDt})
+		                        </if>
+		                        
+		                        <if test='sBirthToDt != null'>
+		                            AND TO_NUMBER(REPLACE(NVL(CUST.BIRTH_DT,0),'-',''))  <![CDATA[<=]]> TO_NUMBER(#{sBirthToDt})
+		                        </if>
+		                        
+		                        <if test='sClaimFromConfDt != null'>
+                                   AND TO_CHAR(MT.CLAIM_CONFIRM_DT, 'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(#{sClaimFromConfDt}, 'YYYYMMDD')
+		                        </if>
+		                        
+		                        <if test='sClaimToConfDt != null'>
+		                            AND TO_CHAR(MT.CLAIM_CONFIRM_DT, 'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(#{sClaimToConfDt}, 'YYYYMMDD')
+		                        </if>
+		                        
+                             </where> 
+					       ) T  
+					       <where>
+					           <if test='sCarBrandCd != null and sCarBrandCd != ""'>
+					               <if test='sCarBrandCd == "BHMC" '>
+					                  T.CAR_BRAND_CD = #{sCarBrandCd}
+					               </if>
+					               <if test='sCarBrandCd != "BHMC" '>
+					                   T.CAR_BRAND_CD != 'BHMC'
+					               </if>
+					           </if>
+					           
+					           <if test='sWrrntFromEndDt != null'>
+                                   AND 
+                                   (TO_CHAR(T.WRRNT_END_DTM, 'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(#{sWrrntFromEndDt}, 'YYYYMMDD')
+                                   		OR TO_CHAR(T.SPEC_END_DT, 'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(#{sWrrntFromEndDt}, 'YYYYMMDD')
+                                   )
+		                        </if>
+		                        
+		                        <if test='sWrrntToEndDt != null'>
+		                            AND 
+		                            (TO_CHAR(T.WRRNT_END_DTM, 'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(#{sWrrntToEndDt}, 'YYYYMMDD')
+		                            	OR TO_CHAR(T.SPEC_END_DT, 'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(#{sWrrntToEndDt}, 'YYYYMMDD')
+		                        	)
+		                        </if>
+		                        
+		                        
+		                        <if test='sFiirFromCalcDt != null'>
+                                   AND TO_CHAR(T.FIRST_CALC_DT, 'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(#{sFiirFromCalcDt}, 'YYYYMMDD')
+		                        </if>
+		                        
+		                        <if test='sFiirToCalcDt != null'>
+		                            AND TO_CHAR(T.FIRST_CALC_DT, 'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(#{sFiirToCalcDt}, 'YYYYMMDD')
+		                        </if>
+		                        
+		                        
+		                        <if test='sLatelyFromCalcDt != null'>
+                                   AND TO_CHAR(T.LATELY_CALC_DT, 'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(#{sLatelyFromCalcDt}, 'YYYYMMDD')
+		                        </if>
+		                        
+		                        <if test='sLatelyToCalcDt != null'>
+		                            AND TO_CHAR(T.LATELY_CALC_DT, 'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(#{sLatelyToCalcDt}, 'YYYYMMDD')
+		                        </if>
+		                        
+		                         <if test='sDlrMbrYn != null and sDlrMbrYn != ""'>
+		                              <if test='sDlrMbrYn == "Y" '>
+		                                   AND  T.DLR_MBR_YN IS NOT NULL
+		                                </if>
+		                              <if test='sDlrMbrYn == "N" '>
+		                                   AND  T.DLR_MBR_YN IS  NULL
+		                               </if>
+		                        </if>
+		                        
+		                        
+		                        
+					        </where>
+					        
+            
+               
+    </select>
+    
+     <!-- 查询数据 -->
+     <select id="selectVehicleBaseinfoCondition" parameterType="VehicleBaseInfoSearchVO" resultType="VehicleBaseInfoVO">
+         /* [chn.bhmc.dms.crm.cif.service.dao.selectVehicleBaseinfoCondition] */  
+         
+         SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                   ,T1.* FROM (
+                SELECT T.*
+                       , DECODE(T.CAR_BRAND_CD, 'BHMC', '北京现代', '其他') AS CAR_BRAND_NM --车辆品牌
+                       , ROUND(T.AVE_DAI_MILE) AS AVE_MILE--平均行驶里程
+                       ,CASE WHEN T.SPEC_END_DT IS NULL THEN T.WRRNT_END_DTM ELSE T.SPEC_END_DT END AS WRRNT_END_DT --保修结束日期
+              FROM ( 
+					SELECT
+					    CUST.CUST_NO  --客户编号
+					   , CUST.CUST_TP --客户类型
+					   , FN_CMM_CD_NM('CRM001', CUST.CUST_TP, #{sLangCd}, 'N') AS CUST_TP_NM --客户类型
+					   , CUST.CUST_NM  --客户名
+					   , CUST.SEX_CD   --性别
+					   , FN_CMM_CD_NM('COM017', CUST.SEX_CD, #{sLangCd}, 'N') AS SEX_CD_NM --性别
+					   , CUST.BIRTH_DT --生日
+					   , CUST.AGE_DTL  --客户年龄
+					   , CUST.BLUE_MEMBERSHIP_NO --蓝缤会员
+					   , NVL2(CUST.BLUE_MEMBERSHIP_NO,'是','否') AS BLUE_MEMBERSHIP_NM --蓝缤会员
+					   , DMB.CUST_NO AS DLR_MBR_YN --自店会员
+					   , NVL2(DMB.CUST_NO,'是','否') AS DLR_MBR_NM -- 自店会员
+					   , CUST.CUST_CD  --潜客/保客
+					   , FN_CMM_CD_NM('CRM023', CUST.CUST_CD, #{sLangCd}, 'N') AS CUST_CD_NM
+					   , CUST.HP_NO    -- 移动电话
+					   , CUST.MATH_DOC_TP --证件类型
+					   , FN_CMM_CD_NM('CRM024', CUST.MATH_DOC_TP, #{sLangCd}, 'N') AS MATH_DOC_TP_NM ----证件类型
+					   , CUST.SSN_CRN_NO  --证件号码
+					   , ADDR.SUNG_NM  --sungNm 省/直辖市
+					   , ADDR.CITY_NM  -- 市
+					   , ADDR.DIST_NM  --distNm 地区
+					   , ADDR.ADDR_DETL_CONT --addrDetlCont  详细地址
+					   , A.VIN_NO  --车辆识别码
+					   , A.CARLINE_CD  --车种名称代码
+					   , FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM_NC --车种名称
+					   , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM -- 车种名称
+					   , A.MODEL_CD
+					   , A.OCN_CD
+					   , FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD) AS MODEL_NM --车款名称
+					   , A.ENGIN_MODEL_CD  --发动机型号代码
+					   , A.ENGIN_MODEL_CD || A.ENGIN_SERIAL_NO AS ENGIN_SERIAL_NO --发动机号码
+					   , A.CAR_REG_NO --车牌号
+					   , CASE WHEN A.NCAR_DSTIN_CD = 'N' THEN 'BHMC'
+					                            ELSE ( SELECT Z8.CMM_CD_NM
+					                                     FROM (SELECT A.CMM_CD
+					                                                , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+					                                             FROM CM_0303T A
+					                                        LEFT OUTER JOIN CM_0304T B
+					                                                    ON A.CMM_GRP_CD = B.CMM_GRP_CD
+					                                                   AND A.CMM_CD = B.CMM_CD
+					                                                   AND B.LANG_CD = #{sLangCd}
+					                                             WHERE A.CMM_GRP_CD = 'COM019'  
+					                                               AND A.USE_YN = 'Y'
+					                                             ) Z8
+					                                     WHERE A.CAR_BRAND_CD = Z8.CMM_CD
+					                                   ) END CAR_BRAND_CD --车辆品牌
+					     , NVL(A.CAR_RUN_DIST_VAL,0) AS CAR_RUN_DIST_VAL --累计行驶里程
+					     , A.ORD_DLR_CD   AS  SALES_SPE_STORE --销售特约店
+					     , A.DLR_CD       AS DLR_CD    --店代码
+					     , A.CUST_SALE_DT --零售日期
+					     , A.GRTE_START_DT --保修开始日期
+					     , A.GRTE_END_DT   --保修结束日期
+					     , CASE WHEN (SELECT COUNT(1) FROM SE_1151T WHERE VIN_NO = A.VIN_NO) > 0 THEN  
+					     ( SELECT ADD_MONTHS(A.GRTE_START_DT,NORM_WARR_PER)-1  FROM (
+					        SELECT S.NORM_WARR_PER FROM SE_1151T S  WHERE S.VIN_NO = A.VIN_NO
+					     ) )  
+				         END  AS SPEC_END_DT --特殊车辆保修结束日期
+					      ,( SELECT ADD_MONTHS(A.GRTE_START_DT -1 ,CASE WHEN A.CAR_DSTIN_CD ='P' THEN LMT_MM ELSE TAXI_LMT_MM END ) AS WRRNT_END_DT
+					               FROM (SELECT CASE WHEN LMT_MM IS NULL THEN A_LMT_MM ELSE LMT_MM END LMT_MM
+					                     ,CASE WHEN TAXI_LMT_MM IS NULL THEN A_TAXI_LMT_MM ELSE TAXI_LMT_MM END TAXI_LMT_MM
+					                 FROM (SELECT MAX(CASE WHEN M.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(A.VIN_NO) FROM DUAL) THEN LMT_MM END)                AS LMT_MM
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(A.VIN_NO) FROM DUAL) THEN LMT_RUN_DIST_VAL END)      AS LMT_RUN_DIST_VAL
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(A.VIN_NO) FROM DUAL) THEN TAXI_LMT_RUN_DIST_VAL END) AS TAXI_LMT_RUN_DIST_VAL
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(A.VIN_NO) FROM DUAL) THEN TAXI_LMT_MM END)           AS TAXI_LMT_MM
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD ='ALL' THEN LMT_MM END)                          AS A_LMT_MM
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD ='ALL' THEN LMT_RUN_DIST_VAL END)                AS A_LMT_RUN_DIST_VAL
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD ='ALL' THEN TAXI_LMT_RUN_DIST_VAL END)           AS A_TAXI_LMT_RUN_DIST_VAL
+					                             ,MAX(CASE WHEN M.LTS_MODEL_CD ='ALL' THEN TAXI_LMT_MM END)                     AS A_TAXI_LMT_MM
+					                         FROM SE_1120T M
+					                        WHERE (M.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(A.VIN_NO) FROM DUAL) OR LTS_MODEL_CD ='ALL' )
+					                          AND TO_DATE( TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+					                          AND WART_RPIR_TP ='W'
+					                )
+					             )
+					           ) AS  WRRNT_END_DTM -- 保修结束日期
+					         /**
+					        ,(
+					           SELECT S.CLAIM_CONFIRM_DT AS CLAIM_CONFIRM_DT FROM SE_0710T S
+					                      WHERE S.CLAIM_TP='K' AND S.CLAIM_STAT_CD ='A' AND S.VIN_NO = A.VIN_NO AND S.DLR_CD=A.DLR_CD
+					        ) AS CLAIM_CONFIRM_DT -- 本店首保承认时间
+					        **/
+					        ,MT.CLAIM_CONFIRM_DT -- 本店首保承认时间
+					        ,(
+					                SELECT 
+					                     CASE WHEN (TO_DATE(S.CALC_DT,'YYYY-MM-DD')-TO_DATE(M.CALC_DT,'YYYY-MM-DD')) = 0 THEN 0
+					                     ELSE 
+										 (S.GI_RUN_DIST_VAL - M.GI_RUN_DIST_VAL) / (TO_DATE(S.CALC_DT,'YYYY-MM-DD')-TO_DATE(M.CALC_DT,'YYYY-MM-DD'))   END --平均日行驶里程 AS  AVE_DAI_MILE
+										FROM
+										   (
+										     
+										        SELECT F.GI_RUN_DIST_VAL,F.CALC_DT FROM ( 
+										                   SELECT 
+										                            C.GI_RUN_DIST_VAL --最后一次交车时行驶里程
+										                            ,D.CALC_DT  --最后一次结算完成时间 
+										                              FROM  SE_0300T C ,SE_0500T D
+										                   WHERE     
+										                          C.DLR_CD    = D.DLR_CD
+										                          AND C.RO_DOC_NO = D.RO_DOC_NO
+										                          AND C.DLR_CD    =  A.DLR_CD      
+										                          AND C.RO_STAT_CD IN ('00','05') 
+										                          AND C.VIN_NO =  A.VIN_NO
+										                          AND  SUBSTR(C.RO_DOC_NO,1,2)  ='RO'
+										                          AND C.RO_DT > A.CUST_SALE_DT -- 工单日期 大于零售日期
+										        ORDER BY D.CALC_DT DESC  --结算日期
+										        ) F WHERE  ROWNUM = 1
+										        
+										   )S,
+										   ( 
+										          SELECT F.GI_RUN_DIST_VAL,F.CALC_DT FROM ( 
+										                   SELECT 
+										                            C.GI_RUN_DIST_VAL --第一次交车时行驶里程
+										                            ,D.CALC_DT  --第一次结算完成时间 
+										                              FROM  SE_0300T C ,SE_0500T D
+										                   WHERE     
+										                          C.DLR_CD    = D.DLR_CD
+										                          AND C.RO_DOC_NO = D.RO_DOC_NO
+										                          AND C.DLR_CD    =  A.DLR_CD   
+										                          AND C.RO_STAT_CD IN ('00','05') 
+										                          AND C.VIN_NO = A.VIN_NO 
+										                          AND   SUBSTR(C.RO_DOC_NO,1,2)  ='RO'
+										                          AND C.RO_DT > A.CUST_SALE_DT  --工单日期 大于零售日期
+										        ORDER BY D.CALC_DT   --结算日期
+										        ) F WHERE  ROWNUM = 1
+										   )M
+					        ) AS AVE_DAI_MILE --平均日行驶里程
+					       ,( SELECT F.RO_DOC_NO FROM ( 
+										                   SELECT 
+										                            C.RO_DOC_NO --首次维修委托号码
+										                            FROM  SE_0300T C ,SE_0500T D
+										                   WHERE     
+										                          C.DLR_CD    = D.DLR_CD
+										                          AND C.RO_DOC_NO = D.RO_DOC_NO
+										                          AND C.DLR_CD    =  #{sDlrCd}   
+										                          AND C.RO_STAT_CD IN ('00','05') 
+										                          AND C.VIN_NO= A.VIN_NO
+										                          AND SUBSTR(C.RO_DOC_NO,1,2)  ='RO'
+										                          AND C.RO_DT > A.CUST_SALE_DT  --工单日期 大于零售日期
+										        ORDER BY D.CALC_DT   --结算日期
+										        
+										        ) F WHERE  ROWNUM = 1
+										 ) AS FIRST_RO_DOC_NO --首次维修委托号码
+						      , ( SELECT F.CALC_DT FROM ( 
+										                   SELECT 
+										                            D.CALC_DT --首次维修的结算完成时间
+										                            FROM  SE_0300T C ,SE_0500T D
+										                   WHERE     
+										                          C.DLR_CD    = D.DLR_CD
+										                          AND C.RO_DOC_NO = D.RO_DOC_NO
+										                          AND C.DLR_CD    =  #{sDlrCd}   
+										                          AND C.RO_STAT_CD IN ('00','05') 
+										                          AND C.VIN_NO= A.VIN_NO
+										                          AND  SUBSTR(C.RO_DOC_NO,1,2)  ='RO'
+										                          AND C.RO_DT > A.CUST_SALE_DT  --工单日期 大于零售日期
+										        ORDER BY D.CALC_DT   --结算日期
+										        
+										        ) F WHERE  ROWNUM = 1
+										 ) AS FIRST_CALC_DT --首次维修的结算完成时间
+										 ,( SELECT F.RO_DOC_NO FROM ( 
+										                   SELECT 
+										                            C.RO_DOC_NO --最近维修委托号码
+										                            FROM  SE_0300T C ,SE_0500T D
+										                   WHERE     
+										                          C.DLR_CD    = D.DLR_CD
+										                          AND C.RO_DOC_NO = D.RO_DOC_NO
+										                          --AND C.RO_TP     = D.RO_TP
+										                          AND C.DLR_CD    =  #{sDlrCd}   
+										                          AND C.RO_STAT_CD IN ('00','05') 
+										                          AND C.VIN_NO= A.VIN_NO 
+										                          AND   SUBSTR(C.RO_DOC_NO,1,2)  ='RO'
+										                          AND C.RO_DT > A.CUST_SALE_DT  --工单日期 大于零售日期
+										        ORDER BY D.CALC_DT DESC  --结算日期
+										        ) F WHERE  ROWNUM = 1
+										 ) AS LATELY_RO_DOC_NO --最近维修委托号码
+						      , ( SELECT F.CALC_DT FROM ( 
+										                   SELECT 
+										                            D.CALC_DT --最近维修的结算完成时间
+										                            FROM  SE_0300T C ,SE_0500T D
+										                   WHERE     
+										                          C.DLR_CD    = D.DLR_CD
+										                          AND C.RO_DOC_NO = D.RO_DOC_NO
+										                          AND C.DLR_CD    =  #{sDlrCd}   
+										                          AND C.RO_STAT_CD IN ('00','05') 
+										                          AND C.VIN_NO= A.VIN_NO
+										                          AND   SUBSTR(C.RO_DOC_NO,1,2)  ='RO'
+										                          AND C.RO_DT > A.CUST_SALE_DT  --工单日期 大于零售日期
+										        ORDER BY D.CALC_DT DESC  --结算日期
+										        ) F WHERE  ROWNUM = 1
+										 ) AS LATELY_CALC_DT --最近维修的结算完成时间
+					        
+					 FROM  CR_0101T CUST 
+					  INNER JOIN
+                            (  SELECT *
+                               FROM ( SELECT 
+                                             CAR.BP_CD
+                                             ,CMST.*
+                                        FROM SA_0123T CAR
+                                       INNER JOIN SA_0121T CMST ON CAR.CAR_ID = CMST.CAR_ID
+                                       AND CMST.CAR_STAT_CD IN('60','70') -- 车辆状态 只查零售和库存的
+                                       WHERE CAR.DLR_CD = #{sDlrCd}
+                                            AND CAR.USE_YN = 'Y'
+                                   <if test='sCustFromSaveDt != null'>
+                                              AND TO_CHAR(CMST.CUST_SALE_DT, 'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(#{sCustFromSaveDt}, 'YYYYMMDD')
+		                           </if>
+		                        
+		                          <if test='sCustToSaveDt != null'>
+		                               AND TO_CHAR(CMST.CUST_SALE_DT, 'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(#{sCustToSaveDt}, 'YYYYMMDD')
+		                           </if>
+                                          
+                                   )
+                                  
+                            ) A ON A.BP_CD = CUST.CUST_NO
+					  LEFT OUTER JOIN (
+					                 SELECT
+					                      ROW_NUMBER() OVER(PARTITION BY  DLR_CD, REF_TABLE_NM, REF_KEY_NM  ORDER BY NVL(UPDT_DT, REG_DT) DESC ) AS ADDR_NUM
+					                     ,DLR_CD
+					                     ,SEQ
+					                     ,REF_TABLE_NM
+					                     ,REF_KEY_NM
+					                     ,ADDR_TP
+					                     ,SUNG_CD
+					                     ,CITY_CD
+					                     ,DIST_CD
+					                     ,ZIP_CD
+					                     ,SUNG_NM
+					                     ,CITY_NM
+					                     ,DIST_NM
+					                     ,ADDR_DETL_CONT
+					                 FROM CR_0116T
+					                 WHERE DLR_CD = #{sDlrCd}
+					                 AND USE_YN = 'Y'
+					                 AND REF_TABLE_NM = 'CR_0101T'
+					                 AND FLAG_YN = 'Y'    
+					             ) ADDR ON CUST.DLR_CD = ADDR.DLR_CD AND CUST.CUST_NO = ADDR.REF_KEY_NM 
+					        LEFT OUTER JOIN (SELECT *
+					                                   FROM ( SELECT BP_CD AS CUST_NO, 
+					                                                 MB.MEMBERSHIP_NO,
+					                                                 MB.GRADE_CD,
+					                                                 LAST_POINT_VAL,
+					                                                 ROW_NUMBER( ) OVER (PARTITION BY CAR.BP_CD ORDER BY MB.REG_DT DESC ) AS RN
+					                                            FROM CR_0801T MB
+					                                           INNER JOIN SA_0123T CAR ON MB.DLR_CD = CAR.DLR_CD AND MB.VIN_NO = CAR.VIN_NO
+					                                           WHERE MB.DLR_CD = #{sDlrCd}
+					                                             AND CAR.USE_YN = 'Y' )
+					                                  WHERE RN = 1 ) DMB ON DMB.CUST_NO = CUST.CUST_NO
+					                                  LEFT OUTER JOIN SE_0710T MT ON MT.VIN_NO = A.VIN_NO AND MT.CLAIM_TP='K' AND MT.CLAIM_STAT_CD ='A' AND MT.VIN_NO = A.VIN_NO   
+					                                
+					                                  
+					   <where>  
+					       <if test='sSalesSpeStore == null or sSalesSpeStore == ""'>
+					            <if test='sDlrCd != null and sDlrCd != ""'>
+                                          A.DLR_CD = #{sDlrCd}
+                                </if>
+                            </if>
+                                 
+                                 <if test='sVinNo != null and sVinNo != ""'>
+                                        AND A.VIN_NO LIKE '%'|| #{sVinNo}||'%'
+                                 </if>
+                                 
+                                 <if test='sCarlineCd != null and sCarlineCd != ""'>
+                                        AND A.CARLINE_CD =  #{sCarlineCd}
+                                 </if>
+                                 
+                                 <if test='sCarRegNo != null and sCarRegNo != ""'>
+                                        AND A.CAR_REG_NO  LIKE  '%'|| #{sCarRegNo}||'%'
+                                 </if>
+                                           
+		                        
+		                        <if test='sSalesSpeStore != null and sSalesSpeStore != ""'>
+		                               <if test='sSalesSpeStore == "Y"'>
+		                                  AND A.ORD_DLR_CD = #{sDlrCd}
+		                               </if>
+		                                <if test='sSalesSpeStore == "N"'>
+		                                  AND A.ORD_DLR_CD != #{sDlrCd}
+		                               </if>
+		                        </if>
+		                        
+		                        <if test='sCarRunDistVal != null and sCarRunDistVal != ""'>
+		                             AND  A.CAR_RUN_DIST_VAL LIKE '%'|| #{sCarRunDistVal}||'%'
+		                        </if>
+                               
+                                <if test='sCustNo != null and sCustNo != ""'>
+		                             AND  CUST.CUST_NO LIKE '%'|| #{sCustNo}||'%'
+		                        </if>
+		                        
+		                        <if test='sCustTp != null and sCustTp != ""'>
+		                              AND CUST.CUST_TP = #{sCustTp} 
+		                        </if>
+		                        
+		                        <if test='sCustCd != null and sCustCd != ""'>
+		                              AND CUST.CUST_CD = #{sCustCd} 
+		                        </if>
+		                      
+		                        
+		                        <if test='sCustNm != null and sCustNm != ""'>
+		                            AND   CUST.CUST_NM LIKE '%'|| #{sCustNm} ||'%'
+		                        </if>
+		                        
+		                        <if test='sHpNo != null and sHpNo != ""'>
+		                              AND CUST.HP_NO LIKE '%'|| #{sHpNo} ||'%' 
+		                        </if>
+		                        
+		                        <if test='sSsnCrnNo != null and sSsnCrnNo != ""'>
+		                             AND  CUST.SSN_CRN_NO LIKE '%'|| #{sSsnCrnNo} ||'%' 
+		                        </if>
+		                        
+		                        <if test='sBlueMembershipNo != null and sBlueMembershipNo != ""'>
+		                           <if test='sBlueMembershipNo == "Y" '>
+					                    AND CUST.BLUE_MEMBERSHIP_NO  IS NOT NULL
+					               </if>
+					               <if test='sBlueMembershipNo == "N" '>
+					                    AND CUST.BLUE_MEMBERSHIP_NO IS NULL
+					               </if>
+		                        </if>
+		                        
+		                        
+		                        <if test='sBirthFromDt != null and sBirthFromDt != ""'>
+                                  
+                                   AND TO_NUMBER(REPLACE(NVL(CUST.BIRTH_DT,0),'-',''))  <![CDATA[>=]]> TO_NUMBER(#{sBirthFromDt})
+		                        </if>
+		                        
+		                        <if test='sBirthToDt != null and sBirthToDt != ""'>
+		                            AND TO_NUMBER(REPLACE(NVL(CUST.BIRTH_DT,0),'-',''))  <![CDATA[<=]]> TO_NUMBER(#{sBirthToDt})
+		                        </if>
+		                        
+		                        <if test='sClaimFromConfDt != null'>
+                                   AND TO_CHAR(MT.CLAIM_CONFIRM_DT, 'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(#{sClaimFromConfDt}, 'YYYYMMDD')
+		                        </if>
+		                        
+		                        <if test='sClaimToConfDt != null'>
+		                            AND TO_CHAR(MT.CLAIM_CONFIRM_DT, 'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(#{sClaimToConfDt}, 'YYYYMMDD')
+		                        </if>
+		                        
+		                       </where>
+                                 
+					       ) T  
+					       <where>
+					           <if test='sCarBrandCd != null and sCarBrandCd != ""'>
+					               <if test='sCarBrandCd == "BHMC" '>
+					                  T.CAR_BRAND_CD = #{sCarBrandCd}
+					               </if>
+					               <if test='sCarBrandCd != "BHMC" '>
+					                   T.CAR_BRAND_CD != 'BHMC'
+					               </if>
+					           </if>
+					           
+					           <if test='sWrrntFromEndDt != null'>
+                                   AND 
+                                   (TO_CHAR(T.WRRNT_END_DTM, 'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(#{sWrrntFromEndDt}, 'YYYYMMDD')
+                                   		OR TO_CHAR(T.SPEC_END_DT, 'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(#{sWrrntFromEndDt}, 'YYYYMMDD')
+		                            )
+		                        </if>
+		                        
+		                        <if test='sWrrntToEndDt != null'>
+		                            AND 
+		                            (TO_CHAR(T.WRRNT_END_DTM, 'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(#{sWrrntToEndDt}, 'YYYYMMDD')
+		                            	OR TO_CHAR(T.SPEC_END_DT, 'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(#{sWrrntToEndDt}, 'YYYYMMDD')
+		                        	 )
+		                        </if>
+		                        
+		                        
+		                        <if test='sFiirFromCalcDt != null'>
+                                   AND TO_CHAR(T.FIRST_CALC_DT, 'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(#{sFiirFromCalcDt}, 'YYYYMMDD')
+		                        </if>
+		                        
+		                        <if test='sFiirToCalcDt != null'>
+		                            AND TO_CHAR(T.FIRST_CALC_DT, 'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(#{sFiirToCalcDt}, 'YYYYMMDD')
+		                        </if>
+		                        
+		                        
+		                        <if test='sLatelyFromCalcDt != null'>
+                                   AND TO_CHAR(T.LATELY_CALC_DT, 'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(#{sLatelyFromCalcDt}, 'YYYYMMDD')
+		                        </if>
+		                        
+		                        <if test='sLatelyToCalcDt != null'>
+		                            AND TO_CHAR(T.LATELY_CALC_DT, 'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(#{sLatelyToCalcDt}, 'YYYYMMDD')
+		                        </if>
+		                        
+		                         <if test='sDlrMbrYn != null and sDlrMbrYn != ""'>
+		                              <if test='sDlrMbrYn == "Y" '>
+		                                   AND  T.DLR_MBR_YN IS NOT NULL
+		                               </if>
+		                              <if test='sDlrMbrYn == "N" '>
+		                                   AND  T.DLR_MBR_YN IS  NULL
+		                              </if>
+		                        </if>
+		                        
+		                        
+		                        
+					        </where>
+					        ORDER BY
+                      <choose>
+                      <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "custNo"'>              T.CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                                <when test='item.field == "vinNo"'>               T.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "custTp"'>              T.CUST_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                                <when test='item.field == "custNm"'>              T.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                                <when test='item.field == "sexCd"'>               T.SEX_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "birthDt"'>             T.BIRTH_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "ageDtl"'>              T.AGE_DTL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "blueMembershipNo"'>    T.BLUE_MEMBERSHIP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "dlrMbrYn"'>            T.DLR_MBR_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "custCd"'>              T.CUST_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "hpNo"'>                T.HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "mathDocTp"'>           T.MATH_DOC_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "ssnCrnNo"'>            T.SSN_CRN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "sungNm"'>              T.SUNG_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "cityNm"'>              T.CITY_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "distNm"'>              T.DIST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "addrDetlCont"'>        T.ADDR_DETL_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "carlineCd"'>           T.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "carlineNm"'>           T.CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "modelCd"'>             T.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "modelNm"'>             T.MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "ocnCd"'>               T.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "enginSerialNo"'>       T.ENGIN_SERIAL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "enginModelCd"'>        T.ENGIN_MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "carRegNo"'>            T.CAR_REG_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "carBrandCd"'>          T.CAR_BRAND_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "carRunDistVal"'>       T.CAR_RUN_DIST_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "salesSpeStore"'>       T.SALES_SPE_STORE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "dlrCd"'>               T.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "custSaleDt"'>          T.CUST_SALE_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "grteStartDt"'>         T.GRTE_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "grteEndDt"'>           T.GRTE_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "wrrntEndDt"'>          T.WRRNT_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "claimConfirmDt"'>      T.CLAIM_CONFIRM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "aveDaiMile"'>          T.AVE_DAI_MILE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "firstRoDocNo"'>        T.FIRST_RO_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "firstCalcDt"'>         T.FIRST_CALC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "latelyRoDocNo"'>       T.LATELY_RO_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "latelyCalcDt"'>        T.LATELY_CALC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <otherwise>
+                                     T.CUST_SALE_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                          T.CUST_SALE_DT DESC
+                    </otherwise>
+                </choose>
+                ) T1
+                <where>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        ROWNUM <![CDATA[<=]]> #{lastIndex}
+                    </if>
+                </where>
+            )
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    RNUM > #{firstIndex}
+                </if>
+            </where>
+         
+    </select>
+</mapper>

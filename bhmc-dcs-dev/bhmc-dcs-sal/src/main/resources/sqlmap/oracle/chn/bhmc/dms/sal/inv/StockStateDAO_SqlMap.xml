@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.inv.service.dao.StockStateDAO">
+
+    <!--  목록 갯수  -->
+    <select id="selectStockStatesByConditionCnt" parameterType="StockStateSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM (
+                 SELECT SUM(1) AS CNT
+                   FROM SA_0121T A
+                  WHERE A.NCAR_DSTIN_CD = 'N'           -- 신차
+                  <if test='sDlrCd != null and sDlrCd != ""'>
+                    AND A.DLR_CD =  #{sDlrCd}           -- 딜러코드
+                  </if>
+                  <if test='sStockTpDS != null and sStockTpDS != ""'>
+                    AND A.STOCK_TP = #{sStockTpDS}      -- 재고유형
+                  </if>
+                  <if test='sCmpCarYn != null and sCmpCarYn != ""'>
+                    AND A.CMP_CAR_YN = #{sCmpCarYn}    -- 회사차여부
+                  </if>
+                  <if test='sCmpCarDstinCd != null and sCmpCarDstinCd != ""'>
+                    AND A.CMP_CAR_DSTIN_CD = #{sCmpCarDstinCd} -- 회사차구분
+                  </if>
+                  <if test='sVinNo != null and sVinNo != ""'>
+                    <choose>
+                      <when test='@org.apache.commons.lang3.StringUtils@contains(sVinNo,"*")'>
+                         <bind name='sVinNo' value='@org.apache.commons.lang3.StringUtils@replace(sVinNo, "*", "%")' />
+                          AND A.VIN_NO LIKE #{sVinNo}
+                      </when>
+                      <otherwise>
+                          AND A.VIN_NO = #{sVinNo}
+                      </otherwise>
+                    </choose>
+                  </if>
+                  <if test='sStrgeCd != null and sStrgeCd != ""'>
+                    AND A.STRGE_CD = #{sStrgeCd}         -- 창고
+                  </if>
+                  <if test='sLocCd != null and sLocCd != ""'>
+                    AND A.LOC_CD =  #{sLocCd}           -- 위치
+                  </if>
+                  <if test='sCarlineCd != null and sCarlineCd != ""'>
+                    AND A.CARLINE_CD =  #{sCarlineCd}
+                  </if>
+                  <if test='sModelCd != null and sModelCd != ""'>
+                    AND A.MODEL_CD =  #{sModelCd}
+                  </if>
+                  <if test='sOcnCd != null and sOcnCd != ""'>
+                    AND A.OCN_CD =  #{sOcnCd}
+                  </if>
+                  <if test='sExtColorCd != null and sExtColorCd != ""'>
+                    AND A.EXT_COLOR_CD =  #{sExtColorCd}
+                  </if>
+                  <if test='sIntColorCd != null and sIntColorCd != ""'>
+                    AND A.INT_COLOR_CD =   #{sIntColorCd}
+                  </if>
+                  <if test='salMng != null and salMng == "Y"'>
+                    AND A.CAR_STAT_CD = '60'
+                    AND NVL(A.DAMAGE_CD, '02')  = '02'         /* SAL049 : 02 비손상 */
+                    AND NVL(A.CMP_CAR_YN, 'N') = 'N'           -- 회사차여부
+
+                    --AND A.STOCK_TP    = '02'                 /* SAL074 재고유형 */
+                    --AND NVL(A.OWN_STAT_CD, 'O') = 'O'        /* 미배정_임시배정 */
+                  </if>
+
+                   GROUP BY A.CARLINE_CD, A.MODEL_CD, A.OCN_CD, A.EXT_COLOR_CD, A.INT_COLOR_CD
+               )
+    </select>
+
+	<!-- 재고상태관리 조회 목록  -->
+	<select id="selectStockStatesByCondition" parameterType="StockStateSearchVO" resultType="StockStateVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_CARLINE_NM_NC(T1.CARLINE_CD) AS CARLINE_NM
+                 , FN_GET_MODEL_NM_NC(T1.MODEL_CD) AS MODEL_NM
+                 , FN_GET_OCN_NM_NC(T1.MODEL_CD, T1.OCN_CD) AS OCN_NM
+                 , FN_GET_EXT_COLOR_NM_NC(T1.EXT_COLOR_CD) AS EXT_COLOR_NM
+                 , FN_GET_INT_COLOR_NM_NC(T1.INT_COLOR_CD) AS INT_COLOR_NM
+                 , T1.*
+              FROM (
+                SELECT A.CARLINE_CD
+                     , A.MODEL_CD
+                     , A.OCN_CD
+                     , A.EXT_COLOR_CD
+                     , A.INT_COLOR_CD
+                     , SUM(1) AS CNT
+                  FROM SA_0121T A
+                 WHERE A.NCAR_DSTIN_CD = 'N'           -- 신차
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND A.DLR_CD =  #{sDlrCd}           -- 딜러코드
+                 </if>
+                 <if test='sStockTpDS != null and sStockTpDS != ""'>
+                   AND A.STOCK_TP = #{sStockTpDS}      -- 재고유형
+                 </if>
+                 <if test='sCmpCarYn != null and sCmpCarYn != ""'>
+                   AND A.CMP_CAR_YN = #{sCmpCarYn}    -- 회사차여부
+                 </if>
+                 <if test='sCmpCarDstinCd != null and sCmpCarDstinCd != ""'>
+                   AND A.CMP_CAR_DSTIN_CD = #{sCmpCarDstinCd} -- 회사차구분
+                 </if>
+                 <if test='sVinNo != null and sVinNo != ""'>
+                   <choose>
+                     <when test='@org.apache.commons.lang3.StringUtils@contains(sVinNo,"*")'>
+                        <bind name='sVinNo' value='@org.apache.commons.lang3.StringUtils@replace(sVinNo, "*", "%")' />
+                         AND A.VIN_NO LIKE #{sVinNo}
+                     </when>
+                     <otherwise>
+                         AND A.VIN_NO = #{sVinNo}
+                     </otherwise>
+                   </choose>
+                 </if>
+                 <if test='sStrgeCd != null and sStrgeCd != ""'>
+                   AND A.STRGE_CD = #{sStrgeCd}         -- 창고
+                 </if>
+                 <if test='sLocCd != null and sLocCd != ""'>
+                   AND A.LOC_CD =  #{sLocCd}           -- 위치
+                 </if>
+                 <if test='sCarlineCd != null and sCarlineCd != ""'>
+                   AND A.CARLINE_CD =  #{sCarlineCd}
+                 </if>
+                 <if test='sModelCd != null and sModelCd != ""'>
+                   AND A.MODEL_CD =  #{sModelCd}
+                 </if>
+                 <if test='sOcnCd != null and sOcnCd != ""'>
+                   AND A.OCN_CD =  #{sOcnCd}
+                 </if>
+                 <if test='sExtColorCd != null and sExtColorCd != ""'>
+                   AND A.EXT_COLOR_CD =  #{sExtColorCd}
+                 </if>
+                 <if test='sIntColorCd != null and sIntColorCd != ""'>
+                   AND A.INT_COLOR_CD =   #{sIntColorCd}
+                 </if>
+                 <if test='salMng != null and salMng == "Y"'>
+                    AND A.CAR_STAT_CD = '60'
+                    AND NVL(A.DAMAGE_CD, '02')  = '02'         /* SAL049 : 02 비손상 */
+                    AND NVL(A.CMP_CAR_YN, 'N') = 'N'           -- 회사차여부
+
+                    --AND A.STOCK_TP    = '02'                   /* SAL074 재고유형 */
+                    --AND NVL(A.OWN_STAT_CD, 'O') = 'O'          /* 미배정_임시배정 */
+                 </if>
+
+                  GROUP BY A.CARLINE_CD, A.MODEL_CD, A.OCN_CD, A.EXT_COLOR_CD, A.INT_COLOR_CD
+                  ORDER BY
+                  <choose>
+                     <when test='sort != null'>
+                         <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                             <choose>
+                                 <when test='item.field == "carlineCd"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "modelCd"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "ocnCd"'>A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "extColorCd"'>A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "intColorCd"'>A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "cnt"'>CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <otherwise>
+                                     A.CARLINE_CD ASC
+                                 </otherwise>
+                             </choose>
+                          </foreach>
+                     </when>
+                     <otherwise>
+                             A.CARLINE_CD ASC
+                     </otherwise>
+                 </choose>
+         ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+
+	</select>
+
+    <!-- 재고상태관리 상세 갯수조회 -->
+    <select id="selectStockStateSubsByConditionCnt" parameterType="StockStateSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0121T A
+         WHERE A.NCAR_DSTIN_CD = 'N'          -- 신차
+        <if test='sDlrCd != null and sDlrCd != ""'>
+          AND A.DLR_CD =  #{sDlrCd}           -- 딜러코드
+        </if>
+        <if test='sCarlineCd != null and sCarlineCd != ""'>
+          AND A.CARLINE_CD =  #{sCarlineCd}
+        </if>
+        <if test='sModelCd != null and sModelCd != ""'>
+          AND A.MODEL_CD =  #{sModelCd}
+        </if>
+        <if test='sOcnCd != null and sOcnCd != ""'>
+          AND A.OCN_CD =  #{sOcnCd}
+        </if>
+        <if test='sExtColorCd != null and sExtColorCd != ""'>
+          AND A.EXT_COLOR_CD =  #{sExtColorCd}
+        </if>
+        <if test='sIntColorCd != null and sIntColorCd != ""'>
+          AND A.INT_COLOR_CD =   #{sIntColorCd}
+        </if>
+        <if test='salMng != null and salMng == "Y"'>
+          AND A.CAR_STAT_CD = '60'
+          AND NVL(A.DAMAGE_CD, '02')  = '02'         /* SAL049 : 02 비손상 */
+          AND NVL(A.CMP_CAR_YN, 'N') = 'N'           -- 회사차여부
+
+          --AND A.STOCK_TP    = '02'                 /* SAL074 재고유형 */
+          --AND NVL(A.OWN_STAT_CD, 'O') = 'O'        /* 미배정_임시배정 */
+        </if>
+    </select>
+    <!-- 재고상태관리 상세조회 -->
+    <select id="selectStockStateSubsByCondition" parameterType="StockStateSearchVO" resultType="StockStateVO">
+        SELECT A.VIN_NO             -- 차대번호
+             , A.NCAR_DSTIN_CD      -- 신차량구분코드
+
+             , A.STOCK_TP           -- 재고유형
+             , NVL(A.CMP_CAR_YN, ' ') AS CMP_CAR_YN                -- 회사차여부
+             , NVL(A.CMP_CAR_DSTIN_CD, ' ') AS CMP_CAR_DSTIN_CD    -- 회사차구분
+             , NVL(A.STRGE_CD, ' ') AS STRGE_CD           -- 창고
+             , NVL(A.LOC_CD, ' ') AS LOC_CD               -- 위치
+             , NVL(B.LOC_NM, ' ') AS LOC_NM
+
+             , A.STOCK_TP           AS BF_STOCK_TP
+             , A.CMP_CAR_YN         AS BF_CMP_CAR_YN
+             , A.CMP_CAR_DSTIN_CD   AS BF_CMP_CAR_DSTIN_CD
+             , A.STRGE_CD           AS BF_STRGE_CD
+             , A.LOC_CD             AS BF_LOC_CD
+
+             , A.CARLINE_CD
+             , FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM
+             , A.MODEL_CD
+             , FN_GET_MODEL_NM_NC(A.MODEL_CD) AS MODEL_NM
+             , A.OCN_CD
+             , FN_GET_OCN_NM_NC(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+             , A.EXT_COLOR_CD
+             , FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+             , A.INT_COLOR_CD
+             , FN_GET_INT_COLOR_NM_NC(A.INT_COLOR_CD) AS INT_COLOR_NM
+             , A.CAR_STAT_CD     -- 차량상태
+             , A.OWN_STAT_CD     -- 보유상태
+             , A.ORD_TP          -- 주문유형
+             , A.ENGIN_MODEL_CD  -- 엔진번호
+             , A.CERT_NO         -- 합격증번호
+             , A.GR_DT           -- 입고일자
+             , A.DLR_CD
+
+             , NVL(A.MM_CNT, 0) AS MM_CNT   -- 재고월령
+             , CASE WHEN NVL(A.MM_CNT, 0) <![CDATA[<=]]> 1 then '#ffe0d9'
+                    WHEN NVL(A.MM_CNT, 0) <![CDATA[<=]]> 2 then '#fff4c9'
+                    ELSE '#e5f5fa'
+               END AS MM_CNT_COLOR
+
+            , A.ORD_DLR_YY_MM_DT   -- 주문년월
+            , A.ORD_MM_DT          -- 주문일
+            , A.MANUFACT_YY_MM_DT  -- 생산일자
+            , A.CAR_VIN_ALLOC_DT   -- 배정일자
+            , A.PLT_GI_DT          -- 출고일자
+
+            , A.RETL_PRC   -- 구매가격
+            , A.WHSL_PRC   -- 지도가격
+            , A.DDCT_RATE  -- 공제비율
+
+            , A.LV2_DLR_STOCK_YN -- 2급딜러 재고 여부
+            , A.CONTRACT_NO      -- 계약번호
+            , A.RFID_NO
+         FROM SA_0121T A
+         LEFT OUTER JOIN (
+                            SELECT DLR_CD
+                                 , STRGE_CD
+                                 , LOC_CD
+                                 , LOC_NM
+                              FROM PT_0222T
+                            GROUP BY DLR_CD, STRGE_CD, LOC_CD, LOC_NM
+                          ) B
+            ON A.DLR_CD   = B.DLR_CD
+           AND A.STRGE_CD = B.STRGE_CD
+           AND A.LOC_CD   = B.LOC_CD
+         WHERE A.NCAR_DSTIN_CD = 'N'          -- 신차
+        <if test='sDlrCd != null and sDlrCd != ""'>
+          AND A.DLR_CD =  #{sDlrCd}           -- 딜러코드
+        </if>
+        <if test='sStockTpDS != null and sStockTpDS != ""'>
+          AND A.STOCK_TP = #{sStockTpDS}      -- 재고유형
+        </if>
+        <if test='sCmpCarYn != null and sCmpCarYn != ""'>
+          AND A.CMP_CAR_YN = #{sCmpCarYn}    -- 회사차여부
+        </if>
+        <if test='sCmpCarDstinCd != null and sCmpCarDstinCd != ""'>
+          AND A.CMP_CAR_DSTIN_CD = #{sCmpCarDstinCd} -- 회사차구분
+        </if>
+        <if test='sVinNo != null and sVinNo != ""'>
+          <choose>
+            <when test='@org.apache.commons.lang3.StringUtils@contains(sVinNo,"*")'>
+               <bind name='sVinNo' value='@org.apache.commons.lang3.StringUtils@replace(sVinNo, "*", "%")' />
+                AND A.VIN_NO LIKE #{sVinNo}
+            </when>
+            <otherwise>
+                AND A.VIN_NO = #{sVinNo}
+            </otherwise>
+          </choose>
+        </if>
+        <if test='sStrgeCd != null and sStrgeCd != ""'>
+          AND A.STRGE_CD = #{sStrgeCd}         -- 창고
+        </if>
+        <if test='sLocCd != null and sLocCd != ""'>
+          AND A.LOC_CD =  #{sLocCd}           -- 위치
+        </if>
+        <if test='sCarlineCd != null and sCarlineCd != ""'>
+          AND A.CARLINE_CD =  #{sCarlineCd}
+        </if>
+        <if test='sModelCd != null and sModelCd != ""'>
+          AND A.MODEL_CD =  #{sModelCd}
+        </if>
+        <if test='sOcnCd != null and sOcnCd != ""'>
+          AND A.OCN_CD =  #{sOcnCd}
+        </if>
+        <if test='sExtColorCd != null and sExtColorCd != ""'>
+          AND A.EXT_COLOR_CD =  #{sExtColorCd}
+        </if>
+        <if test='sIntColorCd != null and sIntColorCd != ""'>
+          AND A.INT_COLOR_CD =   #{sIntColorCd}
+        </if>
+        <if test='salMng != null and salMng == "Y"'>
+          AND A.CAR_STAT_CD = '60'
+          AND NVL(A.DAMAGE_CD, '02')  = '02'         /* SAL049 : 02 비손상 */
+          AND NVL(A.CMP_CAR_YN, 'N') = 'N'           -- 회사차여부
+
+          --AND A.STOCK_TP    = '02'                 /* SAL074 재고유형 */
+          --AND NVL(A.OWN_STAT_CD, 'O') = 'O'        /* 미배정_임시배정 */
+        </if>
+        ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "vinNo"'>A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ncarDstinCd"'>A.NCAR_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "stockTp"'>A.STOCK_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "cmpCarYn"'>A.CMP_CAR_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "cmpCarDstinCd"'>A.CMP_CAR_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "strgeCd"'>A.STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "locCd"'>A.LOC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "carlineCd"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "carlineNm"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "modelCd"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "modelNm"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ocnCd"'>A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ocnNm"'>A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "extColorCd"'>A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "extColorNm"'>A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "intColorCd"'>A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "intColorNm"'>A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "carStatCd"'>A.CAR_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ownStatCd"'>A.OWN_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ordTp"'>A.ORD_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "enginModelCd"'>A.ENGIN_MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "certNo"'>A.CERT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "grDt"'>A.GR_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            A.VIN_NO DESC, A.CARLINE_CD ASC
+                        </otherwise>
+                    </choose>
+                 </foreach>
+            </when>
+            <otherwise>
+                    A.VIN_NO DESC, A.CARLINE_CD ASC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 재고상태관리 저장 -->
+    <update id="updateStockStates" parameterType="StockStateVO">
+        UPDATE SA_0121T
+           set STOCK_TP = #{stockTp}
+             , CMP_CAR_YN = #{cmpCarYn}
+             , CMP_CAR_DSTIN_CD = #{cmpCarDstinCd}
+             , STRGE_CD = #{strgeCd}
+             , LOC_CD = #{locCd}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE VIN_NO = #{vinNo}
+           AND NCAR_DSTIN_CD = #{ncarDstinCd}
+    </update>
+
+    <insert id="insertStockStateHis" parameterType="StockStateVO">
+        INSERT
+          INTO SA_0208T(
+               DLR_CD
+             , VIN_NO
+             , SEQ
+             , STAT_CHG_CD
+             , STAT_CHG_BEF_CONT
+             , STAT_CHG_AFT_CONT
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+         )VALUES(
+               #{dlrCd}
+             , #{vinNo}
+             , (SELECT NVL(MAX(SEQ),0)+1 FROM SA_0208T WHERE DLR_CD = #{dlrCd} AND VIN_NO = #{vinNo})
+             , #{statChgCd}
+             , #{statChgBefCont}
+             , #{statChgAftCont}
+             , #{regUsrId}
+             , SYSDATE
+             , #{regUsrId}
+             , SYSDATE
+         )
+    </insert>
+
+</mapper>

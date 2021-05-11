@@ -1,0 +1,644 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO">
+
+    <!-- 용품 목록을 조회한다. -->
+    <select id="selectAccessoryMngsByConditionCnt" parameterType="AccessoryMngSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO.selectAccessoryMngsByConditionCnt] */
+        SELECT COUNT(*)
+          FROM SA_0261T A    --용품판매헤더
+         LEFT OUTER JOIN (
+                        SELECT A.DLR_CD
+                             , A.GOODS_CONTRACT_NO
+                             , WM_CONCAT(A.GOODS_CD) AS GOODS_CD
+                             , WM_CONCAT(B.ITEM_NM)  AS GOODS_NM
+                             , SUM(A.GOODS_CNT)      AS GOODS_CNT
+                          FROM SA_0262T A
+                          LEFT OUTER JOIN PT_0201T B /* 부품마스터 */
+                            ON A.DLR_CD = B.DLR_CD
+                           AND A.GOODS_CD = B.ITEM_CD
+                         GROUP BY A.DLR_CD, A.GOODS_CONTRACT_NO
+                    ) B
+            ON A.DLR_CD = B.DLR_CD
+           AND A.GOODS_CONTRACT_NO = B.GOODS_CONTRACT_NO
+         LEFT OUTER JOIN SA_0201T Z
+            ON A.DLR_CD = Z.DLR_CD
+           AND A.SALE_CONTRACT_NO = Z.CONTRACT_NO
+         WHERE 1=1
+           AND A.DLR_CD            = #{sDlrCd}
+           <if test='sGoodsTp          != null and sGoodsTp          != ""'> AND A.GOODS_TP          = #{sGoodsTp}        </if>        --용품유형
+           <if test='sGoodsContractNo != null and sGoodsContractNo != ""'>
+           <choose>
+             <when test='@org.apache.commons.lang3.StringUtils@contains(sGoodsContractNo,"*")'>
+               <bind name='sGoodsContractNo' value='@org.apache.commons.lang3.StringUtils@replace(sGoodsContractNo, "*", "%")' />
+                 AND A.GOODS_CONTRACT_NO LIKE #{sGoodsContractNo}
+             </when>
+             <otherwise>
+                 AND A.GOODS_CONTRACT_NO = #{sGoodsContractNo}
+             </otherwise>
+           </choose>
+           </if>
+           <if test='sStartGoodsContractDt  != null'>
+               AND A.GOODS_CONTRACT_DT  <![CDATA[ >= ]]> #{sStartGoodsContractDt}
+           </if>
+           <if test='sEndGoodsContractDt  != null'>
+               AND A.GOODS_CONTRACT_DT  <![CDATA[ < ]]> #{sEndGoodsContractDt} + 1
+           </if>
+           <if test='sContractCustNo   != null and sContractCustNo   != ""'>
+               AND A.CONTRACT_CUST_NO  = #{sContractCustNo}
+           </if>
+           <if test='sContractStatCd   != null and sContractStatCd   != ""'>
+               AND A.CONTRACT_STAT_CD  = #{sContractStatCd}
+           </if>
+           <if test='sStartExpcGiEndDt  != null'>
+               AND A.EXPC_GI_END_DT  <![CDATA[ >= ]]> #{sStartExpcGiEndDt}
+           </if>
+           <if test='sEndExpcGiEndDt  != null'>
+               AND A.EXPC_GI_END_DT  <![CDATA[ < ]]> #{sEndExpcGiEndDt} + 1
+           </if>
+           <if test='sSaleContractNo != null and sSaleContractNo != ""'>
+           <choose>
+             <when test='@org.apache.commons.lang3.StringUtils@contains(sSaleContractNo,"*")'>
+               <bind name='sSaleContractNo' value='@org.apache.commons.lang3.StringUtils@replace(sSaleContractNo, "*", "%")' />
+                 AND A.SALE_CONTRACT_NO LIKE #{sSaleContractNo}
+             </when>
+             <otherwise>
+                 AND A.SALE_CONTRACT_NO = #{sSaleContractNo}
+             </otherwise>
+           </choose>
+           </if>
+           <if test='sVinNo != null and sVinNo != ""'>
+               AND Z.VIN_NO LIKE '%'|| #{sVinNo} ||'%'
+           </if>
+    </select>
+    <select id="selectAccessoryMngsByCondition" parameterType="AccessoryMngSearchVO" resultType="AccessoryMngVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO.selectAccessoryMngsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A.DLR_CD                   --딜러코드
+                     , A.GOODS_CONTRACT_NO        --용품계약번호
+                     , A.GOODS_TP                 --경품업무유형
+                     , A.GOODS_CONTRACT_DT        --용품계약일자
+                     , A.CONTRACT_CUST_NO         --계약고객번호
+                     , X1.CUST_NM    AS CONTRACT_CUST_NM
+                     , A.CONTRACT_CUST_TP         --계약고객유형
+                     , A.PCON_CUST_NO             --연계인고객번호
+                     , X2.CUST_NM    AS PCON_CUST_NM
+                     , A.TEL_NO                   --전화번호
+                     , A.CAR_BRAND_CD             --차량브랜드코드
+                     , A.CARLINE_CD               --차종코드
+                     , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+                     , A.MODEL_CD                 --모델코드
+                     , FN_GET_MODEL_NM(A.MODEL_CD) AS MODEL_NM
+                     , A.OCN_CD                   --OCN코드
+                     , FN_GET_OCN_NM(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+                     , A.EXT_COLOR_CD             --외장색상코드
+                     , FN_GET_EXT_COLOR_NM(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+                     , A.INT_COLOR_CD             --내장색상코드
+                     , FN_GET_INT_COLOR_NM(A.INT_COLOR_CD) AS INT_COLOR_NM
+                     --, A.VIN_NO                   --차대번호
+                     , Z.VIN_NO      AS   VIN_NO  --차대번호
+                     , A.CAR_REG_NO               --차량등록번호
+                     , A.SALE_CONTRACT_NO         --판매계약번호
+                     , A.EXPC_GI_END_DT           --예정출고완료일자
+                     , A.EQIP_PRSN_ID             --설치담당자ID
+                     , A.REAL_DL_DT               --실제인도일자
+                     , A.GOODS_AMT                --용품금액
+                     , A.PREN_AMT                 --증정금액
+                     , A.GOODS_REAL_AMT           --용품실제금액
+                     , A.ADD_PREN_AMT             --추가증정금액
+                     , A.CUST_PAY_AMT             --고객지불금액
+                     , A.CONTRACT_STAT_CD
+                     , B.GOODS_NM
+                     , B.GOODS_CNT
+                     , (SELECT X.PAY_TP FROM SA_0262T X WHERE X.DLR_CD = A.DLR_CD AND X.GOODS_CONTRACT_NO = A.GOODS_CONTRACT_NO AND ROWNUM = 1) AS PAY_TP
+                  FROM SA_0261T A    --용품판매헤더
+                 LEFT OUTER JOIN (
+                                SELECT A.DLR_CD
+                                     , A.GOODS_CONTRACT_NO
+                                     , WM_CONCAT(A.GOODS_CD) AS GOODS_CD
+                                     , WM_CONCAT(NVL(A.GOODS_NM, B.ITEM_NM))  AS GOODS_NM
+                                     , SUM(A.GOODS_CNT)      AS GOODS_CNT
+                                  FROM SA_0262T A
+                                  LEFT OUTER JOIN PT_0201T B      /* 부품마스터 */
+                                    ON A.DLR_CD = B.DLR_CD
+                                   AND A.GOODS_CD = B.ITEM_CD
+                                 GROUP BY A.DLR_CD, A.GOODS_CONTRACT_NO
+                            ) B
+                    ON A.DLR_CD = B.DLR_CD
+                   AND A.GOODS_CONTRACT_NO = B.GOODS_CONTRACT_NO
+                  LEFT OUTER JOIN CR_0101T X1
+                    ON A.CONTRACT_CUST_NO = X1.CUST_NO
+                  LEFT OUTER JOIN CR_0101T X2
+                    ON A.PCON_CUST_NO = X2.CUST_NO
+                  LEFT OUTER JOIN SA_0201T Z
+                    ON A.DLR_CD = Z.DLR_CD
+                   AND A.SALE_CONTRACT_NO = Z.CONTRACT_NO
+                 WHERE 1=1
+                   AND A.DLR_CD            = #{sDlrCd}
+                   <if test='sGoodsTp          != null and sGoodsTp          != ""'> AND A.GOODS_TP          = #{sGoodsTp}        </if>        --용품유형
+                   <if test='sGoodsContractNo != null and sGoodsContractNo != ""'>
+                   <choose>
+                     <when test='@org.apache.commons.lang3.StringUtils@contains(sGoodsContractNo,"*")'>
+                       <bind name='sGoodsContractNo' value='@org.apache.commons.lang3.StringUtils@replace(sGoodsContractNo, "*", "%")' />
+                         AND A.GOODS_CONTRACT_NO LIKE #{sGoodsContractNo}
+                     </when>
+                     <otherwise>
+                         AND A.GOODS_CONTRACT_NO = #{sGoodsContractNo}
+                     </otherwise>
+                   </choose>
+                   </if>
+                   <if test='sStartGoodsContractDt  != null'>
+                       AND A.GOODS_CONTRACT_DT  <![CDATA[ >= ]]> #{sStartGoodsContractDt}
+                   </if>
+                   <if test='sEndGoodsContractDt  != null'>
+                       AND A.GOODS_CONTRACT_DT  <![CDATA[ < ]]> #{sEndGoodsContractDt} + 1
+                   </if>
+                   <if test='sContractCustNo   != null and sContractCustNo   != ""'>
+                       AND A.CONTRACT_CUST_NO  = #{sContractCustNo}
+                   </if>
+                   <if test='sContractStatCd   != null and sContractStatCd   != ""'>
+                       AND A.CONTRACT_STAT_CD  = #{sContractStatCd}
+                   </if>
+                   <if test='sStartExpcGiEndDt  != null'>
+                       AND A.EXPC_GI_END_DT  <![CDATA[ >= ]]> #{sStartExpcGiEndDt}
+                   </if>
+                   <if test='sEndExpcGiEndDt  != null'>
+                       AND A.EXPC_GI_END_DT  <![CDATA[ < ]]> #{sEndExpcGiEndDt} + 1
+                   </if>
+                   <if test='sSaleContractNo != null and sSaleContractNo != ""'>
+                   <choose>
+                     <when test='@org.apache.commons.lang3.StringUtils@contains(sSaleContractNo,"*")'>
+                       <bind name='sSaleContractNo' value='@org.apache.commons.lang3.StringUtils@replace(sSaleContractNo, "*", "%")' />
+                         AND A.SALE_CONTRACT_NO LIKE #{sSaleContractNo}
+                     </when>
+                     <otherwise>
+                         AND A.SALE_CONTRACT_NO = #{sSaleContractNo}
+                     </otherwise>
+                   </choose>
+                   </if>
+                   <if test='sVinNo != null and sVinNo != ""'>
+                       AND Z.VIN_NO LIKE '%'|| #{sVinNo} ||'%'
+                   </if>
+                 ORDER BY
+                 <choose>
+                     <when test='sort != null'>
+                         <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                             <choose>
+                                 <when test='item.field == "goodsTp"'>          A.GOODS_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                 <when test='item.field == "contractCustNo"'>   A.CONTRACT_CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "contractCustNm"'>   CONTRACT_CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "carBrandCd"'>       A.CAR_BRAND_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                 <when test='item.field == "carlineCd"'>        A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                 <when test='item.field == "goodsContractNo"'>  A.GOODS_CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "goodsNm"'>  B.GOODS_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                 <when test='item.field == "goodsCnt"'> B.GOODS_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                 <otherwise>
+                                   A.DLR_CD ASC
+                                  ,A.GOODS_CONTRACT_NO DESC
+                                 </otherwise>
+                             </choose>
+                         </foreach>
+                     </when>
+                     <otherwise>
+                       A.DLR_CD ASC
+                      ,A.GOODS_CONTRACT_NO DESC
+                     </otherwise>
+                 </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+    <!-- 용품 item 목록을 조회한다. -->
+    <select id="selectAccessoryMngItemsByConditionCnt" parameterType="AccessoryMngSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO.selectAccessoryMngItemsByConditionCnt] */
+        SELECT COUNT(*)
+          FROM SA_0262T A
+          LEFT OUTER JOIN PT_0201T B        /* 부품마스터 */
+            ON A.DLR_CD = B.DLR_CD
+           AND A.GOODS_CD = B.ITEM_CD
+         WHERE 1=1
+           AND A.DLR_CD            = #{sDlrCd}
+         <if test='sGoodsContractNo != null and sGoodsContractNo != ""'>
+           AND A.GOODS_CONTRACT_NO          = #{sGoodsContractNo}
+         </if>
+    </select>
+    <select id="selectAccessoryMngItemsByCondition" parameterType="AccessoryMngSearchVO" resultType="AccessoryMngItemVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO.selectAccessoryMngItemsByCondition] */
+        SELECT A.DLR_CD
+             , A.GOODS_CONTRACT_NO
+             , A.SEQ
+             , B.CARLINE_CD
+             , A.GOODS_CD
+             , NVL(A.GOODS_NM, B.ITEM_NM)   AS GOODS_NM
+             , A.GOODS_CNT
+             , A.GOODS_UNIT_CD
+             , A.RETL_PRC
+             , A.DC_RATE
+             , A.SALE_AMT
+             , A.PAY_TP
+             , A.TOT_AMT
+             , A.PKG_ITEM_CD
+             , A.GR_STRGE_CD
+             , A.GI_STRGE_CD
+             , A.DC_AMT
+             , A.MVT_DOC_YY_MM
+             , A.MVT_DOC_NO
+             , A.MVT_DOC_LINE_NO
+             , A.EXPC_GI_END_DT
+             , A.EQIP_PRSN_ID
+             , DECODE(A.REAL_DL_DT, NULL, NULL, TO_CHAR(A.REAL_DL_DT, 'YYYY-MM-DD')) AS REAL_DL_DT
+             , A.EQIP_COST_AMT
+             , A.EXPC_EQIP_DT
+             , A.EQIP_END_DT
+          FROM SA_0262T A
+          LEFT OUTER JOIN PT_0201T B        /* 부품마스터 */
+            ON A.DLR_CD = B.DLR_CD
+           AND A.GOODS_CD = B.ITEM_CD
+         WHERE 1=1
+           AND A.DLR_CD            = #{sDlrCd}
+         <if test='sGoodsContractNo != null and sGoodsContractNo != ""'>
+           AND A.GOODS_CONTRACT_NO          = #{sGoodsContractNo}
+         </if>
+         ORDER BY
+         <choose>
+             <when test='sort != null'>
+                 <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                     <choose>
+                         <when test='item.field == "carlineCd"'> B.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                         <when test='item.field == "goodsCd"'>   A.GOODS_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                         <when test='item.field == "goodsNm"'>   GOODS_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                         <when test='item.field == "goodsCnt"'>  A.GOODS_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                         <when test='item.field == "retlPrc"'>  A.RETL_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                         <when test='item.field == "dcRate"'>  A.DC_RATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                         <when test='item.field == "saleAmt"'> A.SALE_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                         <when test='item.field == "payTp"'> A.PAY_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                         <when test='item.field == "totAmt"'> A.TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                         <when test='item.field == "pkgItemCd"'> A.PKG_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                         <otherwise>
+                           A.DLR_CD ASC
+                          ,A.GOODS_CONTRACT_NO DESC
+                          ,A.SEQ
+                         </otherwise>
+                     </choose>
+                 </foreach>
+             </when>
+             <otherwise>
+               A.DLR_CD ASC
+              ,A.GOODS_CONTRACT_NO DESC
+              ,A.SEQ
+             </otherwise>
+         </choose>
+    </select>
+
+    <!-- 경품관리 내역을 저장한다.  -->
+    <insert id="insertAccessoryMng" parameterType="AccessoryMngVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO.insertAccessoryMng] */
+        INSERT
+          INTO SA_0261T    --용품판매헤더
+            (
+              DLR_CD                   --딜러코드
+             ,GOODS_CONTRACT_NO        --용품계약번호
+             ,GOODS_TP                 --용품유형
+             ,GOODS_CONTRACT_DT        --용품계약일자
+             ,CONTRACT_CUST_NO         --계약고객번호
+             ,CONTRACT_CUST_TP         --계약고객유형
+             ,PCON_CUST_NO             --연계인고객번호
+             ,TEL_NO                   --전화번호
+             ,CAR_BRAND_CD             --차량브랜드코드
+             ,CARLINE_CD               --차종코드
+             ,MODEL_CD                 --모델코드
+             ,OCN_CD                   --OCN코드
+             ,EXT_COLOR_CD             --외장색상코드
+             ,INT_COLOR_CD             --내장색상코드
+             ,VIN_NO                   --차대번호
+             ,CAR_REG_NO               --차량등록번호
+             ,SALE_CONTRACT_NO         --판매계약번호
+             ,EXPC_GI_END_DT           --예정출고완료일자
+             ,EQIP_PRSN_ID             --설치담당자ID
+             ,REAL_DL_DT               --실제인도일자
+             ,GOODS_AMT                --용품금액
+             ,PREN_AMT                 --증정금액
+             ,GOODS_REAL_AMT           --용품실제금액
+             ,ADD_PREN_AMT             --추가증정금액
+             ,CUST_PAY_AMT             --고객지불금액
+             ,CONTRACT_STAT_CD         --계약상태코드
+             ,DC_LVL_CD                --할인레벨코드
+             ,DC_APPROVE_YN            --할인승인코드
+            <if test='dcLvlCd != null and dcLvlCd != ""'>
+             ,DC_APPROVE_DT            --할인승인일자
+            </if>
+             ,REG_USR_ID               --등록자ID
+             ,REG_DT                   --등록일자
+             ,UPDT_USR_ID              --수정자ID
+             ,UPDT_DT                  --수정일자
+            )
+            VALUES
+            (
+              #{dlrCd}                   --딜러코드
+             ,#{goodsContractNo}         --용품계약번호
+             ,#{goodsTp}                 --용품유형
+             ,TO_DATE(TO_CHAR(SYSDATE, 'yyyy/MM/dd'), 'yyyy/MM/dd hh24:mi:ss')  --용품계약일자
+             ,#{contractCustNo}          --계약고객번호
+             ,#{contractCustTp}          --계약고객유형
+             ,#{pconCustNo}              --연계인고객번호
+             ,#{telNo}                   --전화번호
+             ,#{carBrandCd}              --차량브랜드코드
+             ,#{carlineCd}               --차종코드
+             ,#{modelCd}                 --모델코드
+             ,#{ocnCd}                   --OCN코드
+             ,#{extColorCd}              --외장색상코드
+             ,#{intColorCd}              --내장색상코드
+             ,#{vinNo}                   --차대번호
+             ,#{carRegNo}                --차량등록번호
+             ,#{saleContractNo}          --판매계약번호
+             ,#{expcGiEndDt}             --예정출고완료일자
+             ,#{eqipPrsnId}              --설치담당자ID
+             ,#{realDlDt}                --실제인도일자
+             ,#{goodsAmt}                --용품금액
+             ,#{prenAmt}                 --증정금액
+             ,#{goodsRealAmt}            --용품실제금액
+             ,#{addPrenAmt}              --추가증정금액
+             ,#{custPayAmt}              --고객지불금액
+             ,#{contractStatCd}          --계약상태코드
+             ,#{dcLvlCd}                 --할인레벨코드
+             ,#{dcApproveYn}             --할인승인코드
+           <if test='dcLvlCd != null and dcLvlCd != ""'>
+             ,SYSDATE
+           </if>
+             ,#{regUsrId}                --등록자ID
+             ,SYSDATE
+             ,#{updtUsrId}               --수정자ID
+             ,SYSDATE
+            )
+    </insert>
+
+    <!-- 경품관리 내역을 수정 -->
+    <update id="updateAccessoryMng" parameterType="AccessoryMngVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO.updateAccessoryMng] */
+        UPDATE SA_0261T    --용품판매헤더
+           SET GOODS_TP          = #{goodsTp}                 --용품유형
+             , CONTRACT_CUST_NO  = #{contractCustNo}          --계약고객번호
+             , CONTRACT_CUST_TP  = #{contractCustTp}          --계약고객유형
+             , PCON_CUST_NO      = #{pconCustNo}              --연계인고객번호
+             , TEL_NO            = #{telNo}                   --전화번호
+             , CAR_BRAND_CD      = #{carBrandCd}              --차량브랜드코드
+             , CARLINE_CD        = #{carlineCd}               --차종코드
+             , MODEL_CD          = #{modelCd}                 --모델코드
+             , OCN_CD            = #{ocnCd}                   --OCN코드
+             , EXT_COLOR_CD      = #{extColorCd}              --외장색상코드
+             , INT_COLOR_CD      = #{intColorCd}              --내장색상코드
+             , VIN_NO            = #{vinNo}                   --차대번호
+             , CAR_REG_NO        = #{carRegNo}                --차량등록번호
+             , SALE_CONTRACT_NO  = #{saleContractNo}          --판매계약번호
+             , EXPC_GI_END_DT    = #{expcGiEndDt}             --예정출고완료일자
+             , EQIP_PRSN_ID      = #{eqipPrsnId}              --설치담당자ID
+             , REAL_DL_DT        = #{realDlDt}                --실제인도일자
+             , GOODS_AMT         = #{goodsAmt}                --용품금액
+             , PREN_AMT          = #{prenAmt}                 --증정금액
+             , GOODS_REAL_AMT    = #{goodsRealAmt}            --용품실제금액
+             , ADD_PREN_AMT      = #{addPrenAmt}              --추가증정금액
+             , CUST_PAY_AMT      = #{custPayAmt}              --고객지불금액
+             , CONTRACT_STAT_CD  = #{contractStatCd}          --계약상태코드
+             , DC_LVL_CD         = #{dcLvlCd}                 --할인승인코드
+             , DC_APPROVE_YN     = #{dcApproveYn}             --할인승인여부
+             , UPDT_USR_ID       = #{updtUsrId}               --수정자ID
+             , UPDT_DT           = SYSDATE
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND GOODS_CONTRACT_NO = #{goodsContractNo}         --용품계약번호
+    </update>
+
+    <!-- 경품관리item 내역을 저장한다.  -->
+    <insert id="insertAccessoryMngItem" parameterType="AccessoryMngItemVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO.insertAccessoryMngItem] */
+        INSERT
+          INTO SA_0262T    --용품판매아이템
+            (
+              DLR_CD                   --딜러코드
+             ,GOODS_CONTRACT_NO        --용품계약번호
+             ,SEQ                      --일련번호
+             ,GOODS_CD                 --용품코드
+             ,GOODS_NM                 --용품명
+             ,GOODS_CNT                --용품수량
+             ,RETL_PRC                 --소매가격
+             ,DC_RATE                  --할인율
+             ,SALE_AMT                 --판매금액
+             ,PAY_TP                   --지불유형
+             ,TOT_AMT                  --총금액
+             ,PKG_ITEM_CD              --패키지품목코드
+             ,GR_STRGE_CD              --입고창고코드
+             ,GI_STRGE_CD              --입고창고코드
+             ,GOODS_UNIT_CD            --용품단위코드
+             ,DC_AMT                   --할인금액
+             ,REG_USR_ID               --등록자ID
+             ,REG_DT                   --등록일자
+             ,UPDT_USR_ID              --수정자ID
+             ,UPDT_DT                  --수정일자
+             ,EXPC_GI_END_DT
+             ,EQIP_PRSN_ID
+             ,EQIP_COST_AMT
+             ,EXPC_EQIP_DT
+             ,EQIP_END_DT
+            )
+            VALUES
+            (
+              #{dlrCd}                   --딜러코드
+             ,#{goodsContractNo}         --용품계약번호
+             ,(SELECT NVL(MAX(SEQ), 0)+1 FROM SA_0262T WHERE DLR_CD = #{dlrCd} AND GOODS_CONTRACT_NO = #{goodsContractNo})
+             ,#{goodsCd}                 --용품코드
+             ,#{goodsNm}                 --용품명
+             ,#{goodsCnt}                --용품수량
+             ,#{retlPrc}                 --소매가격
+             ,#{dcRate}                  --할인율
+             ,#{saleAmt}                 --판매금액
+             ,#{payTp}                   --지불유형
+             ,#{totAmt}                  --총금액
+             ,#{pkgItemCd}               --패키지품목코드
+             ,#{grStrgeCd}               --입고창고코드
+             ,#{giStrgeCd}               --출고창고코드
+             ,#{goodsUnitCd}             --용품단위코드
+             ,#{dcAmt}                   --할인금액
+             ,#{regUsrId}                --등록자ID
+             ,SYSDATE
+             ,#{updtUsrId}               --수정자ID
+             ,SYSDATE
+             ,#{expcGiEndDt}             --예정출고완료일자
+             ,#{eqipPrsnId}              --설치담당자
+             ,#{eqipCostAmt}             --설치비용
+             ,#{expcEqipDt}              --예정설치일
+             ,#{eqipEndDt}               --설치완료일
+
+            )
+    </insert>
+
+    <!-- 경품관리item 내역을 수정 -->
+    <update id="updateAccessoryMngItem" parameterType="AccessoryMngItemVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO.updateAccessoryMngItem] */
+        UPDATE SA_0262T    --용품판매아이템
+           SET GOODS_CD          = #{goodsCd}                 --용품코드
+             , GOODS_NM          = #{goodsNm}                 --용품명
+             , GOODS_CNT         = #{goodsCnt}                --용품수량
+             , RETL_PRC          = #{retlPrc}                 --소매가격
+             , DC_RATE           = #{dcRate}                  --할인율
+             , SALE_AMT          = #{saleAmt}                 --판매금액
+             , PAY_TP            = #{payTp}                   --지불유형
+             , TOT_AMT           = #{totAmt}                  --총금액
+             , PKG_ITEM_CD       = #{pkgItemCd}               --패키지품목코드
+             , GR_STRGE_CD       = #{grStrgeCd}               --입고창고코드
+             , GI_STRGE_CD       = #{giStrgeCd}               --출고창고코드
+             , GOODS_UNIT_CD     = #{goodsUnitCd}             --용품단위코드
+             , DC_AMT            = #{dcAmt}                   --할인금액
+             , UPDT_USR_ID       = #{updtUsrId}               --수정자ID
+             , UPDT_DT           = SYSDATE
+             , EXPC_GI_END_DT    = #{expcGiEndDt}             --예정출고완료일자
+             , EQIP_PRSN_ID      = #{eqipPrsnId}              --설치담당자
+             , EQIP_COST_AMT     = #{eqipCostAmt}             --설치비용
+             , EXPC_EQIP_DT      = #{expcEqipDt}              --예정설치일
+             , EQIP_END_DT       = #{eqipEndDt}               --설치완료일
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND GOODS_CONTRACT_NO = #{goodsContractNo}         --용품계약번호
+           AND SEQ               = #{seq}                     --일련번호
+    </update>
+
+
+    <!-- 경품관리item 내역을 삭제한다. -->
+    <delete id="deleteAccessoryMngItem" parameterType="AccessoryMngItemVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO.deleteAccessoryMngItem] */
+        DELETE
+          FROM SA_0262T    --용품판매아이템
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND GOODS_CONTRACT_NO = #{goodsContractNo}         --용품계약번호
+           AND SEQ               = #{seq}                     --일련번호
+    </delete>
+
+    <!-- 용품 출고확정 시 수불 정보를 반영한다. -->
+    <update id="updateAccessorySaleOrdItemMvtInfo" parameterType="PartsSaleOrdItemVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO.updateAccessorySaleOrdItemMvtInfo] */
+        UPDATE SA_0262T    --용품판매아이템
+           SET MVT_DOC_YY_MM       = #{mvtDocYyMm}            --수불문서년월
+             , MVT_DOC_NO          = #{mvtDocNo}              --수불문서번호
+             , MVT_DOC_LINE_NO     = #{mvtDocLineNo}          --수불문서라인번호
+             , REAL_DL_DT          = SYSDATE                  --출고일자
+             , UPDT_USR_ID         = #{regUsrId}              --수정자ID
+             , UPDT_DT             = sysdate                  --수정일자
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND GOODS_CONTRACT_NO = #{parSaleOrdNo}            --용품계약번호
+           AND SEQ               = #{parSaleOrdLineNo}        --일련번호
+    </update>
+
+    <!-- 경품관리 상태변경 -->
+    <update id="updateAccessoryMngStateCd" parameterType="AccessoryMngVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO.updateAccessoryMng] */
+        UPDATE SA_0261T    --용품판매헤더
+           SET CONTRACT_STAT_CD  = #{contractStatCd}          --계약상태코드
+           <choose>
+            <when test='contractStatCd != null and contractStatCd != "20"'>
+             , REAL_DL_DT        = NULL
+            </when>
+            <otherwise>
+             , REAL_DL_DT        = TO_DATE(TO_CHAR(SYSDATE, 'yyyy/MM/dd'), 'yyyy/MM/dd hh24:mi:ss')
+            </otherwise>
+           </choose>
+             , UPDT_USR_ID       = #{updtUsrId}               --수정자ID
+             , UPDT_DT           = SYSDATE
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND GOODS_CONTRACT_NO = #{goodsContractNo}         --용품계약번호
+    </update>
+
+    <!-- 판매 계약내역과 관련된 경품관리 내역을 삭제한다. -->
+    <delete id="deleteContractAccessoryMngItem" parameterType="AccessoryMngVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO.deleteContractAccessoryMngItem] */
+        DELETE
+          FROM SA_0262T    --용품판매아이템
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND GOODS_CONTRACT_NO = #{goodsContractNo}         --용품계약번호
+    </delete>
+
+    <!-- 판매 계약내역과 관련된 경품관리 내역을 삭제한다. -->
+    <delete id="deleteContractAccessoryMngHeader" parameterType="AccessoryMngVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryMngDAO.deleteContractAccessoryMngHeader] */
+        DELETE
+          FROM SA_0261T    --용품판매아이템
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND GOODS_CONTRACT_NO = #{goodsContractNo}         --용품계약번호
+    </delete>
+
+
+    <!-- 용품 할인레벨 조회한다 -->
+    <select id="selectDlrGoodsDcLevel" parameterType="AccessoryMngSearchVO" resultType="AccessoryMngVO">
+        SELECT A.DC_LVL_CD
+             , A.PRC_NREG_YN
+           FROM (
+               SELECT 'A' AS ETC
+                    , CASE WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= 0 ]]> THEN ''
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT1 THEN '01'
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT2 THEN '02'
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT3 THEN '03'
+                           ELSE '04'
+                      END AS DC_LVL_CD
+                    , A.PRC_NREG_YN
+                 FROM SA_0120T A
+                where A.CARLINE_CD = #{sCarlineCd}
+                  and A.MODEL_CD = #{sModelCd}
+                  AND A.OCN_CD =  #{sOcnCd}
+                  AND A.START_DT <![CDATA[ <= ]]> SYSDATE
+                  AND A.END_DT   <![CDATA[ >= ]]> SYSDATE - 1
+                  AND A.DLR_Cd = #{sDlrCd}
+
+               UNION
+
+               SELECT 'X' AS ETC
+                    , CASE WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= 0 ]]> THEN ''
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT1 THEN '01'
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT2 THEN '02'
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT3 THEN '03'
+                           ELSE '04'
+                      END AS DC_LVL_CD
+                    , A.PRC_NREG_YN
+                 FROM SA_0120T A
+                where A.CARLINE_CD = #{sCarlineCd}
+                  and A.MODEL_CD = #{sModelCd}
+                  AND A.OCN_CD =  'ALL'
+                  AND A.START_DT <![CDATA[ <= ]]> SYSDATE
+                  AND A.END_DT   <![CDATA[ >= ]]> SYSDATE - 1
+                  AND A.DLR_Cd = #{sDlrCd}
+
+               UNION
+
+               SELECT 'Z' AS ETC
+                    , CASE WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= 0 ]]> THEN ''
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT1 THEN '01'
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT2 THEN '02'
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT3 THEN '03'
+                           ELSE '04'
+                      END AS DC_LVL_CD
+                    , A.PRC_NREG_YN
+                 FROM SA_0120T A
+                where A.CARLINE_CD = #{sCarlineCd}
+                  and A.MODEL_CD = 'ALL'
+                  AND A.OCN_CD =  'ALL'
+                  AND A.START_DT <![CDATA[ <= ]]> SYSDATE
+                  AND A.END_DT   <![CDATA[ >= ]]> SYSDATE - 1
+                  AND A.DLR_Cd = #{sDlrCd}
+
+                ORDER BY ETC DESC           -- ALL 우선 적용
+             ) A
+        WHERE ROWNUM = 1                    -- 다중건일시 한건만 처리
+    </select>
+
+
+
+</mapper>

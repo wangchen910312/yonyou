@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.veh.service.dao.VehicleSpecComboCommDAO">
+
+    <select id="selectCarlineCombo" parameterType="VehicleSpecSearchVO" resultType="VehicleSpecVO">
+        SELECT A.CARLINE_CD,
+               FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM,
+               FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM_NC,
+               A.CARLINE_EN_NM
+          FROM SA_0101T A
+         WHERE SYSDATE BETWEEN A.START_DT AND A.END_DT + 1
+         GROUP BY A.CARLINE_CD, A.CARLINE_NM, A.CARLINE_EN_NM
+         ORDER BY A.CARLINE_CD, A.CARLINE_NM
+    </select>
+
+    <select id="selectModelTypeCombo" parameterType="VehicleSpecSearchVO" resultType="VehicleSpecVO">
+        SELECT DECODE(B.FSCP_CHM_MMM, '', 'N/A', B.FSCP_CHM_MMM) AS FSC_NM,
+               DECODE(B.FSCP_MODTP_CD, '', 'None', B.FSCP_MODTP_CD) AS FSC_CD
+          FROM SA_0102T A, SA_0105T B
+         WHERE A.MODEL_CD = B.MODEL_CD
+           AND SUBSTR(A.MODEL_CD, 1, 2) = #{sCarlineCd}
+         GROUP BY B.FSCP_CHM_MMM, B.FSCP_MODTP_CD
+         ORDER BY B.FSCP_CHM_MMM ASC NULLS FIRST
+    </select>
+
+    <select id="selectOcnCombo" parameterType="VehicleSpecSearchVO" resultType="VehicleSpecVO">
+        SELECT OCN_CD,
+               '[' || OCN_CD || ']' || OCN_NM AS OCN_NM,
+               MODEL_CD,
+               MODEL_CD || OCN_CD AS FSC_CD
+          FROM SA_0105T X
+         WHERE SUBSTR(X.MODEL_CD, 1, 2) = #{sCarlineCd}
+        <if test='sFscCd != null and sFscCd != "" and sFscCd != "None" '>
+           AND X.FSCP_CHM_MMM IN (SELECT A.FSCP_CHM_MMM
+                                    FROM SA_0105T A, SA_0102T B
+                                   WHERE A.MODEL_CD = B.MODEL_CD
+                                     AND SUBSTR(A.MODEL_CD, 1, 2) = #{sCarlineCd}
+                                     AND FSCP_MODTP_CD = #{sFscCd}
+                                   GROUP BY A.FSCP_CHM_MMM)
+        </if>
+         ORDER BY OCN_CD ASC
+    </select>
+
+    <select id="selectExtColorCombo" parameterType="VehicleSpecSearchVO" resultType="VehicleSpecVO">
+        SELECT A.EXT_COLOR_CD,
+               FN_GET_EXT_COLOR_NM(A.EXT_COLOR_CD) AS EXT_COLOR_NM,
+               FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD) AS EXT_COLOR_NM_NC,
+               B.EXT_COLOR_EN_NM
+          FROM SA_0109T A, SA_0107T B
+         WHERE A.EXT_COLOR_CD = B.EXT_COLOR_CD
+           AND A.MODEL_CD = #{sModelCd}
+         GROUP BY A.EXT_COLOR_CD, B.EXT_COLOR_NM, B.EXT_COLOR_EN_NM
+         ORDER BY A.EXT_COLOR_CD, B.EXT_COLOR_NM
+    </select>
+
+    <select id="selectIntColorCombo" parameterType="VehicleSpecSearchVO" resultType="VehicleSpecVO">
+        SELECT A.INT_COLOR_CD,
+               FN_GET_INT_COLOR_NM(A.INT_COLOR_CD) AS INT_COLOR_NM,
+               FN_GET_INT_COLOR_NM_NC(A.INT_COLOR_CD) AS INT_COLOR_NM_NC,
+               B.INT_COLOR_EN_NM
+          FROM SA_0109T A, SA_0108T B
+         WHERE A.INT_COLOR_CD = B.INT_COLOR_CD
+           AND A.MODEL_CD = #{sModelCd}
+         GROUP BY A.INT_COLOR_CD, B.INT_COLOR_NM, B.INT_COLOR_EN_NM
+         ORDER BY A.INT_COLOR_CD, B.INT_COLOR_NM
+    </select>
+</mapper>

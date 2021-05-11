@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : LocationMasterDAO_SqlMap.xml
+    Description : 로케이션 마스터 정보.
+    author In Bo Shim
+    since 2016. 1. 05.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     In Bo Shim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.part.dao.PartBinLocationMasterDAO">
+
+ 	<!-- 부품별 로케이션 마스터 정보 목록을 Count한다. -->
+    <select id="selectBinLocationMasterByItemCdCnt" parameterType="BinLocationMasterSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterDAO.selectBinLocationMasterByItemCdCnt] */
+        SELECT
+            COUNT(*)
+        FROM PT_0222T A
+        WHERE   A.DLR_CD = #{sDlrCd}
+        <if test='sItemCdLst  != null and !sItemCdLst.isEmpty'> AND A.ITEM_CD IN
+           <foreach item="item" index="index" collection="sItemCdLst" open="(" separator="," close=")">
+                #{item}
+           </foreach>
+        </if>        --부품코드
+    </select>
+    
+    <!-- 부품별 로케이션 마스터 정보 목록을 조회한다. -->
+    <select id="selectBinLocationMasterByItemCd" parameterType="BinLocationMasterSearchVO" resultType="chn.bhmc.dms.mob.api.part.vo.BinLocationMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterDAO.selectBinLocationMasterByItemCd] */
+        SELECT
+            A.DLR_CD
+            ,A.LOC_ID
+            ,A.PLT_CD
+            ,A.STRGE_CD
+            ,A.LVL_ID
+            ,A.LOC_CD
+            ,A.LOC_NM
+            ,A.UPPER_LOC_ID
+            ,A.MAX_QTY
+            ,A.LMT_MNG_YN
+            ,A.ITEM_CD
+            ,A.REMARK
+            ,A.REG_USR_ID
+            ,A.REG_DT
+            ,A.UPDT_USR_ID
+            ,A.UPDT_DT
+            ,A.MAIN_LOC_YN
+            ,A.UPPER_LVL_ID
+            ,A.AVLB_STOCK_QTY
+            ,A.RESV_STOCK_QTY
+            ,A.CLAM_STOCK_QTY
+        FROM PT_0222T A
+        WHERE   A.DLR_CD = #{sDlrCd}
+        <if test='sItemCdLst  != null and !sItemCdLst.isEmpty'> AND A.ITEM_CD IN
+           <foreach item="item" index="index" collection="sItemCdLst" open="(" separator="," close=")">
+                #{item}
+           </foreach>
+        </if>        --부품코드
+    </select>
+    
+    <!-- 로케이션 마스터 정보 목록을 조회한다. -->
+    <select id="selectBinLocationMasterByCondition" parameterType="BinLocationMasterSearchVO" resultType="chn.bhmc.dms.mob.api.part.vo.BinLocationMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterDAO.selectBinLocationMasterByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                   A.DLR_CD
+                   ,A.LOC_ID
+                   ,A.LOC_ID AS DB_LOC_ID
+                   ,A.PLT_CD
+                   ,A.STRGE_CD
+                   ,A.LVL_ID
+                   ,A.LOC_CD AS DB_LOC_CD
+                   ,A.UPPER_LOC_ID || '-' || A.LOC_ID AS LOC_CD
+                   ,A.LOC_NM
+                   ,A.UPPER_LOC_ID
+                   ,A.MAX_QTY
+                   ,A.LMT_MNG_YN
+                   ,A.ITEM_CD
+                   ,A.REMARK
+                   ,A.REG_USR_ID
+                   ,A.REG_DT
+                   ,A.UPDT_USR_ID
+                   ,A.UPDT_DT
+                   ,A.MAIN_LOC_YN
+                   ,A.UPPER_LVL_ID
+                   ,A.AVLB_STOCK_QTY
+                   ,A.RESV_STOCK_QTY
+                   ,A.CLAM_STOCK_QTY
+                   ,'Y' AS DB_YN
+                   ,B.LGTH_CNT
+                   ,B.CD_TP
+                   ,B.LAST_LVL_YN
+                   ,CASE WHEN A.LVL_ID <![CDATA[<]]> 1 THEN A.STRGE_CD ELSE (SELECT C.LVL_TXT FROM PT_0221T C WHERE C.DLR_CD = B.DLR_CD AND C.LVL_ID = A.UPPER_LVL_ID )
+                   END AS UPPER_LVL_TXT
+                   ,CASE WHEN A.LVL_ID <![CDATA[<]]> 1 THEN '-' ELSE B.LVL_TXT
+                   END AS LVL_TXT
+                FROM PT_0222T A
+                LEFT JOIN PT_0221T B ON A.DLR_CD = B.DLR_CD AND A.LVL_ID = B.LVL_ID
+               WHERE A.DLR_CD = #{sDlrCd}
+                 AND A.STRGE_CD = #{sStrgeCd}
+                    <if test='sUpperLocId != null and sUpperLocId != ""'>
+                        AND A.UPPER_LOC_ID = #{sUpperLocId}
+                    </if>
+                    <if test='sLocId != null and sLocId != ""'>
+                        AND A.LOC_ID LIKE '%'||#{sLocId}||'%'
+                    </if>
+                    <if test='sItemCd != null and sItemCd != ""'>
+                        AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                    </if>
+
+                    <if test='sLvlId != null and sLvlId != 0 '>
+                        AND A.LVL_ID = #{sLvlId}
+                    </if>
+
+                    <if test='sNotLvlId != null and sNotLvlId != 0 '>
+                        AND A.LVL_ID <![CDATA[<>]]> #{sNotLvlId}
+                    </if>
+
+                    <if test='sMaxLvlId != null and sMaxLvlId != 0 '>
+                        AND A.LVL_ID <![CDATA[>]]> #{sLvlId}
+                    </if>
+
+                    <if test='sLocCd != null and sLocCd != ""'>
+                        AND A.LOC_CD LIKE '%'||#{sLocCd}||'%'
+                    </if>
+
+
+                    <if test='sMainLocYn != null and sMainLocYn != ""'>
+                        AND A.MAIN_LOC_YN = #{sMainLocYn}
+                    </if>
+
+                    <if test='sLastLvlYn != null and sLastLvlYn != ""'>
+                        AND B.LAST_LVL_YN = #{sLastLvlYn}
+                    </if>
+
+                    <if test='sItemCdNullYn =="Y"'>
+                        AND A.ITEM_CD IS NULL
+                    </if>
+
+                    <if test='sItemCdNullYn =="N"'>
+                        AND A.ITEM_CD IS NOT NULL
+                    </if>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "locId"'>A.LOC_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.DLR_CD, A.LOC_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.DLR_CD, A.LOC_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+   <!-- 레벨별 로케이션 마스터 콤보 정보 목록을 조회한다. -->
+    <select id="selectBinLocationMasterComboByLevel" parameterType="BinLocationMasterSearchVO" resultType="chn.bhmc.dms.mob.api.part.vo.BinLocationMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterDAO.selectBinLocationMasterComboByLevel] */
+        SELECT   A.LOC_CD
+                ,A.LOC_NM
+                ,A.LVL_ID
+                ,A.UPPER_LOC_ID
+        FROM PT_0222T A
+             INNER JOIN PT_0221T B
+               ON A.DLR_CD = B.DLR_CD
+              AND A.LVL_ID = B.LVL_ID
+       WHERE A.DLR_CD =  #{sDlrCd}
+       --AND B.LAST_LVL_YN != 'Y'
+       ORDER BY A.DLR_CD, A.LVL_ID, A.UPPER_LOC_ID, A.LOC_CD
+    </select>
+  
+
+</mapper>

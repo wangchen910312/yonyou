@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : PackageCouponMasterMngDAO_SqlMap.xml
+    Description : 패키지 쿠폰 마스터 관리 DAO
+    author Hyun Ho Kim
+    since 2016. 06. 09.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 06. 09.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.dmm.service.dao.PackageCouponMasterMngDAO">
+    <sql id="searchPackageCoupon">
+        <where>
+            AND DLR_CD = #{sDlrCd}
+            <if test='sPkgNm != null and sPkgNm != ""'>
+                AND PKG_NM LIKE '%'||#{sPkgNm}||'%'
+            </if>
+            <if test='sPkgSeq != null and sPkgSeq != ""'>
+                AND PKG_SEQ = #{sPkgSeq}
+            </if>
+            <choose>
+                <when test='(sStartDt != null and sEndDt == null)'>
+                    AND     REG_DT <![CDATA[>=]]> #{sStartDt}
+                </when>
+                <when test='(sStartDt == null and sEndDt != null)'>
+                    AND     REG_DT <![CDATA[<=]]> #{sEndDt}
+                </when>
+                <otherwise>
+                    <if test='(sStartDt != null) and (sEndDt != null)'>
+                        AND     (REG_DT <![CDATA[>=]]> #{sStartDt} AND REG_DT <![CDATA[<=]]> #{sEndDt}+1)
+                    </if>
+                </otherwise>
+            </choose>
+        <if test='sPkgUse != null and sPkgUse != ""'>
+            <choose>
+                <when test='sPkgUse == "Y"'>
+                    AND START_DT <![CDATA[<=]]> SYSDATE
+                    AND END_DT <![CDATA[>=]]> SYSDATE
+                </when>
+            </choose>
+        </if>
+        </where>
+    </sql>
+
+    <!-- 패키지쿠폰 마스터 관리 메인 목록수를 조회한다. -->
+    <select id="selectPackageCouponMasterMngsByConditionCnt" parameterType="PackageCouponMasterMngSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponMasterMngDAO.selectPackageCouponMasterMngsByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0814T
+        <include refid="searchPackageCoupon" />
+
+    </select>
+
+    <!-- 패키지쿠폰 마스터 관리 메인 목록을 조회한다. -->
+    <select id="selectPackageCouponMasterMngsByCondition" parameterType="PackageCouponMasterMngSearchVO" resultType="PackageCouponMasterMngVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponMasterMngDAO.selectPackageCouponMasterMngsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT  DLR_CD
+                            ,PKG_SEQ
+                            ,PKG_NM
+                            ,PKG_AMT
+                            ,PKG_CONT
+                            ,REG_USR_ID
+                            ,REG_DT
+                            ,UPDT_USR_ID
+                            ,UPDT_DT
+                            ,START_DT
+                            ,END_DT
+                            ,USE_YN
+                    FROM    CR_0814T
+                    <include refid="searchPackageCoupon" />
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "pkgAmt"'>PKG_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "pkgNm"'>PKG_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "pkgCont"'>PKG_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "regDtFormat"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "startDt"'>START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "endDt"'>END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "useYn"'>USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        REG_DT DESC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            REG_DT DESC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 블루멤버십 가입 정보 목록을 조회한다. -->
+    <select id="selectPackageCouponMasterMngByKey" parameterType="PackageCouponMasterMngSearchVO" resultType="PackageCouponMasterMngVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponMasterMngDAO.selectPackageCouponMasterMngByKey] */
+            SELECT  DLR_CD
+                    ,PKG_SEQ
+                    ,PKG_NM
+                    ,PKG_AMT
+                    ,PKG_CONT
+                    ,REG_USR_ID
+                    ,REG_DT
+                    ,UPDT_USR_ID
+                    ,UPDT_DT
+            FROM    CR_0814T
+            <include refid="searchPackageCoupon" />
+    </select>
+
+    <insert id="insertPackageCouponMasterMng" parameterType="PackageCouponMasterMngVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponMasterMngDAO.insertPackageCouponMasterMng] */
+        INSERT INTO CR_0814T    --패키지쿠폰MASTER
+        (
+            DLR_CD             --딜러코드
+            ,PKG_SEQ            --패키지일련번호
+            ,PKG_NM             --패키지명
+            ,PKG_AMT            --패키지금액
+            ,PKG_CONT           --패키지내용
+            ,REG_USR_ID         --등록자ID
+            ,REG_DT             --등록일자
+            ,START_DT           --시작일자
+            ,END_DT             --종료일자
+            ,USE_YN             --사용유무
+        )
+        VALUES
+        (
+            #{dlrCd}             --딜러코드
+            ,SEQ_CR_0814T.NEXTVAL            --패키지일련번호
+            ,#{pkgNm}             --패키지명
+            ,#{pkgAmt}            --패키지금액
+            ,#{pkgCont}           --패키지내용
+            ,#{regUsrId}          --등록자ID
+            ,SYSDATE              --등록일자
+            ,#{startDt}           --시작일자
+            ,#{endDt}             --종료일자
+            ,#{useYn}             --사용유무
+        )
+    </insert>
+
+    <update id="updatePackageCouponMasterMng" parameterType="PackageCouponMasterMngVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponMasterMngDAO.updatePackageCouponMasterMng] */
+        UPDATE  CR_0814T    --패키지쿠폰상세
+        SET     PKG_NM      = #{pkgNm}          --패키지명
+                ,PKG_AMT     = #{pkgAmt}        --패키지금액
+                ,PKG_CONT    = #{pkgCont}       --패키지내용
+                ,UPDT_USR_ID = #{updtUsrId}     --수정자ID
+                ,UPDT_DT     = SYSDATE          --수정일자
+                ,START_DT    = #{startDt}       --시작일자
+                ,END_DT      = #{endDt}         --종료일자
+                ,USE_YN      = #{useYn}         --사용유무
+        WHERE 1 = 1
+        AND DLR_CD      = #{dlrCd}             --딜러코드
+        AND PKG_SEQ     = #{pkgSeq}            --패키지일련번호
+    </update>
+
+    <delete id="deletePackageCouponMasterMng" parameterType="PackageCouponMasterMngVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponMasterMngDAO.deletePackageCouponMasterMng] */
+        DELETE  CR_0814T    --패키지쿠폰MASTER
+        WHERE   1 = 1
+        AND     DLR_CD      = #{dlrCd}             --딜러코드
+        AND     PKG_SEQ     = #{pkgSeq}            --패키지일련번호
+    </delete>
+
+</mapper>

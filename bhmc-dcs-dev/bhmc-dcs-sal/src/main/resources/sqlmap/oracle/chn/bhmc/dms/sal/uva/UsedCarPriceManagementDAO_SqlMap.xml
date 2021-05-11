@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : UsedCarPriceManagementDAO_SqlMap.xml
+    Description : 중고차 가격 관리
+    author Bong
+    since 2016. 5. 24.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 5. 24.       Bong              최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.sal.uva.service.dao.UsedCarPriceManagementDAO">
+
+    <select id="selectUsedCarPriceManagementConditionCnt" parameterType="UsedCarPriceManagementSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0127T
+         WHERE DLR_CD = #{sDlrCd}
+        <if test='sStartDt != null and sEndDt != null'>
+           AND START_DT <![CDATA[ <= ]]> #{sEndDt}
+           AND END_DT <![CDATA[ >= ]]> #{sStartDt}
+        </if>
+        <if test='sVinNo != null and sVinNo != ""'>
+            <choose>
+                <when test='@org.apache.commons.lang3.StringUtils@contains(sVinNo,"*")'>
+                    <bind name='sVinNo' value='@org.apache.commons.lang3.StringUtils@replace(sVinNo, "*", "%")' />
+           AND VIN_NO LIKE #{sVinNo}
+                </when>
+                <otherwise>
+           AND VIN_NO = #{sVinNo}
+                </otherwise>
+            </choose>
+        </if>
+        <if test='sUseYn != null and sUseYn != ""'>
+           AND USE_YN = #{sUseYn}
+        </if>
+    </select>
+
+    <select id="selectUsedCarPriceManagementCondition" parameterType="UsedCarPriceManagementSearchVO" resultType="UsedCarPriceManagementVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT DLR_CD
+                     , VIN_NO
+                     , START_DT
+                     , END_DT
+                     , RETL_PRC
+                     , USE_YN
+                  FROM SA_0127T
+                 WHERE DLR_CD = #{sDlrCd}
+                <if test='sStartDt != null and sEndDt != null'>
+                   AND START_DT <![CDATA[ <= ]]> #{sEndDt}
+                   AND END_DT <![CDATA[ >= ]]> #{sStartDt}
+                </if>
+                <if test='sVinNo != null and sVinNo != ""'>
+                    <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sVinNo,"*")'>
+                            <bind name='sVinNo' value='@org.apache.commons.lang3.StringUtils@replace(sVinNo, "*", "%")' />
+                   AND VIN_NO LIKE #{sVinNo}
+                        </when>
+                        <otherwise>
+                   AND VIN_NO = #{sVinNo}
+                        </otherwise>
+                    </choose>
+                </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "vinNO"'>VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "startDt"'>START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "endDt"'>END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "retlPrc"'>RETL_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "useYn"'>USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    VIN_NO, START_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        VIN_NO, START_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 중고차 가격 정보 수정  -->
+    <update id="updateUsedCarPriceManagement" parameterType="UsedCarPriceManagementVO">
+        UPDATE SA_0127T
+           SET START_DT = #{startDt}
+             , RETL_PRC = #{retlPrc}
+             , USE_YN = #{useYn}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE DLR_CD = #{dlrCd}
+           AND END_DT = #{endDt}
+           AND VIN_NO = #{vinNo}
+    </update>
+
+    <!-- 중고차 가격 등록  -->
+    <insert id="insertUsedCarPriceManagement" parameterType="UsedCarPriceManagementVO">
+        INSERT INTO SA_0127T
+             ( DLR_CD
+             , VIN_NO
+             , END_DT
+             , START_DT
+             , RETL_PRC
+             , USE_YN
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT)
+        VALUES
+             ( #{dlrCd}
+             , #{vinNo}
+             , #{endDt}
+             , #{startDt}
+             , #{retlPrc}
+             , #{useYn}
+             , #{regUsrId}
+             , SYSDATE
+             , #{updtUsrId}
+             , SYSDATE)
+    </insert>
+
+</mapper>

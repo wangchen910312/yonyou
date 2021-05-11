@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : PositionsDiscountDAO_SqlMap.xml
+    Description : 직책별 할인금액 관리
+    author Bong
+    since 2016. 5. 11.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 5. 11.       Bong              최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.sal.mst.service.dao.PositionsDiscountDAO">
+
+    <select id="selectPositionsDiscountAmtConditionCnt" parameterType="PositionsDiscountSearchVO" resultType="int">
+    <!-- selectEvalInfoDownloadCnt -->
+        SELECT COUNT(*)
+          FROM SA_0120T
+         WHERE DLR_CD = #{sDlrCd}
+        <if test='sCarlineCd != null and sCarlineCd != ""'>
+           AND CARLINE_CD = #{sCarlineCd}
+        </if>
+        <if test='sModelCd != null and sModelCd != ""'>
+           AND MODEL_CD = #{sModelCd}
+        </if>
+        <if test='sOcnCd != null and sOcnCd != ""'>
+           AND OCN_CD = #{sOcnCd}
+        </if>
+        <if test='sStartDt != null and sEndDt != null'>
+           AND START_DT <![CDATA[ <= ]]> #{sEndDt}
+           AND END_DT <![CDATA[ >= ]]> #{sStartDt}
+        </if>
+    </select>
+
+    <select id="selectPositionsDiscountAmtCondition" parameterType="PositionsDiscountSearchVO" resultType="PositionsDiscountAmtVO">
+    <!-- selectEvalInfoDownload -->
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_CARLINE_NM(T1.CARLINE_CD) AS CARLINE_NM
+                 , DECODE(T1.MODEL_CD, 'ALL', 'ALL', FN_GET_MODEL_NM(T1.MODEL_CD)) AS MODEL_NM
+                 , DECODE(T1.OCN_CD, 'ALL', 'ALL', FN_GET_OCN_NM(T1.MODEL_CD, T1.OCN_CD)) AS OCN_NM
+                 , T1.* FROM (
+                SELECT DLR_CD
+                     , CARLINE_CD
+                     , MODEL_CD
+                     , OCN_CD
+                     , START_DT
+                     , END_DT
+                     , PRC_NREG_YN
+                     , DC_TOT_AMT1
+                     , CAR_DC_AMT1
+                     , GOODS_DC_AMT1
+                     , DC_TOT_AMT2
+                     , CAR_DC_AMT2
+                     , GOODS_DC_AMT2
+                     , DC_TOT_AMT3
+                     , CAR_DC_AMT3
+                     , GOODS_DC_AMT3
+                  FROM SA_0120T
+                 WHERE DLR_CD = #{sDlrCd}
+                <if test='sCarlineCd != null and sCarlineCd != ""'>
+                   AND CARLINE_CD = #{sCarlineCd}
+                </if>
+                <if test='sModelCd != null and sModelCd != ""'>
+                   AND MODEL_CD = #{sModelCd}
+                </if>
+                <if test='sOcnCd != null and sOcnCd != ""'>
+                   AND OCN_CD = #{sOcnCd}
+                </if>
+                <if test='sStartDt != null and sEndDt != null'>
+                   AND START_DT <![CDATA[ <= ]]> #{sEndDt}
+                   AND END_DT <![CDATA[ >= ]]> #{sStartDt}
+                </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "carlineCd"'>CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelCd"'>MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnCd"'>OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "startDt"'>START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "endDt"'>END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dcTotAmt1"'>DC_TOT_AMT1 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carDcAmt1"'>CAR_DC_AMT1 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "goodsDcAmt1"'>GOODS_DC_AMT1 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dcTotAmt2"'>DC_TOT_AMT2 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carDcAmt2"'>CAR_DC_AMT2 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "goodsDcAmt2"'>GOODS_DC_AMT2 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dcTotAmt3"'>DC_TOT_AMT3 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carDcAmt3"'>CAR_DC_AMT3 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "goodsDcAmt3"'>GOODS_DC_AMT3 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    START_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        START_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 할인 금액 수정  -->
+    <update id="updatePositionsDiscountAmt" parameterType="PositionsDiscountAmtVO">
+        UPDATE SA_0120T
+           SET START_DT = #{startDt}
+             , PRC_NREG_YN = #{prcNregYn}
+             , DC_TOT_AMT1 = #{dcTotAmt1}
+             , CAR_DC_AMT1 = #{carDcAmt1}
+             , GOODS_DC_AMT1 = #{goodsDcAmt1}
+             , DC_TOT_AMT2 = #{dcTotAmt2}
+             , CAR_DC_AMT2 = #{carDcAmt2}
+             , GOODS_DC_AMT2 = #{goodsDcAmt2}
+             , DC_TOT_AMT3 = #{dcTotAmt3}
+             , CAR_DC_AMT3 = #{carDcAmt3}
+             , GOODS_DC_AMT3 = #{goodsDcAmt3}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE DLR_CD = #{dlrCd}
+           AND END_DT = #{endDt}
+           AND CARLINE_CD = #{carlineCd}
+           AND MODEL_CD = #{modelCd}
+           AND OCN_CD = #{ocnCd}
+    </update>
+
+    <!-- 할인 금액 등록  -->
+    <insert id="insertPositionsDiscountAmt" parameterType="PositionsDiscountAmtVO">
+        INSERT INTO SA_0120T
+             ( DLR_CD
+             , END_DT
+             , START_DT
+             , CARLINE_CD
+             , MODEL_CD
+             , OCN_CD
+             , PRC_NREG_YN
+             , DC_TOT_AMT1
+             , CAR_DC_AMT1
+             , GOODS_DC_AMT1
+             , DC_TOT_AMT2
+             , CAR_DC_AMT2
+             , GOODS_DC_AMT2
+             , DC_TOT_AMT3
+             , CAR_DC_AMT3
+             , GOODS_DC_AMT3
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT)
+        VALUES
+             ( #{dlrCd}
+             , #{endDt}
+             , #{startDt}
+             , #{carlineCd}
+             , #{modelCd}
+             , #{ocnCd}
+             , #{prcNregYn}
+             , #{dcTotAmt1}
+             , #{carDcAmt1}
+             , #{goodsDcAmt1}
+             , #{dcTotAmt2}
+             , #{carDcAmt2}
+             , #{goodsDcAmt2}
+             , #{dcTotAmt3}
+             , #{carDcAmt3}
+             , #{goodsDcAmt3}
+             , #{regUsrId}
+             , SYSDATE
+             , #{updtUsrId}
+             , SYSDATE)
+    </insert>
+
+
+</mapper>

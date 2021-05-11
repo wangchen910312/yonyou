@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans  xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.2.xsd">
+
+	<!-- method -->
+	<bean id="methodSecurityMetadataSourceAdvisor" class="org.springframework.security.access.intercept.aopalliance.MethodSecurityMetadataSourceAdvisor">
+		<constructor-arg value="methodSecurityInterceptor" />
+		<constructor-arg ref="delegatingMethodSecurityMetadataSource" />
+		<constructor-arg value="delegatingMethodSecurityMetadataSource" />
+	</bean>
+
+	<bean id="methodSecurityInterceptor" class="org.springframework.security.access.intercept.aopalliance.MethodSecurityInterceptor">
+		<property name="validateConfigAttributes" value="false" />
+		<property name="authenticationManager" ref="org.springframework.security.authenticationManager"/>
+		<property name="accessDecisionManager" ref="org.springframework.security.access.vote.AffirmativeBased#0"/>
+		<property name="securityMetadataSource" ref="delegatingMethodSecurityMetadataSource" />
+	</bean>
+
+    <bean id="delegatingMethodSecurityMetadataSource" class="org.springframework.security.access.method.DelegatingMethodSecurityMetadataSource">
+        <constructor-arg>
+            <list>
+                <ref bean="methodSecurityMetadataSources" />
+                <bean class="org.springframework.security.access.annotation.SecuredAnnotationSecurityMetadataSource" />
+                <bean class="org.springframework.security.access.annotation.Jsr250MethodSecurityMetadataSource" />
+            </list>
+        </constructor-arg>
+    </bean>
+
+	<bean id="methodSecurityMetadataSources" class="org.springframework.security.access.method.MapBasedMethodSecurityMetadataSource">
+		<constructor-arg ref="methodMap" />
+	</bean>
+
+	<bean id="methodMap" class="chn.bhmc.dms.security.intercept.MethodResourcesMapFactoryBean" init-method="init">
+		<property name="securedObjectService" ref="securedObjectService"/>
+		<property name="resourceType" value="method"/>
+	</bean>
+
+</beans>

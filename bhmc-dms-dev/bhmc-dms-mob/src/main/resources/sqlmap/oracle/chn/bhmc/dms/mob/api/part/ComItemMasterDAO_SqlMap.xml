@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : ComItemMasterDao_SqlMap.xml
+    Description : 공용부품 정보관리.
+    author Eun Jung Jang
+    since 2016. 5. 16.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 05. 16.     Eun Jung Jang     최초 생성
+-->
+
+
+
+<mapper namespace="chn.bhmc.dms.mob.api.part.dao.PartComItemMasterDAO">
+
+  <!-- 공용부품마스터 총 갯수 조회. -->
+    <select id="comItemMasterByKeyCnt" resultType="int">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ComItemMasterDao.comItemMasterByKeyCnt] */
+            SELECT
+                COUNT(*)
+            FROM DMSDB.PT_0204T A
+            INNER JOIN DMSDB.PT_0201T B ON A.DLR_CD  = B.DLR_CD AND A.ITEM_CD = B.ITEM_CD
+            LEFT OUTER JOIN DMSDB.PT_0301T C ON A.DLR_CD  = C.DLR_CD AND A.ITEM_CD = C.ITEM_CD
+            WHERE A.DLR_CD = #{sDlrCd}
+            AND A.ITEM_CD = #{sItemCd}
+            <if test='sComItemCd != null and sComItemCd != ""'>
+            AND A.COM_ITEM_CD = #{sComItemCd}
+            </if>
+    </select>
+
+    <!-- Key에 해당하는 공용부품마스터 부품정보를 리스트 조회. -->
+    <select id="comItemMasterByKey" parameterType="ComItemMasterSearchVO" resultType="chn.bhmc.dms.mob.api.part.vo.ComItemMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ComItemMasterDao.comItemMasterByKey] */
+        SELECT
+            ROWNUM AS RNUM
+            ,A.DLR_CD
+            ,A.COM_ITEM_CD
+            ,A.ITEM_CD
+            ,B.ITEM_NM
+            ,A.REMARK
+            ,B.ITEM_NM AS COM_ITEM_NM
+            ,NVL(B.GR_STRGE_CD, B.GI_STRGE_CD) AS STRGE_CD
+            ,B.SPYR_CD
+            ,B.ITEM_EN_NM
+            ,B.ITEM_DSTIN_CD
+            ,B.ITEM_GRP_CD
+            ,B.HS_CD
+            ,B.END_YN
+            ,B.START_DT
+            ,B.END_DT
+            ,B.PRE_ITEM_CD
+            ,B.OLD_RPLC_ITEM_CD
+            ,B.NEW_RPLC_ITEM_CD
+            ,B.OLD_RPLC_PAR_CMPT_YN
+            ,B.NEW_RPLC_PAR_CMPT_YN
+            ,B.SUC_CD
+            ,B.LAST_CMPT_ITEM_CD
+            ,B.CAR_USE_UNIT_CNT
+            ,B.MOBIS_IMP_LOCAL_YN_TP
+            ,B.PAR_SPEC_CD
+            ,B.PNC_CD
+            ,B.STOCK_UNIT_CD
+            ,B.ITEM_LGTH_VAL
+            ,B.ITEM_WIDTH_VAL
+            ,B.ITEM_HGTH_VAL
+            ,B.WEIGHT_UNIT_CD
+            ,B.TOT_WEIGHT_VAL
+            ,B.NET_WEIGHT_VAL
+            ,B.FILE_DOC_NO
+            ,B.PURC_LEAD_HM
+            ,B.CQTY_RAISE_TP
+            ,B.MIN_PURC_QTY
+            ,B.STDRD_STOCK_CALC_YN
+            ,B.SFTY_STOCK_QTY
+            ,B.PURC_CQTY_CALC_YN
+            ,B.STOCK_PRSN_ID
+            ,B.PURC_PRSN_ID
+            ,B.GR_STRGE_CD
+            ,B.GI_STRGE_CD
+            ,B.IMP_TEST_TP
+            ,B.ABC_IND
+            ,B.MM3_AVG_DMND_QTY
+            ,B.MM6_AVG_DMND_QTY
+            ,B.MM12_AVG_DMND_QTY
+            ,B.PURC_REQ_CNT
+            ,B.NON_MOVING_FLG
+            ,B.BEF_LAST_GR_DT
+            ,B.LAST_GR_DT
+            ,B.BEF_LAST_GI_DT
+            ,B.LAST_GI_DT
+            ,B.RECOM_RTPRC_AMT
+            ,B.MOVING_AVG_PRC
+            ,B.CARLINE_CD
+            ,B.CARLINE_CD2
+            ,B.BRAND_CD
+            ,B.STDRD_STOCK_QTY
+            ,B.STDRD_STOCK_APPLY_RATE
+            ,B.COM_CARLINE_NM
+            ,B.PRND_YN
+            ,B.DGR_ITEM_YN
+            ,B.SPYR_CD AS BP_TP
+            ,B.BP_CD
+            ,C.BP_NM
+            ,B.MODEL_CD
+            ,B.LAST_GR_AMT
+            ,B.MAX_SFTY_STOCK_QTY
+            ,B.DLR_SELF_ITEM_NM
+            ,B.MJR_USE_YN
+            ,B.MJR_ERR_YN
+            ,B.RENEW_DT
+            ,B.LOC_CD
+            ,D.AVLB_STOCK_QTY
+        FROM PT_0204T A
+        INNER JOIN PT_0201T B ON A.DLR_CD = B.DLR_CD AND A.COM_ITEM_CD = B.ITEM_CD
+        LEFT OUTER JOIN PT_0211T C ON B.DLR_CD = C.DLR_CD AND B.BP_CD  = C.BP_CD
+        LEFT OUTER JOIN (
+            SELECT
+                AA.DLR_CD
+                ,AA.ITEM_CD
+                ,SUM(AA.AVLB_STOCK_QTY) AS AVLB_STOCK_QTY
+            FROM PT_0301T AA
+            GROUP BY AA.DLR_CD, AA.ITEM_CD
+        ) D ON A.DLR_CD = D.DLR_CD AND A.COM_ITEM_CD = D.ITEM_CD
+        WHERE A.DLR_CD  = #{sDlrCd}
+        AND A.ITEM_CD = #{sItemCd}
+        <if test='sComItemCd != null and sComItemCd != ""'>
+        AND A.COM_ITEM_CD = #{sComItemCd}
+        </if>
+
+    </select>
+
+</mapper>

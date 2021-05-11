@@ -1,0 +1,3949 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="ds1" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sCarlineCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sStartDt"/>
+<O>
+<![CDATA[2017]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[ SELECT CARLINE_CD
+       ,FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_NM
+       ,MAX(CASE WHEN MM = 01 THEN TARG_QTY ELSE 0 END) TARG_QTY01
+       ,MAX(CASE WHEN MM = 01 THEN SALE_QTY ELSE 0 END) SALE_QTY01
+       ,ROUND(MAX(CASE WHEN MM = 01 THEN COM_PERC ELSE 0 END),1) AS  COM_PERC01
+       ,MAX(CASE WHEN MM = 02 THEN TARG_QTY ELSE 0 END) TARG_QTY02
+       ,MAX(CASE WHEN MM = 02 THEN SALE_QTY ELSE 0 END) SALE_QTY02
+       ,ROUND(MAX(CASE WHEN MM = 02 THEN COM_PERC ELSE 0 END),1) AS COM_PERC02
+       ,MAX(CASE WHEN MM = 03 THEN TARG_QTY ELSE 0 END) TARG_QTY03
+       ,MAX(CASE WHEN MM = 03 THEN SALE_QTY ELSE 0 END) SALE_QTY03
+       ,ROUND(MAX(CASE WHEN MM = 03 THEN COM_PERC ELSE 0 END),1) AS COM_PERC03
+       ,MAX(CASE WHEN MM = 04 THEN TARG_QTY ELSE 0 END) TARG_QTY04
+       ,MAX(CASE WHEN MM = 04 THEN SALE_QTY ELSE 0 END) SALE_QTY04
+       ,ROUND(MAX(CASE WHEN MM = 04 THEN COM_PERC ELSE 0 END),1) AS COM_PERC04
+       ,MAX(CASE WHEN MM = 05 THEN TARG_QTY ELSE 0 END) TARG_QTY05
+       ,MAX(CASE WHEN MM = 05 THEN SALE_QTY ELSE 0 END) SALE_QTY05
+       ,ROUND(MAX(CASE WHEN MM = 05 THEN COM_PERC ELSE 0 END),1) AS COM_PERC05
+       ,MAX(CASE WHEN MM = 06 THEN TARG_QTY ELSE 0 END) TARG_QTY06
+       ,MAX(CASE WHEN MM = 06 THEN SALE_QTY ELSE 0 END) SALE_QTY06
+       ,ROUND(MAX(CASE WHEN MM = 06 THEN COM_PERC ELSE 0 END),1) AS COM_PERC06
+       ,MAX(CASE WHEN MM = 07 THEN TARG_QTY ELSE 0 END) TARG_QTY07
+       ,MAX(CASE WHEN MM = 07 THEN SALE_QTY ELSE 0 END) SALE_QTY07
+       ,ROUND(MAX(CASE WHEN MM = 07 THEN COM_PERC ELSE 0 END),1) AS COM_PERC07
+       ,MAX(CASE WHEN MM = 08 THEN TARG_QTY ELSE 0 END) TARG_QTY08
+       ,MAX(CASE WHEN MM = 08 THEN SALE_QTY ELSE 0 END) SALE_QTY08
+       ,ROUND(MAX(CASE WHEN MM = 08 THEN COM_PERC ELSE 0 END),1) AS COM_PERC08
+       ,MAX(CASE WHEN MM = 09 THEN TARG_QTY ELSE 0 END) TARG_QTY09
+       ,MAX(CASE WHEN MM = 09 THEN SALE_QTY ELSE 0 END) SALE_QTY09
+       ,ROUND(MAX(CASE WHEN MM = 09 THEN COM_PERC ELSE 0 END),1) AS COM_PERC09
+       ,MAX(CASE WHEN MM = 10 THEN TARG_QTY ELSE 0 END) TARG_QTY10
+       ,MAX(CASE WHEN MM = 10 THEN SALE_QTY ELSE 0 END) SALE_QTY10
+       ,ROUND(MAX(CASE WHEN MM = 10 THEN COM_PERC ELSE 0 END),1) AS COM_PERC10
+       ,MAX(CASE WHEN MM = 11 THEN TARG_QTY ELSE 0 END) TARG_QTY11
+       ,MAX(CASE WHEN MM = 11 THEN SALE_QTY ELSE 0 END) SALE_QTY11
+       ,ROUND(MAX(CASE WHEN MM = 11 THEN COM_PERC ELSE 0 END),1) AS COM_PERC11
+       ,MAX(CASE WHEN MM = 12 THEN TARG_QTY ELSE 0 END) TARG_QTY12
+       ,MAX(CASE WHEN MM = 12 THEN SALE_QTY ELSE 0 END) SALE_QTY12
+       ,ROUND(MAX(CASE WHEN MM = 12 THEN COM_PERC ELSE 0 END),1) AS COM_PERC12
+       ,SUM(TARG_QTY) TARG_QTY_YYYY
+       ,SUM(SALE_QTY) SALE_QTY_YYYY
+       ,SUM(COM_PERC) AS COM_PERC_YYYY
+   FROM (
+SELECT MM,
+       CARLINE_CD,
+       SALE_QTY,
+       TARG_QTY,
+       CASE
+         WHEN SALE_QTY > 0 AND TARG_QTY > 0 THEN
+          ROUND(SALE_QTY / TARG_QTY * 100, 2)
+         ELSE
+          0
+       END COM_PERC
+  FROM (SELECT X.ALDY AS MM,
+               X.CARLINE_CD,
+               SUM(X.ORD_ASSIGN_QTY) AS SALE_QTY,
+               NVL((SELECT Q.TARG_QTY
+                     FROM SA_0431T Q
+                    WHERE Q.DLR_CD = '${sDlrCd}'
+                      AND Q.YY = '${sStartDt}'
+                      AND Q.MM = ALDY
+                      AND Q.CARLINE_CD = X.CARLINE_CD
+                      AND Q.TARG_TP = 'W'
+                      ),
+                   0) AS TARG_QTY
+          FROM (SELECT CARLINE_CD,
+                       SUM(ORD_ASSIGN_QTY) AS ORD_ASSIGN_QTY,
+                       ALDY
+                  FROM (SELECT DECODE(A.PRTY,
+                                      'P',
+                                      1,
+                                      'M',
+                                      1,
+                                      'N',
+                                      1,
+                                      'C',
+                                      1,
+                                      'F',
+                                      1,
+                                      'D',
+                                      1,
+                                      'E',
+                                      1,
+                                      0) AS ORD_ASSIGN_QTY,
+                               A.CARLINE_CD,
+                               SUBSTR(A.EMONT, 5, 2) AS ALDY
+                          FROM SA_0416T A
+                         WHERE A.DLR_CD = '${sDlrCd}'
+                           AND SUBSTR(A.EMONT,1,4) = '${sStartDt}'
+                           )
+                 GROUP BY CARLINE_CD, ALDY
+                UNION ALL
+                SELECT CARLINE_CD, 0 AS ORD_ASSIGN_QTY, '01' AS ALDY
+                  FROM SA_0101T A
+                 WHERE SYSDATE BETWEEN A.START_DT AND A.END_DT
+                UNION ALL
+                SELECT B.CARLINE_CD, 0 AS ORD_ASSIGN_QTY, A.JRNL_DT AS ALDY
+                  FROM (SELECT DECODE(LENGTH(ROWNUM),
+                                      1,
+                                      '0' || TO_CHAR(ROWNUM),
+                                      TO_CHAR(ROWNUM)) JRNL_DT
+                          FROM DICT
+                         WHERE ROWNUM <= 12) A,
+                       SA_0101T B) X
+         WHERE 1 = 1
+         ${IF(LEN(sCarlineCd) == 0, ""," AND x.CARLINE_CD = '"+sCarlineCd+"'")}
+         GROUP BY X.CARLINE_CD, X.ALDY
+         ORDER BY X.CARLINE_CD)
+) T1
+ WHERE CARLINE_CD IS NOT NULL
+  GROUP BY CARLINE_CD
+  ORDER BY CARLINE_CD]]></Query>
+</TableData>
+<TableData name="ds2" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sCarlineCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sStartDt"/>
+<O>
+<![CDATA[2017]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT MM||'月' AS MM,
+       TARG_QTY,
+       SALE_QTY,
+       CASE
+         WHEN TARG_QTY > 0 THEN
+          ROUND(SALE_QTY / TARG_QTY, 2) * 100
+         ELSE
+          0
+       END AS COM_PERC
+  FROM (SELECT X.ALDY AS MM,
+               SUM(X.ORD_ASSIGN_QTY) AS SALE_QTY,
+               NVL((SELECT SUM(Q.TARG_QTY)
+                     FROM SA_0431T Q
+                    WHERE Q.DLR_CD = '${sDlrCd}'
+                      AND Q.YY = '${sStartDt}'
+                      AND Q.MM = ALDY
+                      AND Q.TARG_TP = 'W'),
+                   0) AS TARG_QTY
+          FROM (SELECT CARLINE_CD,
+                       SUM(ORD_ASSIGN_QTY) AS ORD_ASSIGN_QTY,
+                       ALDY
+                  FROM (SELECT DECODE(A.PRTY,
+                                      'P',
+                                      1,
+                                      'M',
+                                      1,
+                                      'N',
+                                      1,
+                                      'C',
+                                      1,
+                                      'F',
+                                      1,
+                                      'D',
+                                      1,
+                                      'E',
+                                      1,
+                                      0) AS ORD_ASSIGN_QTY,
+                               A.CARLINE_CD,
+                               SUBSTR(A.EMONT, 5, 2) AS ALDY
+                          FROM SA_0416T A
+                         WHERE A.DLR_CD = '${sDlrCd}'
+                           AND SUBSTR(A.EMONT,1,4) = '${sStartDt}'
+                           )
+                 GROUP BY CARLINE_CD, ALDY
+                UNION ALL
+                SELECT CARLINE_CD, 0 AS ORD_ASSIGN_QTY, '01' AS ALDY
+                  FROM SA_0101T A
+                 WHERE SYSDATE BETWEEN A.START_DT AND A.END_DT
+                UNION ALL
+                SELECT B.CARLINE_CD, 0 AS ORD_ASSIGN_QTY, A.JRNL_DT AS ALDY
+                  FROM (SELECT DECODE(LENGTH(ROWNUM),
+                                      1,
+                                      '0' || TO_CHAR(ROWNUM),
+                                      TO_CHAR(ROWNUM)) JRNL_DT
+                          FROM DICT
+                         WHERE ROWNUM <= 12) A,
+                       SA_0101T B) X
+         WHERE 1 = 1
+         ${IF(LEN(sCarlineCd) == 0, ""," AND x.CARLINE_CD = '"+sCarlineCd+"'")}
+         GROUP BY X.ALDY
+         ORDER BY X.ALDY)]]></Query>
+</TableData>
+<TableData name="ds3" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sCarlineCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sStartDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_NM,
+       SALE_QTY
+  FROM (SELECT X.CARLINE_CD,
+               SUM(X.ORD_ASSIGN_QTY) AS SALE_QTY
+          FROM (SELECT CARLINE_CD,
+                       SUM(ORD_ASSIGN_QTY) AS ORD_ASSIGN_QTY,
+                       ALDY
+                  FROM (SELECT DECODE(A.PRTY,
+                                      'P',
+                                      1,
+                                      'M',
+                                      1,
+                                      'N',
+                                      1,
+                                      'C',
+                                      1,
+                                      'F',
+                                      1,
+                                      'D',
+                                      1,
+                                      'E',
+                                      1,
+                                      0) AS ORD_ASSIGN_QTY,
+                               A.CARLINE_CD,
+                               SUBSTR(A.EMONT, 5, 2) AS ALDY
+                          FROM SA_0416T A
+                         WHERE A.DLR_CD = '${sDlrCd}'
+                           AND SUBSTR(A.EMONT,1,4) = '${sStartDt}'
+                           )
+                 GROUP BY CARLINE_CD, ALDY
+                UNION ALL
+                SELECT CARLINE_CD, 0 AS ORD_ASSIGN_QTY, '01' AS ALDY
+                  FROM SA_0101T A
+                 WHERE SYSDATE BETWEEN A.START_DT AND A.END_DT
+                UNION ALL
+                SELECT B.CARLINE_CD, 0 AS ORD_ASSIGN_QTY, A.JRNL_DT AS ALDY
+                  FROM (SELECT DECODE(LENGTH(ROWNUM),
+                                      1,
+                                      '0' || TO_CHAR(ROWNUM),
+                                      TO_CHAR(ROWNUM)) JRNL_DT
+                          FROM DICT
+                         WHERE ROWNUM <= 12) A,
+                       SA_0101T B) X
+         WHERE ORD_ASSIGN_QTY > 0
+        ${IF(LEN(sCarlineCd) == 0, ""," AND x.CARLINE_CD = '"+sCarlineCd+"'")}
+         GROUP BY X.CARLINE_CD
+         ORDER BY X.CARLINE_CD)]]></Query>
+</TableData>
+</TableDataMap>
+<ReportWebAttr>
+<ServerPrinter/>
+<WebPageContent>
+<ToolBars>
+<ToolBarManager>
+<Location>
+<Embed position="1"/>
+</Location>
+<ToolBar>
+<Widget class="com.fr.report.web.button.page.First">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-First')}]]></Text>
+<IconName>
+<![CDATA[first]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Previous">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Previous')}]]></Text>
+<IconName>
+<![CDATA[previous]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.PageNavi">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Next">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Next')}]]></Text>
+<IconName>
+<![CDATA[next]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Last">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Last')}]]></Text>
+<IconName>
+<![CDATA[last]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.FlashPrint">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Print[Client]A')}]]></Text>
+<IconName>
+<![CDATA[flashprint]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.Print">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Print')}]]></Text>
+<IconName>
+<![CDATA[print]]></IconName>
+<PrintButtons/>
+</Widget>
+<Widget class="com.fr.report.web.button.Export">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Export')}]]></Text>
+<IconName>
+<![CDATA[export]]></IconName>
+<Buttons pdf="true" excelP="true" excelO="true" excelS="true" word="true" image="true" html="true"/>
+</Widget>
+<Widget class="com.fr.report.web.button.Email">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Email')}]]></Text>
+<IconName>
+<![CDATA[email]]></IconName>
+</Widget>
+<IsDefault>
+<![CDATA[false]]></IsDefault>
+<Background name="ColorBackground" color="-1"/>
+</ToolBar>
+</ToolBarManager>
+</ToolBars>
+<WebPage isPage="false" isShowAsImage="false" isAutoScale="false" isTDHeavy="false"/>
+</WebPageContent>
+</ReportWebAttr>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1080000,1080000,1080000,1080000,1080000,1080000,1080000,1080000,1080000,1080000,1080000,1080000,1080000,1080000,1080000,1080000,1080000,1008000,1008000,1008000,1080000,1080000,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[3886200,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,1872000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" cs="15" rs="17" s="0">
+<O t="CC">
+<LayoutAttr selectedIndex="0"/>
+<ChangeAttr enable="false" changeType="button" timeInterval="5" buttonColor="-8421505" carouselColor="-8421505">
+<TextAttr>
+<Attr alignText="0"/>
+</TextAttr>
+</ChangeAttr>
+<Chart name="默认" chartClass="com.fr.plugin.chart.vanchart.VanChart">
+<Chart class="com.fr.plugin.chart.vanchart.VanChart">
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1118482"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<ChartAttr isJSDraw="true" isStyleGlobal="false"/>
+<Title4VanChart>
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-6908266"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[="提车结构 : " + AY21]]></Attributes>
+</O>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei" style="1" size="80" foreground="-13421773"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<Attr4VanChart useHtml="false" floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0"/>
+</Title4VanChart>
+<Plot class="com.fr.plugin.chart.PiePlot4VanChart">
+<VanChartPlotVersion version="20170104"/>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1118482"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isNullValueBreak="true" autoRefreshPerSecond="0" seriesDragEnable="false" plotStyle="4" combinedSize="50.0"/>
+<newHotTooltipStyle>
+<AttrContents>
+<Attr showLine="false" position="1" isWhiteBackground="true" isShowMutiSeries="false" seriesLabel="${VALUE}"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+<PercentFormat>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.##%]]></Format>
+</PercentFormat>
+</AttrContents>
+</newHotTooltipStyle>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
+<ConditionAttr name="">
+<AttrList>
+<Attr class="com.fr.chart.base.AttrBorder">
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1"/>
+</AttrBorder>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.AttrLabel">
+<AttrLabel>
+<labelAttr enable="true"/>
+<labelDetail class="com.fr.plugin.chart.base.AttrLabelDetail">
+<Attr showLine="true" autoAdjust="false" position="6" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="1" size="72"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="false"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="true"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="false"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="false"/>
+</AttrTooltipSeriesFormat>
+</series>
+<HtmlLabel customText="function(){ return this.value+&apos;(&apos;+(this.percentage*100).toFixed(2)+&apos;%&apos;+&apos;)&apos;;}" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+</labelDetail>
+</AttrLabel>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.AttrTooltip">
+<AttrTooltip>
+<Attr enable="true" followMouse="true" showMutiSeries="false" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="SimSun" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="true"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="false"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="true"/>
+</AttrTooltipSeriesFormat>
+</series>
+<HtmlLabel customText="" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+<GI>
+<AttrBackground>
+<Background name="ColorBackground" color="-16777216"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="2"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="0.5"/>
+</AttrAlpha>
+</GI>
+</AttrTooltip>
+</Attr>
+</AttrList>
+</ConditionAttr>
+</DefaultAttr>
+</ConditionCollection>
+<Legend4VanChart>
+<Legend>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-3355444"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr position="4" visible="true"/>
+<FRFont name="Microsoft YaHei" style="0" size="64" foreground="-10066330"/>
+</Legend>
+<Attr4VanChart floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0" isHighlight="false"/>
+</Legend4VanChart>
+<DataSheet>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isVisible="false"/>
+</DataSheet>
+<DataProcessor class="com.fr.base.chart.chartdata.model.NormalDataModel"/>
+<newPlotFillStyle>
+<AttrFillStyle>
+<AFStyle colorStyle="1"/>
+<FillStyleName fillStyleName="新特性"/>
+<isCustomFillStyle isCustomFillStyle="false"/>
+<ColorList>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+<OColor colvalue="-472193"/>
+<OColor colvalue="-486008"/>
+<OColor colvalue="-8595761"/>
+<OColor colvalue="-7236949"/>
+<OColor colvalue="-8873759"/>
+<OColor colvalue="-1071514"/>
+<OColor colvalue="-1188474"/>
+<OColor colvalue="-6715442"/>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+<OColor colvalue="-472193"/>
+<OColor colvalue="-486008"/>
+<OColor colvalue="-8595761"/>
+<OColor colvalue="-7236949"/>
+<OColor colvalue="-8873759"/>
+<OColor colvalue="-1071514"/>
+<OColor colvalue="-1188474"/>
+<OColor colvalue="-6715442"/>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+<OColor colvalue="-472193"/>
+<OColor colvalue="-486008"/>
+<OColor colvalue="-8595761"/>
+<OColor colvalue="-7236949"/>
+<OColor colvalue="-8873759"/>
+<OColor colvalue="-1071514"/>
+<OColor colvalue="-1188474"/>
+<OColor colvalue="-6715442"/>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+</ColorList>
+</AttrFillStyle>
+</newPlotFillStyle>
+<VanChartPlotAttr isAxisRotation="false"/>
+<PieAttr4VanChart roseType="normal" startAngle="0.0" endAngle="360.0" innerRadius="60.0" supportRotation="false"/>
+<VanChartRadius radiusType="auto" radius="100"/>
+</Plot>
+<ChartDefinition>
+<OneValueCDDefinition seriesName="CARLINE_NM" valueName="SALE_QTY" function="com.fr.data.util.function.SumFunction">
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+<TableData class="com.fr.data.impl.NameTableData">
+<Name>
+<![CDATA[ds3]]></Name>
+</TableData>
+<CategoryName value=""/>
+</OneValueCDDefinition>
+</ChartDefinition>
+</Chart>
+<tools hidden="true" sort="false" export="false" fullScreen="false"/>
+<VanChartZoom>
+<zoomAttr zoomVisible="false" zoomGesture="true" zoomResize="true" zoomType="xy"/>
+<from>
+<![CDATA[]]></from>
+<to>
+<![CDATA[]]></to>
+</VanChartZoom>
+<refreshMoreLabel>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<attr moreLabel="true" plusColor="-11349576" minusColor="-741051"/>
+</refreshMoreLabel>
+</Chart>
+</O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="15" r="0" cs="37" rs="17" s="0">
+<O t="CC">
+<LayoutAttr selectedIndex="0"/>
+<ChangeAttr enable="false" changeType="button" timeInterval="5" buttonColor="-8421505" carouselColor="-8421505">
+<TextAttr>
+<Attr alignText="0"/>
+</TextAttr>
+</ChangeAttr>
+<Chart name="기본" chartClass="com.fr.plugin.chart.vanchart.VanChart">
+<Chart class="com.fr.plugin.chart.vanchart.VanChart">
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1118482"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<ChartAttr isJSDraw="true" isStyleGlobal="false"/>
+<Title4VanChart>
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-6908266"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei" style="0" size="128" foreground="-13421773"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="false" position="0"/>
+</Title>
+<Attr4VanChart useHtml="false" floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0"/>
+</Title4VanChart>
+<Plot class="com.fr.plugin.chart.custom.VanChartCustomPlot">
+<VanChartPlotVersion version="20170104"/>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isNullValueBreak="true" autoRefreshPerSecond="0" seriesDragEnable="false" plotStyle="4" combinedSize="50.0"/>
+<newHotTooltipStyle>
+<AttrContents>
+<Attr showLine="false" position="1" isWhiteBackground="true" isShowMutiSeries="false" seriesLabel="${VALUE}"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+<PercentFormat>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.##%]]></Format>
+</PercentFormat>
+</AttrContents>
+</newHotTooltipStyle>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
+<ConditionAttr name=""/>
+</DefaultAttr>
+</ConditionCollection>
+<Legend4VanChart>
+<Legend>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-3355444"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr position="4" visible="true"/>
+<FRFont name="Microsoft YaHei" style="0" size="88" foreground="-10066330"/>
+</Legend>
+<Attr4VanChart floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0" isHighlight="false"/>
+</Legend4VanChart>
+<DataSheet>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isVisible="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+</DataSheet>
+<DataProcessor class="com.fr.base.chart.chartdata.model.NormalDataModel"/>
+<newPlotFillStyle>
+<AttrFillStyle>
+<AFStyle colorStyle="0"/>
+<FillStyleName fillStyleName=""/>
+<isCustomFillStyle isCustomFillStyle="false"/>
+</AttrFillStyle>
+</newPlotFillStyle>
+<VanChartPlotAttr isAxisRotation="false"/>
+<VanChartRectanglePlotAttr vanChartPlotType="normal" isDefaultIntervalBackground="true"/>
+<XAxisList>
+<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartAxis">
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="1" MainGridStyle="1"/>
+<newLineColor lineColor="-5197648"/>
+<AxisPosition value="3"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+<VanChartAxisAttr mainTickLine="2" secTickLine="0" axisName="X축" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
+<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<alertList/>
+<customBackgroundList/>
+</VanChartAxis>
+</XAxisList>
+<YAxisList>
+<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartValueAxis">
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr rotation="-90" alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="0" MainGridStyle="1"/>
+<newLineColor mainGridColor="-3881788" lineColor="-5197648"/>
+<AxisPosition value="2"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+<VanChartAxisAttr mainTickLine="0" secTickLine="0" axisName="Y축" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
+<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<alertList/>
+<customBackgroundList/>
+<VanChartValueAxisAttr isLog="false" valueStyle="false" baseLog="=10"/>
+<ds>
+<RadarYAxisTableDefinition>
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+<attr/>
+</RadarYAxisTableDefinition>
+</ds>
+</VanChartAxis>
+<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartValueAxis">
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr rotation="-90" alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="0" MainGridStyle="1"/>
+<newLineColor lineColor="-5197648"/>
+<AxisPosition value="4"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+<VanChartAxisAttr mainTickLine="0" secTickLine="0" axisName="Y축2" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
+<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<alertList/>
+<customBackgroundList/>
+<VanChartValueAxisAttr isLog="false" valueStyle="false" baseLog="=10"/>
+<ds>
+<RadarYAxisTableDefinition>
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+<attr/>
+</RadarYAxisTableDefinition>
+</ds>
+</VanChartAxis>
+</YAxisList>
+<stackAndAxisCondition>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
+<ConditionAttr name=""/>
+</DefaultAttr>
+</ConditionCollection>
+</stackAndAxisCondition>
+<VanChartCustomPlotAttr customStyle="column_line"/>
+<CustomPlotList>
+<VanChartPlot class="com.fr.plugin.chart.column.VanChartColumnPlot">
+<VanChartPlotVersion version="20170104"/>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isNullValueBreak="true" autoRefreshPerSecond="0" seriesDragEnable="false" plotStyle="4" combinedSize="50.0"/>
+<newHotTooltipStyle>
+<AttrContents>
+<Attr showLine="false" position="1" isWhiteBackground="true" isShowMutiSeries="false" seriesLabel="${VALUE}"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+<PercentFormat>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.##%]]></Format>
+</PercentFormat>
+</AttrContents>
+</newHotTooltipStyle>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
+<ConditionAttr name="">
+<AttrList>
+<Attr class="com.fr.chart.base.AttrBorder">
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1"/>
+</AttrBorder>
+</Attr>
+<Attr class="com.fr.chart.base.AttrAlpha">
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.AttrTooltip">
+<AttrTooltip>
+<Attr enable="true" followMouse="false" showMutiSeries="true" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="SimSun" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="true"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="true"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="true"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="true"/>
+</AttrTooltipSeriesFormat>
+</series>
+<HtmlLabel customText="" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+<GI>
+<AttrBackground>
+<Background name="ColorBackground" color="-16777216"/>
+<Attr shadow="true"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="2"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="0.5"/>
+</AttrAlpha>
+</GI>
+</AttrTooltip>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.AttrLabel">
+<AttrLabel>
+<labelAttr enable="true"/>
+<labelDetail class="com.fr.plugin.chart.base.AttrLabelDetail">
+<Attr showLine="false" autoAdjust="false" position="0" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="SimSun" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="true"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="true"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="false"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="false"/>
+</AttrTooltipSeriesFormat>
+</series>
+<HtmlLabel customText="" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+</labelDetail>
+</AttrLabel>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.VanChartAttrTrendLine">
+<TrendLine>
+<Attr trendLineName="" trendLineType="linear" prePeriod="0" afterPeriod="0"/>
+<LineStyleInfo>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+<AttrColor>
+<Attr/>
+</AttrColor>
+<AttrLineStyle>
+<newAttr lineStyle="0"/>
+</AttrLineStyle>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+</LineStyleInfo>
+</TrendLine>
+</Attr>
+</AttrList>
+</ConditionAttr>
+</DefaultAttr>
+</ConditionCollection>
+<Legend4VanChart>
+<Legend>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-3355444"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr position="4" visible="true"/>
+<FRFont name="Microsoft YaHei" style="0" size="88" foreground="-10066330"/>
+</Legend>
+<Attr4VanChart floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0" isHighlight="false"/>
+</Legend4VanChart>
+<DataSheet>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isVisible="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+</DataSheet>
+<DataProcessor class="com.fr.base.chart.chartdata.model.NormalDataModel"/>
+<newPlotFillStyle>
+<AttrFillStyle>
+<AFStyle colorStyle="0"/>
+<FillStyleName fillStyleName=""/>
+<isCustomFillStyle isCustomFillStyle="false"/>
+</AttrFillStyle>
+</newPlotFillStyle>
+<VanChartPlotAttr isAxisRotation="false"/>
+<VanChartRectanglePlotAttr vanChartPlotType="custom" isDefaultIntervalBackground="true"/>
+<XAxisList>
+<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartAxis">
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="1" MainGridStyle="1"/>
+<newLineColor lineColor="-5197648"/>
+<AxisPosition value="3"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+<VanChartAxisAttr mainTickLine="2" secTickLine="0" axisName="X축" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
+<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<alertList/>
+<customBackgroundList/>
+</VanChartAxis>
+</XAxisList>
+<YAxisList>
+<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartValueAxis">
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr rotation="-90" alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="0" MainGridStyle="1"/>
+<newLineColor mainGridColor="-3881788" lineColor="-5197648"/>
+<AxisPosition value="2"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+<VanChartAxisAttr mainTickLine="0" secTickLine="0" axisName="Y축" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
+<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<alertList/>
+<customBackgroundList/>
+<VanChartValueAxisAttr isLog="false" valueStyle="false" baseLog="=10"/>
+<ds>
+<RadarYAxisTableDefinition>
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+<attr/>
+</RadarYAxisTableDefinition>
+</ds>
+</VanChartAxis>
+<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartValueAxis">
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr rotation="-90" alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="0" MainGridStyle="1"/>
+<newLineColor lineColor="-5197648"/>
+<AxisPosition value="4"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+<VanChartAxisAttr mainTickLine="0" secTickLine="0" axisName="Y축2" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
+<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<alertList/>
+<customBackgroundList/>
+<VanChartValueAxisAttr isLog="false" valueStyle="false" baseLog="=10"/>
+<ds>
+<RadarYAxisTableDefinition>
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+<attr/>
+</RadarYAxisTableDefinition>
+</ds>
+</VanChartAxis>
+</YAxisList>
+<stackAndAxisCondition>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
+<ConditionAttr name=""/>
+</DefaultAttr>
+<ConditionAttrList>
+<List index="0">
+<ConditionAttr name="stack and series1">
+<AttrList>
+<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
+<AttrSeriesStackAndAxis>
+<Attr xAxisIndex="0" yAxisIndex="0" stacked="false" percentStacked="false" stackID="stack and series1"/>
+</AttrSeriesStackAndAxis>
+</Attr>
+</AttrList>
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[계열번호]]></CNAME>
+<Compare op="0">
+<O>
+<![CDATA[2]]></O>
+</Compare>
+</Condition>
+</ConditionAttr>
+</List>
+</ConditionAttrList>
+</ConditionCollection>
+</stackAndAxisCondition>
+<VanChartColumnPlotAttr seriesOverlapPercent="20.0" categoryIntervalPercent="20.0" fixedWidth="false" columnWidth="0" filledWithImage="false" isBar="false"/>
+</VanChartPlot>
+<VanChartPlot class="com.fr.plugin.chart.line.VanChartLinePlot">
+<VanChartPlotVersion version="20170104"/>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isNullValueBreak="true" autoRefreshPerSecond="0" seriesDragEnable="false" plotStyle="4" combinedSize="50.0"/>
+<newHotTooltipStyle>
+<AttrContents>
+<Attr showLine="false" position="1" isWhiteBackground="true" isShowMutiSeries="false" seriesLabel="${VALUE}"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+<PercentFormat>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.##%]]></Format>
+</PercentFormat>
+</AttrContents>
+</newHotTooltipStyle>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
+<ConditionAttr name="">
+<AttrList>
+<Attr class="com.fr.plugin.chart.base.AttrTooltip">
+<AttrTooltip>
+<Attr enable="true" followMouse="false" showMutiSeries="true" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="SimSun" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="true"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="true"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="true"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="true"/>
+</AttrTooltipSeriesFormat>
+</series>
+<HtmlLabel customText="" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+<GI>
+<AttrBackground>
+<Background name="ColorBackground" color="-16777216"/>
+<Attr shadow="true"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="2"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="0.5"/>
+</AttrAlpha>
+</GI>
+</AttrTooltip>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.AttrLabel">
+<AttrLabel>
+<labelAttr enable="true"/>
+<labelDetail class="com.fr.plugin.chart.base.AttrLabelDetail">
+<Attr showLine="false" autoAdjust="false" position="1" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="SimSun" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="false"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="true"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="false"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="false"/>
+</AttrTooltipSeriesFormat>
+</series>
+<HtmlLabel customText="function(){ return this.value+&quot;%&quot;;}" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+</labelDetail>
+</AttrLabel>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.VanChartAttrTrendLine">
+<TrendLine>
+<Attr trendLineName="" trendLineType="linear" prePeriod="0" afterPeriod="0"/>
+<LineStyleInfo>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+<AttrColor>
+<Attr/>
+</AttrColor>
+<AttrLineStyle>
+<newAttr lineStyle="0"/>
+</AttrLineStyle>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+</LineStyleInfo>
+</TrendLine>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.VanChartAttrLine">
+<VanAttrLine>
+<Attr lineWidth="2" lineStyle="0" nullValueBreak="true"/>
+</VanAttrLine>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.VanChartAttrMarker">
+<VanAttrMarker>
+<Attr isCommon="true" markerType="RoundFilledMarker" radius="4.5" width="30.0" height="30.0"/>
+<Background name="NullBackground"/>
+</VanAttrMarker>
+</Attr>
+</AttrList>
+</ConditionAttr>
+</DefaultAttr>
+</ConditionCollection>
+<Legend4VanChart>
+<Legend>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-3355444"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr position="4" visible="true"/>
+<FRFont name="Microsoft YaHei" style="0" size="88" foreground="-10066330"/>
+</Legend>
+<Attr4VanChart floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0" isHighlight="false"/>
+</Legend4VanChart>
+<DataSheet>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isVisible="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+</DataSheet>
+<DataProcessor class="com.fr.base.chart.chartdata.model.NormalDataModel"/>
+<newPlotFillStyle>
+<AttrFillStyle>
+<AFStyle colorStyle="0"/>
+<FillStyleName fillStyleName=""/>
+<isCustomFillStyle isCustomFillStyle="false"/>
+</AttrFillStyle>
+</newPlotFillStyle>
+<VanChartPlotAttr isAxisRotation="false"/>
+<VanChartRectanglePlotAttr vanChartPlotType="custom" isDefaultIntervalBackground="true"/>
+<XAxisList>
+<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartAxis">
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="1" MainGridStyle="1"/>
+<newLineColor lineColor="-5197648"/>
+<AxisPosition value="3"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+<VanChartAxisAttr mainTickLine="2" secTickLine="0" axisName="X축" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
+<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<alertList/>
+<customBackgroundList/>
+</VanChartAxis>
+</XAxisList>
+<YAxisList>
+<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartValueAxis">
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr rotation="-90" alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="0" MainGridStyle="1"/>
+<newLineColor mainGridColor="-3881788" lineColor="-5197648"/>
+<AxisPosition value="2"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+<VanChartAxisAttr mainTickLine="0" secTickLine="0" axisName="Y축" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
+<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<alertList/>
+<customBackgroundList/>
+<VanChartValueAxisAttr isLog="false" valueStyle="false" baseLog="=10"/>
+<ds>
+<RadarYAxisTableDefinition>
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+<attr/>
+</RadarYAxisTableDefinition>
+</ds>
+</VanChartAxis>
+<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartValueAxis">
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr rotation="-90" alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="0" MainGridStyle="1"/>
+<newLineColor lineColor="-5197648"/>
+<AxisPosition value="4"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+<VanChartAxisAttr mainTickLine="0" secTickLine="0" axisName="Y축2" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
+<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<alertList/>
+<customBackgroundList/>
+<VanChartValueAxisAttr isLog="false" valueStyle="false" baseLog="=10"/>
+<ds>
+<RadarYAxisTableDefinition>
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+<attr/>
+</RadarYAxisTableDefinition>
+</ds>
+</VanChartAxis>
+</YAxisList>
+<stackAndAxisCondition>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
+<ConditionAttr name=""/>
+</DefaultAttr>
+<ConditionAttrList>
+<List index="0">
+<ConditionAttr name="stack and series1">
+<AttrList>
+<Attr class="com.fr.plugin.chart.base.AttrSeriesStackAndAxis">
+<AttrSeriesStackAndAxis>
+<Attr xAxisIndex="0" yAxisIndex="1" stacked="false" percentStacked="false" stackID="stack and series1"/>
+</AttrSeriesStackAndAxis>
+</Attr>
+</AttrList>
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[계열번호]]></CNAME>
+<Compare op="0">
+<O>
+<![CDATA[2]]></O>
+</Compare>
+</Condition>
+</ConditionAttr>
+</List>
+</ConditionAttrList>
+</ConditionCollection>
+</stackAndAxisCondition>
+</VanChartPlot>
+</CustomPlotList>
+</Plot>
+<ChartDefinition>
+<CustomDefinition>
+<DefinitionMapList>
+<DefinitionMap key="column">
+<MoreNameCDDefinition>
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+<TableData class="com.fr.data.impl.NameTableData">
+<Name>
+<![CDATA[ds2]]></Name>
+</TableData>
+<CategoryName value="MM"/>
+<ChartSummaryColumn name="TARG_QTY" function="com.fr.data.util.function.NoneFunction" customName="计划"/>
+<ChartSummaryColumn name="SALE_QTY" function="com.fr.data.util.function.NoneFunction" customName="提车"/>
+</MoreNameCDDefinition>
+</DefinitionMap>
+<DefinitionMap key="line">
+<MoreNameCDDefinition>
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+<TableData class="com.fr.data.impl.NameTableData">
+<Name>
+<![CDATA[ds2]]></Name>
+</TableData>
+<CategoryName value="MM"/>
+<ChartSummaryColumn name="COM_PERC" function="com.fr.data.util.function.NoneFunction" customName="完成率"/>
+</MoreNameCDDefinition>
+</DefinitionMap>
+</DefinitionMapList>
+</CustomDefinition>
+</ChartDefinition>
+</Chart>
+<tools hidden="true" sort="false" export="true" fullScreen="true"/>
+<VanChartZoom>
+<zoomAttr zoomVisible="false" zoomGesture="true" zoomResize="true" zoomType="xy"/>
+<from>
+<![CDATA[]]></from>
+<to>
+<![CDATA[]]></to>
+</VanChartZoom>
+<refreshMoreLabel>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<attr moreLabel="true" plusColor="-11349576" minusColor="-741051"/>
+</refreshMoreLabel>
+</Chart>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="17" rs="3" s="1">
+<O>
+<![CDATA[车种]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="17" cs="9" s="1">
+<O>
+<![CDATA[第一季度]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="17" cs="3" s="1">
+<O>
+<![CDATA[小计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="17" cs="9" s="1">
+<O>
+<![CDATA[第二季度]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="17" cs="3" s="1">
+<O>
+<![CDATA[小计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="17" cs="9" s="1">
+<O>
+<![CDATA[第三季度]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="34" r="17" cs="3" s="1">
+<O>
+<![CDATA[小计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="37" r="17" cs="9" s="1">
+<O>
+<![CDATA[第四季度]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="46" r="17" cs="3" s="1">
+<O>
+<![CDATA[小计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="49" r="17" cs="3" s="1">
+<O>
+<![CDATA[年度]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="18" cs="3" s="1">
+<O>
+<![CDATA[1月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="18" cs="3" s="1">
+<O>
+<![CDATA[2月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="18" cs="3" s="1">
+<O>
+<![CDATA[3月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="18" rs="2" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="18" rs="2" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="18" rs="2" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="18" cs="3" s="1">
+<O>
+<![CDATA[4月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="18" cs="3" s="1">
+<O>
+<![CDATA[5月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="18" cs="3" s="1">
+<O>
+<![CDATA[6月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="18" rs="2" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="18" rs="2" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="18" rs="2" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="18" cs="3" s="1">
+<O>
+<![CDATA[7月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="18" cs="3" s="1">
+<O>
+<![CDATA[8月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="18" cs="3" s="1">
+<O>
+<![CDATA[9月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="34" r="18" rs="2" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="35" r="18" rs="2" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="36" r="18" rs="2" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="37" r="18" cs="3" s="1">
+<O>
+<![CDATA[10月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="40" r="18" cs="3" s="1">
+<O>
+<![CDATA[11月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="43" r="18" cs="3" s="1">
+<O>
+<![CDATA[12月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="46" r="18" rs="2" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="47" r="18" rs="2" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="48" r="18" rs="2" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="49" r="18" rs="2" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="50" r="18" rs="2" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="51" r="18" rs="2" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="19" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="19" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="19" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="19" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="19" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="19" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="19" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="19" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="19" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="19" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="19" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="19" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="19" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="19" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="19" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="19" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="19" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="19" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="19" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="19" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="19" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="19" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="19" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="19" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="19" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="19" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="33" r="19" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="37" r="19" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="38" r="19" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="39" r="19" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="40" r="19" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="41" r="19" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="42" r="19" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="43" r="19" s="1">
+<O>
+<![CDATA[计划]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="44" r="19" s="1">
+<O>
+<![CDATA[提车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="45" r="19" s="1">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="20" s="2">
+<O>
+<![CDATA[合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(B22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(C22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(B21 > 0, (C21 / B21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(E22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(F22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(E21 > 0, (F21 / E21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(H22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(I22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(H21 > 0, (I21 / H21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(K22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(L22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(K21 > 0, (L21 / K21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(N22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(O22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(N21 > 0, (O21 / N21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(Q22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(R22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(Q21 > 0, (R21 / Q21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(T22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(U22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(T21 > 0, (U21 / T21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(W22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(X22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(W21 > 0, (X21 / W21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(Z22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AA22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(Z21 > 0, (AA21 / Z21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AC22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AD22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AC21 > 0, (AD21 / AC21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AF22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AG22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="33" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AF21 > 0, (AG21 / AF21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="34" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AI22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="35" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AJ22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="36" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AI21 > 0, (AJ21 / AI21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="37" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AL22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="38" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AM22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="39" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AL21 > 0, (AM21 / AL21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="40" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AO22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="41" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AP22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="42" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AO21 > 0, (AP21 / AO21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="43" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AR22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="44" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AS22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="45" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AR21 > 0, (AS21 / AR21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="46" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AU22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="47" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AV22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="48" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AU21 > 0, (AV21 / AU21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="49" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AX22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="50" r="20" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(AY22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="51" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AX21 > 0, (AY21 / AX21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="21" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CARLINE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="1" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TARG_QTY01"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="2" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY01"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="3" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(B22 > 0, (C22 / B22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="4" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TARG_QTY02"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="5" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY02"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="6" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(E22 > 0, (F22 / E22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="7" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TARG_QTY03"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="8" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY03"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="9" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(H22 > 0, (I22 / H22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="10" r="21" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=B22 + E22 + H22]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="11" r="21" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=C22 + F22 + I22]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="12" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(K22 > 0, (L22 / K22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="13" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TARG_QTY04"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="14" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY04"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="15" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(N22 > 0, (O22 / N22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="16" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TARG_QTY05"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="17" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY05"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="18" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(Q22 > 0, (R22 / Q22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="19" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TARG_QTY06"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="20" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY06"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="21" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(T22 > 0, (U22 / T22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="22" r="21" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=N22 + Q22 + T22]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="23" r="21" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=O22 + R22 + U22]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="24" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(W22 > 0, (X22 / W22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="25" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TARG_QTY07"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="26" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY07"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="27" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(Z22 > 0, (AA22 / Z22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="28" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TARG_QTY08"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="29" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY08"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="30" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AC22 > 0, (AD22 / AC22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="31" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TARG_QTY09"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="32" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY09"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="33" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AF22 > 0, (AG22 / AF22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="34" r="21" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=Z22 + AC22 + AF22]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="35" r="21" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=AA22 + AD22 + AG22]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="36" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AI22 > 0, (AJ22 / AI22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="37" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TARG_QTY10"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="38" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY10"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="39" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AL22 > 0, (AM22 / AL22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="40" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TARG_QTY11"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="41" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY11"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="42" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AO22 > 0, (AP22 / AO22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="43" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TARG_QTY12"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="44" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY12"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="45" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AR22 > 0, (AS22 / AR22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="46" r="21" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=AL22 + AO22 + AR22]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="47" r="21" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=AM22 + AP22 + AS22]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="48" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AU22 > 0, (AV22 / AU22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="49" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TARG_QTY_YYYY"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="50" r="21" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY_YYYY"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="51" r="21" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(AX22 > 0, (AY22 / AX22), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="50400000" height="100800000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="false" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[Parameter]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Microsoft YaHei" style="1" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Microsoft YaHei" style="1" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0%]]></Format>
+<FRFont name="Microsoft YaHei" style="1" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0%]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID/>
+</WorkBook>

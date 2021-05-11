@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.veh.service.dao.VehicleSpecModelOcnPriceDAO">
+
+	<!-- 모델 목록  -->
+	<select id="selectVehicleModelOcnPrice" parameterType="VehicleSearchVO" resultType="VehicleVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT SA0110.MODEL_CD
+                      ,SA0105.FSCP_CHM_MMM AS MODEL_NM
+                      ,SA0102.CARLINE_CD
+                      ,(SELECT CARLINE_NM FROM SA_0101T WHERE CARLINE_CD = SA0102.CARLINE_CD ) AS CARLINE_NM
+                      ,SA0110.OCN_CD,SA0105.OCN_NM
+                      ,SA0110.START_DT
+                      ,SA0110.END_DT
+                      ,SA0110.WH_PRC
+                      ,SA0110.MS_PRC
+                      ,SA0110.USE_YN
+                      ,SA0110.REG_DT
+                  FROM SA_0110T SA0110,SA_0102T SA0102,SA_0105T SA0105
+                 WHERE 1=1
+                   AND SA0110.MODEL_CD = SA0102.MODEL_CD
+                   AND SA0110.MODEL_CD = SA0105.MODEL_CD
+                   AND SA0110.OCN_CD = SA0105.OCN_CD
+                   <if test='carlineCd != null and carlineCd != ""'>
+                   AND SA0102.CARLINE_CD = #{carlineCd}
+                   </if>
+                   <if test='modelCd != null and modelCd != ""'>
+                   AND SA0110.MODEL_CD = #{modelCd}
+                   </if>
+                   <if test='modelNm != null and modelNm != ""'>
+                    <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(modelNm,"*")'>
+                            <bind name='modelNm' value='@org.apache.commons.lang3.StringUtils@replace(modelNm, "*", "%")' />
+                             AND SA0102.MODEL_NM LIKE #{modelNm}
+                        </when>
+                        <otherwise>
+                             AND SA0102.MODEL_NM = #{modelNm}
+                        </otherwise>
+                    </choose>
+                   </if>
+                   <if test='ocnCd != null and ocnCd != ""'>
+                   AND SA0110.OCN_CD = #{ocnCd}
+                   </if>
+                 <if test='startDt != null and endDt != null'>
+                   <![CDATA[
+                   AND SA0110.END_DT >= #{startDt}
+                   AND SA0110.START_DT <= #{endDt}
+                   ]]>
+                 </if>
+                 <if test='fscCd != null and fscCd != "" and fscCd != "None"'>
+                   AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = SA0105.MODEL_CD AND X.OCN_CD = SA0105.OCN_CD)  = #{fscCd}
+                </if>
+                <if test='fscCd == "None"'>
+                   AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = SA0105.MODEL_CD AND X.OCN_CD = SA0105.OCN_CD) IS NULL
+                </if>
+                
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "carlineCd"'>CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineNm"'>CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelCd"'>MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelNm"'>MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnCd"'>OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnNm"'>OCN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "startDt"'>START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "endDt"'>END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "whPrc"'>WH_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "msPrc"'>MS_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "useYn"'>USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regUsrId"'>REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDt"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    CARLINE_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        CARLINE_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+	<!-- 모델 목록 갯수  -->
+	<select id="selectVehicleModelOcnPriceCnt" parameterType="VehicleSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0110T SA0110,SA_0102T SA0102,SA_0105T SA0105
+         WHERE 1=1
+           AND SA0110.MODEL_CD = SA0102.MODEL_CD
+           AND SA0110.MODEL_CD = SA0105.MODEL_CD
+           AND SA0110.OCN_CD = SA0105.OCN_CD
+         <if test='carlineCd != null and carlineCd != ""'>
+           AND SA0102.CARLINE_CD = #{carlineCd}
+         </if>
+         <if test='modelCd != null and modelCd != ""'>
+           AND SA0110.MODEL_CD = #{modelCd}
+         </if>
+         <if test='ocnCd != null and ocnCd != ""'>
+           AND SA0110.OCN_CD = #{ocnCd}
+         </if>
+         <if test='startDt != null and endDt != null'>
+         <![CDATA[
+           AND SA0110.START_DT <= #{startDt}
+           AND SA0110.END_DT >= #{endDt}
+         ]]>
+         </if>
+         <if test='fscCd != null and fscCd != "" and fscCd != "None"'>
+            AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = SA0105.MODEL_CD AND X.OCN_CD = SA0105.OCN_CD)  = #{fscCd}
+         </if>
+         <if test='fscCd == "None"'>
+            AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = SA0105.MODEL_CD AND X.OCN_CD = SA0105.OCN_CD) IS NULL
+         </if>
+	</select>
+
+    <!-- 외장색 내역을 조회한다. -->
+    <select id="selectVehicleSpecModelOcnExtColorCnt" parameterType="VehicleSearchVO" resultType="int">
+        /* chn.bhmc.dms.sal.veh.service.dao.VehicleSpecModelOcnPriceDAO.selectVehicleSpecModelOcnExtColorCnt */
+        SELECT COUNT(*)
+          FROM (
+                SELECT A.MODEL_CD
+                     , A.EXT_COLOR_CD
+                  FROM SA_0109T A       /* 모델컬러맵핑 */
+                 WHERE A.USE_YN = #{useYn}
+                 <if test='modelCd != null and modelCd != ""'>
+                   AND A.MODEL_CD = #{modelCd} -- 모델코드
+                 </if>
+                 GROUP BY A.MODEL_CD, A.EXT_COLOR_CD
+                )
+    </select>
+    <select id="selectVehicleSpecModelOcnExtColor" parameterType="VehicleSearchVO" resultType="VehicleColorVO">
+        /* chn.bhmc.dms.sal.veh.service.dao.VehicleSpecModelOcnPriceDAO.selectVehicleSpecModelOcnExtColor */
+         SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_MODEL_NM(T1.MODEL_CD) AS MODEL_NM
+                 , FN_GET_EXT_COLOR_NM(T1.EXT_COLOR_CD) AS EXT_COLOR_NM
+                 , T1.*
+              FROM (
+                SELECT A.MODEL_CD
+                     , A.EXT_COLOR_CD
+                  FROM SA_0109T A       /* 모델컬러맵핑 */
+                 WHERE A.USE_YN = #{useYn}
+                 <if test='modelCd != null and modelCd != ""'>
+                   AND A.MODEL_CD = #{modelCd} -- 모델코드
+                 </if>
+                 GROUP BY A.MODEL_CD, A.EXT_COLOR_CD
+                 ORDER BY
+                         <choose>
+                            <when test='sort != null'>
+                                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                    <choose>
+                                        <when test='item.field == "modelCd"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <when test='item.field == "modelNm"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <when test='item.field == "extColorCd"'>A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <when test='item.field == "extColorNm"'>A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <otherwise>
+                                            A.EXT_COLOR_CD ASC
+                                        </otherwise>
+                                    </choose>
+                                </foreach>
+                            </when>
+                            <otherwise>
+                                A.EXT_COLOR_CD ASC
+                            </otherwise>
+                        </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 내장색 내역을 조회한다. -->
+    <select id="selectVehicleSpecModelOcnIntColorCnt" parameterType="VehicleSearchVO" resultType="int">
+        /* chn.bhmc.dms.sal.veh.service.dao.VehicleSpecModelOcnPriceDAO.selectVehicleSpecModelOcnIntColorCnt */
+        SELECT COUNT(*)
+          FROM (
+                SELECT A.MODEL_CD
+                     , A.INT_COLOR_CD
+                  FROM SA_0109T A       /* 모델컬러맵핑 */
+                 WHERE A.USE_YN = #{useYn}
+                 <if test='modelCd != null and modelCd != ""'>
+                   AND A.MODEL_CD = #{modelCd} -- 모델코드
+                 </if>
+                 GROUP BY A.MODEL_CD, A.INT_COLOR_CD
+                )
+    </select>
+    <select id="selectVehicleSpecModelOcnIntColor" parameterType="VehicleSearchVO" resultType="VehicleColorVO">
+        /* chn.bhmc.dms.sal.veh.service.dao.VehicleSpecModelOcnPriceDAO.selectVehicleSpecModelOcnIntColor */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_MODEL_NM(T1.MODEL_CD) AS MODEL_NM
+                 , FN_GET_INT_COLOR_NM(T1.INT_COLOR_CD) AS INT_COLOR_NM
+                 , T1.*
+              FROM (
+                SELECT A.MODEL_CD
+                     , A.INT_COLOR_CD
+                  FROM SA_0109T A       /* 모델컬러맵핑 */
+                 WHERE A.USE_YN = #{useYn}
+                 <if test='modelCd != null and modelCd != ""'>
+                   AND A.MODEL_CD = #{modelCd} -- 모델코드
+                 </if>
+                 GROUP BY A.MODEL_CD, A.INT_COLOR_CD
+                 ORDER BY
+                         <choose>
+                            <when test='sort != null'>
+                                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                    <choose>
+                                        <when test='item.field == "modelCd"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <when test='item.field == "modelNm"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <when test='item.field == "intColorCd"'>A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <when test='item.field == "intColorNm"'>A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <otherwise>
+                                            A.INT_COLOR_CD ASC
+                                        </otherwise>
+                                    </choose>
+                                </foreach>
+                            </when>
+                            <otherwise>
+                                A.INT_COLOR_CD ASC
+                            </otherwise>
+                        </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+</mapper>

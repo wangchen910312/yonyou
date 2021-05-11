@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : StorageManagerDao_SqlMap.xml
+    Description : 창고담당자관리
+    author In Bo Shim
+    since 2017. 02. 17.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2017. 02. 17.     In Bo Shim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.cmp.service.dao.StorageManagerDAO">
+
+	<!-- 창고담당자 정보를 등록한다. -->
+	<insert id="insertStorageManager" parameterType="StorageManagerVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.StorageManagerDAO.insertStorageManager] */
+		INSERT INTO PT_0223T(
+			DLR_CD
+            ,STRGE_CD
+            ,USR_ID
+            ,USR_NM
+            ,REG_USR_ID
+            ,REG_DT
+		)VALUES(
+            #{dlrCd}
+			,#{strgeCd}
+            ,#{usrId}
+            ,#{usrNm}
+            , #{regUsrId}
+            , SYSDATE
+		)
+	</insert>
+
+	<!-- 창고담당자 정보를 수정한다. -->
+	<update id="updateStorageManager" parameterType="StorageManagerVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.StorageManagerDAO.updateStorageManager] */
+		UPDATE PT_0223T SET
+            USR_NM = #{usrNm}
+            ,UPDT_USR_ID = #{regUsrId}
+            ,UPDT_DT = SYSDATE
+		WHERE DLR_CD = #{dlrCd}
+        AND STRGE_CD = #{strgeCd}
+        AND USR_ID = #{usrId}
+	</update>
+
+	<!-- 창고담당자 정보를 삭제한다. -->
+	<delete id="deleteStorageManager" parameterType="StorageManagerVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.StorageManagerDAO.deleteStorageManager] */
+		DELETE FROM PT_0223T
+		WHERE DLR_CD = #{dlrCd}
+        AND STRGE_CD = #{strgeCd}
+        AND USR_ID = #{usrId}
+	</delete>
+
+	<!-- 창고담당자를 조회한다. -->
+	<select id="selectStorageManagerByKey" parameterType="map" resultType="StorageManagerVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.StorageManagerDAO.selectStorageManagerByKey] */
+		SELECT * FROM PT_0223T
+		WHERE STRGE_CD = #{strgeCd}
+            AND PLT_CD = #{pltCd}
+            AND DLR_CD = #{dlrCd}
+	</select>
+
+	<!-- 창고담당자 목록을 조회한다. -->
+	<select id="selectStorageManageresByCondition" parameterType="StorageSearchVO" resultType="StorageManagerVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.StorageManagerDAO.selectStorageManagersByCondition] */
+		SELECT * FROM (
+            SELECT ROWNUM AS RNUM, V1.* FROM (
+                SELECT
+                    T1.*
+                FROM PT_0223T T1
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        T1.DLR_CD = #{sDlrCd}
+                    </if>
+                    <if test='sStrgeCd != null and sStrgeCd != ""'>
+                        AND T1.STRGE_CD = #{sStrgeCd}
+                    </if>
+
+                    <if test='sUsrId != null and sUsrId != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sUsrId,"*")'>
+                                <bind name='sUsrId' value='@org.apache.commons.lang3.StringUtils@replace(sUsrId, "*", "%")' />
+                                    AND T1.USR_ID LIKE #{sUsrId}
+                            </when>
+                            <otherwise>
+                                AND T1.USR_ID = #{sUsrId}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sUsrNm != null and sUsrNm != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sUsrNm,"*")'>
+                                <bind name='sUsrNm' value='@org.apache.commons.lang3.StringUtils@replace(sUsrNm, "*", "%")' />
+                                    AND T1.USR_NM LIKE #{sUsrNm}
+                            </when>
+                            <otherwise>
+                                AND T1.USR_NM = #{sUsrNm}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>T1.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "strgeCd"'>T1.STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "strgeCd"'>T1.USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "strgeCd"'>T1.USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regUsrId"'>T1.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDt"'>T1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtUsrId"'>T1.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtDt"'>T1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    T1.DLR_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        T1.DLR_CD ASC
+                    </otherwise>
+                </choose>
+            ) V1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+	<!-- 창고담당자 목록수를 조회한다. -->
+	<select id="selectStorageManageresByConditionCnt" parameterType="StorageSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.StorageManagerDAO.selectStorageManagersByConditionCnt] */
+		SELECT COUNT(*) AS VALUE
+        FROM PT_0223T T1
+		<where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                T1.DLR_CD = #{sDlrCd}
+            </if>
+            <if test='sStrgeCd != null and sStrgeCd != ""'>
+                AND T1.STRGE_CD = #{sStrgeCd}
+            </if>
+
+            <if test='sUsrId != null and sUsrId != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sUsrId,"*")'>
+                        <bind name='sUsrId' value='@org.apache.commons.lang3.StringUtils@replace(sUsrId, "*", "%")' />
+                            AND T1.USR_ID LIKE #{sUsrId}
+                    </when>
+                    <otherwise>
+                         AND T1.USR_ID = #{sUsrId}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sUsrNm != null and sUsrNm != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sUsrNm,"*")'>
+                        <bind name='sUsrNm' value='@org.apache.commons.lang3.StringUtils@replace(sUsrNm, "*", "%")' />
+                            AND T1.USR_NM LIKE #{sUsrNm}
+                    </when>
+                    <otherwise>
+                        AND T1.USR_NM = #{sUsrNm}
+                    </otherwise>
+                </choose>
+            </if>
+
+        </where>
+	</select>
+
+</mapper>

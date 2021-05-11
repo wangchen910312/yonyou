@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.cmm.ath.service.dao.LoginDAO">
+
+	<!-- 로그인 정보 조회 -->
+	<select id="actionLogin" parameterType="CustomUserVO" resultType="CustomUserVO">
+		SELECT
+            T1.USR_ID
+            ,T1.USR_NM
+            ,T1.USR_PW
+            ,T1.ENABLED_YN
+            ,T1.LANG_CD
+            ,T1.EMP_NO
+            ,T1.DEL_YN
+            ,T1.THEME_ID
+            ,T1.TSK_CD
+            ,T1.DLR_CD
+            ,T2.DLR_NM
+            ,T2.SDPT_CD
+            ,T2.DIST_OFFICE_CD
+            ,T2.BMP_BP_CD
+            ,T2.PREFIX_CUST_NO
+            ,T2.MEMBERSHIP_POLICY
+            ,T2.MEMBERSHIP_POINT_PERIOD
+            ,T2.MEMBERSHIP_POINT_EXCHG_POINT
+            ,T2.MEMBERSHIP_POINT_EXCHG_MONEY
+            ,T2.MEMBERSHIP_POINT_USE_MAX_POINT
+            ,T2.MEMBERSHIP_POINT_AVAIL_SHARE
+            ,T2.CALLCENTER_MAX_CALL
+            ,T2.SYS_OWNER_YN
+            ,T2.USE_CENTER_DMS_YN
+            ,T2.OB_ASSIGN_AUTO_YN
+            ,T2.AUTO_TRSF_CONF
+            ,T2.AUTO_ASSIGN_CD
+            ,T2.SALES_OPPT_PW_YN
+            ,T2.MEMBERSHIP_GRADE_NONE_AUTO_YN
+            ,T1.CLAIM_REQ_PERM_YN
+            ,T2.VALID_CHECK_CALL_SECOND
+		FROM CM_0801T T1
+        INNER JOIN CM_0101T T2 ON T1.DLR_CD = T2.DLR_CD
+		WHERE
+            T1.DEL_YN = 'N'
+            AND T1.USR_ID = #{usrId}
+			AND T1.USR_PW = #{usrPw}
+	</select>
+
+    <!-- 로그인시 Session 정보를 DB에 저장한다. -->
+    <insert id="insertSessionInfo" parameterType="SessionSaveVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.LoginDAO.insertSessionInfo] */
+        INSERT INTO CM_3502T(
+             USR_ID
+            ,SESS_ID
+            ,SESS_START_DT
+            ,INET_ADDR
+            ,REG_DT
+            ,REG_USR_ID
+            ,UPDT_DT
+            ,UPDT_USR_ID
+        )VALUES(
+             #{usrId}
+            ,#{sessionId}
+            ,SYSDATE
+            ,#{inetAddress}
+            ,SYSDATE
+            ,#{usrId}
+            ,SYSDATE
+            ,#{usrId}
+        )
+    </insert>
+
+    <!-- 로그아웃시 Session 정보를 DB에 저장한다. -->
+    <insert id="updateSessionInfo" parameterType="SessionSaveVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.LoginDAO.updateSessionInfo] */
+        UPDATE CM_3502T SET
+            SESS_END_DT = SYSDATE
+            ,UPDT_DT = SYSDATE
+            ,UPDT_USR_ID = #{usrId}
+        WHERE
+            USR_ID = #{usrId}
+            AND SESS_ID = #{sessionId}
+    </insert>
+
+    <!-- 세션ID에 해당하는 Session 정보를 조회한다. -->
+    <select id="selectSessionInfoByKey" parameterType="string" resultType="SessionSaveVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.LoginDAO.selectSessionInfoByKey] */
+        SELECT
+            USR_ID,
+            SESS_ID AS SESSION_ID,
+            SESS_START_DT AS SESSION_START_DT,
+            SESS_END_DT AS SESSION_END_DT,
+            INET_ADDR AS INET_ADDRESS,
+            REG_USR_ID,
+            REG_DT,
+            UPDT_USR_ID,
+            UPDT_DT
+        FROM CM_3502T
+        WHERE SESS_ID = #{value}
+    </select>
+
+</mapper>

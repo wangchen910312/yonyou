@@ -1,0 +1,489 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : IssueReqDAO_SqlMap.xml
+    Description : 부품요청헤더정보.
+    author In Bo Shim
+    since 2016. 1. 11.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 11.     In Bo Shim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.part.dao.PartIssueReqDAO">
+
+    
+    <!-- 부품요청헤더 정보 목록을 조회한다. -->
+    <select id="selectIssueReqsByCondition" parameterType="IssueReqSearchVO" resultType="chn.bhmc.dms.mob.api.part.vo.IssueReqVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssueReqDAO.selectIssueReqsByCondition] */
+        SELECT
+            *
+        FROM(
+            SELECT
+                ROWNUM AS RNUM
+                ,T1.*
+            FROM (
+                SELECT
+                    TT.*
+                FROM
+                (
+                    SELECT
+                        A.DLR_CD
+                        ,A.PAR_REQ_DOC_NO
+                        ,A.PAR_GI_TP
+                        ,A.PAR_REQ_STAT_CD
+                        ,A.CANC_YN
+                        ,A.RO_DOC_NO
+                        ,A.RESV_DOC_NO
+                        ,C.ENGIN_NO
+                        ,A.PLT_CD
+                        ,CASE WHEN A.PAR_GI_TP = 'RO' THEN U2.USR_NM
+                        ELSE D.SA_NM
+                        END SER_PRSN_ID
+                        ,A.CUST_CD
+                        ,A.CUST_NM
+                        ,A.VIN_NO
+                        ,A.CAR_NO
+                        ,U.USR_NM AS REG_USR_ID
+                        ,A.REG_DT
+                        ,A.UPDT_USR_ID
+                        ,CASE WHEN A.PAR_GI_TP = 'IN' THEN
+                            CASE WHEN A.PAR_REQ_STAT_CD = '02' THEN A.UPDT_DT
+                            ELSE NULL
+                            END
+                        ELSE A.UPDT_DT
+                        END UPDT_DT
+                        ,A.READY_DOC_NO
+                        ,NVL(A.READY_STAT_CD, '01') AS READY_STAT_CD
+                        ,CASE WHEN NVL(A.BORROW_STAT_CD, '01') != '01' THEN A.BORROW_DOC_NO
+                        ELSE ''
+                        END AS BORROW_DOC_NO
+                        ,A.BORROW_DOC_NO AS BORROW_DOC_NO_DB
+                        ,NVL(A.BORROW_STAT_CD, '01') AS BORROW_STAT_CD
+                        ,A.ETC_RV_DOC_NO
+                        ,NVL(A.ETC_RV_STAT_CD, '01') AS ETC_RV_STAT_CD
+                        ,A.REMARK
+                        ,B.GI_DOC_NO
+                        ,B.GI_DOC_TP
+                        ,B.GI_DOC_STAT_CD
+                        ,B.MVT_DOC_YY_MM
+                        ,B.MVT_DOC_NO
+                        ,(SELECT MAX(AA.ETC_GI_TP) FROM PT_0502T AA WHERE AA.DLR_CD = A.DLR_CD AND AA.PAR_REQ_DOC_NO = A.PAR_REQ_DOC_NO ) AS ETC_GI_TP
+                        ,(SELECT COUNT(0) FROM PT_0502T AA WHERE AA.DLR_CD = A.DLR_CD AND AA.PAR_REQ_DOC_NO = A.PAR_REQ_DOC_NO ) AS ITEM_CNT
+                        ,NVL(D.RESV_STAT_CD, 'O') AS RESV_STAT_CD
+                        ,NVL(C.RO_STAT_CD, '01') AS RO_STAT_CD
+                        ,NVL(C.DL_STAT_CD, '01') AS DL_STAT_CD
+                        ,NVL(C.RO_TP, '01') AS RO_TP
+                        ,NVL(C.WRK_STAT_CD, '01') AS WRK_STAT_CD
+                        ,(SELECT COUNT(TT.RO_DOC_NO) FROM SE_0300T TT WHERE TT.DLR_CD = #{sDlrCd} AND TT.RESV_DOC_NO = A.RESV_DOC_NO) AS RO_DOC_NO_CNT
+                        ,E.PRE_AMT
+                        ,E.PAR_RESV_REMARK
+                        ,E.DRIVER_NM AS DRIVER_NM
+                        ,(SELECT CARLINE_CD AS CARLINE_CD FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS CARLINE_CD
+                        ,(SELECT FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_NM FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS CARLINE_NM
+                        ,(SELECT FN_GET_MODEL_NM(MODEL_CD) AS MODEL_NM FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS MODEL_NM
+                        ,(SELECT NVL(CAR_RUN_DIST_VAL,0) FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS CAR_RUN_DIST_VAL
+                        ,C.CAR_OWNER_ID
+                        ,C.CAR_OWNER_NM
+                        ,C.DRIVER_ID
+                        ,C.DRIVER_NM
+                        ,C.RO_DT
+                    FROM PT_0501T A
+                    INNER JOIN CM_0801T U ON A.REG_USR_ID = U.USR_ID
+                    LEFT JOIN PT_0511T B ON A.DLR_CD = B.DLR_CD AND A.RO_DOC_NO = B.RO_DOC_NO
+                    LEFT JOIN SE_0300T C ON A.DLR_CD = C.DLR_CD AND A.RO_DOC_NO = C.RO_DOC_NO AND A.RO_TP = C.RO_TP
+                    LEFT JOIN CM_0801T U2 ON C.REG_USR_ID = U2.USR_ID
+                    LEFT JOIN SE_0100T D ON A.DLR_CD = D.DLR_CD AND A.RESV_DOC_NO = D.RESV_DOC_NO
+                    LEFT JOIN SE_0800T E ON A.DLR_CD = E.DLR_CD AND A.RESV_DOC_NO = E.PAR_RESV_DOC_NO
+                    LEFT JOIN(
+                        SELECT
+                            DLR_CD
+                            ,PAR_REQ_DOC_NO
+                            ,MAX(ETC_GI_TP) AS ETC_GI_TP
+                        FROM PT_0502T
+                        WHERE DLR_CD = #{sDlrCd}
+                        GROUP BY DLR_CD, PAR_REQ_DOC_NO
+                    ) F ON A.PAR_REQ_DOC_NO = F.PAR_REQ_DOC_NO
+                    LEFT JOIN(
+                        SELECT
+                            DLR_CD
+                            ,PAR_REQ_DOC_NO
+                            ,COUNT(PAR_REQ_DOC_NO) AS ITEM_CNT
+                        FROM PT_0502T
+                        WHERE DLR_CD = #{sDlrCd}
+                        GROUP BY DLR_CD, PAR_REQ_DOC_NO
+                    ) G ON A.PAR_REQ_DOC_NO = G.PAR_REQ_DOC_NO
+                    <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND A.DLR_CD = #{sDlrCd}
+                    </if>
+
+                    <if test='sParReqDocNo != null and sParReqDocNo != ""'>
+                        AND A.PAR_REQ_DOC_NO = #{sParReqDocNo}
+                    </if>
+
+                    <if test='sParReqDocNoLike != null and sParReqDocNoLike != ""'>
+                        AND A.PAR_REQ_DOC_NO LIKE '%'||#{sParReqDocNoLike}||'%'
+                    </if>
+
+                    <if test='sParGiTp != null and sParGiTp != ""'>
+                        AND A.PAR_GI_TP = #{sParGiTp}
+                    </if>
+
+                    <if test='sParReqStatCd != null and sParReqStatCd != ""'>
+                        AND A.PAR_REQ_STAT_CD = #{sParReqStatCd}
+                    </if>
+
+                    <if test='sRoTp != null and sRoTp != ""'>
+                        AND C.RO_TP = #{sRoTp}
+                    </if>
+
+                    <if test='sRoStatCd != null and sRoStatCd != ""'>
+                        AND C.RO_STAT_CD = #{sRoStatCd}
+                    </if>
+
+                    <if test='sRoStatCdYn != null and sRoStatCdYn != ""'>
+                    <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sRoStatCdYn,"Y")'>
+                            AND C.RO_STAT_CD IN ('01','02')<!-- RO상태 위탁확인,수리서비스 만 -->
+                        </when>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sRoStatCdYn,"E")'>
+                            AND C.RO_STAT_CD NOT IN ('01','02')<!-- RO상태 위탁확인,수리서비스 외 모두 -->
+                        </when>
+                        <otherwise>
+                            AND C.RO_STAT_CD IS NOT NULL
+                        </otherwise>
+                    </choose>
+                    </if>
+
+                    <if test='sSaId != null and sSaId != ""'>
+                        AND A.PAR_REQ_DOC_NO IN (
+                            SELECT
+                                PAR_REQ_DOC_NO
+                            FROM PT_0512T
+                            WHERE DLR_CD = #{sDlrCd}
+                            AND RECEIVE_ID LIKE '%'||#{sSaId}||'%'
+                        )
+                    </if>
+
+                    <if test='sWkgrpNm != null and sWkgrpNm != ""'>
+                        AND A.RO_DOC_NO IN (
+                            SELECT
+                                RO_DOC_NO
+                            FROM SE_0330T
+                            WHERE DLR_CD = #{sDlrCd}
+                            AND WKGRP_NM LIKE '%'||#{sWkgrpNm}||'%'
+                        )
+                    </if>
+
+                    <if test='sRealTecNm != null and sRealTecNm != ""'>
+                        AND A.RO_DOC_NO IN (
+                            SELECT
+                                RO_DOC_NO
+                            FROM SE_0330T
+                            WHERE DLR_CD = #{sDlrCd}
+                            AND REAL_TEC_NM LIKE '%'||#{sRealTecNm}||'%'
+                        )
+                    </if>
+
+                    <if test='sCustCd != null and sCustCd != ""'>
+                        AND A.CUST_CD LIKE '%'|| #{sCustCd} ||'%'
+                    </if>
+
+                    <if test='sCustNm != null and sCustNm != ""'>
+                        AND A.CUST_NM LIKE '%'|| #{sCustNm} ||'%'
+                    </if>
+
+                    <if test='sVinNo != null and sVinNo != ""'>
+                        AND A.VIN_NO LIKE '%'||#{sVinNo}||'%'
+                    </if>
+
+                    <if test='sCarNo != null and sCarNo != ""'>
+                        AND A.CAR_NO LIKE '%'||#{sCarNo}||'%'
+                    </if>
+
+                    <if test='sGiDocNo != null and sGiDocNo != ""'>
+                        AND B.GI_DOC_NO = #{sGiDocNo}
+                    </if>
+
+                    <if test='sGiDocTp != null and sGiDocTp != ""'>
+                        AND B.GI_DOC_TP = #{sGiDocTp}
+                    </if>
+
+                    <if test='sGiDocStatCd != null and sGiDocStatCd != ""'>
+                        AND B.GI_DOC_STAT_CD = #{sGiDocStatCd}
+                    </if>
+
+                    <if test='sGiDocReqStartDt != null'>
+                        AND A.PAR_REQ_DOC_NO IN (
+                            SELECT
+                                PAR_REQ_DOC_NO
+                            FROM PT_0512T
+                            WHERE DLR_CD = #{sDlrCd}
+                            <if test='sGiDocReqStartDt != null'>
+                                <choose>
+                                    <otherwise>
+                                        AND GI_DT <![CDATA[>=]]> #{sGiDocReqStartDt}
+                                    </otherwise>
+                                </choose>
+                            </if>
+                            <if test='sGiDocReqEndDt != null'>
+                                <choose>
+                                    <otherwise>
+                                        AND GI_DT <![CDATA[<=]]> #{sGiDocReqEndDt} + 1
+                                    </otherwise>
+                                </choose>
+                            </if>
+                        )
+                    </if>
+
+                    <if test='sGiDocReqEndDt != null'>
+                        AND A.PAR_REQ_DOC_NO IN (
+                            SELECT
+                                PAR_REQ_DOC_NO
+                            FROM PT_0512T
+                            WHERE DLR_CD = #{sDlrCd}
+                            <if test='sGiDocReqStartDt != null'>
+                                <choose>
+                                    <otherwise>
+                                        AND GI_DT <![CDATA[>=]]> #{sGiDocReqStartDt}
+                                    </otherwise>
+                                </choose>
+                            </if>
+                            <if test='sGiDocReqEndDt != null'>
+                                <choose>
+                                    <otherwise>
+                                        AND GI_DT <![CDATA[<=]]> #{sGiDocReqEndDt} + 1
+                                    </otherwise>
+                                </choose>
+                            </if>
+                        )
+                    </if>
+
+                    <if test='sReceiveId != null and sReceiveId != ""'>
+                        AND A.PAR_REQ_DOC_NO IN (
+                            SELECT
+                                A.PAR_REQ_DOC_NO
+                            FROM PT_0512T A
+                            WHERE A.DLR_CD = #{sDlrCd}
+                            AND A.RECEIVE_ID LIKE '%'||#{sReceiveId}||'%'
+                        )
+                    </if>
+
+                    <if test='sReceiveNm != null and sReceiveNm != ""'>
+                        AND A.PAR_REQ_DOC_NO IN (
+                            SELECT
+                                A.PAR_REQ_DOC_NO
+                            FROM PT_0512T A
+                            LEFT JOIN CM_0801T K3 ON A.RECEIVE_ID = K3.USR_ID
+                            WHERE A.DLR_CD = #{sDlrCd}
+                            AND K3.USR_NM LIKE '%'||#{sReceiveNm}||'%'
+                        )
+                    </if>
+
+                    <if test='sItemCd != null and sItemCd != ""'>
+                        AND A.PAR_REQ_DOC_NO IN (
+                            SELECT
+                                A.PAR_REQ_DOC_NO
+                            FROM PT_0502T A
+                            WHERE A.DLR_CD = #{sDlrCd}
+                            AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                        )
+                    </if>
+
+                    <if test='sRoDocNo != null and sRoDocNo != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sRoDocNoLikeUseYn,"Y")'>
+                                 AND A.RO_DOC_NO LIKE '%'||#{sRoDocNo}||'%'
+                            </when>
+                            <otherwise>
+                                 AND A.RO_DOC_NO = #{sRoDocNo}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sResvDocNo != null and sResvDocNo != ""'>
+                        AND A.RESV_DOC_NO = #{sResvDocNo}
+                    </if>
+
+                    <if test='sResvDocNoLike != null and sResvDocNoLike != ""'>
+                        AND A.RESV_DOC_NO LIKE '%'||#{sResvDocNoLike}||'%'
+                    </if>
+
+                    <if test='sResvStatCd != null and sResvStatCd != ""'>
+                        AND D.RESV_STAT_CD = #{sResvStatCd}
+                    </if>
+
+                    <if test='sReqStartDt != null'>
+                        <choose>
+                            <otherwise>
+                                AND C.RO_DT <![CDATA[>=]]> #{sReqStartDt}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sReqEndDt != null'>
+                        <choose>
+                            <otherwise>
+                                AND C.RO_DT <![CDATA[<=]]> #{sReqEndDt} + 1
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sBorrowDocNo != null and sBorrowDocNo != ""'>
+                        AND A.BORROW_DOC_NO LIKE '%'||#{sBorrowDocNo}||'%'
+                    </if>
+
+                    <if test='sBorrowStatCd != null and sBorrowStatCd != ""'>
+                        AND NVL(A.BORROW_STAT_CD, '01') = #{sBorrowStatCd}
+                    </if>
+
+                    <if test='sBorrowStartDt != null'>
+                         AND A.BORROW_DOC_NO IS Not NULL
+                         AND A.REG_DT <![CDATA[>=]]> #{sBorrowStartDt}
+                    </if>
+
+                    <if test='sBorrowEndDt != null'>
+                         AND A.BORROW_DOC_NO IS Not NULL
+                         AND A.REG_DT <![CDATA[<=]]> #{sBorrowEndDt} + 1
+                    </if>
+
+                    <if test='sInvRoWorkStartDt != null'>
+                         AND C.RO_DT <![CDATA[>=]]> #{sInvRoWorkStartDt}
+                    </if>
+
+                    <if test='sInvRoWorkEndDt != null'>
+                         AND C.RO_DT <![CDATA[<=]]> #{sInvRoWorkEndDt} + 1
+                    </if>
+
+                    <if test='sBorrowDeptNm != null and sBorrowDeptNm != ""'>
+                        AND A.PAR_REQ_DOC_NO IN (
+                            SELECT
+                                A.PAR_REQ_DOC_NO
+                            FROM PT_0502T A
+                            LEFT JOIN CM_0801T K3 ON A.BORROW_USR_ID = K3.USR_ID
+                            LEFT JOIN CM_3401T K4 ON K3.DEPT_CD = K4.DEPT_CD
+                            WHERE A.DLR_CD = #{sDlrCd}
+                            AND A.BORROW_DOC_NO IS NOT NULL
+                            AND K4.DEPT_NM LIKE '%'||#{sBorrowDeptNm}||'%'
+                        )
+                    </if>
+
+                    <if test='sBorrowUsrNm != null and sBorrowUsrNm != ""'>
+                        AND A.PAR_REQ_DOC_NO IN (
+                            SELECT
+                                A.PAR_REQ_DOC_NO
+                            FROM PT_0502T A
+                            LEFT JOIN CM_0801T K3 ON A.BORROW_USR_ID = K3.USR_ID
+                            LEFT JOIN CM_3401T K4 ON K3.DEPT_CD = K4.DEPT_CD
+                            WHERE A.DLR_CD = #{sDlrCd}
+                            AND A.BORROW_DOC_NO IS NOT NULL
+                            AND K3.USR_NM LIKE '%'||#{sBorrowUsrNm}||'%'
+                        )
+                    </if>
+
+                    <if test='sEtcRvDocNo != null and sEtcRvDocNo != ""'>
+                        AND A.ETC_RV_DOC_NO = #{sEtcRvDocNo}
+                    </if>
+
+                    <if test='sReadyStatCd != null and sReadyStatCd != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sReadyStatCd,"RE01")'>
+                                 AND A.READY_STAT_CD IN ('01','02','04')
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sReadyStatCd,"RE02")'>
+                                 AND A.READY_STAT_CD IN ('02','03','05')
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sReadyStatCd,"RE03")'>
+                                 AND A.READY_STAT_CD IN ('01','02')
+                            </when>
+                            <otherwise>
+                                 AND A.READY_STAT_CD = #{sReadyStatCd}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                </where>
+                ) TT
+                WHERE TT.DLR_CD = #{sDlrCd}
+                    <if test='sItemCntYn != null and sItemCntYn == "Y"'>
+                        AND TT.ITEM_CNT > 0
+                    </if>
+                    <if test='sSerPrsnId != null and sSerPrsnId != ""'>
+                        AND TT.REG_USR_ID LIKE '%'||#{sSerPrsnId}||'%'
+                    </if>
+                    <if test='sSerPrsnNm != null and sSerPrsnNm != ""'>
+                        AND TT.SER_PRSN_ID LIKE '%'||#{sSerPrsnNm}||'%'
+                    </if>
+                    <if test='sParGiTp != null and sParGiTp != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"SR")'>
+                                 AND TT.RESV_STAT_CD IN ('O','F','C','S') -- 예약상태코드
+                                 AND TT.RO_DOC_NO_CNT = 0
+                            </when>
+                            <otherwise>
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sEtcGiTp != null and sEtcGiTp != ""'>
+                        AND TT.ETC_GI_TP = #{sEtcGiTp}
+                    </if>
+
+                    <if test='sCarlineCd != null and sCarlineCd != ""'>
+                        AND TT.CARLINE_CD = #{sCarlineCd}
+                    </if>
+                    ORDER BY
+                            TT.DLR_CD ASC, TT.RO_DT DESC
+
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+            <choose>
+                <when test='sort != null'>
+                ORDER BY
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "roDt"'>T1.RO_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "parReqDocNo"'>T1.PAR_REQ_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "parGiTp"'>T1.PAR_GI_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "parReqStatCd"'>T1.PAR_REQ_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "roDocNo"'>T1.RO_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "resvDocNo"'>T1.RESV_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "serPrsnId"'>T1.SER_PRSN_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "custCd"'>T1.CUST_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "custNm"'>T1.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "vinNo"'>T1.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "carNo"'>T1.CAR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "carlineCd"'>T1.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "updtDt"'>T1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "roTp"'>T1.RO_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "roStatCd"'>T1.RO_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "enginNo"'>T1.ENGIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "carlineNm"'>T1.CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "rnum"'>ROWNUM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "borrowDocNo"'>T1.BORROW_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "regDt"'>T1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "borrowStatCd"'>T1.BORROW_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                </otherwise>
+            </choose>
+        )
+        <where>
+        <if test='firstIndex != -1 and lastIndex != -1'>
+            RNUM <![CDATA[>]]> #{firstIndex}
+        </if>
+        </where>
+    </select>
+
+   
+
+</mapper>

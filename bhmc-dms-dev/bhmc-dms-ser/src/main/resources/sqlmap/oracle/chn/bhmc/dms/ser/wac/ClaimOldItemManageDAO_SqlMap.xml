@@ -1,0 +1,541 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : ClaimOldItemManageDAO_SqlMap.xml
+    Description : 고품관리 마스터에 관한 데이터처리
+    author Yin Xueyuan
+    since 2016. 5. 6.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 5. 6.  Yin Xueyuan      최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.wac.service.dao.ClaimOldItemManageDAO">
+
+	<!-- 고품출고관리 수정 -->
+	<update id="updateClaimOldItemManage" parameterType="ClaimOldItemManageVO">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimOldItemManageDAO.updateClaimOldItemManage] */
+		UPDATE SE_0790T    --고품관리
+          SET
+               STAT_CD             = #{statCd}                --상태코드
+              <if test=' olditemStatCd == "03" '>
+              ,RETURN_DT           = sysdate                  --반납일자
+              </if>
+              ,SENDER_ID           = #{senderId}
+              ,SENDER_TEL_NO       = #{senderTelNo}
+              ,TRSF_NO             = #{trsfNo}
+              ,EXPS_CMP_NM         = #{expsCmpNm}
+              ,UPDT_USR_ID         = #{updtUsrId}             --수정자ID
+              ,UPDT_DT             = SYSDATE                  --수정일자
+              <if test=' olditemStatCd == "01" '>
+              ,NOT_SEND_CAUSE_CONT = #{notSendCauseCont}
+              ,NOT_SEND_DT         = sysdate
+              </if>
+              ,CONTROLL_DT         = sysdate
+              ,CONTROLL_USR_ID     = #{updtUsrId}
+              ,OLDITEM_STAT_CD     = #{olditemStatCd}
+         WHERE 1 = 1
+           AND VIN_NO          = #{vinNo}                 --차대번호
+           AND CLAIM_DOC_NO    = #{claimDocNo}            --클레임문서번호
+           AND SEQ             = #{seq}                   --일련번호
+           AND ITEM_CD         = #{itemCd}                --품목코드
+           AND DLR_CD          = #{dlrCd}                 --딜러코드
+	</update>
+
+    <!-- 고품출고관리 삭제 -->
+    <delete id="deleteClaimOldItemManage" parameterType="ClaimOldItemManageVO">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimOldItemManageDAO.deleteClaimOldItemManage] */
+        DELETE FROM SE_0790T
+        WHERE 1 = 1
+           AND VIN_NO          = #{vinNo}                 --차대번호
+           AND CLAIM_DOC_NO    = #{claimDocNo}            --클레임문서번호
+           AND SEQ             = #{seq}                   --일련번호
+           AND ITEM_CD         = #{itemCd}                --품목코드
+           AND DLR_CD          = #{dlrCd}                 --딜러코드
+    </delete>
+
+    <!-- 고품요청조회 리스트 -->
+    <select id="selectClaimOldItemRequestByCondition" parameterType="ClaimOldItemManageSearchVO" resultType="ClaimOldItemManageVO">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimOldItemManageDAO.selectClaimOldItemRequestByCondition] */
+
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                      DLR_CD                     --딜러코드
+                     ,(SELECT DLR_SHT_NM FROM CM_0101T WHERE DLR_CD = A.DLR_CD ) AS DLR_NM
+                     ,VIN_NO                     --차대번호
+                     ,CLAIM_DOC_NO               --클레임문서번호
+                     ,(SELECT CLAIM_START_DT
+                         FROM SE_0710T C
+                        WHERE C.DLR_CD        = A.DLR_CD
+                          AND C.CLAIM_DOC_NO  = A.CLAIM_DOC_NO
+                          AND C.CLAIM_STAT_CD ='A'
+                          AND ROWNUM = 1 ) AS CLAIM_START_DT --클레임 일자
+                     ,NVL(STAT_CD,'01') STAT_CD  --상태코드
+                     ,FN_CMM_CD_NM('SER300',NVL(STAT_CD,'01'),#{sLangCd},'N') AS STAT_NM  --상태명
+                     ,ATQ_REQ_NO                 --고품신청번호
+                     ,SEQ                        --일련번호
+                     ,NVL(RUN_DIST_VAL,0) AS RUN_DIST_VAL --주행거리값
+                     ,RETURN_DT               --반납일자
+                     ,ITEM_CD                 --품목코드
+                     ,ITEM_NM                 --품목명
+                     ,NVL(A.ITEM_UNIT_CD,'EA')AS ITEM_UNIT_CD --품목단위코드
+                     ,NVL(COLLC_QTY,0) AS COLLC_QTY --회수수량
+                     ,CLAIM_QTY               --클레임수량
+                     ,REQ_TEL_NO              --요청자전화번호
+                     ,REQ_STAT_CD             --요청상태코드
+                     ,REQ_REASON_CONT         --요청사유내용
+                     ,COLLC_REQ_DT            --회수요청일자
+                     ,REQ_ID                  --요청자ID
+                     ,REQ_DT                  --요청일자
+                     ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.REQ_ID AND DLR_CD = A.DLR_CD) AS REQ_NM
+                     ,REQ_DEPT_CD             --요청부서코드
+                     ,FN_CMM_CD_NM('SER302',REQ_DEPT_CD,#{sLangCd},'N') REQ_DEPT_NM  --요청부서명
+                     ,COLLC_ID                --회수자ID
+                     ,COLLC_DT                --회수일자
+                     ,DDCT_ID                 --공제자ID
+                     ,DDCT_DT                 --공제일자
+                     ,GI_DSTIN_CD             --출고구분코드
+                     ,GI_REASON_CONT          --출고사유내용
+                     ,GI_DT                   --출고일자
+                     ,GI_DEPT_CD              --출고부서코드
+                     ,GI_ID                   --출고자ID
+                     ,REG_USR_ID              --등록자ID
+                     ,REG_DT                  --등록일자
+                     ,UPDT_USR_ID             --수정자ID
+                     ,UPDT_DT                 --수정일자
+                     ,DDCT_QTY                --공제수량
+                     ,RCIP_ID                 --수취인ID
+                     ,RCIP_ADDR_NM            --수취인주소명
+                     ,RCIP_TEL_NO             --수취인전화번호
+                     ,EXPS_CMP_NM             --택배회사명
+                     ,PAY_TP                  --지불유형
+                     ,SENDER_ID               --부취인ID
+                     ,SENDER_TEL_NO           --부취인전화번호
+                     ,TRSF_NO                 --운송장번호
+                     ,A.NOT_SEND_CAUSE_CONT
+                     ,A.NOT_SEND_DT
+                     ,A.CONTROLL_DT
+                     ,A.OLDITEM_STAT_CD
+                     ,FN_CMM_CD_NM('SER303',A.OLDITEM_STAT_CD,#{sLangCd},'N') AS OLDITEM_STAT_NM
+                     ,A.CONTROLL_USR_ID
+                     ,CASE WHEN STAT_CD = '06' OR STAT_CD = '07'
+                               THEN (SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.CONTROLL_USR_ID AND DLR_CD = A.DLR_CD)
+                               END AS CONTROLL_USR_NM
+                     ,A.ACCEPT_YN
+                     ,A.DDCT_YN
+                     ,FN_CMM_CD_NM('COM020',A.DDCT_YN,#{sLangCd},'N') AS DDCT_YN_NM
+                     ,A.WARNING_INFO
+                     ,A.OLDITEM_CMP_NM
+                     ,A.EXPS_AMT
+                FROM SE_0790T A
+               WHERE DLR_CD = #{sDlrCd}
+                 AND STAT_CD IN('02','03','06','07')
+                <if test='sStatCd != null and sStatCd != ""'>
+                 AND STAT_CD = #{sStatCd}
+                </if>
+                <if test='sItemCd != null and sItemCd != ""'>
+                 AND ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                </if>
+                <if test='sItemNm != null and sItemNm != ""'>
+                 AND ITEM_NM LIKE '%'||#{sItemNm}||'%'
+                </if>
+                <if test='sClaimDocNo != null and sClaimDocNo != ""'>
+                 AND CLAIM_DOC_NO LIKE '%'||#{sClaimDocNo}||'%'
+                </if>
+                <if test='sVinNo != null and sVinNo != ""'>
+                 AND VIN_NO LIKE '%'||#{sVinNo}||'%'
+                </if>
+                <if test='sAtqReqNo != null and sAtqReqNo != ""'>
+                 AND ATQ_REQ_NO LIKE '%'||#{sAtqReqNo}||'%'
+                </if>
+                <if test='sOlditemStatCd != null and sOlditemStatCd != ""'>
+                 AND OLDITEM_STAT_CD  = #{sOlditemStatCd}
+                </if>
+                <if test='sReqFromDt != null'>
+                 AND REQ_DT <![CDATA[>=]]> #{sReqFromDt}
+                </if>
+                <if test='sReqToDt != null'>
+                 AND REQ_DT <![CDATA[<]]> #{sReqToDt} + 1
+                </if>
+                <if test='sDdctYn != null and sDdctYn != ""'>
+                 AND DDCT_YN = #{sDdctYn}
+                </if>
+            ORDER BY
+            <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                             <when test='item.field == "statNm"'>         STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                             <when test='item.field == "dlrCd"'>          A.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                             <when test='item.field == "dlrNm"'>          DLR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                             <when test='item.field == "vinNo"'>          A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                             <when test='item.field == "claimDocNo"'>     A.CLAIM_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                             <when test='item.field == "statCd"'>         A.STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                             <when test='item.field == "atqReqNo"'>       A.ATQ_REQ_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                             <when test='item.field == "claimStartDt"'>   CLAIM_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                             <when test='item.field == "seq"'>            A.SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                             <when test='item.field == "runDistVal"'>     A.RUN_DIST_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                             <when test='item.field == "returnDt"'>       A.RETURN_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                             <when test='item.field == "itemCd"'>         A.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                             <when test='item.field == "itemNm"'>         A.ITEM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                             <when test='item.field == "itemUnitCd"'>     A.ITEM_UNIT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                             <when test='item.field == "collcQty"'>       A.COLLC_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                             <when test='item.field == "claimQty"'>       A.CLAIM_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                             <when test='item.field == "reqTelNo"'>       A.REQ_TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                             <when test='item.field == "reqStatCd"'>      A.REQ_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                             <when test='item.field == "reqReasonCont"'>  A.REQ_REASON_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <when test='item.field == "collcReqDt"'>     A.COLLC_REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                             <when test='item.field == "reqNm"'>          REQ_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                             <when test='item.field == "reqDt"'>          A.REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                             <when test='item.field == "reqDeptNm"'>      REQ_DEPT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                             <when test='item.field == "controllDt"'>     CONTROLL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                             <when test='item.field == "ddctYnNm"'>       DDCT_YN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                             <when test='item.field == "olditemStatNm"'>  OLDITEM_STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                             <when test='item.field == "ddctDt"'>         A.DDCT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                            <otherwise>
+                                ATQ_REQ_NO DESC ,CLAIM_DOC_NO DESC,ITEM_CD ASC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                    ATQ_REQ_NO DESC,CLAIM_DOC_NO DESC, ITEM_CD ASC
+                </otherwise>
+            </choose>
+            ) T1
+            <where>
+                <if test='sReqNm != null and sReqNm != "" '>
+                    REQ_NM LIKE  '%'||#{sReqNm}||'%'
+                </if>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 고품요청조회 목록수 리스트 -->
+    <select id="selectClaimOldItemRequestByConditionCnt" parameterType="ClaimOldItemManageSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimOldItemManageDAO.selectClaimOldItemRequestByConditionCnt] */
+            SELECT COUNT(T1.CLAIM_DOC_NO) FROM (
+                SELECT
+                      DLR_CD                     --딜러코드
+                     ,VIN_NO                     --차대번호
+                     ,CLAIM_DOC_NO               --클레임문서번호
+                     ,NVL(STAT_CD,'01') STAT_CD  --상태코드
+                     ,ATQ_REQ_NO                 --고품신청번호
+                     ,SEQ                        --일련번호
+                     ,ITEM_CD                 --품목코드
+                     ,ITEM_NM                 --품목명
+                     ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = T1.REQ_ID AND DLR_CD = T1.DLR_CD) AS REQ_NM
+                FROM SE_0790T T1
+               WHERE DLR_CD = #{sDlrCd}
+                <if test='sStatCd != null and sStatCd != ""'>
+                 AND STAT_CD = #{sStatCd}
+                </if>
+                <if test='sItemCd != null and sItemCd != ""'>
+                 AND ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                </if>
+                <if test='sItemNm != null and sItemNm != ""'>
+                 AND ITEM_NM LIKE '%'||#{sItemNm}||'%'
+                </if>
+                <if test='sClaimDocNo != null and sClaimDocNo != ""'>
+                 AND CLAIM_DOC_NO LIKE '%'||#{sClaimDocNo}||'%'
+                </if>
+                <if test='sVinNo != null and sVinNo != ""'>
+                 AND VIN_NO LIKE '%'||#{sVinNo}||'%'
+                </if>
+                <if test='sAtqReqNo != null and sAtqReqNo != ""'>
+                 AND ATQ_REQ_NO LIKE '%'||#{sAtqReqNo}||'%'
+                </if>
+                <if test='sOlditemStatCd != null and sOlditemStatCd != ""'>
+                 AND OLDITEM_STAT_CD  = #{sOlditemStatCd}
+                </if>
+                <if test='sReqFromDt != null'>
+                    AND REQ_DT <![CDATA[>=]]> #{sReqFromDt}
+                </if>
+                <if test='sReqToDt != null'>
+                    AND REQ_DT <![CDATA[<]]> #{sReqToDt} + 1
+                </if>
+                <if test='sDdctYn != null and sDdctYn != ""'>
+                 AND DDCT_YN = #{sDdctYn}
+                </if>
+            ) T1
+            <where>
+                <if test='sReqNm != null and sReqNm != "" '>
+                    REQ_NM LIKE  '%'||#{sReqNm}||'%'
+                </if>
+            </where>
+    </select>
+
+    <!-- 고품출고관리 리스트 -->
+    <select id="selectDlrClaimOldItemManageByCondition" parameterType="ClaimOldItemManageSearchVO" resultType="ClaimOldItemManageVO">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimOldItemManageDAO.selectDlrClaimOldItemManageByCondition] */
+
+            SELECT * FROM (
+                SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT
+                          DLR_CD                     --딜러코드
+                         ,(SELECT DLR_SHT_NM FROM CM_0101T WHERE DLR_CD = A.DLR_CD ) AS DLR_NM
+                         ,VIN_NO                     --차대번호
+                         ,CLAIM_DOC_NO               --클레임문서번호
+                         ,(SELECT CLAIM_START_DT
+                             FROM SE_0710T C
+                            WHERE C.DLR_CD        = A.DLR_CD
+                              AND C.CLAIM_DOC_NO  = A.CLAIM_DOC_NO
+                              AND C.CLAIM_STAT_CD ='A'
+                              AND ROWNUM = 1 ) AS CLAIM_START_DT --클레임 일자
+                         ,NVL(STAT_CD,'01') STAT_CD  --상태코드
+                         ,FN_CMM_CD_NM('SER300',NVL(STAT_CD,'01'),#{sLangCd},'N') AS STAT_NM  --상태명
+                         ,ATQ_REQ_NO                 --고품신청번호
+                         ,SEQ                        --일련번호
+                         ,NVL(RUN_DIST_VAL,0) AS RUN_DIST_VAL --주행거리값
+                         ,RETURN_DT               --반납일자
+                         ,ITEM_CD                 --품목코드
+                         ,ITEM_NM                 --품목명
+                         ,NVL(A.ITEM_UNIT_CD,'EA')AS ITEM_UNIT_CD --품목단위코드
+                         ,NVL(COLLC_QTY,0) AS COLLC_QTY --회수수량
+                         ,CLAIM_QTY               --클레임수량
+                         ,REQ_TEL_NO              --요청자전화번호
+                         ,REQ_STAT_CD             --요청상태코드
+                         ,REQ_REASON_CONT         --요청사유내용
+                         ,COLLC_REQ_DT            --회수요청일자
+                         ,REQ_ID                  --요청자ID
+                         ,REQ_DT                  --요청일자
+                         ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.REQ_ID AND DLR_CD = A.DLR_CD) AS REQ_NM
+                         ,REQ_DEPT_CD             --요청부서코드
+                         ,FN_CMM_CD_NM('SER302',REQ_DEPT_CD,#{sLangCd},'N') REQ_DEPT_NM  --요청부서명
+                         ,COLLC_ID                --회수자ID
+                         ,COLLC_DT                --회수일자
+                         ,DDCT_ID                 --공제자ID
+                         ,DDCT_DT                 --공제일자
+                         ,GI_DSTIN_CD             --출고구분코드
+                         ,GI_REASON_CONT          --출고사유내용
+                         ,GI_DT                   --출고일자
+                         ,GI_DEPT_CD              --출고부서코드
+                         ,GI_ID                   --출고자ID
+                         ,REG_USR_ID              --등록자ID
+                         ,REG_DT                  --등록일자
+                         ,UPDT_USR_ID             --수정자ID
+                         ,UPDT_DT                 --수정일자
+                         ,DDCT_QTY                --공제수량
+                         ,RCIP_ID                 --수취인ID
+                         ,RCIP_ADDR_NM            --수취인주소명
+                         ,RCIP_TEL_NO             --수취인전화번호
+                         ,EXPS_CMP_NM             --택배회사명
+                         ,PAY_TP                  --지불유형
+                         ,SENDER_ID               --부취인ID
+                         ,SENDER_TEL_NO           --부취인전화번호
+                         ,TRSF_NO                 --운송장번호
+                         ,A.NOT_SEND_CAUSE_CONT
+                         ,A.NOT_SEND_DT
+                         ,CASE WHEN STAT_CD = '06' OR STAT_CD = '07' THEN A.CONTROLL_DT END CONTROLL_DT
+                         ,A.OLDITEM_STAT_CD
+                         ,FN_CMM_CD_NM('SER303',A.OLDITEM_STAT_CD,#{sLangCd},'N') AS OLDITEM_STAT_NM
+                         ,A.CONTROLL_USR_ID
+                         ,CASE WHEN STAT_CD = '06' OR STAT_CD = '07'
+                               THEN (SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.CONTROLL_USR_ID AND DLR_CD = A.DLR_CD)
+                               END AS CONTROLL_USR_NM
+                         ,A.ACCEPT_YN
+                         ,A.DDCT_YN
+                         ,A.WARNING_INFO
+                         ,A.OLDITEM_CMP_NM
+                         ,A.EXPS_AMT
+                    FROM SE_0790T A
+                   WHERE DLR_CD = #{sDlrCd}
+                     AND STAT_CD IN('02','03','06','07')
+                    <if test='sStatCd != null and sStatCd != ""'>
+                     AND STAT_CD = #{sStatCd}
+                    </if>
+                    <if test='sItemCd != null and sItemCd != ""'>
+                     AND ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                    </if>
+                    <if test='sItemNm != null and sItemNm != ""'>
+                     AND ITEM_NM LIKE '%'||#{sItemNm}||'%'
+                    </if>
+                    <if test='sClaimDocNo != null and sClaimDocNo != ""'>
+                     AND CLAIM_DOC_NO LIKE '%'||#{sClaimDocNo}||'%'
+                    </if>
+                    <if test='sVinNo != null and sVinNo != ""'>
+                     AND VIN_NO LIKE '%'||#{sVinNo}||'%'
+                    </if>
+                    <if test='sAtqReqNo != null and sAtqReqNo != ""'>
+                     AND ATQ_REQ_NO LIKE '%'||#{sAtqReqNo}||'%'
+                    </if>
+                    <if test='sOlditemStatCd != null and sOlditemStatCd != ""'>
+                     AND OLDITEM_STAT_CD  = #{sOlditemStatCd}
+                    </if>
+                    <if test='sReqFromDt != null'>
+                     AND REQ_DT <![CDATA[>=]]> #{sReqFromDt}
+                    </if>
+                    <if test='sReqToDt != null'>
+                     AND REQ_DT <![CDATA[<]]> #{sReqToDt} + 1
+                    </if>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                 <when test='item.field == "dlrCd"'>          A.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                 <when test='item.field == "vinNo"'>          A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                 <when test='item.field == "claimDocNo"'>     A.CLAIM_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                 <when test='item.field == "statCd"'>         A.STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                 <when test='item.field == "atqReqNo"'>       A.ATQ_REQ_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                 <when test='item.field == "seq"'>            A.SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                 <when test='item.field == "runDistVal"'>     A.RUN_DIST_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                 <when test='item.field == "returnDt"'>       A.RETURN_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                 <when test='item.field == "itemCd"'>         A.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                 <when test='item.field == "itemNm"'>         A.ITEM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                 <when test='item.field == "itemUnitCd"'>     A.ITEM_UNIT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                 <when test='item.field == "collcQty"'>       A.COLLC_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                 <when test='item.field == "claimQty"'>       A.CLAIM_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                 <when test='item.field == "reqTelNo"'>       A.REQ_TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                 <when test='item.field == "reqStatCd"'>      A.REQ_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                 <when test='item.field == "reqReasonCont"'>  A.REQ_REASON_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "collcReqDt"'>     A.COLLC_REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                 <when test='item.field == "reqId"'>          A.REQ_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                 <when test='item.field == "reqDt"'>          A.REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                 <when test='item.field == "reqDeptCd"'>      A.REQ_DEPT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                 <when test='item.field == "collcId"'>        A.COLLC_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                 <when test='item.field == "collcDt"'>        A.COLLC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                 <when test='item.field == "ddctId"'>         A.DDCT_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                 <when test='item.field == "ddctDt"'>         A.DDCT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                 <when test='item.field == "giDstinCd"'>      A.GI_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                 <when test='item.field == "giReasonCont"'>   A.GI_REASON_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "giDt"'>           A.GI_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                 <when test='item.field == "giDeptCd"'>       A.GI_DEPT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                 <when test='item.field == "giId"'>           A.GI_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                <otherwise>
+                                    ATQ_REQ_NO DESC ,CLAIM_DOC_NO DESC,ITEM_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        ATQ_REQ_NO DESC,CLAIM_DOC_NO DESC, ITEM_CD ASC
+                    </otherwise>
+                </choose>
+                ) T1
+                <where>
+                    <if test='sReqNm != null and sReqNm != "" '>
+                        REQ_NM LIKE  '%'||#{sReqNm}||'%'
+                    </if>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                    </if>
+                </where>
+            )
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    RNUM > #{firstIndex}
+                </if>
+            </where>
+    </select>
+
+    <!-- 고품출고관리 목록수 리스트 -->
+    <select id="selectDlrClaimOldItemManageByConditionCnt" parameterType="ClaimOldItemManageSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimOldItemManageDAO.selectDlrClaimOldItemManageByConditionCnt] */
+
+            SELECT COUNT(T1.CLAIM_DOC_NO) FROM (
+                SELECT
+                      DLR_CD                     --딜러코드
+                     ,VIN_NO                     --차대번호
+                     ,CLAIM_DOC_NO               --클레임문서번호
+                     ,NVL(STAT_CD,'01') STAT_CD  --상태코드
+                     ,ATQ_REQ_NO                 --고품신청번호
+                     ,SEQ                        --일련번호
+                     ,ITEM_CD                 --품목코드
+                     ,ITEM_NM                 --품목명
+                     ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = T1.REQ_ID AND DLR_CD = T1.DLR_CD) AS REQ_NM
+                FROM SE_0790T T1
+               WHERE DLR_CD = #{sDlrCd}
+                <if test='sStatCd != null and sStatCd != ""'>
+                 AND STAT_CD = #{sStatCd}
+                </if>
+                <if test='sItemCd != null and sItemCd != ""'>
+                 AND ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                </if>
+                <if test='sItemNm != null and sItemNm != ""'>
+                 AND ITEM_NM LIKE '%'||#{sItemNm}||'%'
+                </if>
+                <if test='sClaimDocNo != null and sClaimDocNo != ""'>
+                 AND CLAIM_DOC_NO LIKE '%'||#{sClaimDocNo}||'%'
+                </if>
+                <if test='sVinNo != null and sVinNo != ""'>
+                 AND VIN_NO LIKE '%'||#{sVinNo}||'%'
+                </if>
+                <if test='sAtqReqNo != null and sAtqReqNo != ""'>
+                 AND ATQ_REQ_NO LIKE '%'||#{sAtqReqNo}||'%'
+                </if>
+                <if test='sOlditemStatCd != null and sOlditemStatCd != ""'>
+                 AND OLDITEM_STAT_CD  = #{sOlditemStatCd}
+                </if>
+                <if test='sReqFromDt != null'>
+                 AND REQ_DT <![CDATA[>=]]> #{sReqFromDt}
+                </if>
+                <if test='sReqToDt != null'>
+                 AND REQ_DT <![CDATA[<]]> #{sReqToDt} + 1
+                </if>
+            ) T1
+            <where>
+                <if test='sReqNm != null and sReqNm != "" '>
+                    REQ_NM LIKE  '%'||#{sReqNm}||'%'
+                </if>
+            </where>
+    </select>
+
+    <!-- 고품관리 키조회 -->
+    <select id="selectClaimOldItemManageByKey" parameterType="ClaimOldItemManageSearchVO" resultType="ClaimOldItemManageVO">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimOldItemManageDAO.selectClaimOldItemManageByKey] */
+        SELECT * FROM SE_0790T
+        WHERE 1 = 1
+           AND VIN_NO          = #{vinNo}                 --차대번호
+           AND CLAIM_DOC_NO    = #{claimDocNo}            --클레임문서번호
+           AND SEQ             = #{seq}                   --일련번호
+           AND ITEM_CD         = #{itemCd}                --품목코드
+           AND DLR_CD          = #{dlrCd}                 --딜러코드
+    </select>
+
+     <!-- 고품 데이타 TEMP로 전송. : 프로시져  -->
+    <insert id="insertClaimToTemp" parameterType="ClaimOldItemManageVO" statementType="CALLABLE">
+        {CALL SP_SER_CLAIM_OLDITEM_REQ(
+              #{dlrCd, mode=IN, jdbcType=VARCHAR}
+              #{vinNo, mode=IN, jdbcType=VARCHAR}
+              #{claimDocNo, mode=IN, jdbcType=VARCHAR}
+              #{atqReqNo, mode=IN, jdbcType=VARCHAR}
+              #{seq, mode=IN, jdbcType=VARCHAR}
+              #{itemCd, mode=IN, jdbcType=VARCHAR}
+        )}
+    </insert>
+
+    <!-- 고품 프린트 정보 저장  -->
+    <insert id="insertDlrClaimOldItemPrint" parameterType="ClaimOldItemPrintVO">
+        INSERT INTO SE_0715T(
+            SEQ
+            ,DLR_CD
+            ,CLAIM_NO
+            ,ITEM_CD
+            ,DIST_NO
+            ,REG_USR_ID
+            ,REG_DT
+            )
+        VALUES(
+            (SELECT NVL(MAX(SEQ),0)+1 FROM SE_0715T)
+            ,#{dlrCd}
+            ,#{claimNo}
+            ,#{itemCd}
+            ,#{distNo}
+            ,#{regUsrId}
+            ,SYSDATE
+            )
+    </insert>
+</mapper>

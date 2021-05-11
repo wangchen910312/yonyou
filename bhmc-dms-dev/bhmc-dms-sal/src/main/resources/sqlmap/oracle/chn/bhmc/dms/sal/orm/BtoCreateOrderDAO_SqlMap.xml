@@ -1,0 +1,1254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.orm.service.dao.BtoCreateOrderDAO">
+
+    <!-- 주차 및 메모 조회  -->
+    <select id="selectWeekRemark" parameterType="BtoCreateOrderSearchVO" resultType="BtoCreateOrderEtcVO">
+        SELECT BTO_YY_MM_DT || BTO_CNT AS BTO_YMW_CD
+             , BTO_YY_MM_DT || '-' || BTO_CNT AS BTO_YMW_NM
+             , PFP_EXAM_DT
+             , REPLACE(REPLACE(REMARK, CHR(13), ' '), CHR(10),' ') AS REMARK
+          FROM SA_0432T
+         WHERE BTO_WRK_TP = DECODE(#{sOrdTp}, 'N1', 'B', 'H')
+           AND TO_CHAR(SYSDATE,'YYYYMMDD') BETWEEN TO_CHAR(START_DT,'YYYYMMDD') AND TO_CHAR(END_DT,'YYYYMMDD') <!-- 20200806 TJX 修改有效日期查询方式 -->
+         ORDER BY BTO_YY_MM_DT||BTO_CNT DESC
+    </select>
+
+    <!-- 납기예시일 조회  -->
+    <select id="selectPfpExamDt" parameterType="BtoCreateOrderSearchVO" resultType="BtoCreateOrderEtcVO">
+        SELECT TO_CHAR(PFP_EXAM_DT, 'YYYY-MM-DD') PFP_EXAM_DT
+              ,TO_CHAR(END_DT, 'YYYYMMDDHH24MI') AS END_DT
+          FROM SA_0432T
+         WHERE BTO_YY_MM_DT = SUBSTR(#{sOrdYyMmPrid}, 1, 6)
+           AND BTO_CNT = SUBSTR(#{sOrdYyMmPrid}, 7, 2)
+           AND BTO_WRK_TP = DECODE(#{sOrdTp}, 'N1', 'B', 'H')
+         ORDER BY BTO_YY_MM_DT||BTO_CNT DESC
+    </select>
+
+    <!-- 오더상한(참고수량) 조회  -->
+    <select id="selectRefOrdQty" parameterType="BtoCreateOrderSearchVO" resultType="BtoCreateOrderEtcVO">
+        SELECT DISTINCT NVL(MAX(DEPT_MAX_LMT_RATE),0) ORD_REF_QTY
+          FROM SA_0169T
+         WHERE SALE_DEPT_CD = #{sDeptCd}
+           AND CARLINE_CD = #{sCarlineCd}
+           AND YY_MM_DT = SUBSTR(#{sOrdYyMmPrid}, 1, 6)
+           AND WKCNT_NO = SUBSTR(#{sOrdYyMmPrid}, 7, 2)
+    </select>
+
+    <!-- 오더등급 조회  -->
+    <select id="selectOrdGradeCd" parameterType="BtoCreateOrderSearchVO" resultType="BtoCreateOrderEtcVO">
+        SELECT ORD_GRADE_CD
+          FROM SA_0172T
+         WHERE CARLINE_CD = #{sCarlineCd}
+           AND MODEL_CD = #{sModelCd}
+           AND OCN_CD = #{sOcnCd}
+           AND EXT_COLOR_CD = #{sExtColorCd}
+           AND INT_COLOR_CD = #{sIntColorCd}
+    </select>
+
+    <!-- 전략오더를 제외한 모든 오더 OCN 갯수 조회 -->
+    <select id="selectBtoOcnListsByConditionCnt" parameterType="BtoCarInfoSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.orm.service.dao.BtoCreateOrderDAO.selectBtoOcnListsByConditionCnt] */
+        SELECT COUNT(*)
+          FROM ( SELECT Z.MODEL_CD
+                      , Z.OCN_CD
+                      , FN_GET_OCN_NM(Z.MODEL_CD, Z.OCN_CD) AS OCN_NM
+                      , FN_GET_OCN_NM(Z.MODEL_CD, Z.OCN_CD) AS OCN_NM_PUR
+                      , Z.OCN_NM
+                      , Z.FSCP_CHM_MMM
+                   FROM (
+                             SELECT A.MODEL_CD
+                                  , A.OCN_CD
+                                  , A.OCN_NM
+                                  , NVL(B.USE_CD, 'N') AS BLK_YN
+                                  , A.FSCP_CHM_MMM
+                               FROM (
+                                     SELECT B.CARLINE_CD
+                                          , A.MODEL_CD
+                                          , A.OCN_CD
+                                          , A.OCN_NM
+                                          , A.FSCP_CHM_MMM
+                                       FROM SA_0105T A
+                                       INNER JOIN SA_0102T B
+                                         ON A.MODEL_CD = B.MODEL_CD
+                                      WHERE A.USE_YN = #{useYn}    -- 사용여부
+                                        AND A.START_DT <![CDATA[ <= ]]> SYSDATE  -- 시작일
+                                        AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+                                        <if test='carlineCd != null and carlineCd != ""'>
+                                        AND B.CARLINE_CD = #{carlineCd}    -- 차종코드
+                                        </if>
+                                        <if test='modelCd != null and modelCd != ""'>
+                                        AND B.MODEL_CD = #{modelCd}        -- 모델코드
+                                        </if>
+                                     ) A
+                                LEFT OUTER JOIN (
+                                      SELECT CARLINE_CD
+                                           , MODEL_CD
+                                           , OCN_CD
+                                           , START_DT
+                                           , END_DT
+                                           , USE_CD
+                                        FROM SA_0157T
+                                       WHERE DLR_CD = #{dlrCd}
+                                         <if test='carlineCd != null and carlineCd != ""'>
+                                         AND CARLINE_CD = #{carlineCd}
+                                         </if>
+                                         <if test='modelCd != null and modelCd != ""'>
+                                         AND MODEL_CD   = #{modelCd}
+                                         </if>
+                                         AND START_DT <![CDATA[ <= ]]> SYSDATE     -- 시작일
+                                         AND END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+                                         AND USE_CD = 'B'
+                                 UNION
+                                      SELECT CARLINE_CD
+                                           , MODEL_CD
+                                           , OCN_CD
+                                           , START_DT
+                                           , END_DT
+                                           , USE_CD
+                                        FROM SA_0157T
+                                       WHERE DLR_CD = 'ALLDR'
+                                         <if test='carlineCd != null and carlineCd != ""'>
+                                         AND CARLINE_CD = #{carlineCd}
+                                         </if>
+                                         <if test='modelCd != null and modelCd != ""'>
+                                         AND MODEL_CD   = #{modelCd}
+                                         </if>
+                                         AND START_DT <![CDATA[ <= ]]> SYSDATE     -- 시작일
+                                         AND END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+                                         AND USE_CD = 'B'
+                                    ) B
+                                  ON A.CARLINE_CD = B.CARLINE_CD
+                                 AND A.MODEL_CD = B.MODEL_CD
+                                 AND A.OCN_CD = B.OCN_CD
+                               WHERE NVL(B.USE_CD, 'N') = 'N'
+                           )  Z
+                        GROUP BY  Z.MODEL_CD, Z.OCN_CD, Z.OCN_NM, Z.FSCP_CHM_MMM
+                )
+    </select>
+
+    <!-- 전략오더를 제외한 모든 오더 OCN조회 -->
+    <select id="selectBtoOcnListsByCondition" parameterType="BtoCarInfoSearchVO" resultType="BtoCarInfoVO">
+    /* [chn.bhmc.dms.sal.orm.service.dao.BtoCreateOrderDAO.selectBtoOcnListsByCondition] */
+        SELECT Z.MODEL_CD
+             , Z.OCN_CD
+             , FN_GET_OCN_NM(Z.MODEL_CD, Z.OCN_CD) AS OCN_NM
+             , Z.OCN_NM AS OCN_NM_PUR
+             , (SELECT T.MS_PRC
+                  FROM SA_0110T T
+                 WHERE T.MODEL_CD = Z.MODEL_CD
+                   AND T.OCN_CD = Z.OCN_CD
+                   AND T.START_DT <![CDATA[ <= ]]> SYSDATE   -- 시작일
+                   AND T.END_DT   <![CDATA[ >= ]]> SYSDATE   -- 종료일
+                ) AS MS_PRC
+             , Z.FSCP_CHM_MMM
+          FROM (
+                    SELECT A.MODEL_CD
+                         , A.OCN_CD
+                         , A.OCN_NM
+                         , NVL(B.USE_CD, 'N') AS BLK_YN
+                         , A.FSCP_CHM_MMM
+                      FROM (
+                            SELECT B.CARLINE_CD
+                                 , A.MODEL_CD
+                                 , A.OCN_CD
+                                 , A.OCN_NM
+                                 , A.FSCP_CHM_MMM
+                              FROM SA_0105T A
+                              INNER JOIN SA_0102T B
+                                ON A.MODEL_CD = B.MODEL_CD
+                             WHERE A.USE_YN = #{useYn}    -- 사용여부
+                               AND A.START_DT <![CDATA[ <= ]]> SYSDATE  -- 시작일
+                               AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+                               <if test='carlineCd != null and carlineCd != ""'>
+                               AND B.CARLINE_CD = #{carlineCd}    -- 차종코드
+                               </if>
+                               <if test='modelCd != null and modelCd != ""'>
+                               AND B.MODEL_CD = #{modelCd}        -- 모델코드
+                               </if>
+                            ) A                              /* 모델패키지매핑 - OCN정보 */
+                       LEFT OUTER JOIN (
+                             SELECT CARLINE_CD
+                                  , MODEL_CD
+                                  , OCN_CD
+                                  , START_DT
+                                  , END_DT
+                                  , USE_CD
+                               FROM SA_0157T
+                              WHERE DLR_CD = #{dlrCd}
+                                <if test='carlineCd != null and carlineCd != ""'>
+                                AND CARLINE_CD = #{carlineCd}
+                                </if>
+                                <if test='modelCd != null and modelCd != ""'>
+                                AND MODEL_CD   = #{modelCd}
+                                </if>
+                                AND START_DT <![CDATA[ <= ]]> SYSDATE     -- 시작일
+                                AND END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+                                AND USE_CD = 'B'
+                        UNION
+                             SELECT CARLINE_CD
+                                  , MODEL_CD
+                                  , OCN_CD
+                                  , START_DT
+                                  , END_DT
+                                  , USE_CD
+                               FROM SA_0157T
+                              WHERE DLR_CD = 'ALLDR'
+                                <if test='carlineCd != null and carlineCd != ""'>
+                                AND CARLINE_CD = #{carlineCd}
+                                </if>
+                                <if test='modelCd != null and modelCd != ""'>
+                                AND MODEL_CD   = #{modelCd}
+                                </if>
+                                AND START_DT <![CDATA[ <= ]]> SYSDATE     -- 시작일
+                                AND END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+                                AND USE_CD = 'B'
+                           ) B                              /* OCN블럭정보 */
+                         ON A.CARLINE_CD = B.CARLINE_CD
+                        AND A.MODEL_CD = B.MODEL_CD
+                        AND A.OCN_CD = B.OCN_CD
+                      WHERE NVL(B.USE_CD, 'N') = 'N'
+                  )  Z
+          GROUP BY Z.MODEL_CD, Z.OCN_CD, Z.OCN_NM, Z.FSCP_CHM_MMM
+          ORDER BY Z.OCN_CD ASC
+    </select>
+
+    <!-- 전략오더 OCN 갯수조회 -->
+    <select id="selectStrOcnListsByConditionCnt" parameterType="BtoCarInfoSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.orm.service.dao.BtoCreateOrderDAO.selectStrOcnListsByConditionCnt] */
+        SELECT COUNT(*)
+          FROM (
+                SELECT Z.MODEL_CD
+                     , Z.OCN_CD
+                     , Z.OCN_NM
+                     , FN_GET_OCN_NM(Z.MODEL_CD, Z.OCN_CD) AS OCN_NM_PUR
+                     , Z.FSCP_CHM_MMM
+                  FROM (    SELECT A.MODEL_CD
+                                 , A.OCN_CD
+                                 , A.OCN_NM
+                                 , NVL(B.BLK_YN, 'N') AS BLK_YN
+                                 , A.FSCP_CHM_MMM
+                              FROM (
+                                    SELECT B.CARLINE_CD
+                                         , A.MODEL_CD
+                                         , A.OCN_CD
+                                         , A.OCN_NM
+                                         , A.FSCP_CHM_MMM
+                                      FROM SA_0105T A
+                                      INNER JOIN SA_0102T B
+                                        ON A.MODEL_CD = B.MODEL_CD
+                                     WHERE A.USE_YN = #{useYn}    -- 사용여부
+                                       AND A.START_DT <![CDATA[ <= ]]> SYSDATE  -- 시작일
+                                       AND A.END_DT   <![CDATA[ >= ]]> SYSDATE  -- 종료일
+                                       <if test='carlineCd != null and carlineCd != ""'>
+                                       AND B.CARLINE_CD = #{carlineCd}    -- 차종코드
+                                       </if>
+                                       <if test='modelCd != null and modelCd != ""'>
+                                       AND B.MODEL_CD = #{modelCd}        -- 모델코드
+                                       </if>
+                                    ) A
+                               LEFT OUTER JOIN (
+                                     SELECT *
+                                       FROM SA_0137T
+                                      WHERE DLR_CD = #{dlrCd}
+                                        <if test='carlineCd != null and carlineCd != ""'>
+                                        AND CARLINE_CD = #{carlineCd}
+                                        </if>
+                                        <if test='modelCd != null and modelCd != ""'>
+                                        AND MODEL_CD   = #{modelCd}
+                                        </if>
+                                   ) B
+                                 ON A.CARLINE_CD = B.CARLINE_CD
+                                AND A.MODEL_CD   = B.MODEL_CD
+                                AND A.OCN_CD     = B.OCN_CD
+                              WHERE NVL(B.BLK_YN, 'N') = 'N'
+                          )  Z
+                       GROUP BY  Z.MODEL_CD, Z.OCN_CD, Z.OCN_NM, Z.FSCP_CHM_MMM
+                )
+    </select>
+
+    <!-- 전략오더 OCN 조회 -->
+    <select id="selectStrOcnListsByCondition" parameterType="BtoCarInfoSearchVO" resultType="BtoCarInfoVO">
+    /* [chn.bhmc.dms.sal.orm.service.dao.BtoCreateOrderDAO.selectStrOcnListsByCondition] */
+        SELECT Z.MODEL_CD
+             , Z.OCN_CD
+             , FN_GET_OCN_NM(Z.MODEL_CD, Z.OCN_CD) AS OCN_NM
+             , Z.OCN_NM
+             , FN_GET_OCN_NM(Z.MODEL_CD, Z.OCN_CD) AS OCN_NM_PUR
+             , (SELECT T.MS_PRC
+                  FROM SA_0110T T
+                 WHERE T.MODEL_CD = Z.MODEL_CD
+                   AND T.OCN_CD = Z.OCN_CD
+                   AND T.START_DT <![CDATA[ <= ]]> SYSDATE   -- 시작일
+                   AND T.END_DT   <![CDATA[ >= ]]> SYSDATE   -- 종료일
+                ) AS MS_PRC
+              , FSCP_CHM_MMM
+          FROM (
+                    SELECT A.MODEL_CD
+                         , A.OCN_CD
+                         , A.OCN_NM
+                         , NVL(B.BLK_YN, 'N') AS BLK_YN
+                         , A.FSCP_CHM_MMM
+                      FROM (
+                            SELECT B.CARLINE_CD
+                                 , A.MODEL_CD
+                                 , A.OCN_CD
+                                 , A.OCN_NM
+                                 , A.FSCP_CHM_MMM
+                              FROM SA_0105T A
+                              INNER JOIN SA_0102T B
+                                ON A.MODEL_CD = B.MODEL_CD
+                             WHERE A.USE_YN = #{useYn}    -- 사용여부
+                               AND A.START_DT <![CDATA[ <= ]]> SYSDATE  -- 시작일
+                               AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+                               <if test='carlineCd != null and carlineCd != ""'>
+                               AND B.CARLINE_CD = #{carlineCd}    -- 차종코드
+                               </if>
+                               <if test='modelCd != null and modelCd != ""'>
+                               AND B.MODEL_CD = #{modelCd}        -- 모델코드
+                               </if>
+                            ) A
+                       LEFT OUTER JOIN (
+                             SELECT *
+                               FROM SA_0137T
+                              WHERE DLR_CD = #{dlrCd}
+                                <if test='carlineCd != null and carlineCd != ""'>
+                                AND CARLINE_CD = #{carlineCd}
+                                </if>
+                                <if test='modelCd != null and modelCd != ""'>
+                                AND MODEL_CD   = #{modelCd}
+                                </if>
+                           ) B
+                         ON A.CARLINE_CD = B.CARLINE_CD
+                        AND A.MODEL_CD   = B.MODEL_CD
+                        AND A.OCN_CD     = B.OCN_CD
+                      WHERE NVL(B.BLK_YN, 'N') = 'N'
+                  )  Z
+             GROUP BY Z.MODEL_CD, Z.OCN_CD, Z.OCN_NM, Z.FSCP_CHM_MMM
+             ORDER BY Z.OCN_CD ASC
+    </select>
+
+    <!-- 전략 외장색 갯수 조회 -->
+    <select id="selectBtoExtColorListsByConditionCnt" parameterType="BtoCarInfoSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.orm.service.dao.BtoCreateOrderDAO.selectBtoExtColorListsByConditionCnt] */
+        SELECT COUNT(*)
+          FROM (SELECT EXT_COLOR_CD, FN_GET_EXT_COLOR_NM(EXT_COLOR_CD) AS EXT_COLOR_NM
+                  FROM (SELECT EXT_COLOR_CD, INT_COLOR_CD
+                          FROM SA_0109T
+                         WHERE USE_YN = 'Y'
+                           AND MODEL_CD = #{modelCd}
+                           AND START_DT <![CDATA[ <= ]]> SYSDATE
+                           AND END_DT   <![CDATA[ >= ]]> SYSDATE-1
+                         GROUP BY MODEL_CD, EXT_COLOR_CD, INT_COLOR_CD
+                        MINUS
+                        SELECT EXT_COLOR_CD, INT_COLOR_CD
+                          FROM SA_0168T
+                         WHERE USE_YN = 'B'
+                           AND MODEL_CD = #{modelCd}
+                           AND (OCN_CD = ' ' OR OCN_CD = #{ocnCd} )
+                           AND START_DT <![CDATA[ <= ]]> SYSDATE
+                           AND END_DT   <![CDATA[ >= ]]> SYSDATE-1
+                         GROUP BY MODEL_CD, EXT_COLOR_CD, INT_COLOR_CD
+                        UNION ALL
+                        SELECT EXT_COLOR_CD, INT_COLOR_CD
+                          FROM SA_0168T
+                         WHERE USE_YN = 'N'
+                           AND MODEL_CD = #{modelCd}
+                           AND (OCN_CD = ' ' OR OCN_CD = #{ocnCd} )
+                           AND START_DT <![CDATA[ <= ]]> SYSDATE
+                           AND END_DT   <![CDATA[ >= ]]> SYSDATE-1
+                         GROUP BY MODEL_CD, EXT_COLOR_CD, INT_COLOR_CD
+                        MINUS
+                        SELECT EXT_COLOR_CD, INT_COLOR_CD
+                          FROM SA_0168T
+                         WHERE USE_YN = 'B'
+                           AND MODEL_CD = #{modelCd}
+                           AND OCN_CD = #{ocnCd}
+                           AND START_DT <![CDATA[ <= ]]> SYSDATE
+                           AND END_DT   <![CDATA[ >= ]]> SYSDATE-1
+                         GROUP BY MODEL_CD, EXT_COLOR_CD, INT_COLOR_CD)
+             GROUP BY EXT_COLOR_CD
+                )
+    </select>
+
+    <!-- 전략 외장색 조회 -->
+    <select id="selectBtoExtColorListsByCondition" parameterType="BtoCarInfoSearchVO" resultType="BtoCarInfoVO">
+    /* [chn.bhmc.dms.sal.orm.service.dao.BtoCreateOrderDAO.selectBtoExtColorListsByCondition] */
+            SELECT EXT_COLOR_CD, FN_GET_EXT_COLOR_NM(EXT_COLOR_CD) AS EXT_COLOR_NM
+              FROM (SELECT EXT_COLOR_CD, INT_COLOR_CD
+                      FROM SA_0109T
+                     WHERE USE_YN = 'Y'
+                       AND MODEL_CD = #{modelCd}
+                       AND START_DT <![CDATA[ <= ]]> SYSDATE
+                       AND END_DT   <![CDATA[ >= ]]> SYSDATE-1
+                     GROUP BY MODEL_CD, EXT_COLOR_CD, INT_COLOR_CD
+                    MINUS
+                    SELECT EXT_COLOR_CD, INT_COLOR_CD
+                      FROM SA_0168T
+                     WHERE USE_YN = 'B'
+                       AND MODEL_CD = #{modelCd}
+                       AND (OCN_CD = ' ' OR OCN_CD = #{ocnCd} )
+                       AND START_DT <![CDATA[ <= ]]> SYSDATE
+                       AND END_DT   <![CDATA[ >= ]]> SYSDATE-1
+                     GROUP BY MODEL_CD, EXT_COLOR_CD, INT_COLOR_CD
+                    UNION ALL
+                    SELECT EXT_COLOR_CD, INT_COLOR_CD
+                      FROM SA_0168T
+                     WHERE USE_YN = 'N'
+                       AND MODEL_CD = #{modelCd}
+                       AND (OCN_CD = ' ' OR OCN_CD = #{ocnCd} )
+                       AND START_DT <![CDATA[ <= ]]> SYSDATE
+                       AND END_DT   <![CDATA[ >= ]]> SYSDATE-1
+                     GROUP BY MODEL_CD, EXT_COLOR_CD, INT_COLOR_CD
+                    MINUS
+                    SELECT EXT_COLOR_CD, INT_COLOR_CD
+                      FROM SA_0168T
+                     WHERE USE_YN = 'B'
+                       AND MODEL_CD = #{modelCd}
+                       AND OCN_CD = #{ocnCd}
+                       AND START_DT <![CDATA[ <= ]]> SYSDATE
+                       AND END_DT   <![CDATA[ >= ]]> SYSDATE-1
+                     GROUP BY MODEL_CD, EXT_COLOR_CD, INT_COLOR_CD)
+             GROUP BY EXT_COLOR_CD
+    </select>
+
+    <!-- 전략 내장색 갯수 조회 -->
+    <select id="selectBtoIntColorListsByConditionCnt" parameterType="BtoCarInfoSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.orm.service.dao.BtoCreateOrderDAO.selectBtoIntColorListsByConditionCnt] */
+        SELECT COUNT(*)
+          FROM (SELECT INT_COLOR_CD
+                  FROM SA_0109T
+                 WHERE USE_YN = 'Y'
+                   AND MODEL_CD = #{modelCd}
+                   AND EXT_COLOR_CD = #{extColorCd}
+                   AND START_DT <![CDATA[ <= ]]> SYSDATE
+                   AND END_DT   <![CDATA[ >= ]]> SYSDATE-1
+                 GROUP BY MODEL_CD, INT_COLOR_CD
+                 MINUS
+                SELECT INT_COLOR_CD
+                  FROM SA_0168T
+                 WHERE USE_YN = 'B'
+                   AND MODEL_CD = #{modelCd}
+                   AND (TRIM(OCN_CD) IS NULL OR OCN_CD = #{ocnCd} )
+                   AND EXT_COLOR_CD = #{extColorCd}
+                   AND START_DT <![CDATA[ <= ]]> SYSDATE
+                   AND END_DT   <![CDATA[ >= ]]> SYSDATE-1
+                )
+    </select>
+    <!-- 전략 내장색 조회 -->
+    <select id="selectBtoIntColorListsByCondition" parameterType="BtoCarInfoSearchVO" resultType="BtoCarInfoVO">
+    /* [chn.bhmc.dms.sal.orm.service.dao.BtoCreateOrderDAO.selectBtoIntColorListsByCondition] */
+        SELECT INT_COLOR_CD
+             , FN_GET_INT_COLOR_NM(INT_COLOR_CD) AS INT_COLOR_NM
+          FROM (SELECT INT_COLOR_CD
+                  FROM SA_0109T
+                 WHERE USE_YN = 'Y'
+                   AND MODEL_CD = #{modelCd}
+                   AND EXT_COLOR_CD = #{extColorCd}
+                   AND START_DT <![CDATA[ <= ]]> SYSDATE
+                   AND END_DT   <![CDATA[ >= ]]> SYSDATE-1
+                 GROUP BY MODEL_CD, INT_COLOR_CD
+                 MINUS
+                SELECT INT_COLOR_CD
+                  FROM SA_0168T
+                 WHERE USE_YN = 'B'
+                   AND MODEL_CD = #{modelCd}
+                   AND (TRIM(OCN_CD) IS NULL OR OCN_CD = #{ocnCd} )
+                   AND EXT_COLOR_CD = #{extColorCd}
+                   AND START_DT <![CDATA[ <= ]]> SYSDATE
+                   AND END_DT   <![CDATA[ >= ]]> SYSDATE-1
+               )
+    </select>
+
+    <!-- BTO 주문생성 목록 수를 조회한다. -->
+    <select id="selectBtoCreateOrderByConditionCnt" parameterType="BtoCreateOrderSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM (
+            SELECT * FROM(
+                    SELECT Y.DLR_CD
+                         , Y.ORD_TP
+                         , Y.ORD_YY_MM_DT
+                         , Y.ORD_PRID
+                         , Y.ORD_NO
+                         , Y.CARLINE_CD
+                         , Y.MODEL_CD
+                         , Y.OCN_CD
+                         , Y.EXT_COLOR_CD
+                         , Y.INT_COLOR_CD
+                         , Y.ORD_QTY
+                         , Y.ORD_GRADE_CD
+                         , Y.ORD_PROR_CD
+                         , Y.TRSF_DLR_CD
+                         , (SELECT Z.USR_NM FROM CM_0801T Z WHERE Z.USR_ID = TRSF_DLR_CD ) AS TRSF_DLR_NM
+                         , Y.ORD_STAT_CD
+                         , Y.ORD_DT
+                         , Y.PFP_EXAM_DT
+                         , Y.APPLY_STAT_CD
+                         , Y.SALE_RGST_ID     -- 판매고문
+                         , Y.IFRESULT_RTN     -- ERP전송여부
+                         , Y.REMARK
+                         ,(SELECT X.MS_PRC
+                             FROM SA_0110T X
+                            WHERE X.MODEL_CD = Y.MODEL_CD
+                              AND X.OCN_CD = Y.OCN_CD
+                              AND USE_YN = 'Y'
+                              AND TO_CHAR(X.END_DT,'YYYYMMDD') <![CDATA[ >= ]]> TO_CHAR(SYSDATE, 'YYYYMMDD')+1
+                              AND ROWNUM = 1) AS CAR_RETL_AMT
+                         , FN_GET_MODEL_TP_NM(Y.MODEL_CD, Y.OCN_CD) AS MODEL_NM
+                      FROM SA_0417T Y
+                     WHERE Y.DLR_CD = #{sDlrCd}
+                       AND Y.ORD_TP = #{sOrdTp}
+                       AND Y.ORD_STAT_CD IN ('1D', '1G')
+                       AND (CASE WHEN 'N1' = #{sOrdTp} THEN
+                                DECODE(FST_CONFIRM_DT, NULL, 1, 0)
+                            ELSE DECODE(Y.ORD_STAT_CD, '1D', 1, 0) END) = 1
+                       <!-- AND Y.IFRESULT_RTN != 'E' -->
+                    <if test='sOrdYyMmPrid != null and sOrdYyMmPrid != ""'>
+                       AND Y.ORD_YY_MM_DT = SUBSTR(#{sOrdYyMmPrid}, 1, 6)
+                    </if>
+                    <if test='sOrdYyMmPrid != null and sOrdYyMmPrid != ""'>
+                       AND Y.ORD_PRID = SUBSTR(#{sOrdYyMmPrid}, 7, 2)
+                    </if>
+                    <if test='sOrdDtS != null'>
+                       AND Y.ORD_DT <![CDATA[>=]]> TRUNC(#{sOrdDtS},'DD')
+                       AND Y.ORD_DT <![CDATA[<]]> TRUNC(#{sOrdDtE},'DD')+1
+                    </if>
+                    <if test='sCarlineCd != null and sCarlineCd != ""'>
+                       AND Y.CARLINE_CD = #{sCarlineCd}
+                    </if>
+                    <if test='sModelCd != null and sModelCd != ""'>
+                      AND Y.MODEL_CD     = #{sModelCd}
+                    </if>
+                    <if test='sOcnCd != null and sOcnCd != ""'>
+                      AND Y.OCN_CD       = #{sOcnCd}
+                    </if>
+                    <if test='sExtColorCd != null and sExtColorCd != ""'>
+                      AND Y.EXT_COLOR_CD = #{sExtColorCd}
+                    </if>
+                    <if test='sIntColorCd != null and sIntColorCd != ""'>
+                      AND Y.INT_COLOR_CD = #{sIntColorCd}
+                    </if>
+                ) I1 WHERE 1 = 1
+                <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                    AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = I1.MODEL_CD AND X.OCN_CD = I1.OCN_CD) = #{sFscCd}
+                </if>
+                <if test='sFscCd == "None"'>
+                    AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = I1.MODEL_CD AND X.OCN_CD = I1.OCN_CD) IS NULL
+                </if>
+                )
+    </select>
+
+    <!-- BTO 주문생성 목록 Data  -->
+    <select id="selectBtoCreateOrderByCondition" parameterType="BtoCreateOrderSearchVO" resultType="BtoCreateOrderVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_CARLINE_NM_NC(T1.CARLINE_CD) AS CARLINE_NM
+                 , FN_GET_OCN_NM_NC(T1.MODEL_CD, T1.OCN_CD) AS OCN_NM
+                 , FN_GET_EXT_COLOR_NM_NC(T1.EXT_COLOR_CD) AS EXT_COLOR_NM
+                 , FN_GET_INT_COLOR_NM_NC(T1.INT_COLOR_CD) AS INT_COLOR_NM
+                 , T1.*
+                 , #{sTotalCnt} AS TOTAL_CNT
+              FROM (
+              SELECT I1.*
+                FROM (  SELECT Y.DLR_CD
+                             , Y.ORD_TP
+                             , Y.ORD_YY_MM_DT
+                             , Y.ORD_PRID
+                             , Y.ORD_NO
+                             , Y.CARLINE_CD
+                             , Y.MODEL_CD
+                             , Y.OCN_CD
+                             , Y.EXT_COLOR_CD
+                             , Y.INT_COLOR_CD
+                             , Y.ORD_QTY
+                             , Y.ORD_GRADE_CD
+                             , Y.ORD_PROR_CD
+                             , Y.TRSF_DLR_CD
+                             , (SELECT Z.USR_NM FROM CM_0801T Z WHERE Z.USR_ID = TRSF_DLR_CD ) AS TRSF_DLR_NM
+                             , Y.ORD_STAT_CD
+                             , Y.ORD_DT
+                             , Y.PFP_EXAM_DT
+                             , Y.APPLY_STAT_CD
+                             , Y.SALE_RGST_ID     -- 판매고문
+                             , Y.IFRESULT_RTN     -- ERP전송여부
+                             , Y.REMARK
+                             ,(SELECT X.MS_PRC
+                                 FROM SA_0110T X
+                                WHERE X.MODEL_CD = Y.MODEL_CD
+                                  AND X.OCN_CD = Y.OCN_CD
+                                  AND USE_YN = 'Y'
+                                  AND TO_CHAR(X.END_DT,'YYYYMMDD') <![CDATA[ >= ]]> TO_CHAR(SYSDATE, 'YYYYMMDD')+1
+                                  AND ROWNUM = 1) AS CAR_RETL_AMT
+                             , FN_GET_MODEL_TP_NM(Y.MODEL_CD, Y.OCN_CD) AS MODEL_NM
+                          FROM SA_0417T Y
+                         WHERE Y.DLR_CD = #{sDlrCd}
+                           AND Y.ORD_TP = #{sOrdTp}
+                           AND Y.ORD_STAT_CD IN ('1D', '1G')
+                           AND (CASE WHEN 'N1' = #{sOrdTp} THEN
+                                    DECODE(FST_CONFIRM_DT, NULL, 1, 0)
+                                ELSE DECODE(Y.ORD_STAT_CD, '1D', 1, 0) END) = 1
+                           <!-- AND Y.IFRESULT_RTN != 'E' -->
+                        <if test='sOrdYyMmPrid != null and sOrdYyMmPrid != ""'>
+                           AND Y.ORD_YY_MM_DT = SUBSTR(#{sOrdYyMmPrid}, 1, 6)
+                        </if>
+                        <if test='sOrdYyMmPrid != null and sOrdYyMmPrid != ""'>
+                           AND Y.ORD_PRID = SUBSTR(#{sOrdYyMmPrid}, 7, 2)
+                        </if>
+                        <if test='sOrdDtS != null'>
+                           AND Y.ORD_DT <![CDATA[>=]]> TRUNC(#{sOrdDtS},'DD')
+                           AND Y.ORD_DT <![CDATA[<]]> TRUNC(#{sOrdDtE},'DD')+1
+                        </if>
+                        <if test='sCarlineCd != null and sCarlineCd != ""'>
+                           AND Y.CARLINE_CD = #{sCarlineCd}
+                        </if>
+                        <if test='sModelCd != null and sModelCd != ""'>
+                          AND Y.MODEL_CD     = #{sModelCd}
+                        </if>
+                        <if test='sOcnCd != null and sOcnCd != ""'>
+                          AND Y.OCN_CD       = #{sOcnCd}
+                        </if>
+                        <if test='sExtColorCd != null and sExtColorCd != ""'>
+                          AND Y.EXT_COLOR_CD = #{sExtColorCd}
+                        </if>
+                        <if test='sIntColorCd != null and sIntColorCd != ""'>
+                          AND Y.INT_COLOR_CD = #{sIntColorCd}
+                        </if>
+                    ) I1 WHERE 1 = 1
+                    <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                        AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = I1.MODEL_CD AND X.OCN_CD = I1.OCN_CD) = #{sFscCd}
+                    </if>
+                    <if test='sFscCd == "None"'>
+                        AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = I1.MODEL_CD AND X.OCN_CD = I1.OCN_CD) IS NULL
+                    </if>
+                     ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "ordDt"'>ORD_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "carlineNm"'>CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "modelNm"'>MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "ocnNm"'>OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "extColorNm"'>EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "intColorNm"'>INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "ordQty"'>ORD_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "ordGradeCd"'>ORD_GRADE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "ordProrCd"'>ORD_PROR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "trsfDlrCd"'>TRSF_DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "ordStatCd"'>ORD_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        CARLINE_CD ASC, ORD_PROR_CD DESC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            CARLINE_CD ASC, ORD_PROR_CD DESC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- BTO 주문생성 우선순위를 조회한다. -->
+    <select id="selectOrdProrCd" parameterType="BtoCreateOrderVO" resultType="BtoCreateOrderVO">
+        SELECT LPAD(NVL(MAX(TO_NUMBER(ORD_PROR_CD)),0), 4, '0') AS ORD_PROR_CD
+          FROM SA_0417T
+         WHERE DLR_CD = #{dlrCd}
+           AND CARLINE_CD = #{carlineCd}
+           AND ORD_YY_MM_DT = SUBSTR(#{ordYyMmPrid}, 1, 6)
+           AND ORD_PRID = SUBSTR(#{ordYyMmPrid}, 7, 2)
+           AND IFRESULT_RTN NOT IN ('E')
+    </select>
+
+    <!-- BTO 주문 삭제  -->
+    <update id="updateBtoCreateOrderDelete" parameterType="BtoCreateOrderVO">
+        UPDATE SA_0417T
+           SET ORD_STAT_CD = '1A'
+             , APPLY_STAT_CD = '1A'
+             , ORD_QTY = 0
+             , ERP_TARG_YN = 'Y'
+             , ERP_SEND_YN = 'N'
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE DLR_CD = #{dlrCd}
+           AND ORD_TP = #{ordTp}
+           AND ORD_YY_MM_DT = #{ordYyMmDt}
+           AND ORD_PRID = #{ordPrid}
+           AND ORD_NO = #{ordNo}
+    </update>
+
+    <!-- BTO 주문생성 우선순위를 조회한다. -->
+    <select id="selectChkCreateYn" parameterType="BtoCreateOrderVO" resultType="String">
+        SELECT FN_GET_ORDER_FLAG(#{ordYyMmDt}, #{ordPrid}, #{ordTp}) FROM DUAL
+    </select>
+
+    <!-- BTO 주문번호를 생성한다. -->
+    <select id="selectNextOrdNo" parameterType="BtoCreateOrderVO" resultType="int">
+        SELECT NVL(MAX(ORD_NO)+1, 1) AS ORD_NO
+        FROM SA_0417T
+        WHERE DLR_CD = #{dlrCd}
+            AND ORD_YY_MM_DT = #{ordYyMmDt}
+            AND ORD_PRID = #{ordPrid}
+            AND ORD_NO <![CDATA[ < ]]> '5000'
+    </select>
+
+    <!-- BTO 오더 등록  -->
+    <insert id="insertBtoCreateOrder" parameterType="BtoCreateOrderVO">
+        INSERT INTO SA_0417T (
+             DLR_CD
+            ,ORD_TP
+            ,ORD_YY_MM_DT
+            ,ORD_PRID
+            ,ORD_NO
+            ,CARLINE_CD
+            ,MODEL_CD
+            ,OCN_CD
+            ,EXT_COLOR_CD
+            ,INT_COLOR_CD
+            ,ORD_QTY
+            ,ORD_GRADE_CD
+            ,ORD_PROR_CD
+            ,TRSF_DLR_CD
+            ,DL_DIST_CD
+            ,ORD_STAT_CD
+            ,APPLY_STAT_CD
+            ,ORD_DT
+            ,PROD_ARRG_YN
+            ,PFP_EXAM_DT
+            ,ERP_TARG_YN
+            ,ERP_SEND_YN
+            ,SALE_RGST_ID
+            ,REMARK
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+            ,IFRESULT_RTN
+            ,IFFAILMSG_RTN
+        ) VALUES (
+             #{dlrCd}
+            ,#{ordTp}
+            ,#{ordYyMmDt}
+            ,#{ordPrid}
+            ,#{ordNo}
+            ,#{carlineCd}
+            ,#{modelCd}
+            ,#{ocnCd}
+            ,#{extColorCd}
+            ,#{intColorCd}
+            ,1
+            ,#{ordGradeCd}
+            ,LPAD(#{ordProrCd}, 4, 0)
+            ,#{trsfDlrCd}
+            ,''
+            ,'1D'
+            ,'1D'
+            ,SYSDATE
+            ,'N'
+            ,#{pfpExamDt}
+            ,#{erpTargYn}
+            ,#{erpSendYn}
+            ,#{saleRgstId}
+            ,#{remark}
+            ,#{regUsrId}
+            ,SYSDATE
+            ,#{updtUsrId}
+            ,SYSDATE
+            ,#{ifresultRtn}
+            ,#{iffailmsgRtn}
+        )
+    </insert>
+
+    <!-- BTO 주문 수정  -->
+    <update id="updateBtoCreateOrder" parameterType="BtoCreateOrderVO">
+        UPDATE SA_0417T
+           SET ORD_PROR_CD = LPAD(#{ordProrCd}, 4, 0)
+             , SALE_RGST_ID = #{saleRgstId}
+             , ERP_TARG_YN = #{erpTargYn}
+             , ERP_SEND_YN = #{erpSendYn}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE DLR_CD = #{dlrCd}
+           AND ORD_TP = #{ordTp}
+           AND ORD_YY_MM_DT = #{ordYyMmDt}
+           AND ORD_PRID = #{ordPrid}
+           AND ORD_NO = #{ordNo}
+    </update>
+
+    <!-- BTO 주문 Table key 으로 내역 확인 -->
+    <select id="selectBtoCreateOrderValueSearch" parameterType="BtoCreateOrderVO" resultType="BtoCreateOrderVO">
+        SELECT DLR_CD
+             , ORD_TP
+             , ORD_YY_MM_DT
+             , ORD_PRID
+             , ORD_NO
+             , CARLINE_CD
+             , FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_NM
+             , MODEL_CD
+             , FN_GET_MODEL_NM(MODEL_CD) AS MODEL_NM
+             , OCN_CD
+             , FN_GET_OCN_NM(MODEL_CD, OCN_CD) AS OCN_NM
+             , EXT_COLOR_CD
+             , FN_GET_EXT_COLOR_NM(EXT_COLOR_CD) AS EXT_COLOR_NM
+             , INT_COLOR_CD
+             , FN_GET_INT_COLOR_NM(INT_COLOR_CD) AS INT_COLOR_NM
+             , ORD_QTY
+             , ORD_GRADE_CD
+             , ORD_PROR_CD
+             , TRSF_DLR_CD
+             , ORD_STAT_CD
+             , ORD_DT
+             , PFP_EXAM_DT
+             , APPLY_STAT_CD
+             , SALE_RGST_ID     -- 판매고문
+             , IFRESULT_RTN     -- ERP전송여부
+             , REMARK
+          FROM SA_0417T
+         WHERE DLR_CD = #{dlrCd}
+           AND ORD_TP = #{ordTp}
+           AND ORD_YY_MM_DT = #{ordYyMmDt}
+           AND ORD_PRID = #{ordPrid}
+           AND ORD_NO = #{ordNo}
+    </select>
+
+    <!-- BTO 오더 이력  -->
+    <insert id="insertBtoCreateOrderHis" parameterType="BtoCreateOrderVO">
+        INSERT INTO SA_0417IS (
+             DLR_CD
+            ,ORD_TP
+            ,ORD_YY_MM_DT
+            ,ORD_PRID
+            ,ORD_NO
+            ,SEQ
+            ,CARLINE_CD
+            ,MODEL_CD
+            ,OCN_CD
+            ,EXT_COLOR_CD
+            ,INT_COLOR_CD
+            ,ORD_QTY
+            ,ORD_GRADE_CD
+            ,ORD_PROR_CD
+            ,TRSF_DLR_CD
+            ,DL_DIST_CD
+            ,ORD_STAT_CD
+            ,APPLY_STAT_CD
+            ,ORD_DT
+            ,PROD_ARRG_YN
+            ,PFP_EXAM_DT
+            ,ERP_TARG_YN
+            ,ERP_SEND_YN
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+        ) VALUES (
+             #{dlrCd}
+            ,#{ordTp}
+            ,#{ordYyMmDt}
+            ,#{ordPrid}
+            ,#{ordNo}
+            ,(SELECT NVL(MAX(SEQ), 0) + 1 AS SEQ FROM SA_0417IS
+               WHERE DLR_CD = #{dlrCd}
+                 AND ORD_TP = #{ordTp}
+                 AND ORD_YY_MM_DT = #{ordYyMmDt}
+                 AND ORD_PRID = #{ordPrid}
+                 AND ORD_NO = #{ordNo})
+            ,#{carlineCd}
+            ,#{modelCd}
+            ,#{ocnCd}
+            ,#{extColorCd}
+            ,#{intColorCd}
+            ,1
+            ,#{ordGradeCd}
+            ,#{ordProrCd}
+            ,#{trsfDlrCd}
+            ,''
+            ,'1D'
+            ,'1D'
+            ,SYSDATE
+            ,'N'
+            ,#{pfpExamDt}
+            ,#{erpTargYn}
+            ,#{erpSendYn}
+            ,#{regUsrId}
+            ,SYSDATE
+            ,#{updtUsrId}
+            ,SYSDATE
+        )
+    </insert>
+
+    <!-- BTO 주문생성 팝업 주문금액을 조회한다. -->
+    <select id="selectBtoCreateOrderAmtPopup" parameterType="BtoCreateOrderVO" resultType="BtoCreateOrderAmtPopupVO">
+        SELECT MODEL_CD
+             , OCN_CD
+             , WH_PRC
+             , MS_PRC
+          FROM SA_0110T
+         WHERE MODEL_CD = #{modelCd}
+           AND OCN_CD = #{ocnCd}
+           AND USE_YN = 'Y'
+           AND TO_CHAR(SYSDATE, 'YYYYMMDD') BETWEEN TO_CHAR(START_DT, 'YYYYMMDD') AND TO_CHAR(END_DT, 'YYYYMMDD')
+    </select>
+
+    <!-- 오더등록 : 프로시져  -->
+    <insert id="procPenaltyOrdReq" parameterType="BtoCreateOrderVO" statementType="CALLABLE">
+        {CALL SP_SAL_DMS_P_0417T_IF(
+              'SAL059'
+            , #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{ordTp, mode=IN, jdbcType=VARCHAR}
+            , #{ordYyMmDt, mode=IN, jdbcType=VARCHAR}
+            , #{ordPrid, mode=IN, jdbcType=VARCHAR}
+            , #{ordNo, mode=IN, jdbcType=VARCHAR}
+        )}
+    </insert>
+
+    <!-- 주문유형 : 전략오더 일경우 참고수량 조회 -->
+    <select id="selectASOrdRefOrdQtyChkSearch" parameterType="BtoCreateOrderSearchVO" resultType="int">
+        SELECT  NVL(MAX(PSNT_STOCK_QTY), 0)
+          FROM SA_0136T
+         WHERE CARLINE_CD = #{sCarlineCd}
+           AND MODEL_CD = #{sModelCd}
+           AND OCN_CD = #{sOcnCd}
+    </select>
+
+    <!-- BTO 주문생성 우선순위중복을 체크한다. -->
+    <select id="selectDupOrderPropCd" parameterType="BtoCreateOrderVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0417T
+         WHERE DLR_CD = #{dlrCd}
+           AND CARLINE_CD = #{carlineCd}
+           AND IFRESULT_RTN NOT IN ('E','B')
+           AND ORD_YY_MM_DT = SUBSTR(#{ordYyMmPrid}, 1, 6)
+           AND ORD_PRID = SUBSTR(#{ordYyMmPrid}, 7, 2)
+           AND TO_NUMBER(ORD_PROR_CD) = TO_NUMBER(#{ordProrCd})
+    </select>
+
+    <!-- 전략오더를 제외한 모든 오더 차관 조회 차관적용버젼-->
+    <select id="selectBlockNewCarLooksModelListByCondition" parameterType="BtoCarInfoSearchVO" resultType="BtoCarInfoVO">
+        SELECT FSCP_CHM_MMM AS FSC_NM,
+               FSCP_MODTP_CD AS FSC_CD
+          FROM (SELECT FSCP_CHM_MMM
+                      ,FSCP_MODTP_CD
+                  FROM SA_0105T
+                 WHERE SUBSTR(MODEL_CD, 1, 2) = #{carlineCd}
+                 AND USE_YN='Y' <!-- R19061700597 DMS 中 BTO订单提报功能 车款	选择项项，不用的不展示，即SA_0105T 表中 use_yn 数据为N 的不展示 贾明 2019-6-17  -->
+                   AND FSCP_MODTP_CD IN
+                       (SELECT FSCP_MODTP_CD
+                          FROM SA_0105T
+                         WHERE TO_CHAR(SYSDATE,'YYYYMMDD') BETWEEN TO_CHAR(START_DT,'YYYYMMDD') AND TO_CHAR(END_DT,'YYYYMMDD')   <!-- 20200806 TJX 修改有效日期查询方式 -->
+                         AND USE_YN='Y' <!-- R19061700597 DMS 中 BTO订单提报功能 车款	选择项项，不用的不展示，即SA_0105T 表中 use_yn 数据为N 的不展示 贾明 2019-6-17  -->
+                           AND MODEL_CD || OCN_CD NOT IN
+                               (SELECT BLOCK_FSC
+                                  FROM (SELECT MODEL_CD || OCN_CD AS BLOCK_FSC /*블럭정보가져오기 딜러별*/
+                                          FROM SA_0157T
+                                         WHERE USE_CD = 'B'
+                                           AND DLR_CD = #{dlrCd}
+                                           AND TO_CHAR(SYSDATE,'YYYYMMDD') BETWEEN TO_CHAR(START_DT,'YYYYMMDD') AND TO_CHAR(END_DT,'YYYYMMDD') <!-- 20200806 TJX 修改有效日期查询方式 -->
+                                        UNION ALL
+                                        SELECT MODEL_CD || OCN_CD AS BLOCK_FSC /*블럭정보가져오기 전체*/
+                                          FROM SA_0157T
+                                         WHERE USE_CD = 'B'
+                                           AND DLR_CD = 'ALLDR'
+                                           AND TO_CHAR(SYSDATE,'YYYYMMDD') BETWEEN TO_CHAR(START_DT,'YYYYMMDD') AND TO_CHAR(END_DT,'YYYYMMDD')) <!-- 20200806 TJX 修改有效日期查询方式 -->
+                                 GROUP BY BLOCK_FSC)
+                         GROUP BY FSCP_MODTP_CD)
+                        UNION ALL
+                        SELECT ' ' AS FSCP_CHM_MMM, 'None' AS FSCP_MODTP_CD
+                          FROM DUAL
+                         )
+         GROUP BY FSCP_CHM_MMM, FSCP_MODTP_CD
+         ORDER BY FSCP_CHM_MMM ASC NULLS FIRST, FSCP_MODTP_CD ASC
+    </select>
+
+    <select id="selectN1BlockNewCarLooksOcnListByCondition" parameterType="BtoCarInfoSearchVO" resultType="BtoCarInfoVO">
+        SELECT Z.MODEL_CD,
+               Z.OCN_CD,
+               FN_GET_OCN_NM(Z.MODEL_CD, Z.OCN_CD) AS OCN_NM,
+               Z.OCN_NM AS OCN_NM_PUR,
+               (SELECT T.MS_PRC
+                  FROM SA_0110T T
+                 WHERE T.MODEL_CD = Z.MODEL_CD
+                   AND T.OCN_CD = Z.OCN_CD
+                   AND TO_CHAR(SYSDATE,'YYYYMMDD') BETWEEN TO_CHAR(T.START_DT,'YYYYMMDD') AND TO_CHAR(T.END_DT,'YYYYMMDD') <!-- 20200806 TJX 修改有效日期查询方式 -->) AS MS_PRC,
+              SUM(Z.MODEL_CNT) AS MODEL_CNT,
+              Z.FSCP_CHM_MMM
+          FROM (SELECT A.MODEL_CD, A.OCN_CD, A.OCN_NM, NVL(B.USE_CD, 'N') AS BLK_YN, 1 AS MODEL_CNT, A.FSCP_CHM_MMM
+                  FROM (SELECT B.CARLINE_CD, A.MODEL_CD, A.OCN_CD, A.OCN_NM, A.FSCP_CHM_MMM
+                          FROM SA_0105T A
+                         INNER JOIN SA_0102T B
+                            ON A.MODEL_CD = B.MODEL_CD
+                         WHERE TO_CHAR(SYSDATE,'YYYYMMDD') BETWEEN TO_CHAR(A.START_DT,'YYYYMMDD') AND TO_CHAR(A.END_DT,'YYYYMMDD') <!-- 20200806 TJX 修改有效日期查询方式 -->
+                           AND B.MODEL_CD||A.OCN_CD IN
+                               (SELECT A.MODEL_CD||B.OCN_CD
+                                  FROM SA_0102T A, SA_0105T B
+                                 WHERE A.MODEL_CD = B.MODEL_CD
+                                <if test='fscCd != null and fscCd != "" and fscCd != "None" '>
+                                 AND B.FSCP_MODTP_CD = #{fscCd}
+                                </if>
+                                   )) A
+                  LEFT OUTER JOIN (SELECT CARLINE_CD,
+                                         MODEL_CD,
+                                         OCN_CD,
+                                         START_DT,
+                                         END_DT,
+                                         USE_CD
+                                    FROM SA_0157T
+                                   WHERE DLR_CD = #{dlrCd}
+                                     AND MODEL_CD||OCN_CD IN
+                                         (SELECT A.MODEL_CD||B.OCN_CD
+                                            FROM SA_0102T A, SA_0105T B
+                                           WHERE A.MODEL_CD = B.MODEL_CD
+                                            <if test='fscCd != null and fscCd != "" and fscCd != "None" '>
+                                             AND B.FSCP_MODTP_CD = #{fscCd}
+                                            </if>
+                                             )
+                                     AND TO_CHAR(SYSDATE,'YYYYMMDD') BETWEEN TO_CHAR(START_DT,'YYYYMMDD') AND TO_CHAR(END_DT,'YYYYMMDD') <!-- 20200806 TJX 修改有效日期查询方式 -->
+                                     AND USE_CD = 'B'
+                                  UNION
+                                  SELECT CARLINE_CD,
+                                         MODEL_CD,
+                                         OCN_CD,
+                                         START_DT,
+                                         END_DT,
+                                         USE_CD
+                                    FROM SA_0157T
+                                   WHERE DLR_CD = 'ALLDR'
+                                     AND MODEL_CD||OCN_CD IN
+                                         (SELECT A.MODEL_CD||B.OCN_CD
+                                            FROM SA_0102T A, SA_0105T B
+                                           WHERE A.MODEL_CD = B.MODEL_CD
+                                            <if test='fscCd != null and fscCd != "" and fscCd != "None" '>
+                                             AND B.FSCP_MODTP_CD = #{fscCd}
+                                            </if>
+                                             )
+                                     AND TO_CHAR(SYSDATE,'YYYYMMDD') BETWEEN TO_CHAR(START_DT,'YYYYMMDD') AND TO_CHAR(END_DT,'YYYYMMDD') <!-- 20200806 TJX 修改有效日期查询方式 -->
+                                     AND USE_CD = 'B') B
+                    ON A.CARLINE_CD = B.CARLINE_CD
+                   AND A.MODEL_CD = B.MODEL_CD
+                   AND A.OCN_CD = B.OCN_CD
+                 WHERE NVL(B.USE_CD, 'N') = 'N') Z
+         WHERE SUBSTR(MODEL_CD, 1, 2) = #{carlineCd}
+         GROUP BY Z.MODEL_CD, Z.OCN_CD, Z.OCN_NM, Z.FSCP_CHM_MMM
+         ORDER BY Z.OCN_CD ASC
+    </select>
+
+    <!-- 전략오더를 제외한 모든 오더 OCN 조회 차관적용버젼 AD-->
+    <select id="selectADBlockNewCarLooksOcnListByCondition" parameterType="BtoCarInfoSearchVO" resultType="BtoCarInfoVO">
+        SELECT MODEL_CD, OCN_CD, FSCP_MODTP_CD, SUM(MODEL_CNT) AS MODEL_CNT, FSCP_CHM_MMM
+          FROM (SELECT A.MODEL_CD, A.OCN_CD, A.FSCP_MODTP_CD, 1 AS MODEL_CNT, FSCP_CHM_MMM
+                  FROM (SELECT B.CARLINE_CD, A.MODEL_CD, A.OCN_CD, C.FSCP_MODTP_CD, C.FSCP_CHM_MMM
+                          FROM SA_0105T A, SA_0102T B, SA_0105T C
+                         WHERE A.MODEL_CD = B.MODEL_CD
+                           AND A.MODEL_CD = C.MODEL_CD
+                           AND A.OCN_CD = C.OCN_CD
+                           AND A.START_DT <![CDATA[ <= ]]> SYSDATE
+                           AND A.END_DT   <![CDATA[ >= ]]> SYSDATE-1
+                           AND B.CARLINE_CD = #{carlineCd}
+                           AND B.MODEL_CD IN (SELECT A.MODEL_CD
+                                                FROM SA_0102T A, SA_0105T B
+                                               WHERE A.MODEL_CD = B.MODEL_CD
+                                                 AND SUBSTR(A.MODEL_CD, 1, 2) = #{carlineCd}
+                                               GROUP BY A.MODEL_CD)) A
+                  LEFT OUTER JOIN (SELECT A.CARLINE_CD, A.MODEL_CD, A.OCN_CD
+                                    FROM SA_0157T A, SA_0102T B, SA_0105T C
+                                   WHERE A.MODEL_CD = B.MODEL_CD
+                                     AND A.MODEL_CD = C.MODEL_CD
+                                     AND A.OCN_CD = C.OCN_CD
+                                     AND A.DLR_CD = #{dlrCd}
+                                     AND A.CARLINE_CD = #{carlineCd}
+                                     AND A.MODEL_CD IN
+                                         (SELECT A.MODEL_CD
+                                            FROM SA_0102T A, SA_0105T B
+                                           WHERE A.MODEL_CD = B.MODEL_CD
+                                             AND SUBSTR(A.MODEL_CD, 1, 2) = #{carlineCd}
+                                           GROUP BY A.MODEL_CD)
+                                     AND A.START_DT <![CDATA[ <= ]]> SYSDATE
+                                     AND A.END_DT   <![CDATA[ >= ]]> SYSDATE-1
+                                     AND A.USE_CD = 'B'
+                                  UNION ALL
+                                  SELECT A.CARLINE_CD, A.MODEL_CD, A.OCN_CD
+                                    FROM SA_0157T A, SA_0102T B, SA_0105T C
+                                   WHERE A.MODEL_CD = B.MODEL_CD
+                                     AND A.MODEL_CD = C.MODEL_CD
+                                     AND A.OCN_CD = C.OCN_CD
+                                     AND A.DLR_CD = 'ALLDR'
+                                     AND A.CARLINE_CD = #{carlineCd}
+                                     AND A.MODEL_CD IN
+                                         (SELECT A.MODEL_CD
+                                            FROM SA_0102T A, SA_0105T B
+                                           WHERE A.MODEL_CD = B.MODEL_CD
+                                             AND SUBSTR(A.MODEL_CD, 1, 2) = #{carlineCd}
+                                           GROUP BY A.MODEL_CD)) B
+                    ON A.CARLINE_CD = B.CARLINE_CD
+                   AND A.MODEL_CD = B.MODEL_CD
+                   AND A.OCN_CD = B.OCN_CD)
+         WHERE 1 = 1
+            <if test='fscCd != null and fscCd != "" and fscCd  != "None" '>
+                AND FSCP_MODTP_CD = #{fscCd}
+            </if>
+         GROUP BY MODEL_CD, OCN_CD, FSCP_MODTP_CD, FSCP_CHM_MMM
+         ORDER BY OCN_CD ASC
+    </select>
+
+    <!-- 자원표를 조회한다. -->
+    <select id="selectnormolOrdChartsByConditionCnt" parameterType="OrderChartSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0455T A    /* 전략주문자원정보 */
+             , (SELECT *
+                  FROM SA_0454T
+                 WHERE TO_CHAR(ORD_ST_DT, 'YYYYMMDD') <![CDATA[ <= ]]> TO_CHAR(SYSDATE, 'YYYYMMDD')
+                   AND TO_CHAR(ORD_EN_DT, 'YYYYMMDD') <![CDATA[ >= ]]> TO_CHAR(SYSDATE, 'YYYYMMDD')
+                   AND ORD_YYMM = #{sOrdYymm}
+                   AND ORD_WEEK = LPAD(#{sOrdWeek}, 2, '0')
+               ) B
+          WHERE 1 = 1
+            AND A.USE_YN = 'Y'
+         <if test='strYn != null and strYn != ""'>
+            <choose>
+                <when test='strYn == "Y"'>
+                    AND A.ORD_SEQ = B.ORD_SEQ
+                    AND A.ORD_TP = 'AS'
+                </when>
+                <otherwise>
+                    AND A.ORD_SEQ = B.ORD_SEQ(+)
+                    AND A.ORD_TP != 'AS'
+                </otherwise>
+            </choose>
+         </if>
+         <if test='sCarlineCd != null and sCarlineCd != ""'>
+           AND A.CARLINE_CD = #{sCarlineCd}
+         </if>
+         <if test='sOcnCd != null and sOcnCd != ""'>
+           AND A.OCN_CD = #{sOcnCd}
+         </if>
+         <if test='sOcnDesc != null and sOcnDesc != ""'>
+           AND A.OCN_DESC  = #{sOcnDesc}
+         </if>
+         <if test='sExtColorCd != null and sExtColorCd != ""'>
+           AND A.EXT_COLOR_CD = #{sExtColorCd}
+         </if>
+         <if test='sIntColorCd != null and sIntColorCd != ""'>
+           AND A.INT_COLOR_CD = #{sIntColorCd}
+         </if>
+         <if test='tUseYn != null and tUseYn != ""'>
+           AND A.USE_YN = #{tUseYn}
+         </if>
+         <if test='sOrdTp != null and sOrdTp != ""'>
+           AND A.ORD_TP = #{sOrdTp}
+         </if>
+    </select>
+    <select id="selectnormolOrdChartsByCondition" parameterType="OrderChartSearchVO" resultType="OrderChartVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.*
+              FROM (
+                    SELECT A.CARLINE_CD     -- 차종코드
+                         , A.OCN_CD         -- OCN코드
+                         , A.OCN_DESC       -- OCN명칭
+                         , A.EXT_COLOR_CD   -- 외색코드
+                         , A.EXT_COLOR_DESC -- 외색명칭
+                         , A.INT_COLOR_CD   -- 내색코드
+                         , A.INT_COLOR_DESC -- 내색명칭
+                         , A.ORD_TP         -- 오더유형
+                         , A.MSRP           -- PRICE
+                         , A.QTY            -- Avaliable Resource
+                         , A.UNIT           -- Units(EA)
+                         , A.EMISSN_STND    -- emission standard
+                         , A.USE_YN
+                      FROM SA_0455T A    /* 전략주문자원정보 */
+                         , (SELECT *
+                              FROM SA_0454T
+                             WHERE TO_CHAR(ORD_ST_DT, 'YYYYMMDD') <![CDATA[ <= ]]> TO_CHAR(SYSDATE, 'YYYYMMDD')
+                               AND TO_CHAR(ORD_EN_DT, 'YYYYMMDD') <![CDATA[ >= ]]> TO_CHAR(SYSDATE, 'YYYYMMDD')
+                               AND ORD_YYMM = #{sOrdYymm}
+                               AND ORD_WEEK = LPAD(#{sOrdWeek}, 2, '0')
+                           ) B
+                      WHERE 1 = 1
+                        AND A.USE_YN = 'Y'
+                     <if test='strYn != null and strYn != ""'>
+                        <choose>
+                            <when test='strYn == "Y"'>
+                                AND A.ORD_SEQ = B.ORD_SEQ
+                                AND A.ORD_TP = 'AS'
+                            </when>
+                            <otherwise>
+                                AND A.ORD_SEQ = B.ORD_SEQ(+)
+                                AND A.ORD_TP != 'AS'
+                            </otherwise>
+                        </choose>
+                     </if>
+
+                     <if test='sCarlineCd != null and sCarlineCd != ""'>
+                       AND A.CARLINE_CD = #{sCarlineCd}
+                     </if>
+                     <if test='sOcnCd != null and sOcnCd != ""'>
+                       AND A.OCN_CD = #{sOcnCd}
+                     </if>
+                     <if test='sOcnDesc != null and sOcnDesc != ""'>
+                       AND A.OCN_DESC  = #{sOcnDesc}
+                     </if>
+                     <if test='sExtColorCd != null and sExtColorCd != ""'>
+                       AND A.EXT_COLOR_CD = #{sExtColorCd}
+                     </if>
+                     <if test='sIntColorCd != null and sIntColorCd != ""'>
+                       AND A.INT_COLOR_CD = #{sIntColorCd}
+                     </if>
+                     <if test='tUseYn != null and tUseYn != ""'>
+                       AND A.USE_YN = #{tUseYn}
+                     </if>
+                     <if test='sOrdTp != null and sOrdTp != ""'>
+                       AND A.ORD_TP = #{sOrdTp}
+                     </if>
+
+                     ORDER BY
+                     <choose>
+                         <when test='sort != null'>
+                             <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                 <choose>
+                                     <when test='item.field == "carlineCd"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                     <when test='item.field == "ocnCd"'>A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                     <when test='item.field == "ocnDesc"'>A.OCN_DESC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                     <when test='item.field == "extColorCd"'>A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                     <when test='item.field == "extColorDesc"'>A.EXT_COLOR_DESC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                     <when test='item.field == "intColorCd"'>A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                     <when test='item.field == "intColorDesc"'>A.INT_COLOR_DESC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                     <when test='item.field == "ordTp"'>A.ORD_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                     <when test='item.field == "msrp"'>A.MSRP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                     <when test='item.field == "qty"'>A.QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                     <otherwise>
+                                       A.CARLINE_CD ASC, A.OCN_CD ASC, A.EXT_COLOR_CD ASC, A.INT_COLOR_CD ASC, A.ORD_TP ASC
+                                     </otherwise>
+                                 </choose>
+                             </foreach>
+                         </when>
+                         <otherwise>
+                           A.CARLINE_CD ASC, A.OCN_CD ASC, A.EXT_COLOR_CD ASC, A.INT_COLOR_CD ASC, A.ORD_TP ASC
+                         </otherwise>
+                     </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+</mapper>

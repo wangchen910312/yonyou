@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : ClaimRequestDAO_SqlMap.xml
+    Description : 클레임 요청 에 관한 데이터처리
+    author Kwon Ki Hyun
+    since 2016. 02. 29.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 05. 17.  Kwon Ki Hyun     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.wac.service.dao.ClaimStatusDAO">
+
+    <!-- 클레임 현황을 조회한다. -->
+    <select id="selectClaimStatusByCondition" parameterType="ClaimStatusSearchVO" resultType="ClaimStatusVO">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimStatusDAO.selectClaimStatusByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A.DLR_CD             --딜러코드
+                      ,A.CLAIM_DOC_NO       --클레임문서번호
+                      ,A.RO_DOC_NO          --RO문서번호
+                      ,A.VIN_NO             --차대번호
+                      ,A.CLAIM_REQ_DT       --클레임청구일자
+                      ,A.CLAIM_TP           --클레임유형
+                      ,(
+                         SELECT CMM_CD_TXT
+                           FROM CM_0304T
+                          WHERE CMM_GRP_CD = 'SER091'
+                            AND LANG_CD    = #{langCd}
+                            AND CMM_CD     = A.CLAIM_TP
+                        ) AS CLAIM_TP_NM    --클레임유형명
+                      ,A.RUN_DIST_VAL       --주행거리값
+                      ,(A.REQ_LBR_AMT + A.REQ_ITEM_AMT + A.REQ_SUB_LBR_AMT) AS REQ_AMT --청구금액
+                      ,NVL((NVL(A.CONFIRM_LBR_AMT,0) + NVL(A.CONFIRM_ITEM_AMT,0) + NVL(A.CONFIRM_SUB_LBR_AMT,0)),0) AS CLAIM_TOT_AMT
+                      ,A.CLAIM_CONFIRM_DT   --클레임확정일자
+                      ,A.CLAIM_STAT_CD      --클레임상태코드
+                      ,(
+                         SELECT CMM_CD_TXT
+                           FROM CM_0304T
+                          WHERE CMM_GRP_CD = 'SER090'
+                            AND LANG_CD    = #{langCd}
+                            AND CMM_CD     = A.CLAIM_STAT_CD
+                       ) AS CLAIM_STAT_NM --클레임상태명
+                  FROM SE_0710T A
+                <where>
+                <if test='sDlrCd != null and sDlrCd != ""'>
+                    AND A.DLR_CD = #{sDlrCd}
+                </if>
+                <if test='sClaimDocNo != null and sClaimDocNo != ""'>
+                    AND A.CLAIM_DOC_NO LIKE '%' || #{sClaimDocNo} || '%'
+                </if>
+                <if test='sClaimTp != null and sClaimTp != ""'>
+                    AND A.CLAIM_TP = #{sClaimTp}
+                </if>
+                <if test='sVinNo != null and sVinNo != ""'>
+                    AND A.VIN_NO LIKE '%' || #{sVinNo} || '%'
+                </if>
+                <if test='sClaimStatCd == "Q"'>
+                    <if test='sClaimFromDt != null and sClaimToDt != null'>
+                        AND TO_CHAR(A.CLAIM_REQ_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimToDt},'YYYYMMDD')
+
+                    </if>
+                    AND A.CLAIM_STAT_CD = 'Q'
+                </if>
+                <if test='sClaimStatCd == "A"'>
+                    <if test='sClaimFromDt != null and sClaimToDt != null'>
+                        AND TO_CHAR(A.CLAIM_CONFIRM_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimToDt},'YYYYMMDD')
+
+                    </if>
+                    AND A.CLAIM_STAT_CD = 'A'
+                </if>
+                <if test='sClaimStatCd == "R"'>
+                    <if test='sClaimFromDt != null and sClaimToDt != null'>
+                        AND TO_CHAR(A.CLAIM_CONFIRM_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimToDt},'YYYYMMDD')
+
+                    </if>
+                    AND A.CLAIM_STAT_CD = 'R'
+                </if>
+                <if test='sClaimStatCd == "S"'>
+                    <if test='sClaimFromDt != null and sClaimToDt != null'>
+                        AND TO_CHAR(A.CLAIM_REQ_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimToDt},'YYYYMMDD')
+
+                    </if>
+                    AND A.CLAIM_STAT_CD = 'S'
+                </if>
+                <if test='sClaimStatCd == "C" or sClaimStatCd == ""'>
+                    <if test='sClaimFromDt != null and sClaimToDt != null'>
+                        AND TO_CHAR(A.CLAIM_START_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimToDt},'YYYYMMDD')
+
+                    </if>
+                    AND A.CLAIM_STAT_CD != 'C'
+                </if>
+                </where>
+                ORDER BY
+                <choose>
+                        <when test='sort != null'>
+                                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                        <choose>
+                                                <when test='item.field == "claimDocNo"'>           A.CLAIM_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                                <when test='item.field == "roDocNo"'>              A.RO_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                                <when test='item.field == "vinNo"'>                A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                                <when test='item.field == "claimReqDtFormat"'>     A.CLAIM_REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                                <when test='item.field == "claimTp"'>              A.CLAIM_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                                <when test='item.field == "runDistVal"'>           A.RUN_DIST_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                                <when test='item.field == "reqAmt"'>               REQ_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                   </when>
+                                                <when test='item.field == "claimTotAmt"'>          CLAIM_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                                <when test='item.field == "claimConfirmDtFormat"'> A.CLAIM_CONFIRM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                                <when test='item.field == "claimStatNm"'>          CLAIM_STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                                <otherwise>
+                                                A.CLAIM_DOC_NO
+                                                </otherwise>
+                                        </choose>
+                                </foreach>
+                        </when>
+                        <otherwise>
+                        A.CLAIM_DOC_NO
+                        </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 클레임 현황 목록수를 조회한다. -->
+    <select id="selectClaimStatusByConditionCnt" parameterType="ClaimStatusSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimStatusDAO.selectClaimStatusByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM SE_0710T
+        <where>
+        <if test='sDlrCd != null and sDlrCd != ""'>
+            AND DLR_CD = #{sDlrCd}
+        </if>
+        <if test='sClaimDocNo != null and sClaimDocNo != ""'>
+            AND CLAIM_DOC_NO LIKE '%' || #{sClaimDocNo} || '%'
+        </if>
+        <if test='sClaimTp != null and sClaimTp != ""'>
+            AND CLAIM_TP = #{sClaimTp}
+        </if>
+        <if test='sVinNo != null and sVinNo != ""'>
+            AND VIN_NO LIKE '%' || #{sVinNo} || '%'
+        </if>
+        <if test='sPwaApproveNo != null and sPwaApproveNo != ""'>
+            AND PWA_APPROVE_NO = #{sPwaApproveNo}
+        </if>
+        <if test='sClaimStatCd == "Q"'>
+            <if test='sClaimFromDt != null and sClaimToDt != null'>
+                AND TO_CHAR(CLAIM_REQ_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimToDt},'YYYYMMDD')
+
+            </if>
+            AND CLAIM_STAT_CD = 'Q'
+        </if>
+        <if test='sClaimStatCd == "A"'>
+            <if test='sClaimFromDt != null and sClaimToDt != null'>
+                AND TO_CHAR(CLAIM_CONFIRM_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimToDt},'YYYYMMDD')
+
+            </if>
+            AND CLAIM_STAT_CD = 'A'
+        </if>
+        <if test='sClaimStatCd == "R"'>
+            <if test='sClaimFromDt != null and sClaimToDt != null'>
+                AND TO_CHAR(CLAIM_CONFIRM_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimToDt},'YYYYMMDD')
+
+            </if>
+            AND CLAIM_STAT_CD = 'R'
+        </if>
+        <if test='sClaimStatCd == "S"'>
+            <if test='sClaimFromDt != null and sClaimToDt != null'>
+                AND TO_CHAR(CLAIM_REQ_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimToDt},'YYYYMMDD')
+
+            </if>
+            AND CLAIM_STAT_CD = 'S'
+        </if>
+        <if test='sClaimStatCd == "C" or sClaimStatCd == ""'>
+            <if test='sClaimFromDt != null and sClaimToDt != null'>
+                AND TO_CHAR(CLAIM_START_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimToDt},'YYYYMMDD')
+
+            </if>
+            AND CLAIM_STAT_CD != 'C'
+        </if>
+        </where>
+    </select>
+
+</mapper>

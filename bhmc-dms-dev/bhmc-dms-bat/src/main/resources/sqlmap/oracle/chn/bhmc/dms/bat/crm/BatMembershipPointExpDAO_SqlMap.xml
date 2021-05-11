@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : BatMembershipPointExpDAO_SqlMap.xml
+    Description : 포인트 소멸예정이력 배치작업에 관한 데이터처리
+    author Kim Hyun Ho
+    since 2016. 06. 22.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 06. 22.     Kim Hyun Ho     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.bat.crm.css.service.dao.BatMembershipPointExpDAO">
+
+
+    <!-- 포인트 소멸 예정 등록. -->
+    <insert id="insertMembershipPointExp" parameterType="BatMembershipPointExpVO">
+         INSERT INTO CR_0811T
+        (
+            DLR_CD
+            ,EXTC_SEQ
+            ,POINT_EXTC_EXPC_DT
+            ,MEMBERSHIP_NO
+            ,EXTC_POINT_VAL
+            ,RMN_POINT_VAL
+            ,SMS_SEND_YN
+            ,SMS_SEND_DT
+            ,REG_USR_ID
+            ,REG_DT
+        )
+        SELECT A.DLR_CD
+                ,SEQ_CR_0811T.NEXTVAL
+                ,SYSDATE
+                ,A.MEMBERSHIP_NO
+                ,B.TOT_EXTC_VAL
+                ,A.LAST_POINT_VAL
+                ,'N'
+                ,NULL
+                ,#{regUsrId}
+                ,SYSDATE
+        FROM CR_0801T A INNER JOIN (
+              SELECT  DLR_CD
+                      ,MEMBERSHIP_NO
+                      ,SUM(NVL(EXTC_TARG_POINT_VAL,0)) AS TOT_EXTC_VAL
+              FROM CR_0803T
+              WHERE DLR_CD = #{dlrCd}
+              AND CARD_TP_CD = '01'
+              AND POINT_TP = '+'
+              AND EXTC_TARG_YN = 'Y'
+              AND NVL(EXTC_TARG_POINT_VAL,0) != 0
+              AND EXTC_DT <![CDATA[<=]]> ADD_MONTHS(SYSDATE,1)
+              <!-- AND EXTC_DT <![CDATA[>=]]> SYSDATE AND EXTC_DT <![CDATA[<=]]> (SYSDATE+#{batAddDay}) -->
+              GROUP BY DLR_CD, MEMBERSHIP_NO
+              ) B
+              ON A.DLR_CD = B.DLR_CD
+              AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+              INNER JOIN CR_0101T C
+              ON A.DLR_CD = C.DLR_CD
+              AND A.CUST_NO = C.CUST_NO
+    </insert>
+
+
+</mapper>

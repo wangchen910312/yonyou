@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : SurveyQuestionDAO_SqlMap.xml
+    Description : 설문 질문
+    author Hyun Ho Kim
+    since 2016. 03. 04.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 03. 04.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.css.service.dao.SurveyQuestionDAO">
+    <!-- 설문 템플릿 검색조건 -->
+    <sql id="searchSurveyQuestion">
+        AND A.SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+        AND A.DLR_CD = #{dlrCd}
+        <!-- AND A.SUBY_TMPL_SEQ = #{sSubyTmplSeq} -->
+    </sql>
+
+    <!-- 설문 질문 목록수를 조회한다. -->
+    <select id="selectSurveyQuestionsByConditionCnt" parameterType="SurveyQuestionSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.css.service.dao.SurveyQuestionDAO.selectSurveySatisFactionsByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0902T A INNER JOIN CR_0903T B    --만족도설문템플릿, 설문 질문
+                ON A.SUBY_TMPL_SEQ = B.SUBY_TMPL_SEQ
+                AND A.DLR_CD = B.DLR_CD
+                LEFT OUTER JOIN (
+                  SELECT DLR_CD
+                        ,SUBY_TMPL_SEQ
+                        ,SUBY_TMPL_QEST_SEQ
+                        ,COUNT(ITEM_SEQ) AS ITEM_SEQ_CNT
+                  FROM CR_0904T                         -- 설문 답변
+                  GROUP BY DLR_CD,SUBY_TMPL_SEQ,SUBY_TMPL_QEST_SEQ
+                ) C
+                ON B.SUBY_TMPL_SEQ = C.SUBY_TMPL_SEQ
+                AND B.SUBY_TMPL_QEST_SEQ = C.SUBY_TMPL_QEST_SEQ
+                AND B.DLR_CD = C.DLR_CD
+        WHERE   A.SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+        AND     A.DLR_CD = #{sDlrCd}
+    </select>
+
+    <!-- 설문 질문 정보 목록을 조회한다. -->
+    <select id="selectSurveyQuestionsByCondition" parameterType="SurveyQuestionSearchVO" resultType="SurveyQuestionVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SurveyQuestionDAO.selectSurveyQuestionsByCondition] */
+        SELECT  A.DLR_CD                --딜러코드
+                ,A.SUBY_TMPL_SEQ        --설문탬플릿 일련번호
+                ,B.SUBY_TMPL_QEST_SEQ       --설문템플릿 질문 일련번호
+                ,B.QEST_CONT           --질문내용
+                ,B.QEST_WGT_VAL        --질문가중치값
+                ,B.QEST_TP_CD          --질문유형코드
+                --,B.ANSW_SEL_CNT        --답변선택개수
+                ,B.SORT_ORDER          --정렬순서
+                ,B.REG_USR_ID          --등록자ID
+                ,B.REG_DT              --등록일자
+                ,B.UPDT_USR_ID         --수정자ID
+                ,B.UPDT_DT             --수정일자
+                ,B.REMARK             --비고
+                ,NVL(C.ITEM_SEQ_CNT,0) AS ANSW_SEL_CNT --답변선택개수
+        FROM    CR_0902T A INNER JOIN CR_0903T B    --만족도설문템플릿, 설문 질문
+                ON A.SUBY_TMPL_SEQ = B.SUBY_TMPL_SEQ
+                AND A.DLR_CD = B.DLR_CD
+                LEFT OUTER JOIN (
+                  SELECT DLR_CD
+                        ,SUBY_TMPL_SEQ
+                        ,SUBY_TMPL_QEST_SEQ
+                        ,COUNT(ITEM_SEQ) AS ITEM_SEQ_CNT
+                  FROM CR_0904T                         -- 설문 답변
+                  GROUP BY DLR_CD,SUBY_TMPL_SEQ,SUBY_TMPL_QEST_SEQ
+                ) C
+                ON B.SUBY_TMPL_SEQ = C.SUBY_TMPL_SEQ
+                AND B.SUBY_TMPL_QEST_SEQ = C.SUBY_TMPL_QEST_SEQ
+                AND B.DLR_CD = C.DLR_CD
+        WHERE   A.SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+        AND     A.DLR_CD = #{sDlrCd}
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "qestCont"'>B.QEST_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "qestTpCd"'>B.QEST_TP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "remark"'>B.REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "sortOrder"'>B.SORT_ORDER <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            B.SORT_ORDER ASC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                B.SORT_ORDER ASC
+            </otherwise>
+        </choose>
+    </select>
+
+    <insert id="insertSurveyQuestion" parameterType="SurveyQuestionVO">
+        INSERT INTO CR_0903T    --만족도설문템플릿질문
+        (
+            DLR_CD                     --딜러코드
+            ,SUBY_TMPL_SEQ             --설문템플릿일련번호
+            ,SUBY_TMPL_QEST_SEQ        --일련번호
+            ,QEST_CONT                 --질문내용
+            ,QEST_WGT_VAL              --질문가중치값
+            ,QEST_TP_CD                --질문유형코드
+            ,ANSW_SEL_CNT              --답변선택개수
+            ,SORT_ORDER                --정렬순서
+            ,REMARK                    --비고
+            ,REG_USR_ID                --등록자ID
+            ,REG_DT                    --등록일자
+        )
+        VALUES
+        (
+            #{dlrCd}              --딜러코드
+            ,#{subyTmplSeq}              --설문템플릿일련번호
+            ,(
+                SELECT NVL(MAX(SUBY_TMPL_QEST_SEQ),0) +1
+                FROM CR_0903T
+                WHERE SUBY_TMPL_SEQ = #{subyTmplSeq}          --설문템플릿 질문 일련번호
+                AND DLR_CD = #{dlrCd}
+            )
+            ,#{qestCont}                 --질문내용
+            ,#{qestWgtVal}               --질문가중치값
+            ,#{qestTpCd}                 --질문유형코드
+            ,#{answSelCnt}               --답변선택개수
+            ,#{sortOrder}                --정렬순서
+            ,#{remark}                   --비고
+            ,#{regUsrId}                 --등록자ID
+            ,SYSDATE                    --등록일자
+        )
+    </insert>
+
+    <update id="updateSurveyQuestion" parameterType="SurveyQuestionVO">
+        UPDATE  CR_0903T    --만족도설문템플릿질문
+        SET     QEST_CONT          = #{qestCont}                 --질문내용
+                ,QEST_WGT_VAL       = #{qestWgtVal}               --질문가중치값
+                ,QEST_TP_CD         = #{qestTpCd}                 --질문유형코드
+                ,ANSW_SEL_CNT       = #{answSelCnt}               --답변선택개수
+                ,SORT_ORDER         = #{sortOrder}                --정렬순서
+                ,REMARK             = #{remark}                   --비고
+                ,UPDT_USR_ID        = #{updtUsrId}                --수정자ID
+                ,UPDT_DT            = SYSDATE                     --수정일자
+        WHERE   SUBY_TMPL_SEQ      = #{subyTmplSeq}              --설문템플릿일련번호
+        AND     SUBY_TMPL_QEST_SEQ = #{subyTmplQestSeq}          --설문템플릿 질문 일련번호
+        AND     DLR_CD = #{dlrCd}              --딜러코드
+    </update>
+
+    <delete id="deleteSurveyQuestion" parameterType="SurveyQuestionVO">
+        DELETE  CR_0903T    --만족도설문템플릿질문
+        WHERE   SUBY_TMPL_SEQ      = #{subyTmplSeq}              --설문템플릿일련번호
+        AND     SUBY_TMPL_QEST_SEQ = #{subyTmplQestSeq}          --설문템플릿 질문 일련번호
+        AND     DLR_CD = #{dlrCd}              --딜러코드
+    </delete>
+
+
+    <delete id="deleteSurveyQuestionTotal" parameterType="SurveyQuestionVO">
+        DELETE  CR_0903T    --만족도설문템플릿질문
+        WHERE   SUBY_TMPL_SEQ      = #{subyTmplSeq}              --설문템플릿일련번호
+        AND     DLR_CD = #{dlrCd}              --딜러코드
+    </delete>
+
+    <select id="selectSurveyQuestionViewByCondition" parameterType="SurveyQuestionSearchVO" resultType="SurveySatisFactionVO">
+        SELECT  A.DLR_CD
+                ,A.SUBY_TMPL_SEQ
+                ,B.SUBY_TMPL_QEST_SEQ
+                ,A.SUBY_TMPL_NM
+                ,B.QEST_CONT
+                ,B.QEST_WGT_VAL
+                ,B.QEST_TP_CD
+                ,B.ANSW_SEL_CNT
+        FROM    CR_0902T A LEFT OUTER JOIN CR_0903T B
+                ON A.SUBY_TMPL_SEQ = B.SUBY_TMPL_SEQ
+                AND A.DLR_CD = B.DLR_CD
+        WHERE   A.SUBY_TMPL_SEQ  = #{sSubyTmplSeq}
+        AND     A.DLR_CD = #{sDlrCd}              --딜러코드
+        ORDER BY B.SORT_ORDER, B.SUBY_TMPL_QEST_SEQ ASC
+    </select>
+</mapper>

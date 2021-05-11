@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : PartsVenderPriceMasterDAO_SqlMap.xml
+    Description : 공급처별 부품구매가격 마스터 관리.
+    author In Bo Shim
+    since 2016. 1. 11.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 11.     In Bo Shim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.par.pmm.service.dao.PartsVenderPriceMasterDAO">
+
+    <!-- 공급처별 부품구매가격 마스터 정보를 추가한다. -->
+    <insert id="insertPartsVenderPriceMaster" parameterType="PartsVenderPriceMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.PartsVenderPriceMasterDAO.insertPartsVenderPriceMaster] */
+        INSERT INTO PT_0213T(
+            DLR_CD
+            , BP_CD
+            , ITEM_CD
+            , PRC_TP
+            , LINE_NO
+            , APPLY_YN
+            , PURC_PRC
+            , PRC_QTY
+            , PRC_QTY_UNIT_CD
+            , START_DT
+            , END_DT
+            , DEL_YN
+            , REG_USR_ID
+            , REG_DT
+        ) VALUES (
+            #{ dlrCd }
+            , #{ bpCd }
+            , #{ itemCd }
+            , #{ prcTp }
+            , #{ lineNo }
+            , #{ applyYn }
+            , #{ purcPrc }
+            , #{ prcQty }
+            , #{ prcQtyUnitCd }
+            , #{ startDt }
+            , #{ endDt }
+            , #{ delYn }
+            , #{ regUsrId }
+            , SYSDATE
+        )
+    </insert>
+
+    <!-- 공급처별 부품구매가격 마스터 정보를 수정한다. -->
+    <update id="updatePartsVenderPriceMaster" parameterType="PartsVenderPriceMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.PartsVenderPriceMasterDAO.updatePartsVenderPriceMaster] */
+        UPDATE PT_0213T SET
+            PRC_TP = #{ prcTp }
+            , APPLY_YN = #{ applyYn }
+            , PURC_PRC = #{ purcPrc }
+            , PRC_QTY = #{ prcQty }
+            , PRC_QTY_UNIT_CD = #{ prcQtyUnitCd }
+            , START_DT = #{ startDt }
+            , END_DT = #{ endDt }
+            , DEL_YN = #{ delYn }
+            , UPDT_USR_ID = #{ updtUsrId }
+            , UPDT_DT = SYSDATE
+        WHERE DLR_CD = #{ dlrCd }
+        AND BP_CD = #{ bpCd }
+        AND ITEM_CD = #{ itemCd }
+        AND LINE_NO = #{ lineNo }
+    </update>
+
+    <!-- 공급처별 부품구매가격 마스터 정보를 삭제한다. -->
+    <delete id="deletePartsVenderPriceMaster" parameterType="PartsVenderPriceMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.PartsVenderPriceMasterDAO.deletePartsVenderPriceMaster] */
+        DELETE FROM PT_0213T
+        WHERE DLR_CD = #{ dlrCd }
+        AND BP_CD = #{ bpCd }
+        AND ITEM_CD = #{ itemCd }
+        AND LINE_NO = #{ lineNo }
+    </delete>
+
+    <!-- 공급처별 부품구매가격 마스터 정보를 조회한다. -->
+    <select id="selectPartsVenderPriceMasterByKey" parameterType="PartsVenderPriceMasterSearchVO" resultType="PartsVenderPriceMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.PartsVenderPriceMasterDAO.selectPartsVenderPriceMasterByKey] */
+        SELECT * FROM PT_0213T
+        WHERE DLR_CD = #{ dlrCd }
+        AND BP_CD = #{ bpCd }
+        AND ITEM_CD = #{ itemCd }
+        AND LINE_NO = #{ lineNo }
+        <if test='delYn != null and delYn != ""'>
+            AND DEL_YN = #{ delYn }
+        </if>
+    </select>
+
+    <!-- 공급처별 부품구매가격 마스터 정보 목록을 조회한다. -->
+    <select id="selectPartsVenderPriceMastersByCondition" parameterType="PartsVenderPriceMasterSearchVO" resultType="PartsVenderPriceMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.PartsVenderPriceMasterDAO.selectPartsVenderPriceMastersByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT * FROM PT_0213T
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND DLR_CD LIKE '%'||#{sDlrCd}||'%'
+                    </if>
+
+                    <if test='sBpCd != null and sBpCd != ""'>
+                        AND BP_CD LIKE '%'||#{sBpCd}||'%'
+                    </if>
+
+                    <if test='sItemCd != null and sItemCd != ""'>
+                        AND ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                    </if>
+
+                    <if test='sLineNo != null and sLineNo != 0'>
+                        AND LINE_NO = #{sLineNo}
+                    </if>
+
+                    <if test='sDelYn != null and sDelYn != ""'>
+                        AND DEL_YN = #{sDelYn}
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "bpCd"'>BP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemCd"'>ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "lineNo"'>LINE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 공급처별 부품구매가격 마스터 정보 카운트를 조회한다. -->
+    <select id="selectPartsVenderPriceMastersByConditionCnt" parameterType="PartsVenderPriceMasterSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.pmm.service.dao.PartsVenderPriceMasterDAO.selectPartsVenderPriceMastersByConditionCnt] */
+        SELECT count(*) FROM PT_0213T
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND DLR_CD LIKE '%'||#{sDlrCd}||'%'
+            </if>
+
+            <if test='sBpCd != null and sBpCd != ""'>
+                AND BP_CD LIKE '%'||#{sBpCd}||'%'
+            </if>
+
+            <if test='sItemCd != null and sItemCd != ""'>
+                AND ITEM_CD LIKE '%'||#{sItemCd}||'%'
+            </if>
+
+            <if test='sLineNo != null and sLineNo != 0'>
+                AND LINE_NO = #{sLineNo}
+            </if>
+
+            <if test='sDelYn != null and sDelYn != ""'>
+                AND DEL_YN = #{sDelYn}
+            </if>
+        </where>
+    </select>
+
+    <!-- 공급처별 부품구매가격 마스터 정보 유효일자 카운트를 조회한다. -->
+    <select id="selectPartsVenderPriceMastersPeriodByConditionCnt" parameterType="PartsVenderPriceMasterSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.pmm.service.dao.PartsVenderPriceMasterDAO.selectPartsVenderPriceMastersPeriodByConditionCnt] */
+        SELECT
+            count(0)
+        FROM PT_0213T
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND DLR_CD LIKE '%'||#{sDlrCd}||'%'
+            </if>
+
+            <if test='sBpCd != null and sBpCd != ""'>
+                AND BP_CD LIKE '%'||#{sBpCd}||'%'
+            </if>
+
+            <if test='sItemCd != null and sItemCd != ""'>
+                AND ITEM_CD LIKE '%'||#{sItemCd}||'%'
+            </if>
+
+            <if test='sPrcTp != null and sPrcTp != ""'>
+                AND PRC_TP = #{sPrcTp}
+            </if>
+
+            <if test='sLineNo != null '>
+                AND LINE_NO <![CDATA[<>]]> #{sLineNo}
+            </if>
+
+            <if test='sStartDt != null'>
+                AND #{sStartDt} BETWEEN START_DT AND END_DT
+            </if>
+
+            <if test='sEndDt != null'>
+                AND #{sEndDt} BETWEEN START_DT AND END_DT
+            </if>
+
+        </where>
+        AND DEL_YN = 'N'
+    </select>
+
+</mapper>

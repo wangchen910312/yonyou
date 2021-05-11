@@ -1,0 +1,752 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.ass.service.dao.AssignMngDAO">
+
+	<!-- 배정목록  -->
+	<select id="selectAssignByCondition" parameterType="AssignSearchVO" resultType="AssignVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT SA0121.VIN_NO,SA0121.VIN_NO1,SA0121.VIN_NO2
+                      ,SA0121.CARLINE_CD,FN_GET_CARLINE_NM(SA0121.CARLINE_CD) AS CARLINE_NM
+                      ,SA0121.MODEL_CD,FN_GET_MODEL_NM(SA0121.MODEL_CD) AS MODEL_NM
+                      ,SA0121.OCN_CD,FN_GET_OCN_NM(SA0121.MODEL_CD, SA0121.OCN_CD) AS OCN_NM
+                      ,SA0121.EXT_COLOR_CD,FN_GET_EXT_COLOR_NM(SA0121.EXT_COLOR_CD) AS EXT_COLOR_NM
+                      ,SA0121.INT_COLOR_CD,FN_GET_INT_COLOR_NM(SA0121.INT_COLOR_CD) AS INT_COLOR_NM
+                      ,SA0121.ORD_TP,SA0121.MANUFACT_YY_MM_DT,SA0121.GR_DT,SA0121.RFID_NO,SA0121.LV2_DLR_STOCK_YN
+                      ,SA0421.FCE_SALE_REQ_REASON_CD
+                      ,SA0421.REQ_STAT_CD
+                      ,CASE WHEN SA0421.REQ_STAT_CD = 'R' AND SA0421.APPROVE_YN = 'N' THEN '' -- 요청후 심사중
+                            WHEN SA0421.REQ_STAT_CD = 'Y' AND SA0421.APPROVE_YN = 'N' THEN 'N' -- 요청후 심사거절
+                            WHEN SA0421.REQ_STAT_CD = 'Y' AND SA0421.APPROVE_YN = 'Y' THEN 'Y' -- 요청후 시사통과
+                        ELSE 'NULL' END AS EXP_APR_YN
+                  FROM SA_0121T SA0121
+                     ,( SELECT DLR_CD,VIN_NO1,VIN_NO2,MAX(FCE_SALE_REQ_REASON_CD) AS FCE_SALE_REQ_REASON_CD
+                               ,MAX(SEQ) AS SEQ,MAX(REQ_STAT_CD) AS REQ_STAT_CD,MAX(APPROVE_YN) AS APPROVE_YN
+                          FROM SA_0421T
+                         GROUP BY DLR_CD,VIN_NO1,VIN_NO2
+                       ) SA0421
+                 WHERE 1=1
+                   AND SA0121.DLR_CD = SA0421.DLR_CD(+)
+                   AND SA0121.VIN_NO1 = SA0421.VIN_NO1(+)
+                   AND SA0121.VIN_NO2 = SA0421.VIN_NO2(+)
+                   AND SA0121.CARLINE_CD = #{sCarlineCd}
+                   AND SA0121.MODEL_CD = #{sModelCd}
+                   AND SA0121.OCN_CD = #{sOcnCd}
+                   AND SA0121.EXT_COLOR_CD = #{sExtColorCd}
+                   AND SA0121.INT_COLOR_CD = #{sIntColorCd}
+                   AND SA0121.DLR_CD = #{sDlrCd}
+                   AND SA0121.OWN_STAT_CD = 'O'
+                   AND (SA0121.CAR_STAT_CD = '60'
+                    OR (SA0121.CAR_STAT_CD = '70' AND SA0121.PRE_GI_YN = 'Y'))
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "rnum"'>RNUM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "allocQueNo"'>ALLOC_QUE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "vinNo"'>VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineCd"'>CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelCd"'>MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnCd"'>OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "extColorCd"'>EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "intColorCd"'>INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractNo"'>CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractCustNo"'>CONTRACT_CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractTp"'>CONTRACT_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "saleEmpNo"'>SALE_EMP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractDt"'>CONTRACT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlReqDt"'>DL_REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "assignYn"'>ASSIGN_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "stockTp"'>STOCK_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "allocDt"'>ALLOC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    VIN_NO DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        VIN_NO DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+
+
+	<!-- 배정목록 갯수  -->
+	<select id="selectAssignByConditionCnt" parameterType="AssignSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0121T SA0121
+             , (SELECT DLR_CD,VIN_NO1,VIN_NO2,MAX(FCE_SALE_REQ_REASON_CD) AS FCE_SALE_REQ_REASON_CD
+                     , MAX(SEQ) AS SEQ,MAX(REQ_STAT_CD) AS REQ_STAT_CD,MAX(APPROVE_YN) AS APPROVE_YN
+                  FROM SA_0421T
+                 GROUP BY DLR_CD,VIN_NO1,VIN_NO2
+                ) SA0421
+         WHERE 1=1
+           AND SA0121.DLR_CD = SA0421.DLR_CD(+)
+           AND SA0121.VIN_NO1 = SA0421.VIN_NO1(+)
+           AND SA0121.VIN_NO2 = SA0421.VIN_NO2(+)
+           AND SA0121.CARLINE_CD = #{sCarlineCd}
+           AND SA0121.MODEL_CD = #{sModelCd}
+           AND SA0121.OCN_CD = #{sOcnCd}
+           AND SA0121.EXT_COLOR_CD = #{sExtColorCd}
+           AND SA0121.INT_COLOR_CD = #{sIntColorCd}
+           AND SA0121.DLR_CD = #{sDlrCd}
+         <if test='sVinNo2 != null and sVinNo2 != ""'>
+           AND SA0121.VIN_NO2 = #{sVinNo2}
+         </if>
+	</select>
+
+
+
+
+
+    <!-- 배정 팝업 목록  -->
+    <select id="selectAssignPopupListByCondition" parameterType="AssignSearchVO" resultType="AssignVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT SA0121.VIN_NO
+                      ,SA0121.CARLINE_CD,FN_GET_CARLINE_NM(SA0121.CARLINE_CD) AS CARLINE_NM
+                      ,SA0121.MODEL_CD,FN_GET_MODEL_NM(SA0121.MODEL_CD) AS MODEL_NM
+                      ,SA0121.OCN_CD,FN_GET_OCN_NM(SA0121.MODEL_CD, SA0121.OCN_CD) AS OCN_NM
+                      ,SA0121.EXT_COLOR_CD,FN_GET_EXT_COLOR_NM(SA0121.EXT_COLOR_CD) AS EXT_COLOR_NM
+                      ,SA0121.INT_COLOR_CD,FN_GET_INT_COLOR_NM(SA0121.INT_COLOR_CD) AS INT_COLOR_NM
+                      ,SA0121.MANUFACT_YY_MM_DT
+                      ,SA0121.STOCK_TP
+                      ,SA0121.STRGE_CD,(SELECT STRGE_NM FROM CM_0104T WHERE STRGE_CD = SA0121.STRGE_CD AND DLR_CD = SA0121.DLR_CD) AS STRGE_NM
+                      ,SA0121.LOC_CD
+                  FROM SA_0121T SA0121,SA_0201T SA0201
+                 WHERE 1=1
+                   AND SA0121.DLR_CD = SA0201.DLR_CD(+)
+                   AND SA0121.CONTRACT_NO = SA0201.CONTRACT_NO(+)
+                   AND SA0121.NCAR_DSTIN_CD = 'N'
+                   AND (SA0121.OWN_STAT_CD = 'O' OR SA0121.OWN_STAT_CD IS NULL)
+                   AND SA0121.CAR_STAT_CD IN ('50','60')
+                   AND (SA0121.STOCK_TP IN ('01','02','04') OR SA0121.STOCK_TP IS NULL)
+                   AND SA0121.CMP_CAR_YN = 'N'
+                   AND SA0121.CMP_CAR_YN IS NOT NULL
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND SA0121.DLR_CD = #{sDlrCd}
+                 </if>
+                 <if test='sCarlineCd != null and sCarlineCd != ""'>
+                   AND SA0121.CARLINE_CD = #{sCarlineCd}
+                 </if>
+                 <if test='sModelCd != null and sModelCd != ""'>
+                   AND SA0121.MODEL_CD = #{sModelCd}
+                 </if>
+                 <if test='sOcnCd != null and sOcnCd != ""'>
+                   AND SA0121.OCN_CD = #{sOcnCd}
+                 </if>
+                 <if test='sExtColorCd != null and sExtColorCd != ""'>
+                   AND SA0121.EXT_COLOR_CD = #{sExtColorCd}
+                 </if>
+                 <if test='sIntColorCd != null and sIntColorCd != ""'>
+                   AND SA0121.INT_COLOR_CD = #{sIntColorCd}
+                 </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "vinNo"'>VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineCd"'>CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelCd"'>MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnCd"'>OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "extColorCd"'>EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "intColorCd"'>INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "manufactYyMmDt"'>MANUFACT_YY_MM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "stockTp"'>STOCK_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "strgeCd"'>STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "locCd"'>LOC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    SA0121.VIN_NO ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        SA0121.VIN_NO ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+    <!-- 배정목록 갯수  -->
+    <select id="selectAssignPopupListByConditionCnt" parameterType="AssignSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0121T SA0121,SA_0201T SA0201
+         WHERE 1=1
+           AND SA0121.DLR_CD = SA0201.DLR_CD(+)
+           AND SA0121.CONTRACT_NO = SA0201.CONTRACT_NO(+)
+           AND SA0121.NCAR_DSTIN_CD = 'N'
+           AND (SA0121.OWN_STAT_CD = 'O' OR SA0121.OWN_STAT_CD IS NULL)
+           AND SA0121.CAR_STAT_CD IN ('50','60')
+           AND (SA0121.STOCK_TP IN ('01','02','04') OR SA0121.STOCK_TP IS NULL)
+           AND SA0121.CMP_CAR_YN = 'N'
+           AND SA0121.CMP_CAR_YN IS NOT NULL
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND SA0121.DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sCarlineCd != null and sCarlineCd != ""'>
+           AND SA0121.CARLINE_CD = #{sCarlineCd}
+         </if>
+         <if test='sModelCd != null and sModelCd != ""'>
+           AND SA0121.MODEL_CD = #{sModelCd}
+         </if>
+         <if test='sOcnCd != null and sOcnCd != ""'>
+           AND SA0121.OCN_CD = #{sOcnCd}
+         </if>
+         <if test='sExtColorCd != null and sExtColorCd != ""'>
+           AND SA0121.EXT_COLOR_CD = #{sExtColorCd}
+         </if>
+         <if test='sIntColorCd != null and sIntColorCd != ""'>
+           AND SA0121.INT_COLOR_CD = #{sIntColorCd}
+         </if>
+    </select>
+
+
+
+    <!-- 배정관리 - 배정처리 (배정되였던 계약번호인지를 확인) -->
+    <select id="selectContractNo" resultType="String">
+        SELECT SA0206.ALLOC_QUE_NO
+          FROM SA_0206T SA0206
+         WHERE 1=1
+           AND SA0206.CONTRACT_NO = #{contractNo}
+    </select>
+
+
+    <!-- 배정관리 배정등록  -->
+    <insert id="insertVehicleAssign" parameterType="AssignVO" >
+        INSERT INTO SA_0206T
+        ( DLR_CD
+         ,CONTRACT_NO
+         ,ALLOC_QUE_NO
+         ,ALLOC_DT
+         ,STAT_CD
+         ,VIN_NO
+         ,RVIN_NO
+         ,REG_USR_ID
+         ,REG_DT
+         ) VALUES
+        ( #{dlrCd}
+         ,#{contractNo}
+         ,(SELECT 'AL' || DECODE(MAX(ALLOC_QUE_NO),NULL,'00000001',LPAD(MAX(TO_NUMBER(SUBSTR(ALLOC_QUE_NO,3)))+1,8,0)) FROM SA_0206T)
+         ,SYSDATE
+         ,#{statCd}
+         ,#{vinNo}
+         ,''
+         ,#{regUsrId}
+         ,SYSDATE
+         )
+    </insert>
+
+
+
+    <!-- 배정관리 배정히스토리 테이블 등록  -->
+    <insert id="insertVehicleAssignH" parameterType="AssignVO" >
+        INSERT INTO SA_0206HT
+        ( DLR_CD
+         ,CONTRACT_NO
+         ,SEQ
+         ,ALLOC_QUE_NO
+         ,ALLOC_DT
+         ,STAT_CD
+         ,VIN_NO
+         ,RVIN_NO
+         ,REG_USR_ID
+         ,REG_DT
+         ) VALUES
+        ( #{dlrCd}
+         ,#{contractNo}
+         ,(SELECT NVL(MAX(SEQ)+1,1) FROM SA_0206HT)
+         --,(SELECT MAX(ALLOC_QUE_NO) FROM SA_0206T WHERE ROWNUM = 1)
+         ,#{allocQueNo}
+         ,SYSDATE
+         ,#{statCd}
+         ,#{vinNo}
+         ,''
+         ,#{regUsrId}
+         ,SYSDATE
+         )
+    </insert>
+
+
+    <!-- 배정관리 - 배정후 계약테이블정보 update  -->
+    <update id="updateAssignOrder" parameterType="AssignVO" >
+        UPDATE SA_0201T
+           SET
+               CONTRACT_STAT_CD = #{contractStatCd}
+          <if test='contractStatCd == "21"'>
+              ,ALLOC_QUE_NO = ''
+              ,ALLOC_DT = ''
+          </if>
+          <if test='contractStatCd == "30"'>
+              --,ALLOC_QUE_NO = (SELECT MAX(ALLOC_QUE_NO) FROM SA_0206T WHERE ROWNUM = 1)
+              ,ALLOC_QUE_NO = #{allocQueNo}
+              ,ALLOC_DT = SYSDATE
+          </if>
+         WHERE 1=1
+           AND DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </update>
+
+
+    <!-- 배정관리 - 배정(취소)후 차량테이블정보 update  -->
+    <update id="updateAssignVehicle" parameterType="AssignVO" >
+        UPDATE SA_0121T
+           SET OWN_STAT_CD = #{ownStatCd}
+              ,CONTRACT_NO = #{contractNo}
+         WHERE 1=1
+           AND VIN_NO = #{vinNo}
+    </update>
+
+
+    <!-- 배정관리 - 배정취소 - 배정테이블 업데이트  -->
+    <update id="updateVehicleAssign" parameterType="AssignVO" >
+        UPDATE SA_0206T
+           SET STAT_CD = #{statCd}
+         WHERE 1=1
+           AND DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </update>
+
+
+
+    <!-- 배정관리 - 배정취소 - 배정테이블 삭제  -->
+    <delete id="deleteVehicleAssign" parameterType="AssignVO" >
+        DELETE SA_0206T
+         WHERE DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </delete>
+
+
+    <!-- 배정관리 - 차량교환 - 배정테이블 업데이트  -->
+    <update id="updateVehicleExchangeO" parameterType="AssignVO" >
+        UPDATE SA_0206T
+           SET VIN_NO = #{vinNo2}
+              ,RVIN_NO = #{vinNo1}
+              ,STAT_CD = #{statCd}
+         WHERE VIN_NO = #{vinNo1}
+           AND ALLOC_QUE_NO = #{allocQueNo1}
+    </update>
+
+
+    <!-- 배정관리 - 차량교환 - 배정테이블 업데이트  -->
+    <update id="updateVehicleExchangeT" parameterType="AssignVO" >
+        UPDATE SA_0206T
+           SET VIN_NO = #{vinNo1}
+              ,RVIN_NO = #{vinNo2}
+              ,STAT_CD = #{statCd}
+         WHERE VIN_NO = #{vinNo2}
+           AND ALLOC_QUE_NO = #{allocQueNo2}
+    </update>
+
+    <!-- 배정관리 - 차량교환 - 배정히스토리테이블 insert -->
+    <insert id="insertExchangeH" parameterType="AssignVO">
+        INSERT INTO SA_0206HT
+            ( DLR_CD
+             ,CONTRACT_NO
+             ,SEQ
+             ,ALLOC_QUE_NO
+             ,ALLOC_DT
+             ,STAT_CD
+             ,VIN_NO
+             ,RVIN_NO
+             ,REG_USR_ID
+             ,REG_DT
+             )
+        SELECT DLR_CD,CONTRACT_NO,(SELECT NVL(MAX(SEQ)+1,1) FROM SA_0206HT)
+              ,ALLOC_QUE_NO,ALLOC_DT,STAT_CD,VIN_NO,RVIN_NO,REG_USR_ID,REG_DT
+          FROM SA_0206T
+         WHERE VIN_NO IN (#{vinNo})
+    </insert>
+
+
+
+
+    <!-- 배정계약현황 목록  -->
+    <select id="selectAssignStsByCondition" parameterType="AssignSearchVO" resultType="AssignVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT SA0206.DLR_CD,SA0206.ALLOC_QUE_NO,SA0206.ALLOC_DT,SA0206.STAT_CD,SA0206.VIN_NO
+                      ,DECODE(SA0201.CONTRACT_STAT_CD,'21','02','30','01') AS ASSIGN_YN
+                      ,SA0201.CONTRACT_NO,SA0201.DL_REQ_DT,SA0201.CONTRACT_CUST_NO
+                      ,(SELECT CUST_NM FROM CR_0101T WHERE CUST_NO = SA0201.CONTRACT_CUST_NO ) AS CONTRACT_CUST_NM
+                      ,SA0201.CONTRACT_TP,SA0201.SALE_EMP_NO,SA0201.CONTRACT_DT
+                      ,SA0121.CARLINE_CD,FN_GET_CARLINE_NM(SA0121.CARLINE_CD) AS CARLINE_NM
+                      ,SA0121.MODEL_CD,FN_GET_MODEL_NM(SA0121.MODEL_CD) AS MODEL_NM
+                      ,SA0121.OCN_CD,FN_GET_OCN_NM(SA0121.MODEL_CD, SA0121.OCN_CD) AS OCN_NM
+                      ,SA0121.EXT_COLOR_CD,FN_GET_EXT_COLOR_NM(SA0121.EXT_COLOR_CD) AS EXT_COLOR_NM
+                      ,SA0121.INT_COLOR_CD,FN_GET_INT_COLOR_NM(SA0121.INT_COLOR_CD) AS INT_COLOR_NM
+                  FROM SA_0206T SA0206, SA_0201T SA0201,SA_0121T SA0121
+                 WHERE 1=1
+                   AND SA0206.DLR_CD = SA0201.DLR_CD
+                   AND SA0206.CONTRACT_NO = SA0201.CONTRACT_NO
+                   AND SA0206.VIN_NO = SA0121.VIN_NO
+                   --AND SA0201.CONTRACT_NO = SA0121.CONTRACT_NO
+                 <if test='sContractNo != null and sContractNo != ""'>
+                   AND SA0206.CONTRACT_NO = #{sContractNo}
+                 </if>
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                    AND SA0201.DLR_CD = #{sDlrCd}
+                 </if>
+                 <if test='sContractCustNo != null and sContractCustNo != ""'>
+                   AND SA0201.CONTRACT_CUST_NO = #{sContractCustNo}
+                 </if>
+                 <if test='sContractTp != null and sContractTp != ""'>
+                   AND SA0201.CONTRACT_TP = #{sContractTp}
+                 </if>
+                 <if test='sCarlineCd != null and sCarlineCd != ""'>
+                   AND SA0121.CARLINE_CD = #{sCarlineCd}
+                 </if>
+                 <if test='sModelCd != null and sModelCd != ""'>
+                   AND SA0121.MODEL_CD = #{sModelCd}
+                 </if>
+                 <if test='sOcnCd != null and sOcnCd != ""'>
+                   AND SA0121.OCN_CD = #{sOcnCd}
+                 </if>
+                 <if test='sExtColorCd != null and sExtColorCd != ""'>
+                   AND SA0121.EXT_COLOR_CD = #{sExtColorCd}
+                 </if>
+                 <if test='sIntColorCd != null and sIntColorCd != ""'>
+                   AND SA0121.INT_COLOR_CD = #{sIntColorCd}
+                 </if>
+                 <if test='sVinNo != null and sVinNo != ""'>
+                   AND SA0206.VIN_NO = #{sVinNo}
+                 </if>
+                 <if test='sDlReqStartDt != null and sDlReqEndDt != null'>
+                   <![CDATA[
+                   AND SA0201.DL_REQ_DT >= #{sDlReqStartDt}
+                   AND SA0201.DL_REQ_DT <= #{sDlReqEndDt}
+                   ]]>
+                 </if>
+                 <if test='sContractStartDt != null and sContractEndDt != null'>
+                   <![CDATA[
+                   AND SA0201.CONTRACT_DT >= #{sContractStartDt}
+                   AND SA0201.CONTRACT_DT <= #{sContractEndDt}
+                   ]]>
+                 </if>
+                 <if test='sAllocStartDt != null and sAllocEndDt != null'>
+                   <![CDATA[
+                   AND SA0206.ALLOC_DT >= #{sAllocStartDt}
+                   AND SA0206.ALLOC_DT <= #{sAllocEndDt}
+                   ]]>
+                 </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "allocQueNo"'>ALLOC_QUE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "vinNo"'>VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineCd"'>CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelCd"'>MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnCd"'>OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "extColorCd"'>EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "intColorCd"'>INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractNo"'>CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractCustNo"'>CONTRACT_CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractTp"'>CONTRACT_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "saleEmpNo"'>SALE_EMP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractDt"'>CONTRACT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlReqDt"'>DL_REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "stockTp"'>STOCK_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "allocDt"'>ALLOC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    SA0206.ALLOC_QUE_NO DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        SA0206.ALLOC_QUE_NO DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+
+    <!-- 배정계약현황 목록갯수  -->
+    <select id="selectAssignStsByConditionCnt" parameterType="AssignSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0206T SA0206, SA_0201T SA0201,SA_0121T SA0121
+         WHERE 1=1
+           AND SA0206.DLR_CD = SA0201.DLR_CD
+           AND SA0206.CONTRACT_NO = SA0201.CONTRACT_NO
+           AND SA0206.VIN_NO = SA0121.VIN_NO
+           --AND SA0201.CONTRACT_NO = SA0121.CONTRACT_NO
+         <if test='sContractNo != null and sContractNo != ""'>
+           AND SA0206.CONTRACT_NO = #{sContractNo}
+         </if>
+         <if test='sDlrCd != null and sDlrCd != ""'>
+            AND SA0201.DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sContractCustNo != null and sContractCustNo != ""'>
+           AND SA0201.CONTRACT_CUST_NO = #{sContractCustNo}
+         </if>
+         <if test='sContractTp != null and sContractTp != ""'>
+           AND SA0201.CONTRACT_TP = #{sContractTp}
+         </if>
+         <if test='sCarlineCd != null and sCarlineCd != ""'>
+           AND SA0121.CARLINE_CD = #{sCarlineCd}
+         </if>
+         <if test='sModelCd != null and sModelCd != ""'>
+           AND SA0121.MODEL_CD = #{sModelCd}
+         </if>
+         <if test='sOcnCd != null and sOcnCd != ""'>
+           AND SA0121.OCN_CD = #{sOcnCd}
+         </if>
+         <if test='sExtColorCd != null and sExtColorCd != ""'>
+           AND SA0121.EXT_COLOR_CD = #{sExtColorCd}
+         </if>
+         <if test='sIntColorCd != null and sIntColorCd != ""'>
+           AND SA0121.INT_COLOR_CD = #{sIntColorCd}
+         </if>
+         <if test='sVinNo != null and sVinNo != ""'>
+           AND SA0206.VIN_NO = #{sVinNo}
+         </if>
+         <if test='sDlReqStartDt != null and sDlReqEndDt != null'>
+           <![CDATA[
+           AND SA0201.DL_REQ_DT >= #{sDlReqStartDt}
+           AND SA0201.DL_REQ_DT <= #{sDlReqEndDt}
+           ]]>
+         </if>
+         <if test='sContractStartDt != null and sContractEndDt != null'>
+           <![CDATA[
+           AND SA0201.CONTRACT_DT >= #{sContractStartDt}
+           AND SA0201.CONTRACT_DT <= #{sContractEndDt}
+           ]]>
+         </if>
+         <if test='sAllocStartDt != null and sAllocEndDt != null'>
+           <![CDATA[
+           AND SA0206.ALLOC_DT >= #{sAllocStartDt}
+           AND SA0206.ALLOC_DT <= #{sAllocEndDt}
+           ]]>
+         </if>
+    </select>
+
+
+
+    <!-- 배정취소이력현황 목록  -->
+    <select id="selectAssignCancelStsByCondition" parameterType="AssignSearchVO" resultType="AssignVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT SA0206H.ALLOC_QUE_NO,SA0206H.VIN_NO
+                      ,DECODE(SA0201.CONTRACT_STAT_CD,'21','02','30','01') AS ASSIGN_YN
+                      ,SA0206H.ALLOC_DT,SA0206H.REG_DT
+                      ,SA0201.CONTRACT_NO,SA0201.CONTRACT_CUST_NO
+                      ,(SELECT CUST_NM FROM CR_0101T WHERE CUST_NO = SA0201.CONTRACT_CUST_NO ) AS CONTRACT_CUST_NM
+                      ,SA0201.CONTRACT_TP,SA0201.SALE_EMP_NO,SA0201.CONTRACT_DT,SA0201.DL_REQ_DT
+                      ,SA0121.CARLINE_CD,FN_GET_CARLINE_NM(SA0121.CARLINE_CD) AS CARLINE_NM
+                      ,SA0121.MODEL_CD,FN_GET_MODEL_NM(SA0121.MODEL_CD) AS MODEL_NM
+                      ,SA0121.OCN_CD,FN_GET_OCN_NM(SA0121.MODEL_CD, SA0121.OCN_CD) AS OCN_NM
+                      ,SA0121.EXT_COLOR_CD,FN_GET_EXT_COLOR_NM(SA0121.EXT_COLOR_CD) AS EXT_COLOR_NM
+                      ,SA0121.INT_COLOR_CD,FN_GET_INT_COLOR_NM(SA0121.INT_COLOR_CD) AS INT_COLOR_NM
+                  FROM SA_0206HT SA0206H,SA_0201T SA0201,SA_0121T SA0121
+                 WHERE 1=1
+                   --AND SA0206H.DLR_CD = SA0201.DLR_CD
+                   AND SA0206H.CONTRACT_NO = SA0201.CONTRACT_NO
+                   AND SA0206H.VIN_NO = SA0121.VIN_NO
+                   --AND SA0201.CONTRACT_NO = SA0121.CONTRACT_NO
+                   AND SA0206H.STAT_CD = '02'
+                 <if test='sContractNo != null and sContractNo != ""'>
+                   AND SA0201.CONTRACT_NO = #{sContractNo}
+                 </if>
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                    AND SA0201.DLR_CD = #{sDlrCd}
+                 </if>
+                 <if test='sContractCustNo != null and sContractCustNo != ""'>
+                   AND SA0201.CONTRACT_CUST_NO = #{sContractCustNo}
+                 </if>
+                 <if test='sContractTp != null and sContractTp != ""'>
+                   AND SA0201.CONTRACT_TP = #{sContractTp}
+                 </if>
+                 <if test='sCarlineCd != null and sCarlineCd != ""'>
+                   AND SA0121.CARLINE_CD = #{sCarlineCd}
+                 </if>
+                 <if test='sModelCd != null and sModelCd != ""'>
+                   AND SA0121.MODEL_CD = #{sModelCd}
+                 </if>
+                 <if test='sOcnCd != null and sOcnCd != ""'>
+                   AND SA0121.OCN_CD = #{sOcnCd}
+                 </if>
+                 <if test='sExtColorCd != null and sExtColorCd != ""'>
+                   AND SA0121.EXT_COLOR_CD = #{sExtColorCd}
+                 </if>
+                 <if test='sIntColorCd != null and sIntColorCd != ""'>
+                   AND SA0121.INT_COLOR_CD = #{sIntColorCd}
+                 </if>
+                 <if test='sVinNo != null and sVinNo != ""'>
+                   AND SA0206H.VIN_NO = #{sVinNo}
+                 </if>
+                 <if test='sDlReqStartDt != null and sDlReqEndDt != null'>
+                   <![CDATA[
+                   AND SA0201.DL_REQ_DT >= #{sDlReqStartDt}
+                   AND SA0201.DL_REQ_DT <= #{sDlReqEndDt}
+                   ]]>
+                 </if>
+                 <if test='sContractStartDt != null and sContractEndDt != null'>
+                   <![CDATA[
+                   AND SA0201.CONTRACT_DT >= #{sContractStartDt}
+                   AND SA0201.CONTRACT_DT <= #{sContractEndDt}
+                   ]]>
+                 </if>
+                 <if test='sCancelStartDt != null and sCancelEndDt != null'>
+                   <![CDATA[
+                   AND SA0206H.REG_DT >= #{sCancelStartDt}
+                   AND SA0206H.REG_DT <= #{sCancelEndDt}
+                   ]]>
+                 </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "rnum"'>RNUM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "allocQueNo"'>ALLOC_QUE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "vinNo"'>VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineCd"'>CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelCd"'>MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnCd"'>OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "extColorCd"'>EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "intColorCd"'>INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractNo"'>CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractCustNo"'>CONTRACT_CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractTp"'>CONTRACT_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "saleEmpNo"'>SALE_EMP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractDt"'>CONTRACT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlReqDt"'>DL_REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "assignYn"'>ASSIGN_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "stockTp"'>STOCK_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "allocDt"'>ALLOC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDt"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    SA0206H.ALLOC_QUE_NO DESC NULLS LAST
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        SA0206H.ALLOC_QUE_NO DESC NULLS LAST
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+
+    <!-- 배정취소이력목록 갯수  -->
+    <select id="selectAssignCancelStsByConditionCnt" parameterType="AssignSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0206HT SA0206H,SA_0201T SA0201,SA_0121T SA0121
+         WHERE 1=1
+           --AND SA0206H.DLR_CD = SA0201.DLR_CD
+           AND SA0206H.CONTRACT_NO = SA0201.CONTRACT_NO
+           AND SA0206H.VIN_NO = SA0121.VIN_NO
+           --AND SA0201.CONTRACT_NO = SA0121.CONTRACT_NO
+           AND SA0206H.STAT_CD = '02'
+         <if test='sContractNo != null and sContractNo != ""'>
+           AND SA0201.CONTRACT_NO = #{sContractNo}
+         </if>
+         <if test='sDlrCd != null and sDlrCd != ""'>
+            AND SA0201.DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sContractCustNo != null and sContractCustNo != ""'>
+           AND SA0201.CONTRACT_CUST_NO = #{sContractCustNo}
+         </if>
+         <if test='sContractTp != null and sContractTp != ""'>
+           AND SA0201.CONTRACT_TP = #{sContractTp}
+         </if>
+         <if test='sCarlineCd != null and sCarlineCd != ""'>
+           AND SA0121.CARLINE_CD = #{sCarlineCd}
+         </if>
+         <if test='sModelCd != null and sModelCd != ""'>
+           AND SA0121.MODEL_CD = #{sModelCd}
+         </if>
+         <if test='sOcnCd != null and sOcnCd != ""'>
+           AND SA0121.OCN_CD = #{sOcnCd}
+         </if>
+         <if test='sExtColorCd != null and sExtColorCd != ""'>
+           AND SA0121.EXT_COLOR_CD = #{sExtColorCd}
+         </if>
+         <if test='sIntColorCd != null and sIntColorCd != ""'>
+           AND SA0121.INT_COLOR_CD = #{sIntColorCd}
+         </if>
+         <if test='sVinNo != null and sVinNo != ""'>
+           AND SA0206H.VIN_NO = #{sVinNo}
+         </if>
+         <if test='sDlReqStartDt != null and sDlReqEndDt != null'>
+           <![CDATA[
+           AND SA0201.DL_REQ_DT >= #{sDlReqStartDt}
+           AND SA0201.DL_REQ_DT <= #{sDlReqEndDt}
+           ]]>
+         </if>
+         <if test='sContractStartDt != null and sContractEndDt != null'>
+           <![CDATA[
+           AND SA0201.CONTRACT_DT >= #{sContractStartDt}
+           AND SA0201.CONTRACT_DT <= #{sContractEndDt}
+           ]]>
+         </if>
+         <if test='sCancelStartDt != null and sCancelEndDt != null'>
+           <![CDATA[
+           AND SA0206H.REG_DT >= #{sCancelStartDt}
+           AND SA0206H.REG_DT <= #{sCancelEndDt}
+           ]]>
+         </if>
+    </select>
+
+
+
+
+
+</mapper>

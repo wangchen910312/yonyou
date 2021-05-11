@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : SalesOpptMgmtDAO_SqlMap.xml
+    Description : 영업 스케줄에 관한 데이터처리
+    author in moon Lee
+    since 2016.03.07.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016.03.07.     in moon Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cso.service.dao.SalesOpptMgmtDAO">
+
+    <!-- 판매기회 정보 검색조건 -->
+    <sql id="searchSalesOpptMgmt">
+
+
+        INNER JOIN CR_0101T CR0101T ON CR0201T.CUST_NO = CR0101T.CUST_NO AND CR0201T.DLR_CD = CR0101T.DLR_CD AND CR0101T.DEL_YN = 'N'
+        LEFT OUTER JOIN CM_0801T SCT ON CR0101T.MNG_SC_ID = SCT.USR_ID
+        LEFT OUTER JOIN CM_0801T USRT ON CR0201T.REG_USR_ID = USRT.USR_ID
+        <!-- 관심차종 검색을 위해 관심차종 테이블 조인 조건 -->
+        INNER JOIN CR_0203T CR0203T ON CR0201T.SALE_OPPT_NO = CR0203T.REF_KEY_NM AND CR0203T.REF_TABLE_NM = 'CR_0201T' AND CR0203T.FLAG_YN = 'Y'
+
+        <where>
+
+            AND CR0201T.DLR_CD = #{sDlrCd}
+
+                <!-- TODO[이인문] 영업스케줄을 SC 상위 관리자가 볼경우 아래 조건 추가
+                <if test='sScIdRole'>
+                    AND CR0201T.SC_ID in #{sScId}
+                </if>
+                -->
+            <if test='sScId != null and sScId != ""'>
+                AND CR0101T.MNG_SC_ID = #{sScId}
+            </if>
+
+            <!-- 고객명 검색 -->
+            <if test='sCustNm != null and sCustNm != ""'>
+                AND CR0101T.CUST_NM LIKE #{sCustNm}
+            </if>
+
+            <!--  관심차종/관심모델 검색 -->
+            <if test='sIntrCarLine != null and sIntrCarLine != ""'>
+                AND CR0203T.CARLINE_CD = #{sIntrCarLine}
+            </if>
+            <if test='sIntrModel != null and sIntrModel != "" '>
+                AND CR0203T.MODEL_CD = #{sIntrModel}
+            </if>
+
+            <!-- 전출상태 검색 -->
+            <if test='sTrsfStatCd != null and sTrsfStatCd != ""'>
+                AND CR0201T.TRSF_STAT_CD = #{sTrsfStatCd}
+            </if>
+
+            <!-- 판매기회단계 검색 -->
+            <if test='sSaleOpptStepCd != null and sSaleOpptStepCd != ""'>
+                AND CR0201T.SALE_OPPT_STEP_CD = #{sSaleOpptStepCd}
+            </if>
+
+            <!-- 판매기회등록 기간 검색 -->
+            <if test='sStartRegDt != null'>
+            <![CDATA[
+                AND CR0201T.REG_DT >= #{sStartRegDt}
+            ]]>
+            </if>
+            <if test='sEndRegDt != null'>
+            <![CDATA[
+                AND CR0201T.REG_DT < #{sEndRegDt}
+            ]]>
+            </if>
+
+            <!-- 고객번호 검색 -->
+            <if test='sCustNo != null and sCustNo != ""'>
+                AND CR0201T.CUST_NO = #{sCustNo}
+            </if>
+
+
+        </where>
+    </sql>
+
+
+    <!-- 판매기회 정보 목록수를 조회한다. -->
+    <select id="selectSalesOpptMgmtsByConditionCnt" parameterType="SalesOpptMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptMgmtDAO.selectSalesOpptMgmtsByConditionCnt] */
+
+        SELECT COUNT(*) AS VALUE
+        FROM CR_0201T CR0201T
+        <include refid="searchSalesOpptMgmt" />
+    </select>
+
+    <!-- 판매기회 정보 목록을 조회한다. -->
+    <select id="selectSalesOpptMgmtsByCondition" parameterType="SalesOpptMgmtSearchVO" resultType="SalesOpptMgmtVO">
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptMgmtDAO.selectSalesOpptMgmtsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                     CR0201T.DLR_CD                                         --딜러코드
+                    ,CR0201T.SALE_OPPT_NO                                   --판매기회일련번호
+                    ,CR0201T.LEAD_NO                                        --리드번호
+                    ,CR0201T.CUST_NO                                        --고객번호
+                    ,CR0101T.CUST_NM                                        --고객명
+                    ,CR0101T.CUST_CD                                        --잠재/보유고객
+                    ,CR0201T.SALE_OPPT_STEP_CD                              --판매기회단계코드
+                    ,CR0201T.EXPC_SALE_DT                                   --예상판매일자
+                    ,CR0203T.CARLINE_CD
+                    ,FN_GET_CARLINE_NM(CR0203T.CARLINE_CD) AS CARLINE_NM
+                    ,CR0203T.MODEL_CD
+                    ,FN_GET_MODEL_NM(CR0203T.MODEL_CD) AS MODEL_NM
+                    ,CR0201T.SUCC_PRB_CD                                    --성공확률코드
+                    ,CR0201T.SALE_OPPT_SRC_CD                               --판매기회출처코드
+                    ,CR0201T.HP_NO                                          --휴대폰번호
+                    ,CR0201T.REMARK                                         --비고
+                    ,CR0201T.TRSF_STAT_CD                                   --전출상태코드
+                    ,CR0201T.BHMC_YN                                        --BHMC여부
+                    ,CR0201T.REG_USR_ID                                     --등록자ID
+                    ,USRT.USR_NM AS REG_USR_NM                              --등록자이름
+                    ,CR0201T.REG_DT                                         --등록일자
+
+                    ,CR0101T.MNG_SC_ID AS SC_ID                                          --SCID
+                    ,SCT.USR_NM AS SC_NM                                    --SC이름
+                FROM CR_0201T CR0201T
+                <include refid="searchSalesOpptMgmt" />
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "custNm"'>            CR0101T.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                <when test='item.field == "remark"'>            CR0201T.REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                                <when test='item.field == "carlineNm"'>         CR0203T.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                <when test='item.field == "modelNm"'>           CR0203T.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                <when test='item.field == "expcSaleDt"'>        CR0201T.EXPC_SALE_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "succPrbCd"'>         CR0201T.SUCC_PRB_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "scId"'>              SCT.USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                   </when>
+                                <when test='item.field == "regDt"'>             CR0201T.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+
+                                <when test='item.field == "saleOpptSrcCd"'>     CR0201T.SALE_OPPT_SRC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "saleOpptStepCd"'>    CR0201T.SALE_OPPT_STEP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                <when test='item.field == "trsfStatCd"'>        CR0201T.TRSF_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <otherwise>
+                                    CR0201T.SALE_OPPT_NO DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        CR0201T.SALE_OPPT_NO DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+    <!-- 판매기회 정보를 등록한다. -->
+    <insert id="insertSalesOpptMgmt" parameterType="SalesOpptMgmtVO" >
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptMgmtDAO.insertSalesOpptMgmt] */
+        INSERT INTO CR_0201T    --판매기회
+        (
+             DLR_CD                   --딜러코드
+            ,SALE_OPPT_NO            --판매기회단계시퀀스
+            ,LEAD_NO                  --리드번호
+
+            ,REMARK                   --판매기회 개술
+            ,CUST_NO                  --고객번호
+            ,HP_NO                    --휴대폰번호
+            ,SALE_OPPT_STEP_CD        --판매기회단계코드
+            ,EXPC_SALE_DT             --예상판매일자
+
+            ,SALE_OPPT_SRC_CD         --판매기회출처코드
+            ,TRSF_STAT_CD             --전출상태코드
+            ,SUCC_PRB_CD              --성공확률코드
+
+            ,BHMC_YN                  --BHMC여부
+            ,REG_USR_ID               --등록자ID
+            ,REG_DT                   --등록일자
+
+        ) VALUES (
+             #{dlrCd}                   --딜러코드
+            ,SEQ_CR_0201T.NEXTVAL       --판매기회단계시퀀스
+            ,#{leadNo}                 --리드번호
+
+            ,#{remark}                  --판매기회 개술
+            ,#{custNo}                  --고객번호
+            ,#{hpNo}                    --휴대폰번호
+            ,#{saleOpptStepCd}          --판매기회단계코드
+            ,#{expcSaleDt}              --예상판매일자
+
+            ,#{saleOpptSrcCd}           --판매기회출처코드
+            ,#{trsfStatCd}              --전출상태코드
+            ,#{succPrbCd}               --성공확률코드
+
+            ,#{bhmcYn}                  --BHMC여부
+            ,#{regUsrId}                --등록자ID
+            ,SYSDATE                    --등록일자
+        )
+        <selectKey resultType="String" keyProperty="saleOpptNo" order="AFTER">
+            SELECT SEQ_CR_0201T.currval AS saleOpptNo FROM DUAL
+        </selectKey>
+    </insert>
+
+    <!-- 판매기회 정보를 수정한다. -->
+    <update id="updateSalesOpptMgmt" parameterType="SalesOpptMgmtVO" >
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptMgmtDAO.updateSalesOpptMgmt] */
+
+        UPDATE CR_0201T SET                           --판매기회
+             UPDT_DT           = SYSDATE                    --수정일자
+            ,UPDT_USR_ID       = #{updtUsrId}               --수정자ID
+
+            ,DLR_CD            = #{dlrCd}                   --딜러코드
+
+            ,REMARK            = #{remark}                  --판매기회 개술
+            ,CUST_NO           = #{custNo}                  --고객번호
+            ,HP_NO             = #{hpNo}                    --휴대폰번호
+            ,SALE_OPPT_STEP_CD = #{saleOpptStepCd}          --판매기회단계코드
+            ,EXPC_SALE_DT      = #{expcSaleDt}              --예상판매일자
+
+            ,SALE_OPPT_SRC_CD  = #{saleOpptSrcCd}           --판매기회출처코드
+            ,TRSF_STAT_CD      = #{trsfStatCd}              --전출상태코드
+            ,SUCC_PRB_CD       = #{succPrbCd}               --성공확률코드
+            ,BHMC_YN           = #{bhmcYn}                  --BHMC여부
+        WHERE SALE_OPPT_NO     = #{saleOpptNo}             --판매기회일련번호
+    </update>
+
+    <!-- 판매기회 상세 정보를 조회한다. -->
+    <select id="selectSalesOpptMgmtByKey" parameterType="SalesOpptMgmtSearchVO" resultType="SalesOpptMgmtVO">
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptMgmtDAO.selectSalesOpptMgmtByKey] */
+        SELECT
+             CR0201T.DLR_CD                   --딜러코드
+            ,CR0201T.SALE_OPPT_NO            --판매기회일련번호
+            ,CR0201T.LEAD_NO                  --리드번호
+            ,CR0201T.REMARK                   --판매기회 개술
+
+            ,CR0201T.CUST_NO                  --고객번호
+            ,CR0101T.CUST_NM                  --고객명
+            ,CR0101T.CUST_TP                  --고객유형(개입/법인)
+            ,CR0101T.EMAIL_NM                 --이메일
+            ,CR0201T.HP_NO                    --휴대폰번호
+            ,CR0201T.SALE_OPPT_STEP_CD        --판매기회단계코드
+            ,CR0201T.EXPC_SALE_DT             --예상판매일자
+
+            ,CR0101T.MATH_DOC_TP              --신분증유형
+            ,CR0101T.SSN_CRN_NO               --증서번호
+            ,SCT.USR_NM AS SC_NM              -- SC 이름
+
+            ,CR0203T.CARLINE_CD
+            ,FN_GET_CARLINE_NM(CR0203T.CARLINE_CD) AS CARLINE_NM
+            ,CR0203T.MODEL_CD
+            ,FN_GET_MODEL_NM(CR0203T.MODEL_CD) AS MODEL_NM
+
+            ,CR0201T.SALE_OPPT_SRC_CD         --판매기회출처코드
+            ,CR0201T.TRSF_STAT_CD             --전출상태코드
+            ,CR0201T.SUCC_PRB_CD              --성공확률코드
+
+            ,CR0101T.MNG_SC_ID AS SC_ID                                          --SCID
+            ,SCT.USR_NM AS SC_NM                                    --SC이름
+
+            ,CR0201T.BHMC_YN                  --BHMC여부
+            ,CR0201T.REG_USR_ID               --등록자ID
+            ,USRT.USR_NM AS REG_USR_NM            --등록자이름
+            ,CR0201T.REG_DT                   --등록일자
+        FROM CR_0201T CR0201T
+        INNER JOIN CR_0101T CR0101T ON CR0201T.CUST_NO = CR0101T.CUST_NO AND CR0201T.DLR_CD = CR0101T.DLR_CD AND CR0101T.DEL_YN = 'N'
+        LEFT OUTER JOIN CM_0801T SCT ON CR0101T.MNG_SC_ID = SCT.USR_ID
+        LEFT OUTER JOIN CM_0801T USRT ON CR0201T.REG_USR_ID = USRT.USR_ID
+        INNER JOIN CR_0203T CR0203T ON CR0201T.SALE_OPPT_NO = CR0203T.REF_KEY_NM AND CR0203T.REF_TABLE_NM = 'CR_0201T' AND CR0203T.FLAG_YN = 'Y'
+        WHERE CR0201T.SALE_OPPT_NO = #{sSaleOpptNo}
+        AND CR0201T.DLR_CD = #{sDlrCd}
+
+    </select>
+
+    <!-- 판매기회 정보 히스토리 목록수를 조회한다. -->
+    <select id="selectSalesOpptHistorysByConditionCnt" parameterType="SalesOpptMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptMgmtDAO.selectSalesOpptHistorysByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_0201HT
+        WHERE SALE_OPPT_NO = #{sSaleOpptNo}
+        AND DLR_CD = #{sDlrCd}
+    </select>
+
+    <!-- 판매기회 정보 히스토리 목록을 조회한다. -->
+    <select id="selectSalesOpptHistorysByCondition" parameterType="SalesOpptMgmtSearchVO" resultType="SalesOpptMgmtVO">
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptMgmtDAO.selectSalesOpptHistorysByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    *
+                FROM CR_0201HT
+                WHERE SALE_OPPT_NO = #{sSaleOpptNo}
+                AND DLR_CD = #{sDlrCd}
+                ORDER BY REG_DT DESC
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 판매기회단계 상태를 수정한다. -->
+    <update id="updateSalesOpptStep" parameterType="SalesOpptMgmtVO" >
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptMgmtDAO.updateSalesOpptStep] */
+
+        UPDATE CR_0201T SET                           --판매기회
+             UPDT_USR_ID       = #{updtUsrId}               --수정자ID
+            ,UPDT_DT           = SYSDATE                    --수정일자
+            ,SALE_OPPT_STEP_CD = #{saleOpptStepCd}          --판매기회단계코드
+        WHERE SALE_OPPT_NO     = #{saleOpptNo}             --판매기회일련번호
+    </update>
+
+    <!-- 전출상태를 수정한다. -->
+    <update id="updateTrsfStat" parameterType="SalesOpptMgmtVO" >
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptMgmtDAO.updateTrsfStat] */
+        UPDATE CR_0201T SET                           --판매기회
+             UPDT_USR_ID       = #{updtUsrId}               --수정자ID
+            ,UPDT_DT           = SYSDATE                    --수정일자
+            ,TRSF_STAT_CD      = #{trsfStatCd}          --전출상태코드
+        WHERE SALE_OPPT_NO     = #{saleOpptNo}             --판매기회일련번호
+    </update>
+
+    <!-- 판매기회 실패 사유를 등록한다. -->
+    <insert id="insertSalesOpptFail" parameterType="SalesOpptMgmtVO" >
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptMgmtDAO.insertSalesOpptFail] */
+        INSERT INTO CR_0210T    --판매기회실패
+        (
+             SEQ                  --일련번호
+            ,SALE_OPPT_NO        --판매기회일련번호
+            ,FAIL_TP_CD           --실패유형코드
+            ,FAIL_CAU1_CD         --실패원인1코드
+            ,FAIL_CAU2_CD         --실패원인2코드
+            ,FAIL_BRAND_CD        --실패브랜드코드
+            ,FAIL_MODEL_CD        --실패모델코드
+            ,REG_USR_ID           --등록자ID
+            ,REG_DT               --등록일자
+        ) VALUES (
+             SEQ_CR_0210T.NEXTVAL   --판매기회 실패 시퀀스
+            ,#{saleOpptNo}         --판매기회일련번호
+            ,#{failTpCd}            --실패유형코드
+            ,#{failCau1Cd}          --실패원인1코드
+            ,#{failCau2Cd}          --실패원인2코드
+            ,#{failBrandCd}         --실패브랜드코드
+            ,#{failModelCd}         --실패모델코드
+            ,#{regUsrId}            --등록자ID
+            ,SYSDATE                --등록일자
+        )
+    </insert>
+
+
+    <!-- 판매기회단계 진행중 중복 수량 체크  -->
+    <select id="selectSalesOpptDupCnt" parameterType="SalesOpptMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptMgmtDAO.selectSalesOpptDupCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM  CR_0201T CR0201T
+        INNER JOIN CR_0101T CR0101T ON CR0201T.CUST_NO = CR0101T.CUST_NO AND CR0201T.DLR_CD = CR0101T.DLR_CD AND CR0101T.DEL_YN = 'N'
+        INNER JOIN CR_0203T CR0203T ON CR0201T.SALE_OPPT_NO = CR0203T.REF_KEY_NM AND CR0203T.REF_TABLE_NM = 'CR_0201T' AND CR0203T.FLAG_YN = 'Y'
+        WHERE CR0201T.DLR_CD  = #{sDlrCd}
+        AND CR0201T.CUST_NO = #{sCustNo}
+    <if test='sDupConfigDay != null and sDupConfigDay == "0"'>     <!-- 진행중 02,03,04,05,06 -->
+        AND CR0201T.SALE_OPPT_STEP_CD IN ('02','03','04','05')
+    </if>
+    <if test='sDupConfigDay != null and sDupConfigDay != "0"'>     <!-- 진행중 아닌거 01,07 -->
+        AND CR0201T.REG_DT BETWEEN SYSDATE-#{sDupConfigDay} AND SYSDATE
+    </if>
+
+    </select>
+
+
+</mapper>

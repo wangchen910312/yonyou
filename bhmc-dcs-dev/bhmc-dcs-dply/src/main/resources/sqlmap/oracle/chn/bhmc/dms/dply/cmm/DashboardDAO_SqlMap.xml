@@ -1,0 +1,366 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : DashboardDAO_SqlMap.xml
+    Description : Dashboard에 관한 데이터처리
+    author Cheol Man Oh
+    since 2016. 6. 16.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 6. 15.     Cheol Man Oh     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.dply.cmm.service.dao.DashboardDAO">
+
+    <!-- Dashboard 배포스케줄요약 조회한다. -->
+    <select id="selectScheduleSummary" parameterType="DashboardSearchVO" resultType="ScheduleSummaryVO">
+        /* [chn.bhmc.dms.dply.cmm.service.dao.DashboardDAO.selectScheduleSummary] */
+        SELECT FLAG,
+               CASE FLAG
+               WHEN 'Total'   THEN TOTAL
+               WHEN 'Working' THEN WORKING
+               WHEN 'Ready'   THEN READY
+               WHEN 'Running' THEN RUNNING
+               WHEN 'Stopped' THEN STOPPED
+               WHEN 'Cancel'  THEN CANCEL
+               WHEN 'Completed' THEN COMPLETED
+               WHEN 'Fail' THEN FAIL
+               END AS CNT
+          FROM
+        (
+        SELECT COUNT(*) AS TOTAL,
+               SUM(CASE WHEN DEPLOY_STAT_CD = 'W' THEN 1 ELSE 0 END) AS WORKING,
+               SUM(CASE WHEN DEPLOY_STAT_CD = 'N' THEN 1 ELSE 0 END) AS READY,
+               SUM(CASE WHEN DEPLOY_STAT_CD = 'R' THEN 1 ELSE 0 END) AS RUNNING,
+               SUM(CASE WHEN DEPLOY_STAT_CD = 'S' THEN 1 ELSE 0 END) AS STOPPED,
+               SUM(CASE WHEN DEPLOY_STAT_CD = 'C' THEN 1 ELSE 0 END) AS CANCEL,
+               SUM(CASE WHEN DEPLOY_STAT_CD = 'Y' THEN 1 ELSE 0 END) AS COMPLETED,
+               SUM(CASE WHEN DEPLOY_STAT_CD = 'Z' THEN 1 ELSE 0 END) AS FAIL
+        FROM   CM_1502T
+        WHERE 1 = 1
+        <if test='sTerm == "1w"'>
+        AND    DEPLOY_START_DT <![CDATA[>=]]> SYSDATE - 7
+        AND    DEPLOY_START_DT <![CDATA[<=]]> SYSDATE + 7
+        </if>
+        <if test='sTerm == "1m"'>
+        AND    DEPLOY_START_DT <![CDATA[>=]]> ADD_MONTHS(SYSDATE, -1)
+        AND    DEPLOY_START_DT <![CDATA[<=]]> ADD_MONTHS(SYSDATE, 1)
+        </if>
+        <if test='sTerm == "3m"'>
+        AND    DEPLOY_START_DT <![CDATA[>=]]> ADD_MONTHS(SYSDATE, -3)
+        AND    DEPLOY_START_DT <![CDATA[<=]]> ADD_MONTHS(SYSDATE, 3)
+        </if>
+
+        ) T,
+        (
+        SELECT 1 AS SORT_ORDER, 'Total' AS FLAG
+          FROM DUAL
+        UNION ALL
+        SELECT 2 AS SORT_ORDER, 'Working' AS FLAG
+          FROM DUAL
+        UNION ALL
+        SELECT 3 AS SORT_ORDER, 'Ready' AS FLAG
+          FROM DUAL
+        UNION ALL
+        SELECT 4 AS SORT_ORDER, 'Running' AS FLAG
+          FROM DUAL
+        UNION ALL
+        SELECT 5 AS SORT_ORDER, 'Stopped' AS FLAG
+          FROM DUAL
+        UNION ALL
+        SELECT 6 AS SORT_ORDER, 'Cancel' AS FLAG
+          FROM DUAL
+        UNION ALL
+        SELECT 7 AS SORT_ORDER, 'Completed' AS FLAG
+          FROM DUAL
+        UNION ALL
+        SELECT 8 AS SORT_ORDER, 'Fail' AS FLAG
+          FROM DUAL
+        ) S
+        ORDER BY SORT_ORDER
+    </select>
+
+    <!-- Dashboard 일별 배포스케줄요약 조회한다. -->
+    <select id="selectScheduleSummaryByDay" parameterType="DashboardSearchVO" resultType="ScheduleSummaryVO">
+        /* [chn.bhmc.dms.dply.cmm.service.dao.DashboardDAO.selectScheduleSummaryByDay] */
+        SELECT  TO_CHAR(DEPLOY_START_DT,'YYYY-MM-DD') DEPLOY_START_DT_DISP,
+                SUM(CASE WHEN DEPLOY_STAT_CD = 'W' THEN 1 ELSE 0 END)  WORKING_CNT,
+                SUM(CASE WHEN DEPLOY_STAT_CD = 'N' THEN 1 ELSE 0 END)  READY_CNT,
+                SUM(CASE WHEN DEPLOY_STAT_CD = 'R' THEN 1 ELSE 0 END)  RUNNING_CNT,
+                SUM(CASE WHEN DEPLOY_STAT_CD = 'S' THEN 1 ELSE 0 END)  STOPPED_CNT,
+                SUM(CASE WHEN DEPLOY_STAT_CD = 'C' THEN 1 ELSE 0 END)  CANCEL_CNT,
+                SUM(CASE WHEN DEPLOY_STAT_CD = 'Y' THEN 1 ELSE 0 END)  COMPLETED_CNT,
+                SUM(CASE WHEN DEPLOY_STAT_CD = 'Z' THEN 1 ELSE 0 END)  FAIL_CNT,
+                COUNT(*) AS TOTAL_CNT,
+                SUM(CASE WHEN SCHEDULE_TP_CD = 'S' THEN 1 ELSE 0 END)  SCHEDULED_CNT,
+                SUM(CASE WHEN SCHEDULE_TP_CD = 'I' THEN 1 ELSE 0 END)  IMMEDIATE_CNT
+        FROM    CM_1502T
+        WHERE   1 = 1
+        <if test='sTerm == "1w"'>
+        AND    DEPLOY_START_DT <![CDATA[>=]]> SYSDATE - 7
+        AND    DEPLOY_START_DT <![CDATA[<=]]> SYSDATE + 7
+        </if>
+        <if test='sTerm == "1m"'>
+        AND    DEPLOY_START_DT <![CDATA[>=]]> ADD_MONTHS(SYSDATE, -1)
+        AND    DEPLOY_START_DT <![CDATA[<=]]> ADD_MONTHS(SYSDATE, 1)
+        </if>
+        <if test='sTerm == "3m"'>
+        AND    DEPLOY_START_DT <![CDATA[>=]]> ADD_MONTHS(SYSDATE, -3)
+        AND    DEPLOY_START_DT <![CDATA[<=]]> ADD_MONTHS(SYSDATE, 3)
+        </if>
+        GROUP BY TO_CHAR(DEPLOY_START_DT,'YYYY-MM-DD')
+        ORDER BY TO_CHAR(DEPLOY_START_DT,'YYYY-MM-DD') DESC
+    </select>
+
+    <!-- Dashboard 배포스케줄목록 조회한다. -->
+    <select id="selectScheduleList" parameterType="DashboardSearchVO" resultType="ScheduleSummaryVO">
+        /* [chn.bhmc.dms.dply.cmm.service.dao.DashboardDAO.selectScheduleList] */
+        SELECT A.SPEC_CD,
+               A.SPEC_NM,
+               B.DEPLOY_VER_NO,
+               B.SCHEDULE_TP_CD,
+               B.DEPLOY_TP_CD,
+               B.DEPLOY_START_DT AS DEPLOY_PLAN_START_DT,
+               (SELECT  MIN(DEPLOY_REQ_END_DT) FROM CM_1505T C
+               WHERE C.SPEC_CD = B.SPEC_CD
+               AND     C.DEPLOY_VER_NO = B.DEPLOY_VER_NO) AS DEPLOY_START_DT,  --배포시작일시
+               (SELECT  MAX(DEPLOY_REQ_END_DT) FROM CM_1505T C
+               WHERE C.SPEC_CD = B.SPEC_CD
+               AND     C.DEPLOY_VER_NO = B.DEPLOY_VER_NO) AS DEPLOY_END_DT,  --배포종료일시,
+               B.DEPLOY_STAT_CD,
+               (SELECT  COUNT(*) FROM CM_1504T C
+               WHERE  C.DEPLOY_EXCP_YN = 'N'
+               AND      C.SPEC_CD = B.SPEC_CD
+               AND      C.DEPLOY_VER_NO = B.DEPLOY_VER_NO) AS TRGT_DMS_CNT, --대상DMS수,
+               (SELECT  COUNT(*) FROM CM_1504T C
+               WHERE  NVL(DEPLOY_RSLT_CD,'00') <![CDATA[<>]]> '00'
+               AND      C.SPEC_CD = B.SPEC_CD
+               AND      C.DEPLOY_VER_NO = B.DEPLOY_VER_NO) AS FAIL_DMS_CNT, --실패DMS수,
+               B.ACHK_FAIL_ALW_CNT, -- 상태확인실패허용DMS수,
+               B.ALW_FAIL_DMS_CNT  -- 실패허용DMS수
+        FROM   CM_1401T A,
+               CM_1502T B
+        WHERE  1 = 1
+        <if test='sTerm == "1w"'>
+        AND    DEPLOY_START_DT <![CDATA[>=]]> SYSDATE - 7
+        AND    DEPLOY_START_DT <![CDATA[<=]]> SYSDATE + 7
+        </if>
+        <if test='sTerm == "1m"'>
+        AND    DEPLOY_START_DT <![CDATA[>=]]> ADD_MONTHS(SYSDATE, -1)
+        AND    DEPLOY_START_DT <![CDATA[<=]]> ADD_MONTHS(SYSDATE, 1)
+        </if>
+        <if test='sTerm == "3m"'>
+        AND    DEPLOY_START_DT <![CDATA[>=]]> ADD_MONTHS(SYSDATE, -3)
+        AND    DEPLOY_START_DT <![CDATA[<=]]> ADD_MONTHS(SYSDATE, 3)
+        </if>
+        AND    B.SPEC_CD = A.SPEC_CD
+        ORDER  BY B.SPEC_CD DESC, B.DEPLOY_VER_NO
+    </select>
+
+    <!-- Dashboard 배포그룹목록을 조회한다. -->
+    <select id="selectDeployGroupForDashboard" parameterType="DashboardSearchVO" resultType="DeployGroupForDashboardVO">
+        /* [chn.bhmc.dms.dply.cmm.service.dao.DashboardDAO.selectDeployGroupForDashboard] */
+        SELECT SPEC_CD,
+               DEPLOY_VER_NO,
+               DEPLOY_GRP_ID,
+               CASE WHEN DEPLOY_START_DT IS NULL AND DEPLOY_END_DT IS NULL THEN 'Ready'
+                    WHEN DEPLOY_START_DT IS NOT NULL AND DEPLOY_END_DT IS NULL THEN 'Running'
+                    WHEN DEPLOY_START_DT IS NOT NULL AND DEPLOY_END_DT IS NOT NULL THEN 'Completed' END AS DEPLOY_STAT_CD,
+               DEPLOY_TARG_DLR_CNT,
+               DEPLOY_END_DLR_CNT
+        FROM   CM_1503T
+        WHERE  SPEC_CD = #{sSpecCd}
+        AND    DEPLOY_VER_NO = #{sDeployVerNo}
+        ORDER BY DEPLOY_PROR_VAL
+    </select>
+
+    <!-- Dashboard 배포 DMS 목록을 조회한다. -->
+    <select id="selectDeployGroupDealerForDashboard" parameterType="DashboardSearchVO" resultType="DeployGroupDealerForDashboardVO">
+        /* [chn.bhmc.dms.dply.cmm.service.dao.DashboardDAO.selectDeployGroupDealerForDashboard] */
+        SELECT ROWNUM AS RNUM,
+               DLR_CD,
+               DLR_NM,
+               DEPLOY_PROC_CNT,
+               LAST_DEPLOY_PROC_DT,
+               DEPLOY_REQ_END_YN,
+               DEPLOY_RES_RECEIVE_DT,
+               DEPLOY_RSLT_CD
+        FROM (
+             SELECT A.DLR_CD AS DLR_CD,
+                    B.DLR_NM AS DLR_NM,
+                    A.DEPLOY_PROC_CNT AS DEPLOY_PROC_CNT,
+                    A.LAST_DEPLOY_PROC_DT AS LAST_DEPLOY_PROC_DT,
+                    A.DEPLOY_REQ_END_YN AS DEPLOY_REQ_END_YN,
+                    A.DEPLOY_RES_RECEIVE_DT AS DEPLOY_RES_RECEIVE_DT,
+                    A.DEPLOY_RSLT_CD
+             FROM   CM_1504T A, VW_COM_DLR_INFO B
+             WHERE  A.SPEC_CD = #{sSpecCd}
+             AND    A.DEPLOY_VER_NO = #{sDeployVerNo}
+             AND    A.DEPLOY_GRP_ID = #{sDeployGrpId}
+             AND    A.DLR_CD = B.DLR_CD
+             ORDER BY DLR_CD
+            )
+    </select>
+
+    <!-- DMS측 배포실행 오류내역 조회한다. -->
+    <select id="selectDeployFailContents" parameterType="DashboardSearchVO" resultType="DeployFailContentsVO">
+        /* [chn.bhmc.dms.dply.cmm.service.dao.DashboardDAO.selectDeployFailContents] */
+        SELECT SPEC_TP_NM,
+               OPER_CMD_NM,
+               DEPLOY_ITEM,
+               ERR_MSG,
+               COUNT(*) AS DEPLOY_FAIL_DMS_CNT
+        FROM (
+               SELECT DISTINCT
+                      DLR_CD,
+                      SPEC_TP_NM,
+                      OPER_CMD_NM,
+                      DEPLOY_ITEM,
+                      ERR_MSG
+               FROM (
+                      SELECT C.DLR_CD AS DLR_CD,
+                             A.SPEC_TP_NM AS SPEC_TP_NM,
+                             B.OPER_CMD_NM AS OPER_CMD_NM,
+                             B.REPO_URL_NM AS DEPLOY_ITEM,
+                             SUBSTR(A.DEPLOY_RSLT_MESG_CONT,1,200) || '...' AS ERR_MSG
+                      FROM   CM_1507T A,
+                             CM_1402T B,
+                             CM_1506T C
+                      WHERE  A.SPEC_CD = #{sSpecCd}
+                      AND    A.SPEC_CD = B.SPEC_CD
+                      AND    A.SEQ= B.SEQ
+                      AND    A.DEPLOY_PROC_YN = 'Y'
+                      AND    A.DEPLOY_RSLT_CD = '1'
+                      AND    A.SPEC_TP_NM = 'REPOSITORY'
+                      AND    A.DEPLOY_REQ_SEQ = C.DEPLOY_REQ_SEQ
+                      AND    C.SPEC_CD = A.SPEC_CD
+                      AND    C.DEPLOY_VER_NO = #{sDeployVerNo}
+                      UNION ALL
+                      SELECT C.DLR_CD AS DLR_CD,
+                             A.SPEC_TP_NM  AS SPEC_TP_NM,
+                             B.OPER_CMD_NM AS OPER_CMD_NM,
+                             B.SYMBOLIC_NM || '/' || BUNDLE_VER_NO AS DEPLOY_ITEM,
+                             SUBSTR(A.DEPLOY_RSLT_MESG_CONT,1,200) || '...' AS ERR_MSG
+                      FROM   CM_1507T A,
+                             CM_1403T B,
+                             CM_1506T C
+                      WHERE  A.SPEC_CD = #{sSpecCd}
+                      AND    A.SPEC_CD = B.SPEC_CD
+                      AND    A.SEQ= B.SEQ
+                      AND    A.DEPLOY_PROC_YN = 'Y'
+                      AND    A.DEPLOY_RSLT_CD = '1'
+                      AND    A.SPEC_TP_NM = 'SERVICE'
+                      AND    A.DEPLOY_REQ_SEQ = C.DEPLOY_REQ_SEQ
+                      AND    C.SPEC_CD = A.SPEC_CD
+                      AND    C.DEPLOY_VER_NO = #{sDeployVerNo}
+                      UNION ALL
+                      SELECT C.DLR_CD AS DLR_CD,
+                             A.SPEC_TP_NM  AS SPEC_TP_NM,
+                             DECODE(UPPER(TRIM(DBMS_LOB.SUBSTR(B.SQL_TEXT_CONT,6))),'INSERT','DML','DELETE','DML','UPDATE','DML','DDL') AS OPER_CMD_NM,
+                             DBMS_LOB.SUBSTR(B.SQL_TEXT_CONT,200) || '...' AS DEPLOY_ITEM,
+                             SUBSTR(A.DEPLOY_RSLT_MESG_CONT,1,200) || '...' AS ERR_MSG
+                      FROM   CM_1507T A,
+                             CM_1404T B,
+                             CM_1506T C
+                      WHERE  A.SPEC_CD = #{sSpecCd}
+                      AND    A.SPEC_CD = B.SPEC_CD
+                      AND    A.SEQ= B.SEQ
+                      AND    A.DEPLOY_PROC_YN = 'Y'
+                      AND    A.DEPLOY_RSLT_CD = '1'
+                      AND    A.SPEC_TP_NM = 'SQL'
+                      AND    A.DEPLOY_REQ_SEQ = C.DEPLOY_REQ_SEQ
+                      AND    C.SPEC_CD = A.SPEC_CD
+                      AND    C.DEPLOY_VER_NO = #{sDeployVerNo}
+                      UNION ALL
+                      SELECT C.DLR_CD AS DLR_CD,
+                             A.SPEC_TP_NM AS SPEC_TP_NM,
+                             'Add/Change' AS OPER_CMD_NM,
+                             B.PRTY_FILE_NM || ' | ' || B.PRTY_KEY_NM || ' | ' || B.PRTY_KEY_VAL  AS DEPLOY_ITEM,
+                             SUBSTR(A.DEPLOY_RSLT_MESG_CONT,1,200) || '...' AS ERR_MSG
+                      FROM   CM_1507T A,
+                             CM_1405T B,
+                             CM_1506T C
+                      WHERE  A.SPEC_CD = #{sSpecCd}
+                      AND    A.SPEC_CD = B.SPEC_CD
+                      AND    A.SEQ= B.SEQ
+                      AND    A.DEPLOY_PROC_YN = 'Y'
+                      AND    A.DEPLOY_RSLT_CD = '1'
+                      AND    A.SPEC_TP_NM = 'PROPERTY'
+                      AND    A.DEPLOY_REQ_SEQ = C.DEPLOY_REQ_SEQ
+                      AND    C.SPEC_CD = A.SPEC_CD
+                      AND    C.DEPLOY_VER_NO = #{sDeployVerNo}
+                      UNION ALL
+                      SELECT C.DLR_CD AS DLR_CD,
+                             A.SPEC_TP_NM AS SPEC_TP_NM,
+                             'Download' AS OPER_CMD_NM,
+                             B.SRC_FILE_PATH_NM  AS DEPLOY_ITEM,
+                             SUBSTR(A.DEPLOY_RSLT_MESG_CONT,1,200) || '...' AS ERR_MSG
+                      FROM   CM_1507T A,
+                             CM_1501T B,
+                             CM_1506T C
+                      WHERE  A.SPEC_CD = #{sSpecCd}
+                      AND    A.SPEC_CD = B.SPEC_CD
+                      AND    A.SEQ= B.SEQ
+                      AND    A.DEPLOY_PROC_YN = 'Y'
+                      AND    A.DEPLOY_RSLT_CD = '1'
+                      AND    A.SPEC_TP_NM = 'FILE'
+                      AND    A.DEPLOY_REQ_SEQ = C.DEPLOY_REQ_SEQ
+                      AND    C.SPEC_CD = A.SPEC_CD
+                      AND    C.DEPLOY_VER_NO = #{sDeployVerNo}
+                      UNION ALL
+                      SELECT C.DLR_CD AS DLR_CD,
+                             A.SPEC_TP_NM AS SPEC_TP_NM,
+                             'Execute' AS OPER_CMD_NM,
+                             B.OPER_CMD_NM  AS DEPLOY_ITEM,
+                             SUBSTR(A.DEPLOY_RSLT_MESG_CONT,1,200) || '...' AS ERR_MSG
+                      FROM   CM_1507T A,
+                             CM_1511T B,
+                             CM_1506T C
+                      WHERE  A.SPEC_CD = #{sSpecCd}
+                      AND    A.SPEC_CD = B.SPEC_CD
+                      AND    A.SEQ= B.SEQ
+                      AND    A.DEPLOY_PROC_YN = 'Y'
+                      AND    A.DEPLOY_RSLT_CD = '1'
+                      AND    A.SPEC_TP_NM IN ( 'ANTEJOB','POSTJOB')
+                      AND    A.DEPLOY_REQ_SEQ = C.DEPLOY_REQ_SEQ
+                      AND    C.SPEC_CD = A.SPEC_CD
+                      AND    C.DEPLOY_VER_NO = #{sDeployVerNo}
+                    )
+             )
+        GROUP BY
+              SPEC_TP_NM,
+              OPER_CMD_NM,
+              DEPLOY_ITEM,
+              ERR_MSG
+    </select>
+
+
+    <!-- DMS 연동 오류내역을 조회한다. -->
+    <select id="selectDMSConnectErrors" parameterType="DashboardSearchVO" resultType="DMSConnectErrorsVO">
+        /* [chn.bhmc.dms.dply.cmm.service.dao.DashboardDAO.selectDMSConnectErrors] */
+        SELECT  ROWNUM AS RNUM,
+                A.DLR_CD,
+                B.DLR_NM,
+                B.DMS_IP_NM,
+                B.DMS_OPER_EMAIL_NM,
+                B.DMS_OPER_TEL_NO,
+                B.DMS_USE_YN,
+                A.DEPLOY_RSLT_CD,
+                A.DEPLOY_PROC_CNT,
+                A.LAST_DEPLOY_PROC_DT
+        FROM    CM_1504T A,
+                VW_COM_DLR_INFO B
+        WHERE   A.SPEC_CD = #{sSpecCd}
+        AND     A.DEPLOY_VER_NO = #{sDeployVerNo}
+        AND     A.DEPLOY_RSLT_CD IN ('12','13')
+        AND     A.DLR_CD = B.DLR_CD
+        ORDER BY A.DEPLOY_RSLT_CD
+
+    </select>
+
+
+
+
+</mapper>

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.svo.service.dao.SpecialCarPolicyDAO">
+
+    <!-- 목록 갯수  -->
+    <select id="selectPolicyHistorysByConditionCnt" parameterType="PolicySearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0175T A    --특수차정책이력
+         WHERE 1 = 1
+         <if test='sPolicyTp   != null and sPolicyTp   != ""'>
+           AND A.POLICY_TP   = #{sPolicyTp}
+         </if>
+    </select>
+
+	<!-- 조회 목록  -->
+	<select id="selectPolicyHistorysByCondition" parameterType="PolicySearchVO" resultType="PolicyVO">
+    /* [chn.bhmc.dms.sal.svo.service.dao.SpecialCarPolicyDAO.selectPolicyHistorysByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , T1.*
+              FROM (
+                    SELECT A.POLICY_TP          --정책유형
+                         , A.SEQ                --일련번호
+                         , A.POLICY_CONT        --정책내용
+                         , A.REG_USR_ID         --등록자ID
+                         , A.REG_DT             --등록일자
+                         , A.UPDT_USR_ID        --수정자ID
+                         , A.UPDT_DT            --수정일자
+                      FROM SA_0175T A    --특수차정책이력
+                     WHERE 1 = 1
+                 <if test='sPolicyTp   != null and sPolicyTp   != ""'>
+                   AND A.POLICY_TP   = #{sPolicyTp}
+                 </if>
+                 ORDER BY
+                 <choose>
+                     <when test='sort != null'>
+                         <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                             <choose>
+                                 <when test='item.field == "policyTp"'>
+                                    A.POLICY_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>
+                                 </when>
+                                 <otherwise>
+                                   A.POLICY_TP ASC, A.SEQ DESC
+                                 </otherwise>
+                             </choose>
+                         </foreach>
+                     </when>
+                     <otherwise>
+                       A.POLICY_TP ASC, A.SEQ DESC
+                     </otherwise>
+                 </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+</mapper>

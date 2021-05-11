@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="chn.bhmc.dms.sal.dlv.service.dao.ReleaseCancelHistoryDAO">
+
+	<!-- 배정목록  -->
+	<select id="selectReleaseCancelHistoryByCondition" parameterType="ReleaseCancelHistoryVO" resultType="ReleaseCancelHistoryListVO">
+
+        SELECT T3.* FROM(
+             SELECT T2.*, ROWNUM AS RONUM FROM (
+                SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT A.KMSEQ                                       --번호
+                          ,A.KMOPT                                       --조작(출입고내역 : SAL187)
+                          ,TO_CHAR(TO_DATE(A.KMTRDY,'YYYYMMDD'), 'YYYY-MM-DD') AS KMDATE
+                          ,A.KMSTDY
+                          ,CASE WHEN A.KMOPT = 'I1' OR  A.KMOPT = 'I2'THEN A.KMDATE
+                                ELSE A.KMSTDY
+                                END AS OP_DATE
+                          ,A.KMVIN                                       --VIN
+                          ,FN_GET_CARLINE_NM(B.CARLINE_CD) AS CARLINE_NM --차종
+                          ,FN_GET_MODEL_NM(B.MODEL_CD) AS MODEL_NM       --차관
+                          ,FN_GET_USER_NM(A.KMUSER) AS KMUSER            --조작인명
+                          ,A.KMUSER AS USER_ID                           --조작인ID
+                          ,A.KMCNCD
+                          ,(    select CUST_NM from CR_0101T WHERE (DLR_CD, CUST_NO) IN (
+                            select DLR_CD, contract_cust_no
+                              from sa_0201t
+                             where dlr_cd = #{dlrCd}
+                               and vin_no =#{vinNo}
+                               and contract_stat_cd = '50'
+                               and rownum = 1
+                            )
+                          ) AS CUSTNM
+                    FROM SA_0301T A, SA_0121T B
+                    WHERE A.KMVIN = B.VIN_NO
+                      AND A.KMOPT NOT IN ('I1', 'I2')
+                    AND B.DLR_CD = #{dlrCd}                                    --세션의 딜러코드
+                   <if test='vinNo != null and vinNo != ""'>
+                    AND B.VIN_NO LIKE '%'||#{vinNo}||'%'
+                   </if>
+
+                    ORDER BY
+                     <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "kmopt"'>KMOPT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "optDt"'>KMDATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "kmvin"'>KMVIN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "carlineNm"'>CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "modelNm"'>MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "kmuser"'>KMUSER <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                       KMTRDY DESC, KMVIN ASC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            KMTRDY DESC, KMVIN ASC
+                        </otherwise>
+                    </choose>
+                 ) T1
+                <where>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        ROWNUM <![CDATA[<=]]> #{lastIndex}
+                    </if>
+                </where>
+            ) T2
+        ) T3
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+	<!-- 배정목록 갯수  -->
+	<select id="selectReleaseCancelHistoryByConditionCnt" parameterType="ReleaseCancelHistoryVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0301T A, SA_0121T B
+         WHERE A.KMVIN = B.VIN_NO
+           AND A.KMOPT NOT IN ('I1', 'I2')
+           AND B.DLR_CD = #{dlrCd}                                    --세션의 딜러코드
+           <if test='vinNo != null and vinNo != ""'>
+           AND B.VIN_NO LIKE '%'||#{vinNo}||'%'
+           </if>
+    </select>
+</mapper>

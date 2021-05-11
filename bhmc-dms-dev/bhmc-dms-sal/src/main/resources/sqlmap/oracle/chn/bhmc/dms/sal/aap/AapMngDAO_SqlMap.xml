@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.aap.service.dao.AapMngDAO">
+
+	<!-- 대행업무관리  -->
+	<select id="selectAapMngByCondition" parameterType="AapMngSearchVO" resultType="AapMngVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A.DLR_CD                   --딜러코드
+                     , A.SEQ                      --일련번호
+                     , A.AAP_DT                   --대행일자
+                     , A.AAP_WRK_DSTIN_CD         --대행작업구분코드
+                     , A.CONTRACT_NO              --계약번호
+                     , A.VIN_NO                   --차대번호
+                     , A.CARLINE_CD               --차종코드
+                     , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+                     , A.MODEL_CD                 --모델코드
+                     , FN_GET_MODEL_NM(A.MODEL_CD) AS MODEL_NM
+                     , A.OCN_CD                   --OCN코드
+                     , FN_GET_OCN_NM(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+                     , A.CAR_REG_NO               --차량등록번호
+                     , A.CUST_NO                  --고객번호
+                     , A.CUST_NM                  --고객명
+                     , A.CUST_TP                  --고객유형
+                     , A.AAP_EMP_NM               --대행사원명
+                     , A.CST_AMT                  --원가금액
+                     , A.PROFIT_AMT               --이윤금액
+                     , A.AAP_AMT                  --대행금액
+                     , A.SUNG_CD                  --성코드
+                     , (
+                         SELECT MAX(SUNG_NM) FROM CM_0205T
+                          WHERE USE_YN = 'Y'
+                            AND SUNG_CD = A.SUNG_CD
+                          GROUP BY SUNG_CD
+                     ) AS SUNG_NM
+                     , A.CITY_CD                  --도시코드
+                     , (
+                         SELECT MAX(CITY_NM) FROM CM_0205T
+                          WHERE SUNG_CD = A.SUNG_CD
+                            AND CITY_CD = A.CITY_CD
+                            AND USE_YN = 'Y'
+                          GROUP BY CITY_CD
+                     ) AS CITY_NM
+                     , A.DIST_CD                  --지역코드
+                     , (
+                         SELECT DIST_NM FROM CM_0205T
+                          WHERE SUNG_CD = A.SUNG_CD
+                            AND CITY_CD = A.CITY_CD
+                            AND DIST_CD = A.DIST_CD
+                            AND USE_YN = 'Y'
+                     ) AS DIST_NM
+                     , A.REG_PRE_AMT              --등록이전금액
+                     , A.REAL_REG_AMT             --실등록금액
+                     , A.REG_FEE_AMT              --등록수수료금액
+                     , A.REG_EXPC_DT              --등록예상일자
+                     , A.PURC_TAX_PRE_AMT         --구매세금이전금액
+                     , A.REAL_PURC_TAX_AMT        --실구매세금액
+                     , A.REAL_REG_DT              --실등록일자
+                     , A.REG_USR_ID               --등록자ID
+                     , A.REG_DT                   --등록일자
+                     , A.UPDT_USR_ID              --수정자ID
+                     , A.UPDT_DT                  --수정일자
+                  FROM SA_0264T A
+                 WHERE 1=1
+                   AND A.DLR_CD = #{sDlrCd}
+                 <if test='sSeq != null and sSeq != ""'>
+                   AND A.SEQ = #{sSeq}
+                 </if>
+                 <if test='sVinNo != null and sVinNo != ""'>
+                    AND A.VIN_NO LIKE '%' || #{sVinNo} || '%'
+                 </if>
+                 <if test='sContractNo != null and sContractNo != ""'>
+                    AND A.CONTRACT_NO = #{sContractNo}
+                 </if>
+                 <if test='sCarRegNo != null and sCarRegNo != ""'>
+                   AND A.CAR_REG_NO = #{sCarRegNo}
+                 </if>
+                 <if test='sAapWrkDstinCd != null and sAapWrkDstinCd != ""'>
+                   AND A.AAP_WRK_DSTIN_CD = #{sAapWrkDstinCd}
+                 </if>
+                 <if test='sAapEmpNm != null and sAapEmpNm != ""'>
+                     <choose>
+                         <when test='@org.apache.commons.lang3.StringUtils@contains(sAapEmpNm,"*")'>
+                             <bind name='sAapEmpNm' value='@org.apache.commons.lang3.StringUtils@replace(sAapEmpNm, "*", "%")' />
+                             AND A.AAP_EMP_NM LIKE #{sAapEmpNm}
+                         </when>
+                         <otherwise>
+                             AND A.AAP_EMP_NM = #{sAapEmpNm}
+                         </otherwise>
+                     </choose>
+                 </if>
+                 <if test='sCustNo != null and sCustNo != ""'>
+                   AND A.CUST_NO = #{sCustNo}
+                 </if>
+                 <if test='sCustNm != null and sCustNm != ""'>
+                     <choose>
+                         <when test='@org.apache.commons.lang3.StringUtils@contains(sCustNm,"*")'>
+                             <bind name='sCustNm' value='@org.apache.commons.lang3.StringUtils@replace(sCustNm, "*", "%")' />
+                             AND A.CUST_NM LIKE #{sCustNm}
+                         </when>
+                         <otherwise>
+                             AND A.CUST_NM = #{sCustNm}
+                         </otherwise>
+                     </choose>
+                 </if>
+                 <if test='sStartDt != null and sEndDt != null'>
+                   AND A.AAP_DT <![CDATA[>=]]> TRUNC(#{sStartDt},'DD')
+                   AND A.AAP_DT <![CDATA[<]]> TRUNC(#{sEndDt},'DD')+1
+                 </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "rnum"'>RNUM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "aapWrkDstinCd"'>AAP_WRK_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "vinNo"'>VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carRegNo"'>CAR_REG_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "cstAmt"'>CST_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "profitAmt"'>PROFIT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "aapAmt"'>AAP_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineCd"'>CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineNm"'>CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelCd"'>MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelNm"'>MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnCd"'>OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnNm"'>OCN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "aapEmpNm"'>AAP_EMP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    VIN_NO DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        VIN_NO DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+
+	<!-- 대행업무관리 목록 갯수  -->
+	<select id="selectAapMngByConditionCnt" parameterType="AapMngSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0264T A
+         WHERE 1=1
+           AND A.DLR_CD = #{sDlrCd}
+         <if test='sSeq != null and sSeq != ""'>
+           AND A.SEQ = #{sSeq}
+         </if>
+         <if test='sVinNo != null and sVinNo != ""'>
+            AND A.VIN_NO LIKE '%' || #{sVinNo} || '%'
+         </if>
+         <if test='sContractNo != null and sContractNo != ""'>
+            AND A.CONTRACT_NO = #{sContractNo}
+         </if>
+         <if test='sCarRegNo != null and sCarRegNo != ""'>
+           AND A.CAR_REG_NO = #{sCarRegNo}
+         </if>
+         <if test='sAapWrkDstinCd != null and sAapWrkDstinCd != ""'>
+           AND A.AAP_WRK_DSTIN_CD = #{sAapWrkDstinCd}
+         </if>
+         <if test='sAapEmpNm != null and sAapEmpNm != ""'>
+             <choose>
+                 <when test='@org.apache.commons.lang3.StringUtils@contains(sAapEmpNm,"*")'>
+                     <bind name='sAapEmpNm' value='@org.apache.commons.lang3.StringUtils@replace(sAapEmpNm, "*", "%")' />
+                     AND A.AAP_EMP_NM LIKE #{sAapEmpNm}
+                 </when>
+                 <otherwise>
+                     AND A.AAP_EMP_NM = #{sAapEmpNm}
+                 </otherwise>
+             </choose>
+         </if>
+         <if test='sCustNo != null and sCustNo != ""'>
+           AND A.CUST_NO = #{sCustNo}
+         </if>
+         <if test='sCustNm != null and sCustNm != ""'>
+             <choose>
+                 <when test='@org.apache.commons.lang3.StringUtils@contains(sCustNm,"*")'>
+                     <bind name='sCustNm' value='@org.apache.commons.lang3.StringUtils@replace(sCustNm, "*", "%")' />
+                     AND A.CUST_NM LIKE #{sCustNm}
+                 </when>
+                 <otherwise>
+                     AND A.CUST_NM = #{sCustNm}
+                 </otherwise>
+             </choose>
+         </if>
+         <if test='sStartDt != null and sEndDt != null'>
+           AND A.AAP_DT <![CDATA[>=]]> TRUNC(#{sStartDt},'DD')
+           AND A.AAP_DT <![CDATA[<]]> TRUNC(#{sEndDt},'DD')+1
+         </if>
+	</select>
+
+    <!-- 대행업무 저장.  -->
+    <update id="updateAapMng" parameterType="AapMngVO">
+        UPDATE SA_0264T
+           SET AAP_DT            = #{aapDt}                   --대행일자
+             , AAP_WRK_DSTIN_CD  = #{aapWrkDstinCd}           --대행작업구분코드
+             , CONTRACT_NO       = #{contractNo}              --계약번호
+             , VIN_NO            = #{vinNo}                   --차대번호
+             , CARLINE_CD        = #{carlineCd}               --차종코드
+             , MODEL_CD          = #{modelCd}                 --모델코드
+             , OCN_CD            = #{ocnCd}                   --OCN코드
+             , CAR_REG_NO        = #{carRegNo}                --차량등록번호
+             , CUST_NO           = #{custNo}                  --고객번호
+             , CUST_NM           = #{custNm}                  --고객명
+             , CUST_TP           = #{custTp}                  --고객유형
+             , AAP_EMP_NM        = #{aapEmpNm}                --대행사원명
+             , CST_AMT           = #{cstAmt}                  --원가금액
+             , PROFIT_AMT        = #{profitAmt}               --이윤금액
+             , AAP_AMT           = #{aapAmt}                  --대행금액
+             , SUNG_CD           = #{sungCd}                  --성코드
+             , CITY_CD           = #{cityCd}                  --도시코드
+             , DIST_CD           = #{distCd}                  --지역코드
+             , REG_PRE_AMT       = #{regPreAmt}               --등록이전금액
+             , REAL_REG_AMT      = #{realRegAmt}              --실등록금액
+             , REG_FEE_AMT       = #{regFeeAmt}               --등록수수료금액
+             , REG_EXPC_DT       = #{regExpcDt}               --등록예상일자
+             , PURC_TAX_PRE_AMT  = #{purcTaxPreAmt}           --구매세금이전금액
+             , REAL_PURC_TAX_AMT = #{realPurcTaxAmt}          --실구매세금액
+             , REAL_REG_DT       = #{realRegDt}               --실등록일자
+             , UPDT_USR_ID       = #{updtUsrId}               --수정자ID
+             , UPDT_DT           = SYSDATE
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND SEQ               = #{seq}                     --일련번호
+    </update>
+
+
+    <!-- 대행업무 정보를 등록한다. -->
+    <insert id="insertAapMng" parameterType="AapMngVO">
+        INSERT INTO SA_0264T
+        (
+          DLR_CD                   --딜러코드
+         ,SEQ                      --일련번호
+         ,AAP_DT                   --대행일자
+         ,AAP_WRK_DSTIN_CD         --대행작업구분코드
+         ,CONTRACT_NO              --계약번호
+         ,VIN_NO                   --차대번호
+         ,CARLINE_CD               --차종코드
+         ,MODEL_CD                 --모델코드
+         ,OCN_CD                   --OCN코드
+         ,CAR_REG_NO               --차량등록번호
+         ,CUST_NO                  --고객번호
+         ,CUST_NM                  --고객명
+         ,CUST_TP                  --고객유형
+         ,AAP_EMP_NM               --대행사원명
+         ,CST_AMT                  --원가금액
+         ,PROFIT_AMT               --이윤금액
+         ,AAP_AMT                  --대행금액
+         ,SUNG_CD                  --성코드
+         ,CITY_CD                  --도시코드
+         ,DIST_CD                  --지역코드
+         ,REG_PRE_AMT              --등록이전금액
+         ,REAL_REG_AMT             --실등록금액
+         ,REG_FEE_AMT              --등록수수료금액
+         ,REG_EXPC_DT              --등록예상일자
+         ,PURC_TAX_PRE_AMT         --구매세금이전금액
+         ,REAL_PURC_TAX_AMT        --실구매세금액
+         ,REAL_REG_DT              --실등록일자
+         ,REG_USR_ID               --등록자ID
+         ,REG_DT                   --등록일자
+         ,UPDT_USR_ID              --수정자ID
+         ,UPDT_DT                  --수정일자
+        )
+        VALUES
+        (
+          #{dlrCd}                   --딜러코드
+         ,(SELECT NVL(MAX(SEQ),0)+1 FROM SA_0264T WHERE DLR_CD = #{dlrCd})
+         ,#{aapDt}                   --대행일자
+         ,#{aapWrkDstinCd}           --대행작업구분코드
+         ,#{contractNo}              --계약번호
+         ,#{vinNo}                   --차대번호
+         ,#{carlineCd}               --차종코드
+         ,#{modelCd}                 --모델코드
+         ,#{ocnCd}                   --OCN코드
+         ,#{carRegNo}                --차량등록번호
+         ,#{custNo}                  --고객번호
+         ,#{custNm}                  --고객명
+         ,#{custTp}                  --고객유형
+         ,#{aapEmpNm}                --대행사원명
+         ,#{cstAmt}                  --원가금액
+         ,#{profitAmt}               --이윤금액
+         ,#{aapAmt}                  --대행금액
+         ,#{sungCd}                  --성코드
+         ,#{cityCd}                  --도시코드
+         ,#{distCd}                  --지역코드
+         ,#{regPreAmt}               --등록이전금액
+         ,#{realRegAmt}              --실등록금액
+         ,#{regFeeAmt}               --등록수수료금액
+         ,#{regExpcDt}               --등록예상일자
+         ,#{purcTaxPreAmt}           --구매세금이전금액
+         ,#{realPurcTaxAmt}          --실구매세금액
+         ,#{realRegDt}               --실등록일자
+         ,#{regUsrId}                --등록자ID
+         ,SYSDATE
+         ,#{updtUsrId}               --수정자ID
+         ,SYSDATE
+        )
+        <selectKey resultType="int" keyProperty="seq" order="AFTER">
+            SELECT MAX(SEQ) AS SEQ FROM SA_0264T WHERE DLR_CD = #{dlrCd}
+        </selectKey>
+    </insert>
+
+    <!-- 대행업무 계약번호로 삭제 -->
+    <delete id="deleteContractAapMng" parameterType="AapMngVO">
+        DELETE
+          FROM SA_0264T
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND CONTRACT_NO       = #{contractNo}              --계약번호
+    </delete>
+
+</mapper>

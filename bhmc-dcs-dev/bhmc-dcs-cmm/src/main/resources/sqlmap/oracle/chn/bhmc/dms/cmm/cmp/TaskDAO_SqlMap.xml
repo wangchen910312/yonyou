@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : TaskDao_SqlMap.xml
+    Description : 직무에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 1. 29.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 29.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.cmp.service.dao.TaskDAO">
+
+    <!-- 직무 정보를 등록한다. -->
+    <insert id="insertTask" parameterType="TaskVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.TaskDAO.insertTask] */
+        INSERT INTO CM_2801T(
+            CMP_TP
+            ,TSK_CD
+            ,TSK_NM
+            ,DEPT_CD
+        )VALUES(
+            #{cmpTp}
+            ,#{tskCd}
+            ,#{tskNm}
+            ,#{deptCd}
+        )
+    </insert>
+
+    <!-- 직무 정보 정보를 수정한다. -->
+    <update id="updateTask" parameterType="TaskVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.TaskDAO.updateTask] */
+        UPDATE CM_2801T SET
+            TSK_NM = #{tskNm}
+            ,DEPT_CD = #{deptCd}
+        WHERE CMP_TP = #{cmpTp}
+            AND TSK_CD = #{tskCd}
+    </update>
+
+    <!-- 직무 정보 정보를 삭제한다. -->
+    <delete id="deleteTask" parameterType="TaskVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.TaskDAO.deleteTask] */
+        DELETE FROM CM_2801T
+        WHERE CMP_TP = #{cmpTp}
+            AND TSK_CD = #{tskCd}
+    </delete>
+
+    <!-- 직무 정보를 조회한다. -->
+    <select id="selectTaskByKey" parameterType="map" resultType="TaskVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.TaskDAO.selectTaskByKey] */
+        SELECT * FROM CM_2801T
+        WHERE CMP_TP = #{cmpTp}
+            AND TSK_CD = #{tskCd}
+    </select>
+
+    <!-- 직무 정보 목록을 조회한다. -->
+    <select id="selectTasksByCondition" parameterType="TaskSearchVO" resultType="TaskVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.TaskDAO.selectTasksByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT V1.CMP_TP, V2.CMP_TP_NM, V1.TSK_CD, V1.TSK_NM, V1.DEPT_CD, V3.DEPT_NM
+                FROM CM_2801T V1
+                LEFT JOIN (
+                    SELECT K1.CMM_CD, NVL(K2.CMM_CD_TXT, K1.CMM_CD_NM) CMP_TP_NM
+                    FROM CM_0303T K1
+                    LEFT JOIN CM_0304T K2 ON K1.CMM_GRP_CD = K2.CMM_GRP_CD AND K1.CMM_CD = K2.CMM_CD AND K2.LANG_CD = #{sLangCd}
+                    WHERE  K1.CMM_GRP_CD = 'COM051'
+                ) V2 ON V1.CMP_TP = V2.CMM_CD
+                LEFT JOIN CM_3401T V3 ON V1.CMP_TP = V3.CMP_TP AND V1.DEPT_CD = V3.DEPT_CD
+                <where>
+                    <if test='sCmpTp != null and sCmpTp != ""'>
+                        V1.CMP_TP = #{sCmpTp}
+                    </if>
+
+                    <if test='sTskCd != null and sTskCd != ""'>
+                        AND V1.TSK_CD = #{sTskCd}
+                    </if>
+
+                    <if test='sTskNm != null and sTskNm != ""'>
+                        AND V1.TSK_NM LIKE '%'||#{sTskNm}||'%'
+                    </if>
+
+                    <if test='sDeptCd != null and sDeptCd != ""'>
+                        AND V1.DEPT_CD = #{sDeptCd}
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "cmpTp"'>V1.CMP_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "cmpTpNm"'>V2.CMP_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "tskCd"'>V1.TSK_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "tskNm"'>V1.TSK_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "deptCd"'>V1.DEPT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "deptNm"'>V3.DEPT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    V1.CMP_TP ASC, V1.TSK_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        CMP_TP ASC, TSK_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 직무 정보 목록수를 조회한다. -->
+    <select id="selectTasksByConditionCnt" parameterType="TaskSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.TaskDAO.selectTasksByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CM_2801T
+        <where>
+            <if test='sCmpTp != null and sCmpTp != ""'>
+                CMP_TP = #{sCmpTp}
+            </if>
+
+            <if test='sTskCd != null and sTskCd != ""'>
+                AND TSK_CD = #{sTskCd}
+            </if>
+
+            <if test='sTskNm != null and sTskNm != ""'>
+                AND TSK_NM LIKE '%'||#{sTskNm}||'%'
+            </if>
+
+            <if test='sDeptCd != null and sDeptCd != ""'>
+                AND DEPT_CD = #{sDeptCd}
+            </if>
+        </where>
+    </select>
+
+</mapper>

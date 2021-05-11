@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : JobScheduleDAO_SqlMap.xml
+    Description : JOB SCHEDULE에 관한 데이터처리
+    author Cheol Man Oh
+    since 2016. 4. 21.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 4. 21.     Cheol Man Oh     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.dply.cmm.service.dao.JobScheduleDAO">
+
+	<!-- Job Schedule 정보 목록을 조회한다. -->
+	<select id="selectJobScheduleByCondition" parameterType="JobScheduleSearchVO" resultType="JobScheduleVO">
+        /* [chn.bhmc.dms.dply.cmm.service.dao.JobScheduleDAO.selectJobScheduleByCondition] */
+		SELECT * FROM (
+            SELECT ROWNUM AS RNUM, V1.* FROM (
+                SELECT
+                       T1.SCHEDULE_NM
+                     , T1.SCHEDULE_TP_CD
+                     , T1.CRONTAB_PATT_CONT
+                     , T1.SCHEDULE_START_DT
+                     , T1.EXEC_CMD_NM
+                     , T1.DEL_YN
+                     , T1.REG_USR_ID
+                     , T1.REG_DT
+                     , T1.UPDT_USR_ID
+                     , T1.UPDT_DT
+                FROM CM_1601T T1
+                <where>
+                    <if test='sScheduleTpCd != null and sScheduleTpCd != ""'>
+                        T1.SCHEDULE_TP_CD = #{sScheduleTpCd}
+                    </if>
+
+                    <if test='sScheduleNm != null and sScheduleNm != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sScheduleNm,"*")'>
+                                <bind name='sScheduleNm' value='@org.apache.commons.lang3.StringUtils@replace(sScheduleNm, "*", "%")' />
+                                 AND T1.SCHEDULE_NM LIKE #{sScheduleNm}
+                            </when>
+                            <otherwise>
+                                 AND T1.SCHEDULE_NM = #{sScheduleNm}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sStartRegDt != null'>
+                                 AND T1.REG_DT <![CDATA[ >= ]]> #{sStartRegDt}
+                    </if>
+                    <if test='sEndRegDt != null'>
+                                 AND T1.REG_DT <![CDATA[ < ]]> #{sEndRegDt} + 1
+                    </if>
+
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "scheduleNm"'>SCHEDULE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "scheduleTpCd"'>SCHEDULE_TP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "crontabPattCont"'>CRONTAB_PATT_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "scheduleStartDt"'>SCHEDULE_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "execCmdNm"'>EXEC_CMD_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "delYn"'>DEL_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    SCHEDULE_NM ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        SCHEDULE_NM ASC
+                    </otherwise>
+                </choose>
+            ) V1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+	<!-- Job Schedule 목록수를 조회한다. -->
+	<select id="selectJobScheduleByConditionCnt" parameterType="JobScheduleSearchVO" resultType="int">
+        /* [chn.bhmc.dms.dply.cmm.service.dao.JobScheduleDAO.selectJobScheduleByConditionCnt] */
+		SELECT COUNT(*) AS VALUE
+        FROM CM_1601T T1
+		<where>
+
+            <if test='sScheduleTpCd != null and sScheduleTpCd != ""'>
+                T1.SCHEDULE_TP_CD = #{sScheduleTpCd}
+            </if>
+
+            <if test='sScheduleNm != null and sScheduleNm != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sScheduleNm,"*")'>
+                        <bind name='sScheduleNm' value='@org.apache.commons.lang3.StringUtils@replace(sScheduleNm, "*", "%")' />
+                         AND T1.SCHEDULE_NM LIKE #{sScheduleNm}
+                    </when>
+                    <otherwise>
+                         AND T1.SCHEDULE_NM = #{sScheduleNm}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sStartRegDt != null'>
+                         AND T1.REG_DT <![CDATA[ >= ]]> #{sStartRegDt}
+            </if>
+            <if test='sEndRegDt != null'>
+                         AND T1.REG_DT <![CDATA[ < ]]> #{sEndRegDt} + 1
+            </if>
+
+		</where>
+	</select>
+
+
+    <!-- Job Schedule 정보 생성  -->
+    <insert id="insertJobSchedule" parameterType="JobScheduleVO">
+    /* [chn.bhmc.dms.dply.cmm.service.dao.JobScheduleDAO.insertJobSchedule] */
+        INSERT
+          INTO CM_1601T(
+               SCHEDULE_NM
+             , SCHEDULE_TP_CD
+             , CRONTAB_PATT_CONT
+             , SCHEDULE_START_DT
+             , EXEC_CMD_NM
+             , DEL_YN
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+        )VALUES(
+               #{scheduleNm       }
+             , #{scheduleTpCd     }
+             , #{crontabPattCont  }
+             , #{scheduleStartDt  }
+             , #{execCmdNm        }
+             , #{delYn            }
+             , #{regUsrId         }
+             , SYSDATE
+             , ''
+             , ''
+        )
+    </insert>
+
+    <!-- Job Schedule 정보 수정  -->
+    <update id="updateJobSchedule" parameterType="JobScheduleVO">
+    /* [chn.bhmc.dms.dply.cmm.service.dao.JobScheduleDAO.updateJobSchedule] */
+        UPDATE CM_1601T
+                    SET SCHEDULE_TP_CD      = #{scheduleTpCd     }
+                      , CRONTAB_PATT_CONT   = #{crontabPattCont  }
+                      , SCHEDULE_START_DT   = #{scheduleStartDt  }
+                      , EXEC_CMD_NM         = #{execCmdNm        }
+                      , DEL_YN              = #{delYn            }
+                      , UPDT_USR_ID         = #{updtUsrId        }
+                      , UPDT_DT             = SYSDATE
+                  WHERE SCHEDULE_NM         = #{scheduleNm       }
+    </update>
+
+
+    <!-- Job Schedule 실행이력 정보 목록을 조회한다. -->
+    <select id="selectJobScheduleExecHistByCondition" parameterType="JobScheduleSearchVO" resultType="JobScheduleExecHistVO">
+        /* [chn.bhmc.dms.dply.cmm.service.dao.JobScheduleDAO.selectJobScheduleExecHistByCondition] */
+        SELECT
+               T1.SCHEDULE_NM
+             , T1.EVENT_DT
+             , T1.SEQ
+             , T1.END_STAT_MESG_CONT
+             , T1.TASK_ID
+             , T1.START_DT
+             , T1.END_DT
+             , T1.REG_USR_ID
+             , T1.REG_DT
+             , T1.UPDT_USR_ID
+             , T1.UPDT_DT
+          FROM CM_1602T T1
+         WHERE SCHEDULE_NM = #{sScheduleNm}
+        ORDER BY EVENT_DT DESC
+    </select>
+
+
+
+
+
+
+
+
+
+
+
+
+</mapper>

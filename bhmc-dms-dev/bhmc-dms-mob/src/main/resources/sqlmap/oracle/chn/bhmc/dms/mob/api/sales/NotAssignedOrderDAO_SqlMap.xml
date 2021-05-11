@@ -1,0 +1,674 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.mob.api.sales.dao.SalesNotAssignedOrderDAO">
+
+    <select id="selectNotAssignedOrderCnt" parameterType="NotAssignedOrderSearchVO" resultType="int">
+        SELECT SUM(ORTY) 
+          FROM (SELECT CARLINE_NM
+                     , CARLINE_CD
+                     , MODEL_CD
+                     , OCN_NM
+                     , OCN_CD
+                     , EXT_COLOR_NM
+                     , EXT_COLOR_CD
+                     , INT_COLOR_NM
+                     , INT_COLOR_CD
+                     , MDPR
+                     , SUM(ORTY) ORTY
+                     , SUM(AAMT) AAMT
+                  FROM (SELECT A.ORD_YYMM,
+                               A.ORD_WEEK,
+                               A.SALES_NO,
+                               A.SORD,
+                               B.ORD_DT,
+                               FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM,
+                               A.CARLINE_CD,
+                               FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD) AS MODEL_NM,
+                               A.MODEL_CD,
+                               FN_GET_OCN_NM_NC(A.MODEL_CD, A.OCN_CD) AS OCN_NM,
+                               A.OCN_CD,
+                               FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD) AS EXT_COLOR_NM,
+                               A.EXT_COLOR_CD,
+                               FN_GET_INT_COLOR_NM_NC(A.INT_COLOR_CD) AS INT_COLOR_NM,
+                               A.INT_COLOR_CD,
+                               B.REG_USR_ID AS CHRG_CD,
+                               DECODE(A.INNO, '00000000', NULL, A.INNO) AS INNO,
+                               (SELECT X.WH_PRC
+                                 FROM SA_0110T X
+                                WHERE X.MODEL_CD = A.MODEL_CD
+                                  AND X.OCN_CD = A.OCN_CD
+                                  AND TO_CHAR(X.END_DT,'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(SYSDATE,'YYYYMMDD')
+                                  AND X.USE_YN = 'Y') AS WH_PRC,
+                               (SELECT X.MS_PRC
+                                 FROM SA_0110T X
+                                WHERE X.MODEL_CD = A.MODEL_CD
+                                  AND X.OCN_CD = A.OCN_CD
+                                  AND TO_CHAR(X.END_DT,'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(SYSDATE,'YYYYMMDD')
+                                  AND X.USE_YN = 'Y') AS MDPR,
+                               CASE WHEN B.ORD_QTY <![CDATA[>]]> 1 THEN 1
+                                    ELSE B.ORD_QTY
+                                      END AS ORTY,
+                               A.PAYM,
+                               A.DLR_CD,
+                               A.CASH_AMT,
+                               A.D2PRT_AMT,
+                               A.D3PRT_AMT,
+                               A.ADJP,
+                               A.DAMT,
+                               A.AAMT,
+                               SUBSTR(A.ORD_YYMM, 3) AS ORD_YYMM_S,
+                               A.SORD AS ORD_TYPE
+                              ,B.SALE_RGST_ID
+                              ,(SELECT Z.USR_NM
+                                    FROM CM_0801T Z
+                                   WHERE Z.USR_ID = B.SALE_RGST_ID
+                              ) AS SALE_RGST_NM
+                              ,TO_CHAR(B.ORD_DT, 'YYYY-MM-DD') AS ORD_DT_XLS
+                              ,CASE WHEN A.AAMT+(A.DAMT)*-1 <![CDATA[>]]> 0
+                                    THEN ROUND(((A.DAMT)*-1)/(A.AAMT+(A.DAMT)*-1)*100,2)
+                                    ELSE 0 END AS DC_RATE
+                              ,B.REG_USR_ID
+                              ,B.ORD_GRADE_CD
+                              ,A.ORD_SEQ
+                              ,C.ADJ_STAT_CD
+                          FROM SA_0416T A, SA_0417T B
+                             , (
+                                SELECT A.*
+                                  FROM SA_0453T A
+                                     , (
+                                        SELECT DLR_CD
+                                             , ORD_YYMM
+                                             , ORD_WEEK
+                                             , ORD_SEQ
+                                             , SORD
+                                             , SALES_NO
+                                             , MAX(SEQ) AS SEQ
+                                          FROM SA_0453T
+                                         GROUP BY DLR_CD, ORD_YYMM, ORD_WEEK, ORD_SEQ, SORD, SALES_NO
+                                        ) B
+                                  WHERE A.DLR_CD = B.DLR_CD
+                                    AND A.ORD_YYMM = B.ORD_YYMM
+                                    AND A.ORD_WEEK = B.ORD_WEEK
+                                    AND A.ORD_SEQ = B.ORD_SEQ
+                                    AND A.SORD = B.SORD
+                                    AND A.SALES_NO = B.SALES_NO
+                                    AND A.SEQ = B.SEQ
+                              ) C
+                         WHERE A.DLR_CD = B.DLR_CD
+                           AND A.ORD_YYMM = B.ORD_YY_MM_DT
+                           AND A.ORD_WEEK = B.ORD_PRID
+                           AND A.CARLINE_CD = B.CARLINE_CD
+                           AND A.ORD_SEQ = TO_NUMBER(B.ORD_NO)
+                           AND A.SORD = B.ORD_TP
+                           AND A.DLR_CD = C.DLR_CD(+)
+                           AND A.ORD_YYMM = C.ORD_YYMM(+)
+                           AND A.ORD_WEEK = C.ORD_WEEK(+)
+                           AND A.CARLINE_CD = C.CARLINE_CD(+)
+                           AND A.ORD_SEQ = C.ORD_SEQ(+)
+                           AND A.SORD = C.SORD(+)
+                           AND A.SALES_NO = C.SALES_NO(+)
+                           AND A.PRTY = 'A'
+                         <if test='sDlrCd != null and sDlrCd != ""'>
+                           AND A.DLR_CD = #{sDlrCd}
+                         </if>
+                         <if test='sOrdTp != null and sOrdTp != ""'>
+                           AND A.SORD = #{sOrdTp}
+                         </if>
+                         <if test='sCarlineCd != null and sCarlineCd != ""'>
+                           AND A.CARLINE_CD = #{sCarlineCd}
+                         </if>
+                         <if test='sModelCd != null and sModelCd != ""'>
+                           AND A.MODEL_CD = #{sModelCd}
+                         </if>
+                         <if test='sOcnCd != null and sOcnCd != ""'>
+                           AND A.OCN_CD = #{sOcnCd}
+                         </if>
+                         <if test='sExtColorCd != null and sExtColorCd != ""'>
+		                   AND A.EXT_COLOR_CD = #{sExtColorCd}
+		                 </if>
+		                 <if test='sIntColorCd != null and sIntColorCd != ""'>
+		                   AND A.INT_COLOR_CD = #{sIntColorCd}
+		                 </if>
+                         <if test='sOrdStartDtStr != null and sOrdStartDtStr != ""' >
+                           AND TO_CHAR(B.ORD_DT,'YYYYMMDD') <![CDATA[ >= ]]> #{sOrdStartDtStr}
+                         </if>
+                         <if test='sOrdStartDtStr != null and sOrdStartDtStr != ""' >
+                           AND TO_CHAR(B.ORD_DT,'YYYYMMDD') <![CDATA[ < ]]> #{sOrdStartDtStr} +1
+                         </if>
+                         <if test='sOrdPrid != null and sOrdPrid != ""'>
+                           AND B.ORD_YY_MM_DT = SUBSTR(#{sOrdPrid}, 1, 6)
+                           AND B.ORD_PRID = SUBSTR(#{sOrdPrid}, 7, 2)
+                         </if>
+                         <if test='sPaym != null and sPaym != ""'>
+                           AND A.PAYM = #{sPaym}
+                         </if>
+                         <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD)  = #{sFscCd}
+                         </if>
+                         <if test='sFscCd == "None"'>
+                           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+                         </if>
+                        )
+                        GROUP BY CARLINE_NM
+                                ,CARLINE_CD
+                                ,MODEL_NM
+                                ,MODEL_CD
+                                ,OCN_NM
+                                ,OCN_CD
+                                ,EXT_COLOR_NM
+                                ,EXT_COLOR_CD
+                                ,INT_COLOR_NM
+                                ,INT_COLOR_CD
+                                ,MDPR
+               ORDER BY CARLINE_CD, MODEL_CD, OCN_CD, EXT_COLOR_CD, INT_COLOR_CD)
+    </select>
+
+	<select id="selectNotAssignedOrder" parameterType="NotAssignedOrderSearchVO" resultType="chn.bhmc.dms.mob.api.sales.vo.NotAssignedOrderVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                  ,FN_GET_MODEL_TP_NM(T1.MODEL_CD, T1.OCN_CD) AS MODEL_NM
+                  ,T1.*
+            FROM (
+                SELECT CARLINE_NM
+                     , CARLINE_CD
+                     , MODEL_CD
+                     , OCN_NM
+                     , OCN_CD
+                     , EXT_COLOR_NM
+                     , EXT_COLOR_CD
+                     , INT_COLOR_NM
+                     , INT_COLOR_CD
+                     , MDPR
+                     , SUM(ORTY) ORTY
+                     , SUM(AAMT) AAMT
+                  FROM (SELECT A.ORD_YYMM,
+                               A.ORD_WEEK,
+                               A.SALES_NO,
+                               A.SORD,
+                               B.ORD_DT,
+                               FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM,
+                               A.CARLINE_CD,
+                               FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD) AS MODEL_NM,
+                               A.MODEL_CD,
+                               FN_GET_OCN_NM_NC(A.MODEL_CD, A.OCN_CD) AS OCN_NM,
+                               A.OCN_CD,
+                               FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD) AS EXT_COLOR_NM,
+                               A.EXT_COLOR_CD,
+                               FN_GET_INT_COLOR_NM_NC(A.INT_COLOR_CD) AS INT_COLOR_NM,
+                               A.INT_COLOR_CD,
+                               B.REG_USR_ID AS CHRG_CD,
+                               DECODE(A.INNO, '00000000', NULL, A.INNO) AS INNO,
+                               (SELECT X.WH_PRC
+                                 FROM SA_0110T X
+                                WHERE X.MODEL_CD = A.MODEL_CD
+                                  AND X.OCN_CD = A.OCN_CD
+                                  AND TO_CHAR(X.END_DT,'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(SYSDATE,'YYYYMMDD')
+                                  AND X.USE_YN = 'Y') AS WH_PRC,
+                               (SELECT X.MS_PRC
+                                 FROM SA_0110T X
+                                WHERE X.MODEL_CD = A.MODEL_CD
+                                  AND X.OCN_CD = A.OCN_CD
+                                  AND TO_CHAR(X.END_DT,'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(SYSDATE,'YYYYMMDD')
+                                  AND X.USE_YN = 'Y') AS MDPR,
+                               CASE WHEN B.ORD_QTY <![CDATA[>]]> 1 THEN 1
+                                    ELSE B.ORD_QTY
+                                      END AS ORTY,
+                               A.PAYM,
+                               A.DLR_CD,
+                               A.CASH_AMT,
+                               A.D2PRT_AMT,
+                               A.D3PRT_AMT,
+                               A.ADJP,
+                               A.DAMT,
+                               A.AAMT,
+                               SUBSTR(A.ORD_YYMM, 3) AS ORD_YYMM_S,
+                               A.SORD AS ORD_TYPE
+                              ,B.SALE_RGST_ID
+                              ,(SELECT Z.USR_NM
+                                    FROM CM_0801T Z
+                                   WHERE Z.USR_ID = B.SALE_RGST_ID
+                              ) AS SALE_RGST_NM
+                              ,TO_CHAR(B.ORD_DT, 'YYYY-MM-DD') AS ORD_DT_XLS
+                              ,CASE WHEN A.AAMT+(A.DAMT)*-1 <![CDATA[>]]> 0
+                                    THEN ROUND(((A.DAMT)*-1)/(A.AAMT+(A.DAMT)*-1)*100,2)
+                                    ELSE 0 END AS DC_RATE
+                              ,B.REG_USR_ID
+                              ,B.ORD_GRADE_CD
+                              ,A.ORD_SEQ
+                              ,C.ADJ_STAT_CD
+                          FROM SA_0416T A, SA_0417T B
+                             , (
+                                SELECT A.*
+                                  FROM SA_0453T A
+                                     , (
+                                        SELECT DLR_CD
+                                             , ORD_YYMM
+                                             , ORD_WEEK
+                                             , ORD_SEQ
+                                             , SORD
+                                             , SALES_NO
+                                             , MAX(SEQ) AS SEQ
+                                          FROM SA_0453T
+                                         GROUP BY DLR_CD, ORD_YYMM, ORD_WEEK, ORD_SEQ, SORD, SALES_NO
+                                        ) B
+                                  WHERE A.DLR_CD = B.DLR_CD
+                                    AND A.ORD_YYMM = B.ORD_YYMM
+                                    AND A.ORD_WEEK = B.ORD_WEEK
+                                    AND A.ORD_SEQ = B.ORD_SEQ
+                                    AND A.SORD = B.SORD
+                                    AND A.SALES_NO = B.SALES_NO
+                                    AND A.SEQ = B.SEQ
+                              ) C
+                         WHERE A.DLR_CD = B.DLR_CD
+                           AND A.ORD_YYMM = B.ORD_YY_MM_DT
+                           AND A.ORD_WEEK = B.ORD_PRID
+                           AND A.CARLINE_CD = B.CARLINE_CD
+                           AND A.ORD_SEQ = TO_NUMBER(B.ORD_NO)
+                           AND A.SORD = B.ORD_TP
+                           AND A.DLR_CD = C.DLR_CD(+)
+                           AND A.ORD_YYMM = C.ORD_YYMM(+)
+                           AND A.ORD_WEEK = C.ORD_WEEK(+)
+                           AND A.CARLINE_CD = C.CARLINE_CD(+)
+                           AND A.ORD_SEQ = C.ORD_SEQ(+)
+                           AND A.SORD = C.SORD(+)
+                           AND A.SALES_NO = C.SALES_NO(+)
+                           AND A.PRTY = 'A'
+                         <if test='sDlrCd != null and sDlrCd != ""'>
+                           AND A.DLR_CD = #{sDlrCd}
+                         </if>
+                         <if test='sOrdTp != null and sOrdTp != ""'>
+                           AND A.SORD = #{sOrdTp}
+                         </if>
+                         <if test='sCarlineCd != null and sCarlineCd != ""'>
+                           AND A.CARLINE_CD = #{sCarlineCd}
+                         </if>
+                         <if test='sModelCd != null and sModelCd != ""'>
+                           AND A.MODEL_CD = #{sModelCd}
+                         </if>
+                         <if test='sOcnCd != null and sOcnCd != ""'>
+                           AND A.OCN_CD = #{sOcnCd}
+                         </if>
+                         <if test='sExtColorCd != null and sExtColorCd != ""'>
+		                   AND A.EXT_COLOR_CD = #{sExtColorCd}
+		                 </if>
+		                 <if test='sIntColorCd != null and sIntColorCd != ""'>
+		                   AND A.INT_COLOR_CD = #{sIntColorCd}
+		                 </if>
+                         <if test='sOrdStartDtStr != null and sOrdStartDtStr != ""' >
+                           AND TO_CHAR(B.ORD_DT,'YYYYMMDD') <![CDATA[ >= ]]> #{sOrdStartDtStr}
+                         </if>
+                         <if test='sOrdStartDtStr != null and sOrdStartDtStr != ""' >
+                           AND TO_CHAR(B.ORD_DT,'YYYYMMDD') <![CDATA[ < ]]> #{sOrdStartDtStr} +1
+                         </if>
+                         <if test='sOrdPrid != null and sOrdPrid != ""'>
+                           AND B.ORD_YY_MM_DT = SUBSTR(#{sOrdPrid}, 1, 6)
+                           AND B.ORD_PRID = SUBSTR(#{sOrdPrid}, 7, 2)
+                         </if>
+                         <if test='sPaym != null and sPaym != ""'>
+                           AND A.PAYM = #{sPaym}
+                         </if>
+                         <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD)  = #{sFscCd}
+                         </if>
+                         <if test='sFscCd == "None"'>
+                           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+                         </if>
+                        )
+                        GROUP BY CARLINE_NM
+                                ,CARLINE_CD
+                                ,MODEL_NM
+                                ,MODEL_CD
+                                ,OCN_NM
+                                ,OCN_CD
+                                ,EXT_COLOR_NM
+                                ,EXT_COLOR_CD
+                                ,INT_COLOR_NM
+                                ,INT_COLOR_CD
+                                ,MDPR
+               ORDER BY CARLINE_CD, MODEL_CD, OCN_CD, EXT_COLOR_CD, INT_COLOR_CD
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+	<!-- 未分配订单明细查询 -->
+	<select id="selectNotAssignedOrderDetailCnt" parameterType="NotAssignedOrderSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM (SELECT 1
+                 FROM SA_0416T A, SA_0417T B
+                    , (
+                       SELECT A.*
+                         FROM SA_0453T A
+                            , (
+                               SELECT DLR_CD
+                                    , ORD_YYMM
+                                    , ORD_WEEK
+                                    , ORD_SEQ
+                                    , SORD
+                                    , SALES_NO
+                                    , MAX(SEQ) AS SEQ
+                                 FROM SA_0453T
+                                GROUP BY DLR_CD, ORD_YYMM, ORD_WEEK, ORD_SEQ, SORD, SALES_NO
+                               ) B
+                         WHERE A.DLR_CD = B.DLR_CD
+                           AND A.ORD_YYMM = B.ORD_YYMM
+                           AND A.ORD_WEEK = B.ORD_WEEK
+                           AND A.ORD_SEQ = B.ORD_SEQ
+                           AND A.SORD = B.SORD
+                           AND A.SALES_NO = B.SALES_NO
+                           AND A.SEQ = B.SEQ
+                     ) C
+                WHERE A.DLR_CD = B.DLR_CD
+                  AND A.ORD_YYMM = B.ORD_YY_MM_DT
+                  AND A.ORD_WEEK = B.ORD_PRID
+                  AND A.CARLINE_CD = B.CARLINE_CD
+                  AND A.ORD_SEQ = TO_NUMBER(B.ORD_NO)
+                  AND A.SORD = B.ORD_TP
+                  AND A.DLR_CD = C.DLR_CD(+)
+                  AND A.ORD_YYMM = C.ORD_YYMM(+)
+                  AND A.ORD_WEEK = C.ORD_WEEK(+)
+                  AND A.CARLINE_CD = C.CARLINE_CD(+)
+                  AND A.ORD_SEQ = C.ORD_SEQ(+)
+                  AND A.SORD = C.SORD(+)
+                  AND A.SALES_NO = C.SALES_NO(+)
+                  AND A.PRTY = 'A'
+                <if test='sDlrCd != null and sDlrCd != ""'>
+                  AND A.DLR_CD = #{sDlrCd}
+                </if>
+                <if test='sOrdTp != null and sOrdTp != ""'>
+                  AND A.SORD = #{sOrdTp}
+                </if>
+                <if test='sCarlineCd != null and sCarlineCd != ""'>
+                  AND A.CARLINE_CD = #{sCarlineCd}
+                </if>
+                <if test='sModelCd != null and sModelCd != ""'>
+                  AND A.MODEL_CD = #{sModelCd}
+                </if>
+                <if test='sOcnCd != null and sOcnCd != ""'>
+                  AND A.OCN_CD = #{sOcnCd}
+                </if>
+                <if test='sExtColorCd != null and sExtColorCd != ""'>
+                  AND A.EXT_COLOR_CD = #{sExtColorCd}
+                </if>
+                <if test='sIntColorCd != null and sIntColorCd != ""'>
+                  AND A.INT_COLOR_CD = #{sIntColorCd}
+                </if>
+                <if test='sOrdStartDtStr != "" and sOrdStartDtStr != null and sOrdEndDtStr != "" and sOrdEndDtStr != null' >
+                  AND TO_CHAR(B.ORD_DT,'YYYYMMDD') BETWEEN #{sOrdStartDtStr} AND #{sOrdEndDtStr}
+                </if>
+                <if test='sOrdStartDt != null' >
+                  AND B.ORD_DT <![CDATA[ >= ]]> #{sOrdStartDt}
+                </if>
+                <if test='sOrdEndDt != null' >
+                  AND B.ORD_DT <![CDATA[ < ]]> #{sOrdEndDt} +1
+                </if>
+                <if test='sOrdPrid != null and sOrdPrid != ""'>
+                  AND B.ORD_YY_MM_DT = SUBSTR(#{sOrdPrid}, 1, 6)
+                  AND B.ORD_PRID = SUBSTR(#{sOrdPrid}, 7, 2)
+                </if>
+                <if test='sPaym != null and sPaym != ""'>
+                  AND A.PAYM = #{sPaym}
+                </if>
+                <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                  AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD)  = #{sFscCd}
+                </if>
+                <if test='sFscCd == "None"'>
+                  AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+                </if>
+             )
+    </select>
+
+	<select id="selectNotAssignedOrderDetail" parameterType="NotAssignedOrderSearchVO" resultType="chn.bhmc.dms.mob.api.sales.vo.NotAssignedOrderVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                  ,FN_GET_MODEL_TP_NM(T1.MODEL_CD, T1.OCN_CD) AS MODEL_NM
+                  ,T1.*
+            FROM (
+                SELECT ORD_YYMM || '-' || ORD_WEEK AS ORDP_CNDY
+                     , ORD_DT
+                     , SALES_NO
+                     , SORD
+                     , CARLINE_NM
+                     , CARLINE_CD
+                     , MODEL_CD
+                     , OCN_NM
+                     , OCN_CD
+                     , EXT_COLOR_NM
+                     , EXT_COLOR_CD
+                     , INT_COLOR_NM
+                     , INT_COLOR_CD
+                     , CHRG_CD
+                     , MDPR
+                     , MDPR - ADJP AS AFT_MDPR
+                     , MDPR - ADJP AS ORDP_VAPR
+                     , ORTY AS ORDP_COUNT
+                     , ORTY
+                     , TO_DATE(INNO,'YYYYMMDD') AS ORDP_EXNO
+                     , MDPR
+                     , ADJP
+                     , PAYM
+                     , DLR_CD
+                     , CASH_AMT
+                     , D2PRT_AMT
+                     , D3PRT_AMT
+                     , ADJP
+                     , DAMT
+                     , AAMT
+                     , ORD_YYMM_S
+                     , ORD_WEEK
+                     , ORD_TYPE
+                     , SALE_RGST_ID
+                     , SALE_RGST_NM
+                     , SUBSTR(INNO,1,4)||'-'||SUBSTR(INNO,5,2)||'-'||SUBSTR(INNO,7) AS ORDP_EXNO_XLS
+                     , ORD_DT_XLS
+                     , DC_RATE
+                     , REG_USR_ID AS ORD_RGST_ID
+                     , ( SELECT '['|| SORD ||']'||Z1.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL138'   /*오더유형*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z1
+                         WHERE SORD = Z1.CMM_CD
+                       ) AS ORD_TP_NM             -- 주문유형
+                     , ORD_YYMM
+                     , ORD_GRADE_CD
+                     , ORD_SEQ
+                     , ADJ_STAT_CD
+                  FROM (SELECT A.ORD_YYMM,
+                               A.ORD_WEEK,
+                               A.SALES_NO,
+                               A.SORD,
+                               B.ORD_DT,
+                               FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM,
+                               A.CARLINE_CD,
+                               FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD) AS MODEL_NM,
+                               A.MODEL_CD,
+                               FN_GET_OCN_NM_NC(A.MODEL_CD, A.OCN_CD) AS OCN_NM,
+                               A.OCN_CD,
+                               FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD) AS EXT_COLOR_NM,
+                               A.EXT_COLOR_CD,
+                               FN_GET_INT_COLOR_NM_NC(A.INT_COLOR_CD) AS INT_COLOR_NM,
+                               A.INT_COLOR_CD,
+                               B.REG_USR_ID AS CHRG_CD,
+                               DECODE(A.INNO, '00000000', NULL, A.INNO) AS INNO,
+                               (SELECT X.WH_PRC
+                                 FROM SA_0110T X
+                                WHERE X.MODEL_CD = A.MODEL_CD
+                                  AND X.OCN_CD = A.OCN_CD
+                                  AND TO_CHAR(X.END_DT,'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(SYSDATE,'YYYYMMDD')
+                                  AND X.USE_YN = 'Y') AS WH_PRC,
+                               (SELECT X.MS_PRC
+                                 FROM SA_0110T X
+                                WHERE X.MODEL_CD = A.MODEL_CD
+                                  AND X.OCN_CD = A.OCN_CD
+                                  AND TO_CHAR(X.END_DT,'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(SYSDATE,'YYYYMMDD')
+                                  AND X.USE_YN = 'Y') AS MDPR,
+                               CASE WHEN B.ORD_QTY <![CDATA[>]]> 1 THEN 1
+                                    ELSE B.ORD_QTY
+                                      END AS ORTY,
+                               A.PAYM,
+                               A.DLR_CD,
+                               A.CASH_AMT,
+                               A.D2PRT_AMT,
+                               A.D3PRT_AMT,
+                               A.ADJP,
+                               A.DAMT,
+                               A.AAMT,
+                               SUBSTR(A.ORD_YYMM, 3) AS ORD_YYMM_S,
+                               A.SORD AS ORD_TYPE
+                              ,B.SALE_RGST_ID
+                              ,(SELECT Z.USR_NM
+                                    FROM CM_0801T Z
+                                   WHERE Z.USR_ID = B.SALE_RGST_ID
+                              ) AS SALE_RGST_NM
+                              ,TO_CHAR(B.ORD_DT, 'YYYY-MM-DD') AS ORD_DT_XLS
+                              ,CASE WHEN A.AAMT+(A.DAMT)*-1 <![CDATA[>]]> 0
+                                    THEN ROUND(((A.DAMT)*-1)/(A.AAMT+(A.DAMT)*-1)*100,2)
+                                    ELSE 0 END AS DC_RATE
+                              ,B.REG_USR_ID
+                              ,B.ORD_GRADE_CD
+                              ,A.ORD_SEQ
+                              ,C.ADJ_STAT_CD
+                          FROM SA_0416T A, SA_0417T B
+                             , (
+                                SELECT A.*
+                                  FROM SA_0453T A
+                                     , (
+                                        SELECT DLR_CD
+                                             , ORD_YYMM
+                                             , ORD_WEEK
+                                             , ORD_SEQ
+                                             , SORD
+                                             , SALES_NO
+                                             , MAX(SEQ) AS SEQ
+                                          FROM SA_0453T
+                                         GROUP BY DLR_CD, ORD_YYMM, ORD_WEEK, ORD_SEQ, SORD, SALES_NO
+                                        ) B
+                                  WHERE A.DLR_CD = B.DLR_CD
+                                    AND A.ORD_YYMM = B.ORD_YYMM
+                                    AND A.ORD_WEEK = B.ORD_WEEK
+                                    AND A.ORD_SEQ = B.ORD_SEQ
+                                    AND A.SORD = B.SORD
+                                    AND A.SALES_NO = B.SALES_NO
+                                    AND A.SEQ = B.SEQ
+                              ) C
+                         WHERE A.DLR_CD = B.DLR_CD
+                           AND A.ORD_YYMM = B.ORD_YY_MM_DT
+                           AND A.ORD_WEEK = B.ORD_PRID
+                           AND A.CARLINE_CD = B.CARLINE_CD
+                           AND A.ORD_SEQ = TO_NUMBER(B.ORD_NO)
+                           AND A.SORD = B.ORD_TP
+                           AND A.DLR_CD = C.DLR_CD(+)
+                           AND A.ORD_YYMM = C.ORD_YYMM(+)
+                           AND A.ORD_WEEK = C.ORD_WEEK(+)
+                           AND A.CARLINE_CD = C.CARLINE_CD(+)
+                           AND A.ORD_SEQ = C.ORD_SEQ(+)
+                           AND A.SORD = C.SORD(+)
+                           AND A.SALES_NO = C.SALES_NO(+)
+                           AND A.PRTY = 'A'
+                         <if test='sDlrCd != null and sDlrCd != ""'>
+                           AND A.DLR_CD = #{sDlrCd}
+                         </if>
+                         <if test='sOrdTp != null and sOrdTp != ""'>
+                           AND A.SORD = #{sOrdTp}
+                         </if>
+                         <if test='sCarlineCd != null and sCarlineCd != ""'>
+                           AND A.CARLINE_CD = #{sCarlineCd}
+                         </if>
+                         <if test='sModelCd != null and sModelCd != ""'>
+                           AND A.MODEL_CD = #{sModelCd}
+                         </if>
+                         <if test='sOcnCd != null and sOcnCd != ""'>
+                           AND A.OCN_CD = #{sOcnCd}
+                         </if>
+                         <if test='sExtColorCd != null and sExtColorCd != ""'>
+                           AND A.EXT_COLOR_CD = #{sExtColorCd}
+                         </if>
+                         <if test='sIntColorCd != null and sIntColorCd != ""'>
+                           AND A.INT_COLOR_CD = #{sIntColorCd}
+                         </if>
+                         <if test='sOrdStartDtStr != null and sOrdStartDtStr != ""' >
+                           AND TO_CHAR(B.ORD_DT,'YYYYMMDD') <![CDATA[ >= ]]> #{sOrdStartDt}
+                         </if>
+                         <if test='sOrdEndDtStr != null and sOrdEndDtStr != ""' >
+                           AND TO_CHAR(B.ORD_DT,'YYYYMMDD') <![CDATA[ < ]]> #{sOrdEndDt} +1
+                         </if>
+                         <if test='sOrdPrid != null and sOrdPrid != ""'>
+                           AND B.ORD_YY_MM_DT = SUBSTR(#{sOrdPrid}, 1, 6)
+                           AND B.ORD_PRID = SUBSTR(#{sOrdPrid}, 7, 2)
+                         </if>
+                         <if test='sPaym != null and sPaym != ""'>
+                           AND A.PAYM = #{sPaym}
+                         </if>
+                         <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD)  = #{sFscCd}
+                         </if>
+                         <if test='sFscCd == "None"'>
+                           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+                         </if>
+                        )
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "orty"'>ORTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ordpCndy"'>ORD_YYMM || '-' || ORD_WEEK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ordDt"'>ORD_DT <choose><when test='item.dir == "ordDt"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "salesNo"'>SALES_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "sord"'>SORD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineNm"'>CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelNm"'>MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnNm"'>OCN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "extColorNm"'>EXT_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "intColorNm"'>INT_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "chrgCd"'>CHRG_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ordpExno"'>ORDP_EXNO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "mdpr"'>MDPR <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "aftMdpr"'>AFT_MDPR <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "adjp"'>ADJP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ordpVapr"'>ORDP_VAPR <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ordpCount"'>ORDP_COUNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "saleRgstNm"'>SALE_RGST_NM <choose><when test='item.dir == "saleRgstNm"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "adjStatCd"'>SALE_RGST_NM <choose><when test='item.dir == "saleRgstNm"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                   ORD_DT, SORD, CARLINE_CD, MODEL_CD, OCN_CD, EXT_COLOR_CD, INT_COLOR_CD
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        ORD_DT, SORD, CARLINE_CD, MODEL_CD, OCN_CD, EXT_COLOR_CD, INT_COLOR_CD
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>   
+</mapper>

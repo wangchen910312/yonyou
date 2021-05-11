@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : AwayCustomerDAO_SqlMap.xml
+    Description : 자리 비움 예약 관한 데이터처리
+    author Byoung Chul Jeon
+    since 2015. 4. 25.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 04. 25.     Byoung Chul Jeon     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.sci.service.dao.AwayCustomerDAO">
+    <insert id="insertAwayCustomer" parameterType="AwayCustomerVO">
+        /* [chn.bhmc.dms.cmm.away.service.dao.AwayCustomerDAO.insertAwayCustomer] */
+        INSERT INTO CM_2001T(
+               REV_DT
+             , USR_ID
+             , REV_START_HM
+             , REV_END_HM
+             , REV_CONT
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+        ) VALUES (
+               TO_DATE(#{revNewDt}, 'YYYY-MM-DD')
+             , #{usrId}
+             , #{revNewStartHm}
+             , #{revNewEndHm}
+             , #{revCont}
+             , #{regUsrId}
+             , SYSDATE
+             , #{regUsrId}
+             , SYSDATE
+        )
+    </insert>
+
+    <update id="updateAwayCustomer" parameterType="AwayCustomerVO">
+        /* [chn.bhmc.dms.cmm.away.service.dao.AwayCustomerDAO.updateAwayCustomer] */
+        UPDATE CM_2001T
+           SET REV_DT           = TO_DATE(#{revNewDt}, 'YYYY-MM-DD')
+             , REV_START_HM     = #{revNewStartHm}
+             , REV_END_HM       = #{revNewEndHm}
+             , REV_CONT         = #{revCont}
+             , UPDT_USR_ID      = #{updtUsrId}
+             , UPDT_DT          = SYSDATE
+         WHERE REV_DT       = TO_DATE(#{revOldDt}, 'YYYY-MM-DD')
+           AND USR_ID       = #{usrId}
+           AND REV_START_HM = #{revOldStartHm}
+    </update>
+
+    <delete id="deleteAwayCustomer" parameterType="AwayCustomerVO">
+        /* [chn.bhmc.dms.cmm.away.service.dao.AwayCustomerDAO.deleteAwayCustomer] */
+        DELETE FROM CM_2001T
+        <where>
+           AND REV_DT       = TO_DATE(#{revOldDt}, 'YYYY-MM-DD')
+           AND USR_ID       = #{usrId}
+            <if test='revOldStartHm != null and revOldStartHm != ""'>
+           AND REV_START_HM = #{revOldStartHm}
+            </if>
+        </where>
+    </delete>
+
+    <select id="selectAwayCustomerByCondition" parameterType="AwayCustomerSearchVO" resultType="AwayCustomerVO">
+        /* [chn.bhmc.dms.cmm.away.service.dao.AwayCustomerDAO.selectAwayCustomerByCondition] */
+        SELECT *
+              FROM (SELECT ROWNUM AS RNUM
+                         , TB.*
+                      FROM (SELECT TO_CHAR(T1.REV_DT, 'YYYY-MM-DD') AS STR_REV_DT
+                                 , T1.USR_ID
+                                 , T1.REV_START_HM
+                                 , T1.REV_END_HM
+                                 , T1.REV_CONT
+                              FROM CM_2001T T1
+                             INNER JOIN CM_0801T T2
+                                ON T1.USR_ID        = T2.USR_ID
+                            <where>
+                               AND T1.USR_ID        = #{sUsrId}
+                               AND T2.ENABLED_YN    = 'Y'
+                               AND T2.DEL_YN        = 'N'
+                                <if test='sRevStartDt != null and sRevStartDt != ""'>
+                                    AND T1.REV_DT        >= TO_DATE(#{sRevStartDt}, 'YYYY-MM-DD')
+                                </if>
+                                <if test='sRevEndDt != null and sRevEndDt != ""'>
+                                    AND T1.REV_DT        <![CDATA[<]]>  TO_DATE(#{sRevEndDt}, 'YYYY-MM-DD')
+                                </if>
+                            </where>
+                            ORDER BY
+                        <choose>
+                            <when test='sort != null'>
+                                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                    <choose>
+                                        <when test='item.field == "revDt"'>T1.REV_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <otherwise>
+                                            T1.REV_DT ASC
+                                        </otherwise>
+                                    </choose>
+                                </foreach>
+                            </when>
+                            <otherwise>
+                                T1.REV_DT ASC
+                            </otherwise>
+                        </choose>) TB
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>)
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectAwayCustomerByConditionCnt" parameterType="AwayCustomerSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.away.service.dao.AwayCustomerDAO.selectAwayCustomerByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM (SELECT 1
+                  FROM CM_2001T T1
+                 INNER JOIN CM_0801T T2
+                    ON T1.USR_ID        = T2.USR_ID
+                 <where>
+                   AND T1.USR_ID        = #{sUsrId}
+                   AND T2.ENABLED_YN    = 'Y'
+                   AND T2.DEL_YN        = 'N'
+                    <if test='sRevStartDt != null and sRevStartDt != ""'>
+                        AND T1.REV_DT >= TO_DATE(#{sRevStartDt}, 'YYYY-MM-DD')
+                    </if>
+                    <if test='sRevEndDt != null and sRevEndDt != ""'>
+                        AND T1.REV_DT <![CDATA[<]]>  TO_DATE(#{sRevEndDt}, 'YYYY-MM-DD')
+                    </if>
+                 GROUP BY T1.REV_DT
+                </where>) T
+    </select>
+
+    <select id="selectAwayCustomerByPk" parameterType="AwayCustomerSearchVO" resultType="AwayCustomerVO">
+        /* [chn.bhmc.dms.cmm.away.service.dao.AwayCustomerDAO.selectAwayCustomerByPk] */
+        SELECT TO_CHAR(T1.REV_DT, 'YYYY-MM-DD') AS STR_REV_DT
+             , T1.REV_DT
+             , T1.USR_ID
+             , T1.REV_START_HM
+             , T1.REV_END_HM
+             , T1.REV_CONT
+          FROM CM_2001T T1
+         INNER JOIN CM_0801T T2
+            ON T1.USR_ID        = T2.USR_ID
+         WHERE T1.USR_ID        = #{sUsrId}
+           AND T1.REV_DT        = TO_DATE(#{sRevDt}, 'YYYY-MM-DD')
+           AND T1.REV_START_HM  = #{sRevStartHm}
+           AND T2.ENABLED_YN    = 'Y'
+           AND T2.DEL_YN        = 'N'
+    </select>
+
+    <select id="selectAwayCustomerByOverLap" parameterType="AwayCustomerSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.away.service.dao.AwayCustomerDAO.selectAwayCustomerByOverLap] */
+        <![CDATA[
+            SELECT COUNT(*) AS VALUE
+              FROM CM_2001T
+             WHERE USR_ID = #{sUsrId}
+               AND REV_DT = TO_DATE(#{sRevDt}, 'YYYY-MM-DD')
+               AND (TO_NUMBER(SUBSTR(REV_START_HM, 0, 2)) <= TO_NUMBER(#{sRevStartHm}) AND TO_NUMBER(SUBSTR(REV_END_HM, 0, 2)) > TO_NUMBER(#{sRevStartHm})
+                OR  TO_NUMBER(SUBSTR(REV_START_HM, 0, 2)) > TO_NUMBER(#{sRevStartHm}) AND TO_NUMBER(SUBSTR(REV_START_HM, 0, 2)) < TO_NUMBER(#{sRevEndHm}) AND TO_NUMBER(SUBSTR(REV_END_HM, 0, 2)) > TO_NUMBER(#{sRevEndHm}))
+        ]]>
+    </select>
+
+    <select id="selectAwayCustomerDelByConditionCnt" parameterType="AwayCustomerSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.away.service.dao.AwayCustomerDAO.selectAwayCustomerByConditionCnt] */
+        <![CDATA[
+            SELECT COUNT(*) AS VALUE
+              FROM CM_2001T
+             WHERE USR_ID = #{sUsrId}
+               AND REV_DT = TO_DATE(#{sRevDt}, 'YYYY-MM-DD')
+               AND REV_DT <= SYSDATE
+        ]]>
+    </select>
+</mapper>

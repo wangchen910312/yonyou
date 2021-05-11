@@ -1,0 +1,1040 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="ds1" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sWrkTp"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sStartDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sEndDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDateFormat"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sSmsSendRslt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT APP_DSTIN_CD,
+       MAX(CMM_CD_NM) AS SMS_SEND_DSTIN_NM, -- 업무유형	
+       COUNT(*) AS ALL_CNT, -- 발송 총 수량
+       SUM(S_CNT) AS S_CNT, -- 발송 성공
+       SUM(F_CNT) AS F_CNT -- 발송 실패
+  FROM (  SELECT SMS.APP_DSTIN_CD, -- 업무 유형
+   				 CMMCD.CMM_CD_NM,
+                 DECODE(SMS.RECEIVE_RSLT_CD, '0', '1', '0') AS S_CNT,
+                 DECODE(SMS.RECEIVE_RSLT_CD, '0', '0', '1') AS F_CNT
+            FROM CM_3101T SMS 
+           INNER JOIN (SELECT NVL(T2.CMM_CD_TXT,
+                              T1.CMM_CD_NM) AS CMM_CD_NM,
+                              T1.CMM_CD
+                         FROM CM_0303T T1 LEFT JOIN CM_0304T T2 ON T1.CMM_GRP_CD = T2.CMM_GRP_CD
+                          AND T1.CMM_CD = T2.CMM_CD
+                          AND T2.LANG_CD = 'zh'
+                        WHERE T1.CMM_GRP_CD = 'COM065' 
+                          AND T1.REMARK1 = 'WEB'
+					  ) CMMCD ON SMS.APP_DSTIN_CD = CMMCD.CMM_CD
+           WHERE SMS.DLR_CD = '${sDlrCd}' 
+   ${IF(sSmsSendRslt == "Y", " AND SMS.RECEIVE_RSLT_CD = '0' ","")}
+   ${IF(sSmsSendRslt == "N", " AND SMS.RECEIVE_RSLT_CD != '0' ","")}
+   ${IF(LEN(sWrkTp) == 0, ""," AND SMS.APP_DSTIN_CD = '"+sWrkTp+"'")}
+   ${IF(LEN(sStartDt) = 0 , ""," AND TO_CHAR(SMS.REG_DT,'"+sDateFormat+"') between '"+sStartDt+"' and '"+sEndDt+"'") }           
+         )
+GROUP BY APP_DSTIN_CD]]></Query>
+</TableData>
+<TableData name="ds2" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sWrkTp"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sStartDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sEndDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDateFormat"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sSmsSendRslt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[ SELECT SMS.APP_DSTIN_CD,
+        CMMCD.CMM_CD_NM AS SMS_SEND_DSTIN_NM, -- 업무 유형	
+        SMS.REG_DT, -- 발송 시간
+        DECODE(SMS.RECEIVE_RSLT_CD, '0', '发送成功', '发送失败') AS RECEIVE_RSLT, -- SMS 발송 결과 
+        DECODE(SMS.RECEIVE_RSLT_CD, '0', '', FN_CMM_CD_NM ('COM064', SMS.RECEIVE_RSLT_CD, 'zh', '') ) AS RECEIVE_RSLT_FAIL, -- 실페 원인
+        C.CUST_NM, -- 고객명
+        SMS.TEL_NO, -- 이동 전화
+        SMS.SMS_CONT, -- 내용	
+        FN_GET_USER_NM (SMS.REG_USR_ID) AS REG_USR_ID -- 조작 인			
+   FROM CM_3101T SMS 
+   LEFT OUTER JOIN CR_0101T C ON SMS.DLR_CD = C.DLR_CD AND SMS.CUST_NO = C.CUST_NO 
+  INNER JOIN(SELECT NVL(T2.CMM_CD_TXT, T1.CMM_CD_NM) AS CMM_CD_NM,
+                    T1.CMM_CD
+               FROM CM_0303T T1 LEFT JOIN CM_0304T T2 ON T1.CMM_GRP_CD = T2.CMM_GRP_CD
+                AND T1.CMM_CD = T2.CMM_CD
+                AND T2.LANG_CD = 'zh'
+              WHERE T1.CMM_GRP_CD = 'COM065'
+                AND T1.REMARK1 = 'WEB'
+             ) CMMCD ON SMS.APP_DSTIN_CD = CMMCD.CMM_CD
+  WHERE SMS.DLR_CD = '${sDlrCd}' 
+ -- AND SMS.REG_DT BETWEEN SYSDATE-100 AND SYSDATE -- 검색 : 발송시간			
+ -- AND SMS.RECEIVE_RSLT_CD = '0' -- 검색 : 발송결과 (성공)			
+ -- AND SMS.RECEIVE_RSLT_CD != '0' -- 검색 : 발송결과 (실패)			
+ -- AND SMS.SMS_SEND_DSTIN_CD = '' -- 검색 : 업무유형		
+   ${IF(sSmsSendRslt == "Y", " AND SMS.RECEIVE_RSLT_CD = '0' ","")}
+   ${IF(sSmsSendRslt == "N", " AND SMS.RECEIVE_RSLT_CD != '0' ","")}
+   ${IF(LEN(sWrkTp) == 0, ""," AND SMS.APP_DSTIN_CD = '"+sWrkTp+"'")}
+   ${IF(LEN(sStartDt) = 0 , ""," AND TO_CHAR(SMS.REG_DT,'"+sDateFormat+"') between '"+sStartDt+"' and '"+sEndDt+"'") }		
+  ORDER BY SMS.REG_DT DESC]]></Query>
+</TableData>
+</TableDataMap>
+<ReportWebAttr>
+<ServerPrinter/>
+<WebPageContent>
+<Listener event="afterload">
+<JavaScript class="com.fr.js.JavaScriptImpl">
+<Parameters/>
+<Content>
+<![CDATA[setTimeout(function(){
+	$(".ez").click(function(e){
+		var $prev;
+		if($( e.target ).parents( ".fh" ).length == 2){
+			$prev = $( e.target ).parents( ".fh" ).eq(1).prev();
+		}else{
+			$prev = $( e.target ).parents( ".fh" ).eq(0).prev();
+		}
+		if($prev.text().length > 20){
+			$prev.text($prev.attr("title").substring(0,20));
+		}else{
+			$prev.text($prev.attr("title"));
+		}
+	});
+},1000);]]></Content>
+</JavaScript>
+</Listener>
+<ToolBars>
+<ToolBarManager>
+<Location>
+<Embed position="1"/>
+</Location>
+<ToolBar>
+<Widget class="com.fr.report.web.button.page.First">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-First')}]]></Text>
+<IconName>
+<![CDATA[first]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Previous">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Previous')}]]></Text>
+<IconName>
+<![CDATA[previous]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.PageNavi">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Next">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Next')}]]></Text>
+<IconName>
+<![CDATA[next]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Last">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Last')}]]></Text>
+<IconName>
+<![CDATA[last]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.FlashPrint">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Print[Client]A')}]]></Text>
+<IconName>
+<![CDATA[flashprint]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.Print">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Print')}]]></Text>
+<IconName>
+<![CDATA[print]]></IconName>
+<PrintButtons/>
+</Widget>
+<Widget class="com.fr.report.web.button.Export">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Export')}]]></Text>
+<IconName>
+<![CDATA[export]]></IconName>
+<Buttons pdf="true" excelP="true" excelO="true" excelS="true" word="true" image="true" html="true"/>
+</Widget>
+<Widget class="com.fr.report.web.button.Email">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Email')}]]></Text>
+<IconName>
+<![CDATA[email]]></IconName>
+</Widget>
+</ToolBar>
+</ToolBarManager>
+</ToolBars>
+<WebPage isPage="true" isShowAsImage="false" isAutoScale="false" isTDHeavy="false"/>
+</WebPageContent>
+<WebViewContent>
+<Listener event="afterload">
+<JavaScript class="com.fr.js.JavaScriptImpl">
+<Parameters/>
+<Content>
+<![CDATA[setTimeout(function(){
+	$(".ez").click(function(e){
+		var $prev;
+		if($( e.target ).parents( ".fh" ).length == 2){
+			$prev = $( e.target ).parents( ".fh" ).eq(1).prev();
+		}else{
+			$prev = $( e.target ).parents( ".fh" ).eq(0).prev();
+		}
+		if($prev.text().length > 20){
+			$prev.text($prev.attr("title").substring(0,20));
+		}else{
+			$prev.text($prev.attr("title"));
+		}
+	});
+},1000);]]></Content>
+</JavaScript>
+</Listener>
+<ToolBars>
+<ToolBarManager>
+<Location>
+<Embed position="1"/>
+</Location>
+<ToolBar>
+<Widget class="com.fr.report.web.button.PageSetup">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('PageSetup-Page_Setup')}]]></Text>
+<IconName>
+<![CDATA[pagesetup]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.PrintPreview">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('PrintP-Print_Preview')}]]></Text>
+<IconName>
+<![CDATA[preview]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.FlashPrint">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Print[Client]A')}]]></Text>
+<IconName>
+<![CDATA[flashprint]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.Print">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Print')}]]></Text>
+<IconName>
+<![CDATA[print]]></IconName>
+<PrintButtons/>
+</Widget>
+<Widget class="com.fr.report.web.button.Export">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Export')}]]></Text>
+<IconName>
+<![CDATA[export]]></IconName>
+<Buttons pdf="true" excelP="true" excelO="true" excelS="true" word="true" image="true" html="true"/>
+</Widget>
+<Widget class="com.fr.report.web.button.Email">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Email')}]]></Text>
+<IconName>
+<![CDATA[email]]></IconName>
+</Widget>
+</ToolBar>
+</ToolBarManager>
+</ToolBars>
+<SortFuncCheck check="true"/>
+<ConditionFuncCheck check="true"/>
+<ListFuncCheck check="true"/>
+</WebViewContent>
+<WebWriteContent>
+<Listener event="afterload">
+<JavaScript class="com.fr.js.JavaScriptImpl">
+<Parameters/>
+<Content>
+<![CDATA[setTimeout(function(){
+	$(".ez").click(function(e){
+		var $prev;
+		if($( e.target ).parents( ".fh" ).length == 2){
+			$prev = $( e.target ).parents( ".fh" ).eq(1).prev();
+		}else{
+			$prev = $( e.target ).parents( ".fh" ).eq(0).prev();
+		}
+		if($prev.text().length > 20){
+			$prev.text($prev.attr("title").substring(0,20));
+		}else{
+			$prev.text($prev.attr("title"));
+		}
+	});
+},1000);]]></Content>
+</JavaScript>
+</Listener>
+<ToolBars>
+<ToolBarManager>
+<Location>
+<Embed position="1"/>
+</Location>
+<ToolBar>
+<Widget class="com.fr.report.web.button.write.Submit">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Submit')}]]></Text>
+<IconName>
+<![CDATA[submit]]></IconName>
+<Verify failVerifySubmit="false" value="true"/>
+<Sheet onlySubmitSelect="false"/>
+</Widget>
+<Widget class="com.fr.report.web.button.write.Verify">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Verify-Data_Verify')}]]></Text>
+<IconName>
+<![CDATA[verify]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.FlashPrint">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Print[Client]A')}]]></Text>
+<IconName>
+<![CDATA[flashprint]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.Print">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Print')}]]></Text>
+<IconName>
+<![CDATA[print]]></IconName>
+<PrintButtons/>
+</Widget>
+<Widget class="com.fr.report.web.button.Export">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Export')}]]></Text>
+<IconName>
+<![CDATA[export]]></IconName>
+<Buttons pdf="true" excelP="true" excelO="true" excelS="true" word="true" image="true" html="true"/>
+</Widget>
+<Widget class="com.fr.report.web.button.Email">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Email')}]]></Text>
+<IconName>
+<![CDATA[email]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.write.AppendColumnRow">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Add')}${i18n('Record')}]]></Text>
+<IconName>
+<![CDATA[appendcolumn]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.write.ShowCellValue">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<widgetValue/>
+<LabelAttr verticalcenter="true" textalign="0" autoline="false"/>
+<FRFont name="SimSun" style="0" size="72"/>
+<border style="0" color="-723724"/>
+</Widget>
+</ToolBar>
+</ToolBarManager>
+</ToolBars>
+<SelectedColor/>
+<WebWrite SheetPosition="3"/>
+<RptLocation isShowAtLeft="true"/>
+<UnloadCheck/>
+<ShowWidgets/>
+<OtherAttr isAutoStash="false"/>
+</WebWriteContent>
+</ReportWebAttr>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="1" T="4"/>
+<FR/>
+<HC/>
+<FC/>
+<UPFCR COLUMN="false" ROW="true"/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[342900,1371600,1152000,1152000,1152000,1152000,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[419100,4305300,3657600,3086100,3581400,3086100,3162300,2880000,3888000,8915400,1752600,2628900,1066800,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="1" s="0">
+<O>
+<![CDATA[业务类型]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="1" s="0">
+<O>
+<![CDATA[发送短信总数]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="1" s="0">
+<O>
+<![CDATA[发送成功]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="1" s="0">
+<O>
+<![CDATA[发送失败]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="2" s="1">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SMS_SEND_DSTIN_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="2" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="ALL_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="3" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="S_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="4" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="F_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="5" r="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="3" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="3" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="3" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="3" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="3" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="3" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="3" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="3" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="4" s="0">
+<O>
+<![CDATA[业务类型]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="4" cs="2" s="0">
+<O>
+<![CDATA[发送时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="4" s="0">
+<O>
+<![CDATA[短信发送结果]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="4" cs="2" s="0">
+<O>
+<![CDATA[失败原因]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="4" s="0">
+<O>
+<![CDATA[客户名]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="4" s="0">
+<O>
+<![CDATA[手机号码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="4" cs="2" s="0">
+<O>
+<![CDATA[沟通内容]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="4" s="0">
+<O>
+<![CDATA[操作人]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="5" s="1">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="SMS_SEND_DSTIN_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="2" r="5" cs="2" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="REG_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="4" r="5" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="RECEIVE_RSLT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="5" r="5" cs="2" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="RECEIVE_RSLT_FAIL"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="7" r="5" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="CUST_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<CellGUIAttr adjustmode="1"/>
+<CellPageAttr/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="8" r="5" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="TEL_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="9" r="5" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="SMS_CONT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<CellGUIAttr showAsDefault="true">
+<ToolTipText>
+<![CDATA[==$$$]]></ToolTipText>
+</CellGUIAttr>
+<CellPageAttr/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Present class="com.fr.base.present.FormulaPresent">
+<Content>
+<![CDATA[=if(len($$$) <= 20, $$$, left($$$, 20))]]></Content>
+</Present>
+<Expand dir="0"/>
+</C>
+<C c="10" r="5" s="7">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[="<span class='ez'  style='cursor:pointer'>详情</span>"]]></Attributes>
+</O>
+<PrivilegeControl/>
+<CellGUIAttr printContent="false" showAsHTML="true"/>
+<CellPageAttr/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Present class="com.fr.base.present.FormulaPresent">
+<Content>
+<![CDATA[=if(len(J6) <= 20, "", $$$)]]></Content>
+</Present>
+<Expand/>
+</C>
+<C c="11" r="5" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="REG_USR_ID"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="8" r="10">
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings isHorizontalCenterOnPage="true" headerHeight="720000" footerHeight="720000">
+<PaperSetting orientation="1">
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList>
+<HFElement className="com.fr.base.headerfooter.PageNumberHFElement">
+<FRFont name="SimSun" style="0" size="72"/>
+<![CDATA[1]]></HFElement>
+</RightList>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="80"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-16776961"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID/>
+</WorkBook>

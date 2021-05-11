@@ -1,0 +1,482 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : SanbaoReturnRequestDAO_SqlMap.xml
+    Description : 삼보 반품요청 에 관한 데이터처리
+    author Kwon Ki Hyun
+    since 2016. 07. 26.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 07. 26.  Kwon Ki Hyun     최초 생성
+-->
+<mapper namespace="chn.bhmc.dms.ser.wac.service.dao.SanbaoReturnRequestDAO">
+
+    <!-- 삼포반품신청 등록 -->
+    <insert id="insertSanbaoReturnRequest" parameterType="SanbaoReturnVO" >
+    /* [chn.bhmc.dms.ser.wac.service.dao.SanbaoReturnRequestDAO.insertSanbaoReturnRequest] */
+
+        INSERT INTO SE_0760T    --삼보반품마스터
+        (
+          DLR_CD                    --딜러코드
+         ,LINE_NO                   --라인번호
+         ,VIN_NO                    --차대번호
+         ,VIN_NO1                   --차대번호1
+         ,VIN_NO2                   --차대번호2
+         ,LTS_MODEL_CD              --LTS모델코드
+         ,RETURN_STAT_CD            --반품상태코드
+         ,CAR_OWNER_ID              --차량소유자ID
+         ,CAR_OWNER_NM              --차량소유자명
+         ,CAR_ACPT_PBLM_CONT        --차량접수문제내용
+         ,DLR_RESP_CONT             --딜러담당의견
+         ,CAU_ITEM_CD               --원인품목코드
+         ,CAU_ITEM_NM               --원인품목명
+         ,FILE_KEY_NM               --파일키명
+         ,REQ_DSTIN_TP              --요청구분유형
+         ,RETURN_DSTIN_TP           --반품구분유형
+         ,RETURN_APPROVE_NO         --반품승인번호
+         ,CAR_INVC_AMT              --차량인보이스금액
+         ,RUN_DIST_VAL              --주행거리값
+         ,DPCA_AMT                  --감가상각율
+         ,CUST_BUDN_AMT             --고객부담금액
+         ,OCAR_EVAL_AMT             --중고차평가금액
+         ,REQ_AMT                   --요청금액
+         ,DLR_BUDN_AMT              --딜러부담금액
+         ,REG_USR_ID                --등록자ID
+         ,REG_DT                    --등록일자
+        )
+        VALUES
+        (
+          #{dlrCd}                    --딜러코드
+         ,(SELECT NVL(MAX(LINE_NO),0)+1
+             FROM SE_0760T
+            WHERE DLR_CD = #{dlrCd}
+          )                           --라인번호
+         ,#{vinNo}                    --차대번호
+         ,#{vinNo1}                   --차대번호1
+         ,#{vinNo2}                   --차대번호2
+         ,#{ltsModelCd}               --LTS모델코드
+         ,#{returnStatCd}             --반품상태코드
+         ,#{carOwnerId}               --차량소유자ID
+         ,#{carOwnerNm}               --차량소유자명
+         ,#{carAcptPblmCont}          --차량접수문제내용
+         ,#{dlrRespCont}              --딜러담당의견
+         ,#{cauItemCd}                --원인품목코드
+         ,#{cauItemNm}                --원인품목명
+         ,#{fileKeyNm}                --파일키명
+         ,#{reqDstinTp}               --요청구분유형
+         ,#{returnDstinTp}            --반품구분유형
+         ,#{returnApproveNo}          --반품승인번호
+         ,#{carInvcAmt}               --차량인보이스금액
+         ,#{runDistVal}               --주행거리값
+         ,#{dpcaAmt}                  --감가상각율
+         ,#{custBudnAmt}              --고객부담금액
+         ,#{ocarEvalAmt}              --중고차평가금액
+         ,#{reqAmt}                   --요청금액
+         ,#{dlrBudnAmt}               --딜러부담금액
+         ,#{regUsrId}                 --등록자ID
+         ,sysdate                     --등록일자
+        )
+    </insert>
+
+    <!-- 삼포반품신청 수정 -->
+    <update id="updateSanbaoReturnRequest" parameterType="SanbaoReturnVO" >
+    /* [chn.bhmc.dms.ser.wac.service.dao.SanbaoReturnRequestDAO.updateSanbaoReturnRequest] */
+
+        UPDATE SE_0760T                                         --삼보반품마스터
+           SET
+               RETURN_STAT_CD     = #{returnStatCd}             --반품상태코드
+              ,CAU_ITEM_CD        = #{cauItemCd}                --원인품목코드
+              ,CAU_ITEM_NM        = #{cauItemNm}                --원인품목명
+              <if test='returnStatCd == "Q" '  >
+              ,RETURN_REQ_DT      = sysdate                     --반품요청일자
+              </if>
+              ,CAR_ACPT_PBLM_CONT = #{carAcptPblmCont}          --차량접수문제내용
+              ,DLR_RESP_CONT      = #{dlrRespCont}              --딜러담당의견
+              ,FILE_KEY_NM        = #{fileKeyNm}                --파일키명
+              ,REQ_DSTIN_TP       = #{reqDstinTp}               --요청구분유형
+              ,RETURN_DSTIN_TP    = #{returnDstinTp}            --반품구분유형
+              ,CAR_INVC_AMT       = #{carInvcAmt}               --차량인보이스금액
+              ,RUN_DIST_VAL       = #{runDistVal}               --주행거리값
+              ,DPCA_AMT           = #{dpcaAmt}                  --감가상각율
+              ,CUST_BUDN_AMT      = #{custBudnAmt}              --고객부담금액
+              ,OCAR_EVAL_AMT      = #{ocarEvalAmt}              --중고차평가금액
+              ,REQ_AMT            = #{reqAmt}                   --요청금액
+              ,UPDT_USR_ID        = #{updtUsrId}                --수정자ID
+              ,UPDT_DT            = SYSDATE                     --수정일자
+         WHERE 1 = 1
+           AND LINE_NO            = #{lineNo}                   --라인번호
+           AND VIN_NO             = #{vinNo}                    --차대번호
+           AND DLR_CD             = #{dlrCd}                    --딜러코드
+    </update>
+
+    <!-- 삼포반품신청 인터페이스 테이블 등록  -->
+    <insert id="insertSanbaoReturnRequestIf" parameterType="SanbaoReturnVO">
+    /* [chn.bhmc.dms.ser.wac.service.dao.SanbaoReturnRequestDAO.deleteSanbaoReturnRequestIf] */
+
+           INSERT INTO SE_0760I(
+                 DLR_CD
+                ,LINE_NO
+                ,RETURN_REQ_DT
+                ,VIN_NO
+                ,VIN_NO1
+                ,VIN_NO2
+                ,LTS_MODEL_CD
+                ,RETURN_STAT_CD
+                ,CAR_OWNER_ID
+                ,CAR_OWNER_NM
+                ,CAR_ACPT_PBLM_CONT
+                ,DLR_RESP_ID
+                ,DLR_RESP_TEL_NO
+                ,DLR_RESP_CONT
+                ,CAU_ITEM_CD
+                ,CAU_ITEM_NM
+                ,FILE_KEY_NM
+                ,REQ_DSTIN_TP
+                ,RETURN_DSTIN_TP
+                ,ACPT_DT
+                ,JUDG_DT
+                ,RETURN_APPROVE_NO
+                ,CORP_OPN_CONT
+                ,CAR_INVC_AMT
+                ,RUN_DIST_VAL
+                ,DPCA_AMT
+                ,CUST_BUDN_AMT
+                ,OCAR_EVAL_AMT
+                ,REQ_AMT
+                ,DLR_BUDN_AMT
+                ,CORP_BUDN_AMT
+                ,PWA_USE_YN
+                ,PWA_APPROVE_NO
+                ,REG_USR_ID
+                ,REG_DT
+                ,UPDT_USR_ID
+                ,UPDT_DT
+                ,IFRESULT
+                )
+              SELECT DLR_CD
+                    ,LINE_NO
+                    ,RETURN_REQ_DT
+                    ,VIN_NO
+                    ,VIN_NO1
+                    ,VIN_NO2
+                    ,LTS_MODEL_CD
+                    ,RETURN_STAT_CD
+                    ,CAR_OWNER_ID
+                    ,CAR_OWNER_NM
+                    ,CAR_ACPT_PBLM_CONT
+                    ,DLR_RESP_ID
+                    ,DLR_RESP_TEL_NO
+                    ,DLR_RESP_CONT
+                    ,CAU_ITEM_CD
+                    ,CAU_ITEM_NM
+                    ,FILE_KEY_NM
+                    ,REQ_DSTIN_TP
+                    ,RETURN_DSTIN_TP
+                    ,ACPT_DT
+                    ,JUDG_DT
+                    ,RETURN_APPROVE_NO
+                    ,CORP_OPN_CONT
+                    ,CAR_INVC_AMT
+                    ,RUN_DIST_VAL
+                    ,DPCA_AMT
+                    ,CUST_BUDN_AMT
+                    ,OCAR_EVAL_AMT
+                    ,REQ_AMT
+                    ,DLR_BUDN_AMT
+                    ,CORP_BUDN_AMT
+                    ,PWA_USE_YN
+                    ,PWA_APPROVE_NO
+                    ,REG_USR_ID
+                    ,REG_DT
+                    ,UPDT_USR_ID
+                    ,UPDT_DT
+                    ,'N' IFRESULT
+                FROM SE_0760T
+                WHERE 1 = 1
+                  AND DLR_CD   = #{dlrCd}                    --딜러코드
+                  AND LINE_NO  = #{lineNo}                   --라인번호
+                  AND VIN_NO   = #{vinNo}                    --차대번호
+
+    </insert>
+
+    <!-- 삼포반품신청 인터페이스 테이블 삭제  -->
+    <delete id="deleteSanbaoReturnRequestIf" parameterType="SanbaoReturnVO">
+    /* [chn.bhmc.dms.ser.wac.service.dao.SanbaoReturnRequestDAO.deleteSanbaoReturnRequestIf] */
+
+           DELETE FROM SE_0760I
+            WHERE 1 = 1
+              AND DLR_CD             = #{dlrCd}                    --딜러코드
+              AND LINE_NO            = #{lineNo}                   --라인번호
+              AND VIN_NO             = #{vinNo}                    --차대번호
+
+    </delete>
+
+    <!-- 삼포반품신청  인터페이스 전송 여부 정보 -->
+    <select id="selectSanbaoReturnRequestIfSendByConditionCnt" parameterType="SanbaoReturnVO" resultType="int" >
+        /* [chn.bhmc.dms.ser.wac.service.dao.SanbaoReturnRequestDAO.selectSanbaoReturnRequestIfSendByConditionCnt] */
+
+        SELECT COUNT(LINE_NO) AS VALUE
+          FROM SE_0760I
+         WHERE 1 = 1
+           AND DLR_CD             = #{dlrCd}                    --딜러코드
+           AND LINE_NO            = #{lineNo}                   --라인번호
+           AND VIN_NO             = #{vinNo}                    --차대번호
+          <if test ='ifResltYn != null and ifResltYn != ""'>
+           AND IFRESULT = #{ifResltYn}
+          </if>
+    </select>
+
+    <!-- 삼포반품신청  인터페이스 전송 여부 정보 -->
+    <select id="selectSanbaoReturnRequestStatCdByKey" parameterType="SanbaoReturnVO" resultType="string" >
+        /* [chn.bhmc.dms.ser.wac.service.dao.SanbaoReturnRequestDAO.selectSanbaoReturnRequestStatCdByKey] */
+
+        SELECT RETURN_STAT_CD
+          FROM SE_0760T
+         WHERE 1 = 1
+           AND DLR_CD             = #{dlrCd}                    --딜러코드
+           AND LINE_NO            = #{lineNo}                   --라인번호
+           AND VIN_NO             = #{vinNo}                    --차대번호
+
+    </select>
+
+
+    <!-- 삼포반품신청 그리드 조회 -->
+    <select id="selectSanbaoReturnRequestByCondition" parameterType="SanbaoReturnSearchVO" resultType="SanbaoReturnVO">
+    /* [chn.bhmc.dms.ser.wac.service.dao.SanbaoReturnRequestDAO.selectSanbaoReturnRequestByCondition] */
+      SELECT * FROM (
+         SELECT ROWNUM AS RNUM , T1.* FROM (
+             SELECT
+                    DLR_CD                    --딜러코드
+                   ,LINE_NO                   --라인번호
+                   ,RETURN_REQ_DT             --반품요청일자
+                   ,VIN_NO                    --차대번호
+                   ,VIN_NO1                   --차대번호1
+                   ,VIN_NO2                   --차대번호2
+                   ,LTS_MODEL_CD              --LTS모델코드
+                   ,RETURN_STAT_CD            --반품상태코드
+                   ,CAR_OWNER_ID              --차량소유자ID
+                   ,CAR_OWNER_NM              --차량소유자명
+                   ,REQ_DSTIN_TP              --요청구분유형
+                   ,RETURN_DSTIN_TP           --반품구분유형
+                   ,ACPT_DT                   --접수일자
+                   ,JUDG_DT                   --판정일자
+                   ,CUST_BUDN_AMT             --고객부담금액
+                   ,REQ_AMT                   --요청금액
+                   ,DLR_BUDN_AMT              --딜러부담금액
+                   ,CORP_BUDN_AMT             --법인부담금액
+              FROM SE_0760T    --삼보반품마스터
+             WHERE DLR_CD = #{sDlrCd}
+               <if test='sReturnStatCd != null and sReturnStatCd != "" '>
+                   AND RETURN_STAT_CD = #{sReturnStatCd}
+               </if>
+               <if test='sReqDstinTp != null and sReqDstinTp != "" '>
+                   AND REQ_DSTIN_TP =  #{sReqDstinTp}
+               </if>
+                ORDER BY DLR_CD , LINE_NO DESC
+             )T1
+            <where>
+              <if test='firstIndex != -1 and lastIndex != -1'>
+               AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+              </if>
+           </where>
+        )
+           <where>
+               <if test='firstIndex != -1 and lastIndex != -1'>
+                 RNUM > #{firstIndex}
+               </if>
+           </where>
+    </select>
+
+    <select id="selectSanbaoReturnRequestByConditionCnt" parameterType="SanbaoReturnSearchVO" resultType="int">
+    /* [chn.bhmc.dms.ser.wac.service.dao.SanbaoReturnRequestDAO.selectSanbaoReturnRequestByConditionCnt] */
+
+         SELECT
+                COUNT(LINE_NO) VALUE
+          FROM SE_0760T    --삼보반품마스터
+         WHERE DLR_CD = #{sDlrCd}
+           <if test='sReturnStatCd != null and sReturnStatCd != "" '>
+               AND RETURN_STAT_CD = #{sReturnStatCd}
+           </if>
+           <if test='sReqDstinTp != null and sReqDstinTp != "" '>
+               AND REQ_DSTIN_TP =  #{sReqDstinTp}
+           </if>
+
+    </select>
+
+    <!-- 삼포반품신청 그리드 조회 -->
+    <select id="selectSanbaoReturnApproveByCondition" parameterType="SanbaoReturnSearchVO" resultType="SanbaoReturnVO">
+    /* [chn.bhmc.dms.ser.wac.service.dao.SanbaoReturnRequestDAO.selectSanbaoReturnApproveByCondition] */
+      SELECT * FROM (
+         SELECT ROWNUM AS RNUM , T1.* FROM (
+             SELECT
+                    DLR_CD                    --딜러코드
+                   ,LINE_NO                   --라인번호
+                   ,RETURN_REQ_DT             --반품요청일자
+                   ,VIN_NO                    --차대번호
+                   ,VIN_NO1                   --차대번호1
+                   ,VIN_NO2                   --차대번호2
+                   ,LTS_MODEL_CD              --LTS모델코드
+                   ,RETURN_STAT_CD            --반품상태코드
+                   ,CAR_OWNER_ID              --차량소유자ID
+                   ,CAR_OWNER_NM              --차량소유자명
+                   ,REQ_DSTIN_TP              --요청구분유형
+                   ,RETURN_DSTIN_TP           --반품구분유형
+                   ,ACPT_DT                   --접수일자
+                   ,JUDG_DT                   --판정일자
+                   ,CUST_BUDN_AMT             --고객부담금액
+                   ,REQ_AMT                   --요청금액
+                   ,DLR_BUDN_AMT              --딜러부담금액
+                   ,CORP_BUDN_AMT             --법인부담금액
+                   ,RETURN_APPROVE_NO         --반품승인번호
+                   ,PWA_APPROVE_NO            --사용된 PWA 승인번호
+                   ,PWA_USE_YN                --PWA 사용여부
+              FROM SE_0760T A    --삼보반품마스터
+             WHERE RETURN_STAT_CD != 'O'
+               <if test='sDlrCd != null and sDlrCd != "" '>
+                   AND DLR_CD = #{sDlrCd}
+               </if>
+               <if test='sReturnStatCd != null and sReturnStatCd != "" '>
+                   AND RETURN_STAT_CD = #{sReturnStatCd}
+               </if>
+               <if test='sReqDstinTp != null and sReqDstinTp != "" '>
+                   AND REQ_DSTIN_TP =  #{sReqDstinTp}
+               </if>
+               <if test='sFromDt !=null'>
+                   AND RETURN_REQ_DT <![CDATA[>=]]> #{sFromDt}
+               </if>
+               <if test='sToDt !=null'>
+                   AND RETURN_REQ_DT <![CDATA[<=]]> #{sToDt}+1
+               </if>
+               <if test='sVinNo !=null and sVinNo != ""'>
+                   AND VIN_NO = #{sVinNo}
+               </if>
+               <if test='sPreFixId !=null and sPreFixId != "" and sPreFixId == "PWA" '>
+                   AND PWA_USE_YN = 'N'
+                   AND PWA_APPROVE_NO IS NULL
+                   AND NOT EXISTS(
+                             SELECT RETURN_APPROVE_NO
+                               FROM SE_0730T B
+                              WHERE B.DLR_CD            = A.DLR_CD
+                                AND B.RETURN_APPROVE_NO = A.RETURN_APPROVE_NO
+                                AND B.VIN_NO            = A.VIN_NO
+                   )
+               </if>
+               ORDER BY RETURN_REQ_DT DESC
+             )T1
+            <where>
+              <if test='firstIndex != -1 and lastIndex != -1'>
+               AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+              </if>
+           </where>
+        )
+           <where>
+               <if test='firstIndex != -1 and lastIndex != -1'>
+                 RNUM > #{firstIndex}
+               </if>
+           </where>
+    </select>
+
+    <!-- 삼포반품신청 그리드 목록수 조회 -->
+    <select id="selectSanbaoReturnApproveByConditionCnt" parameterType="SanbaoReturnSearchVO" resultType="int">
+    /* [chn.bhmc.dms.ser.wac.service.dao.SanbaoReturnRequestDAO.selectSanbaoReturnApproveByConditionCnt] */
+
+             SELECT COUNT(LINE_NO)VALUE
+              FROM SE_0760T A    --삼보반품마스터
+             WHERE RETURN_STAT_CD != 'O'
+               <if test='sDlrCd != null and sDlrCd != "" '>
+                   AND DLR_CD = #{sDlrCd}
+               </if>
+               <if test='sReturnStatCd != null and sReturnStatCd != "" '>
+                   AND RETURN_STAT_CD = #{sReturnStatCd}
+               </if>
+               <if test='sReqDstinTp != null and sReqDstinTp != "" '>
+                   AND REQ_DSTIN_TP =  #{sReqDstinTp}
+               </if>
+               <if test='sFromDt !=null'>
+                   AND RETURN_REQ_DT <![CDATA[>=]]> #{sFromDt}
+               </if>
+               <if test='sToDt !=null'>
+                   AND RETURN_REQ_DT <![CDATA[<=]]> #{sToDt}+1
+               </if>
+               <if test='sVinNo !=null and sVinNo != ""'>
+                   AND VIN_NO = #{sVinNo}
+               </if>
+               <if test='sPreFixId !=null and sPreFixId != "" and sPreFixId == "PWA" '>
+                   AND PWA_USE_YN = 'N'
+                   AND PWA_APPROVE_NO IS NULL
+                   AND NOT EXISTS(
+                             SELECT RETURN_APPROVE_NO
+                               FROM SE_0730T B
+                              WHERE B.DLR_CD            = A.DLR_CD
+                                AND B.RETURN_APPROVE_NO = A.RETURN_APPROVE_NO
+                                AND B.VIN_NO            = A.VIN_NO
+                   )
+               </if>
+    </select>
+
+
+    <!-- 삼포반품신청 조회 -->
+    <select id="selectSanbaoReturnRequestByKey" parameterType="SanbaoReturnSearchVO" resultType="SanbaoReturnVO">
+    /* [chn.bhmc.dms.ser.wac.service.dao.SanbaoReturnRequestDAO.selectSanbaoReturnRequestByKey] */
+
+          SELECT A.* ,FN_SER_LTS_MODEL_NM(A.LTS_MODEL_CD, #{sLangCd}) AS LTS_MODEL_NM --모델명
+            FROM SE_0760T A
+           WHERE DLR_CD = #{sDlrCd}
+             AND VIN_NO = #{sVinNo}
+             AND LINE_NO = #{sLineNo}
+
+    </select>
+
+    <update id="updateSanbaoReturnApprovePWA" parameterType="SanbaoReturnVO">
+    /* [chn.bhmc.dms.ser.wac.service.dao.SanbaoReturnRequestDAO.updateSanbaoReturnApprovePWA] */
+
+        UPDATE SE_0760T    --삼보반품마스터
+           SET
+               UPDT_USR_ID        = #{updtUsrId}                --수정자ID
+              ,UPDT_DT            = SYSDATE                     --수정일자
+              <choose>
+                  <when test='pwaUseYn != null and pwaUseYn != "" '>
+                      <if test='pwaUseYn == "Y" '>
+                      ,PWA_USE_YN         = #{pwaUseYn}             --PWA 사용여부
+                      ,PWA_APPROVE_NO     = #{pwaApproveNo}         --PWA 승인번호
+                      </if>
+                      <if test='pwaUseYn == "N" '>
+                      ,PWA_USE_YN         = #{pwaUseYn}             --PWA 사용여부
+                      ,PWA_APPROVE_NO     = null                    --PWA 승인번호
+                      </if>
+                  </when>
+              </choose>
+         WHERE 1 = 1
+           AND VIN_NO             = #{vinNo}                    --차대번호
+           <if test='dlrCd != null and dlrCd != "" '>
+           AND DLR_CD             = #{dlrCd}                    --딜러코드
+           </if>
+           <if test='returnApproveNo != null and returnApproveNo != "" '>
+           AND RETURN_APPROVE_NO  = #{returnApproveNo}          --반품승인번호
+           </if>
+           <if test='preFixId == "CLM" and pwaApproveNo != null and pwaApproveNo != "" '>
+            AND PWA_APPROVE_NO     = #{pwaApproveNo}            --PWA 승인번호
+           </if>
+    </update>
+
+
+    <!-- SanBao return 데이타 TEMP로 전송. : 프로시져  -->
+    <insert id="insertSanBaoReturnToRollBack" parameterType="SanbaoReturnVO" statementType="CALLABLE">
+        {CALL SP_SER_SANBAO_RETURN_REQ_ROLLBACK(
+              #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{lineNo, mode=IN, jdbcType=VARCHAR}
+            , #{returnStatCd, mode=IN, jdbcType=VARCHAR}
+        )}
+    </insert>
+
+    <!-- SanBao return 데이타 TEMP로 전송. : 프로시져  -->
+    <insert id="insertSanBaoReturnToIf" parameterType="SanbaoReturnVO" statementType="CALLABLE">
+        {CALL SP_SER_SANBAO_RETURN_REQ(
+              #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{lineNo, mode=IN, jdbcType=VARCHAR}
+        )}
+    </insert>
+</mapper>

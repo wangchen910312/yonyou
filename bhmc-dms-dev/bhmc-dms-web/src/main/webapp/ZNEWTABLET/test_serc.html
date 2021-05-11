@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+    <title></title>
+    <link rel="stylesheet" href="../resources/css/kendo/kendo.common.min.css" />
+    <link rel="stylesheet" href="../resources/css/kendo/kendo.default.min.css" />
+    <link rel="stylesheet" href="../resources/css/mob/kendo.mobile.all.min.css" />
+    <link rel="stylesheet" type="text/css" href="../resources/css/common.css">
+    <link rel="stylesheet" type="text/css" href="../resources/css/tablet.css">
+
+    <script src="../resources/js/jquery-2.1.4.min.js"></script>
+    <script src="../resources/js/kendo/kendo.all.min.js"></script>
+
+    <!-- <script type="text/javascript">var _contextPath = "${pageContext.request.contextPath}";</script>
+    <script type="text/javascript" src="<c:url value='/cmm/sci/js/selectCultureSettings.do' />"></script>
+    <script type="text/javascript" src="../resources/js/dms/dms.common-1.0.js"></script>
+    <script type="text/javascript" src="../resources/js/dms/kendo.ui.ext-1.0.js"></script>
+    <script type="text/javascript" src="../resources/js/dms/jquery.ext-1.0.js"></script>
+    <script type="text/javascript" src="../resources/js/dms/jquery.xml2json.js"></script> -->
+
+<!-- <dms:isTablet>
+<script type="text/javascript" src="<c:url value='/resources/js/dms/kendo.ui.ext-tablet-1.0.js' />"></script>
+</dms:isTablet> -->
+
+</head>
+<body>
+<button class="btn_m btn_reset" id="btnReset">초기화</button><!--초기화  -->
+<button class="btn_m btn_search" id="btnSearch">조회</button><!-- 조회 -->
+<form id="rcvForm" name="rcvForm" method="POST">
+    <div id="tabstrip" class="tab_area">
+        <!-- 탭메뉴 -->
+        <ul>
+            <li id="SER" class="k-state-active"><span>정비정산</span><!-- 정비정산 --></li>
+            <li id="PAR" ><span>부품정산</span></li> <!-- 부품정산 -->
+        </ul>
+        <div>
+             <!-- 그리드 시작 -->
+            <div class="table_grid">
+                <div id="receiveGrid" ></div>
+            </div>
+        </div>
+        <div>
+             <!-- 그리드 시작 -->
+            <div class="table_grid">
+                <div id="itemGrid" ></div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- <div class="table_grid">
+        <div id="receiveGrid" ></div>
+    </div> -->
+    <input type="text" id="rcvDocNo">
+    <input type="text" id="rcvSubDocNo">
+    <input type="text" id="paymTp">
+    <input type="text" id="rcvSubDocNo2">
+    <input type="text" id="roDocNo">
+    <div class="table_grid">
+        <div id="detailGrid" class="grid"></div>
+    </div>
+</form>
+</body>
+<script>
+var selectTabId = "SER";
+$(document).ready(function (){
+
+    $("#tabstrip").kendoTabStrip({
+        animation:false
+        ,select:function(e) {
+            selectTabId = e.item.id;
+        }
+    });
+
+    $("#receiveGrid").kendoGrid({
+        //gridId:"G-SER-1011-000081"
+        dataSource:{
+            error:function(e) {
+                dms.notification.error(e.xhr.responseJSON.errors);
+            }
+            ,transport:{
+                read:{
+                    url:"/bhmc-dms-web/ser/rcv/serviceReceive/selectServiceReceives.do"
+                    ,dataType:"json"
+                    ,type:"POST"
+                    ,contentType: "application/json; charset=utf-8"
+                }
+                ,parameterMap:function(options, operation) {
+                    if (operation === "read") {
+
+                        var params = {};
+
+                        params["recordCountPerPage"] = 10;
+                        params["pageIndex"] = 1;
+                        params["firstIndex"] = 0;
+                        params["lastIndex"] = 10;
+                        params["sort"] = options.sort;
+
+                        params["sRoDocNo"]    = "";
+                        params["sRoTp"]       = "";
+                        params["sRcvStatCd"]  = "O";
+                        params["sPaymTp"]     = "";
+                        params["sPaymPrid"]   = "";
+                        params["sVinNo"]      = "";
+                        params["sDriverNm"]   = "";
+                        params["sCarRegNo"]   = "";
+                        params["sPaymUsrNm"]  = "";
+                        params["sCalcFromDt"] = null;
+                        params["sCalcToDt"]   = null;
+                        params["sPaymYn"]     = "";
+                        params["sCalcPrsnNm"] = "";
+                        params["sCalcStatCd"]   = "00";
+                        params["sSerParDstinCd"] = "SER";
+
+                        return kendo.stringify(params);
+
+                    } else if (operation !== "read" && options.models) {
+                        return kendo.stringify(options.models);
+                    }
+                }
+            }
+            ,schema:{
+                /* model:{
+                    id:"rnum"
+                    ,fields:{
+                        dlrCd:{type:"string"}
+                        ,carRegNo:{type:"string"}
+                        ,rcvDocNo:{type:"string"}
+                        ,vinNo:{type:"string"}
+                        ,driverNm:{type:"string"}
+                        ,carOwnerNm:{type:"string"}
+                        ,roDocNo:{type:"string"}
+                        ,rcvStatCd:{type:"string"}
+                        ,calcDocNo:{type:"string"}
+                        ,calcDt:{type:"date"}
+                        ,roDt:{type:"date"}
+                        ,wonUnitCutAmt:{type:"number"}
+                        ,demicPointCutAmt:{type:"number"}
+                        ,rcvAmt:{type:"number"}
+                    }
+                }, */
+                data: "data",
+                total: "total"
+
+            }
+            ,aggregate:[
+                { field:"rcvAmt", aggregate:"sum" }
+            ]
+        }
+        ,editable:false
+        ,enableTooltip:true               //Tooltip 적용, default:false
+        ,filterable:false                 // 필터링 기능 사용안함
+        ,dataBound:function(e) {
+           /*  var selectedVal =  e.sender.dataItem(e.sender.tbody.find("tr")[gridRow]);
+            if(selectedVal != null){
+                if(rowRcvSubDocNo  == selectedVal.rcvSubDocNo){
+                    e.sender.select(e.sender.tbody.find("tr")[gridRow]);
+                }
+            } */
+        }
+        ,dataBinding:function(e) {
+            console.log(e);
+        }
+        ,change:function(e){
+             var dataItem = this.dataItem(this.select());
+             saveYn = false;
+             $("#rcvDocNo").val(dataItem.rcvDocNo);
+             $("#rcvSubDocNo").val(dataItem.rcvSubDocNo);
+             $("#rcvSubDocNo2").val(dataItem.rcvSubDocNo);
+             $("#roDocNo").val(dataItem.roDocNo);
+             $("#paymTp").val(dataItem.paymTp);
+
+             $("#detailGrid").data("kendoGrid").dataSource.read();
+
+             //setButtonEnable( dataItem.rcvStatCd , dataItem.paymYn );
+
+        }
+        ,height:250
+        ,selectable:"row"
+        ,columns:[
+             {field:"carRegNo", title:"차량번호", width:100,attributes:{"class":"al"}}//차량번호
+            ,{field:"vinNo", title:"VIN", width:150,attributes:{"class":"al"}}//VIN
+            ,{field:"carOwnerNm", title:"차량소유자", width:80,attributes:{"class":"al"}}//차량소유자
+            ,{field:"driverNm", title:"방문자", width:120, attributes:{"class":"al"}}//방문자
+            ,{field:"carlineNm", title:"차종명", width:100}                // 차종명칭
+            ,{field:"modelNm", title:"모델명칭", width:100}                    // 모델명칭
+            ,{field:"runDistVal", title:"사전점검주행거리", width:100, attributes :{"class":"ar"}, format:"{0:n0}"}      // 현주행거리
+            ,{field:"carRunDistVal", title:"인도주행거리", attributes :{"class":"ar"}, width:100 , format:"{0:n0}"} // 인도주행거리
+            ,{field:"rcvStatCd", title:"수납등록상태", width:120, attributes:{"class":"ac"}}//지불상태
+            ,{field:"roDocNo", title:"RO번호", width:120,attributes:{"class":"ac"}}//RO 번호
+            ,{field:"roTpNm", title:"RO유형", width:80, attributes:{"class":"ac"}}  // RO유형
+            ,{field:"roDt", title:"RO일자", width:120, sortable:false, attributes:{"class":"ac"}
+                ,format:"{0:yyyy-MM-dd HH:mm}"
+            }   // RO일자
+            ,{field:"roRegUsrNm", title:"RO발행자", width:100}    // 정비위탁자
+            ,{field:"calcDocNo", title:"결제문서번호", width:120, attributes:{"class":"al"}}//정비정산번호
+            ,{field:"calcDt", title:"정산완료시간", width:120, attributes:{"class":"ac"}, format:"{0:yyyy-MM-dd HH:mm}"}//정산일자
+            ,{field:"calcPrsnNm", title:"정산완료자", width:120, attributes:{"class":"al"}}//정산완료자
+            ,{field:"paymTp", title:"지불유형", width:70
+                ,attributes:{"class":"ac"}
+            }          // 지불유형
+            ,{field:"paymCd", title:"지불자코드", width:100, attributes:{"class":"al"}}       // 지불자 코드
+            ,{field:"paymUsrNm", title:"지불자", width:100, attributes:{"class":"al"}}       // 지불자
+            ,{field:"paymPrid", title:"지불기한", width:90
+                ,attributes:{"class":"ac"}
+            }       // 지불기한
+            ,{field:"calcAmt", title:"정산금액", width:90, attributes:{"class":"ar"}, format:"{0:n2}"}            //정산금액
+            ,{field:"wonUnitCutAmt", title:"정산절사금액", width:90, attributes:{"class":"ar"}, format:"{0:n2}" }     //정산절사
+            ,{field:"demicPointCutAmt", title:"정산제로금액", width:90, attributes:{"class":"ar"}, format:"{0:n2}"}    //정산제로
+            ,{field:"paymAmt", title:"수납금액", width:90, attributes:{"class":"ar"}, format:"{0:n2}"}           // 수납금액
+            ,{field:"rcvAmt", title:"실수금액", width:90, attributes:{"class":"ar"}
+                ,format:"{0:n2}"
+                ,aggregates:["sum"]
+                ,footerTemplate:"<div class='ar'>#=kendo.toString(sum,'n2')#</div>"
+            }          //실수령금액
+            ,{field:"npayAmt", title:"미수금액", width:90, attributes:{"class":"ar"}, format:"{0:n2}"}      //미수금
+            ,{field:"paymRemark", title:"지불비고", width:90}    // 지불비고
+            ,{field:"rcvHisPaymMthCd", title:"예상지불방식", width:100
+                ,attributes:{"class":"ac"}
+            }    // 예상지불방식
+            ,{field:"rcvHisRcptTp", title:"예상영수증유형", width:120
+            }   //예상영수증유형
+            ,{field:"rcvDocNo", title:"수납문서번호", width:120, attributes:{"class":"al"}}//수납번호
+            ,{field:"paymYnNm", title:"지불완료여부", width:80,attributes:{"class":"ac"}}//청산완료여부
+            ,{field:"lbrAmt", title:"발생공임비", width:90, attributes:{"class":"ar"}, format:"{0:n2}" , hidden:true} //발생공임비 (사용안함)
+            ,{field:"parAmt", title:"발생부품비", width:90, attributes:{"class":"ar"}, format:"{0:n2}" , hidden:true}//발생부품비 (사용안함)
+            ,{field:"etcAmt", title:"발생기타비용", width:90, attributes:{"class":"ar"}, format:"{0:n2}", hidden:true}//발생기타비 (사용안함)
+            ,{field:"preAmt", title:"선수금 금액 사용", width:80, attributes:{"class":"ar"}, hidden:true}//선수금 금액 사용
+            ,{field:"balAmt", title:"선불금용금사용금액", width:80, attributes:{"class":"ar"}, hidden:true}//선불금금액
+            ,{field:"dcPermCd", title:"할인권한", width:80, attributes:{"class":"ac"}, hidden:true}//할인권한
+            ,{field:"cupnNo", title:"CouponNo", width:90, hidden:true}       // 쿠폰번호
+            ,{field:"cupnAmt", title:"CouponPrice", width:90, attributes:{"class":"ar"}, hidden:true
+            }       // 쿠폰금액
+            ,{field:"paymMthCd", title:"수납방식", width:70
+                ,attributes:{"class":"ac"}
+                ,hidden:true
+            }    // 지불방식
+            ,{field:"rcptTp", title:"영수증 유형", width:120
+                ,hidden:true
+            }//영수증유형
+        ]
+    });
+
+
+
+
+
+ // 부품
+    $("#itemGrid").kendoGrid({
+        gridId:"G-SER-1011-000082"
+        ,dataSource:{
+            transport:{
+               read:{
+                   url:"/bhmc-dms-web/ser/rcv/serviceReceive/selectServiceReceives.do"
+                   ,dataType:"json"
+                   ,type:"POST"
+                   ,contentType: "application/json; charset=utf-8"
+               }
+               ,parameterMap:function(options, operation) {
+                   if (operation === "read") {
+
+                       var params = {};
+
+                       params["recordCountPerPage"] = 10;
+                       params["pageIndex"] = 1;
+                       params["firstIndex"] = 0;
+                       params["lastIndex"] = 10;
+                       params["sort"] = options.sort;
+
+                       params["sRoDocNo"]    = "";
+                       params["sRoTp"]       = "";
+                       params["sRcvStatCd"]  = "";
+                       params["sPaymTp"]     = "";
+                       params["sPaymPrid"]   = "";
+                       params["sVinNo"]      = "";
+                       params["sDriverNm"]   = "";
+                       params["sCarRegNo"]   = "";
+                       params["sPaymUsrNm"]  = "";
+                       params["sCalcFromDt"] = null;
+                       params["sCalcToDt"]   = null;
+                       params["sPaymYn"]     = "";
+                       params["sSerParDstinCd"] = "PAR";
+
+                       return kendo.stringify(params);
+
+                   } else if (operation !== "read" && options.models) {
+                       return kendo.stringify(options.models);
+                   }
+               }
+           }
+           ,schema:{
+               model:{
+                   id:"rnum"
+                   ,fields:{
+                        dlrCd:{type:"string"}
+                       ,carRegNo:{type:"string"}
+                       ,rcvDocNo:{type:"string"}
+                       ,vinNo:{type:"string"}
+                       ,driverNm:{type:"string"}
+                       ,carOwnerNm:{type:"string"}
+                       ,roDocNo:{type:"string"}
+                       ,rcvStatCd:{type:"string"}
+                       ,calcDocNo:{type:"string"}
+                       ,calcDt:{type:"date"}
+                       ,wonUnitCutAmt:{type:"number"}
+                       ,demicPointCutAmt:{type:"number"}
+                    }
+                },
+                data: "data",
+                total: "total"
+            }
+        }
+        ,editable:false
+        ,enableTooltip:true               //Tooltip 적용, default:false
+        ,filterable:false                 // 필터링 기능 사용안함
+        ,dataBound:function(e) {
+            /* var selectedVal =  e.sender.dataItem(e.sender.tbody.find("tr")[gridRow]);
+            if(selectedVal != null){
+                if(rowRcvSubDocNo  == selectedVal.rcvSubDocNo){
+                    e.sender.select(e.sender.tbody.find("tr")[gridRow]);
+                }
+            } */
+        }
+        ,change:function(e){
+            var dataItem = this.dataItem(this.select());
+            $("#rcvDocNo").val(dataItem.rcvDocNo);
+            $("#rcvSubDocNo").val(dataItem.rcvSubDocNo);
+            $("#rcvSubDocNo2").val(dataItem.rcvSubDocNo);
+            $("#roDocNo").val(dataItem.roDocNo);
+            $("#paymTp").val(dataItem.paymTp);
+
+            $("#detailGrid").data("kendoGrid").dataSource.read();
+
+            //setButtonEnable( dataItem.rcvStatCd ,"Y");
+        }
+        ,height:250
+        ,selectable:"row"
+        ,columns:[
+             {field:"paymYnNm", title:"지불완료여부", width:80,attributes:{"class":"ac"},hidden:true}//청산완료여부
+            ,{field:"carRegNo", title:"차량번호", width:100,attributes:{"class":"al"}}//차량번호
+            ,{field:"vinNo", title:"VIN", width:150,attributes:{"class":"al"}}//VIN
+            ,{field:"carOwnerNm", title:"차량소유자", width:80,attributes:{"class":"al"}}//차량소유자
+            ,{field:"driverNm", title:"수리 의뢰자", width:120, attributes:{"class":"al"}}//운전자
+            ,{field:"rcvStatCd", title:"수납등록상태", width:120, attributes:{"class":"ac"}}//지불상태
+            ,{field:"calcDt", title:"정산완료시간", width:120, attributes:{"class":"ac"}, format:"{0:yyyy-MM-dd HH:mm}"}//정산일자
+            ,{field:"calcDocNo", title:"결제문서번호", width:120, attributes:{"class":"al"}}//정비정산번호
+            ,{field:"rcvDocNo", title:"수납문서번호", width:120, attributes:{"class":"al"}}//수납번호
+            ,{field:"calcPrsnNm", title:"정산완료자", width:120, attributes:{"class":"ac"}}//정산완료자
+            ,{field:"calcSubDocNo", title:"결제문서번호", width:150,hidden:true}          // 정산번호
+            ,{field:"paymTp", title:"지불유형", width:70
+                ,attributes:{"class":"ac"}
+            }          // 지불유형
+            ,{field:"paymUsrNm", title:"지불자", width:100, attributes:{"class":"al"}}       // 지불자
+            ,{field:"paymPrid", title:"지불기한", width:90
+                ,attributes:{"class":"ac"}
+            }       // 지불기한
+            ,{field:"lbrAmt", title:"발생공임비", width:90, attributes:{"class":"ar"}, format:"{0:n2}" , hidden:true} //발생공임비(사용안함)
+            ,{field:"parAmt", title:"발생부품비", width:90, attributes:{"class":"ar"}, format:"{0:n2}" , hidden:true}//발생부품비(사용안함)
+            ,{field:"etcAmt", title:"발생기타비용", width:90, attributes:{"class":"ar"}, format:"{0:n2}" , hidden:true}//발생기타비(사용안함)
+            ,{field:"calcAmt", title:"수납금액", width:90, attributes:{"class":"ar"}, format:"{0:n2}"}            //발생금액
+            ,{field:"rcvAmt", title:"실수금액", width:90, attributes:{"class":"ar"}, format:"{0:n2}"}          //실수령금액
+            ,{field:"npayAmt", title:"미수금액", width:90, attributes:{"class":"ar"}, format:"{0:n2}"}      //미수금
+            ,{field:"wonUnitCutAmt", title:"정산절사", width:90, attributes:{"class":"ar"}, format:"{0:n2}" }                 //정산절사
+            ,{field:"demicPointCutAmt", title:"정산제로", width:90, attributes:{"class":"ar"}, format:"{0:n2}"}              //정산제로
+            ,{field:"paymAmt", title:"정산금액", width:90, attributes:{"class":"ar"}, format:"{0:n2}"}    // 최종정산금액
+            ,{field:"paymMthCd", title:"수납방식", width:70
+                ,attributes:{"class":"ac"}
+            }    // 지불방식
+            ,{field:"cupnNo", title:"CouponNo", width:90,hidden:true}       // 쿠폰번호
+            ,{field:"cupnAmt", title:"CouponPrice", width:90, attributes:{"class":"ar"},hidden:true
+            }       // 쿠폰금액
+            ,{field:"rcptTp", title:"영수증 유형", width:120
+            }//영수증유형
+            ,{field:"preAmt", title:"선수금 금액 사용", width:80, attributes:{"class":"ar"},hidden:true}//선수금 금액 사용
+            ,{field:"balAmt", title:"선불금용금사용금액", width:80, attributes:{"class":"ar"},hidden:true}//선불금금액
+            ,{field:"dcPermCd", title:"할인권한", width:80, attributes:{"class":"ac"},hidden:true}//할인권한
+            ,{field:"paymRemark", title:"지불비고", width:90}    // 지불비고
+          ]
+    });
+
+
+
+
+    $("#detailGrid").kendoGrid({
+        //gridId:"G-SER-1011-000083"
+        dataSource:{
+            transport:{
+                read:{
+                    url:"/bhmc-dms-web/ser/rcv/serviceReceive/selectServiceReceiveDetailsHist.do"
+                    ,dataType:"json"
+                    ,type:"POST"
+                    ,contentType:"application/json; charset=utf-8"
+                }
+                ,parameterMap:function(options, operation) {
+                    if (operation === "read") {
+
+                        var params = {};
+
+                        params["sRcvDocNo"] = $("#rcvDocNo").val();
+                        params["sRcvSubDocNo"] = $("#rcvSubDocNo").val();
+                        params["sPaymTp"]   = $("#paymTp").val();
+
+                        return kendo.stringify(params);
+
+                    }else if (operation !== "read" && options.models) {
+                        return kendo.stringify(options.models);
+                    }
+                }
+            }
+            ,schema:{
+                model:{
+                    id:"rnum"
+                    ,fields:{
+                        rnum:{type:"number" ,editable:false}
+                        ,paymTp:{type:"string"}
+                        ,paymPrid:{type:"string", validation:{required:true} , editable:false} /* 지불기간 */
+                        ,lbrAmt:{type:"number"} /* 발생공임비 */
+                        ,parAmt:{type:"number"} /* 발생부품비 */
+                        ,etcAmt:{type:"number"} /* 발생기타비 */
+                        ,rcvAmt:{type:"number"} /* 발생금액 */
+                        ,paymAmt:{type:"number"}
+                        ,paymMthCd:{type:"string"}
+                        ,rcvCpltDt:{type:"date"}
+                        ,rcptDt:{type:"date"}
+                        ,npayChkDt:{type:"date"}
+                        ,refdDt:{type:"date"}
+                        ,calcDocNo:{type:"string"}
+                        ,lineNo:{type:"number"}
+                    }
+                },
+                data: "data",
+                total: "total"
+            }
+        }
+        ,height:150
+        ,selectable:"row"
+        ,editable:false
+        ,pageable:false
+        ,autoBind:false
+        ,sortable:false
+        //,multiSelectWithCheckbox:true
+        //,appendEmptyColumn:true
+        ,enableTooltip:true               //Tooltip 적용, default:false
+        ,filterable:false                 // 필터링 기능 사용안함
+        ,dataBound:function (e){
+
+            /* var rows = e.sender.tbody.children();
+
+            $.each(rows, function(idx, row){
+                var row = $(rows[idx]);
+                var dataItem = e.sender.dataItem(row);
+
+                if(dataItem.paymYn == "Y" || dataItem.paymPrid == "02"){
+                    e.sender.tbody.find("input[data-uid='" + dataItem.uid + "']").attr("disabled","disabled");
+                }else{
+                    e.sender.tbody.find("input[data-uid='" + dataItem.uid + "']").attr("disabled");
+                }
+            }); */
+        }
+        ,change : function(e){
+
+            /* var grid = $('#detailGrid').data('kendoGrid');
+            var selectedVal = grid.dataItem(grid.select());
+            var totAmt = 0;
+            var btnRefundYn = false; */
+
+        }
+        ,columns:[
+            {title:"", width:40
+                ,attributes:{"class":"ac"}
+                ,headerTemplate:"<input type='checkbox' class='checkAll' />"
+            }
+            ,{field:"rnum", title:"번호", width:50,attributes:{"class":"ac"}, hidden:true }                                                               // 번호
+            ,{field:"rcvHistStatNm", title:"수납상태", width:80, attributes:{"class":"ac"} }                                            //수납상태명
+            ,{field:"rcvCpltDt", title:"수납완료일자", width:125, attributes:{"class":"ac"}, format:"{0:yyyy-MM-dd HH:mm}"}//수납완료일자
+            ,{field:"regUsrNm", title:"수납자", width:90, attributes:{"class":"al"} }                                                    //수납자
+            ,{field:"paymMthCd", title:"수납방식", width:70,attributes:{"class":"ac"}}            //지불방식
+            ,{field:"rcvAmt", title:"실수금액", width:90, attributes:{"class":"ar"}, format:"{0:n2}"}                                       //실수령금액
+            ,{field:"rcptTp", title:"영수증 유형", width:120}                                             //영수증유형
+            ,{field:"rcptNo", title:"영수증번호", width:120, attributes:{"class":"al"} }                                                    //영수증번호
+            ,{field:"rcptDt", title:"영수증일자", width:125, attributes:{"class":"ac"}, format:"{0:yyyy-MM-dd HH:mm}"} //영수증일자
+            ,{field:"rcvRemark", title:"수납비고", width:195, attributes:{"class":"al"}}                                                //수납비고
+            ,{field:"lineNo", title:"수납문서번호", width:120, hidden:true }                                                                              //
+            ,{field:"rcvDocNo", title:"수납문서번호", width:120, hidden:true }                                                                              // 수납번호
+            ,{field:"rcvStatCd", title:"수납등록상태", width:80, attributes:{"class":"ac"},hidden:true} //지불상태
+            ,{field:"paymTp", title:"지불유형", width:70,attributes:{"class":"ac"},hidden:true}           //지불유형
+            ,{field:"paymUsrNm", title:"지불자", width:100, attributes:{"class":"al"} ,hidden:true}                                         //지불자
+            ,{field:"paymPrid", title:"지불기한", width:90,attributes:{"class":"ac"},hidden:true}   //지불기한
+            ,{field:"npayAmt", title:"미수금액", width:90, attributes:{"class":"ar"}, format:"{0:n2}" ,hidden:true}                       //미수금
+            ,{field:"npayChkDt", title:"미수금확인시간", width:120, attributes:{"class":"ac"}, format:"{0:yyyy-MM-dd HH:mm}",hidden:true}//미수금확인시간
+            ,{field:"refdAmt", title:"환불금액", width:90, attributes:{"class":"ar"}, format:"{0:n2}" ,hidden:true}                         //환불금액
+            ,{field:"refdDt", title:"환불확인시간", width:125, attributes:{"class":"ac"}, format:"{0:yyyy-MM-dd HH:mm}", hidden:true}//환불확인시간
+            ,{field:"refdPrsnNm", title:"환불담당자", width:90, attributes:{"class":"al"} , hidden:true}                                   //환불담당자
+            ,{field:"paymYn", hidden:true }
+            ,{field:"calcDocNo", hidden:true }
+            ,{field:"carOwnerId", hidden:true }
+            ,{field:"carRegNo", hidden:true }
+            ,{field:"vinNo", hidden:true }
+        ]
+    });
+
+  //버튼 - 조회
+    $("#btnSearch").kendoButton({
+        click:function(e) {
+
+            //gridRow = 0;
+            //rowRcvSubDocNo;
+
+            if(selectTabId == "SER"){
+                $('#receiveGrid').data('kendoGrid').dataSource.page(1);
+            }else{
+                $('#itemGrid').data('kendoGrid').dataSource.page(1);
+            }
+            $("#detailGrid").data('kendoGrid').dataSource.data([]);
+            /* $("#rcvSubDocNo2").val("");
+
+            setButtonEnable("","N"); */
+
+        }
+    });
+
+    $("#btnReset").kendoButton({
+        click:function(e){
+            $("#rcvForm").get(0).reset();
+            $("#receiveGrid").data("kendoGrid").dataSource.data([]);
+            $("#itemGrid").data("kendoGrid").dataSource.data([]);
+            $("#detailGrid").data("kendoGrid").dataSource.data([]);
+
+            //$("#sCalcFromDt").data("kendoExtMaskedDatePicker").value("2017-05-18");
+            //$("#sCalcToDt").data("kendoExtMaskedDatePicker").value("2017-06-02");
+        }
+    });
+});
+</script>
+</html>

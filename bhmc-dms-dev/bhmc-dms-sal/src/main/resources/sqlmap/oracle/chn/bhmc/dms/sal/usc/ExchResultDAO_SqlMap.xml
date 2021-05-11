@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.usc.service.dao.ExchResultDAO">
+
+	<!-- 조회 목록 - 중고차치환판매결과조회  -->
+	<select id="selectExchResultByCondition" parameterType="ExchResultSearchVO" resultType="ExchResultVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT SA0141.*
+                     , (SELECT DIVI_NM FROM CM_2501T WHERE DIVI_CD = SA0141.SDPT_CD) AS SDPT_NM
+                     , (SELECT OFF_NM FROM CM_2601T WHERE OFF_CD = SA0141.OFFICE_CD AND DIVI_CD = SA0141.SDPT_CD) AS OFFICE_NM
+                     , (SELECT CSTL_NM FROM CM_2701T WHERE CSTL_CD = SA0141.SUNG_CD) AS SUNG_NM
+                     , (SELECT CITY_NM FROM CM_3201T WHERE CSTL_CD = SA0141.SUNG_CD AND CITY_CD = SA0141.CITY_CD ) AS CITY_NM
+                  FROM (
+                        SELECT ROW_NUMBER() OVER(PARTITION BY A.DLR_CD, A.OCAR_VIN_NO ORDER BY A.UPLOAD_DT DESC, A.SEQ DESC) AS RN
+                             , A.*
+                          FROM SA_0141T A
+                       ) SA0141
+                 WHERE SA0141.RN = 1
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND SA0141.DLR_CD  = #{sDlrCd}
+                 </if>
+                 <if test='sSdptCd != null and sSdptCd != ""'>
+                   AND SA0141.SDPT_CD = #{sSdptCd}
+                 </if>
+                 <if test='sOfficeCd != null and sOfficeCd != ""'>
+                   AND SA0141.OFFICE_CD = #{sOfficeCd}
+                 </if>
+                 <if test='sSungCd != null and sSungCd != ""'>
+                   AND SA0141.SUNG_CD = #{sSungCd}
+                 </if>
+                 <if test='sCityCd != null and sCityCd != ""'>
+                   AND SA0141.CITY_CD = #{sCityCd}
+                 </if>
+                 <if test='sUploadStartDt != null and sUploadEndDt != null'>
+                   AND SA0141.UPLOAD_DT <![CDATA[>=]]> TRUNC(#{sUploadStartDt},'DD')
+                   AND SA0141.UPLOAD_DT <![CDATA[<]]> TRUNC(#{sUploadEndDt},'DD')+1
+                 </if>
+                 <if test='sPayYyMmDt != null and sPayYyMmDt != ""'>
+                   AND SA0141.PAY_YY_MM_DT = #{sPayYyMmDt}
+                 </if>
+                 <if test='sVinNo != null and sVinNo != ""'>
+                   AND SA0141.OCAR_VIN_NO LIKE '%' || #{sVinNo} || '%'
+                 </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "uploadDt"'>UPLOAD_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "exchTp"'>EXCH_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlrNm"'>DLR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "cityCd"'>CITY_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "sungCd"'>SUNG_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "officeCd"'>OFFICE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "sdptCd"'>SDPT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocarMakerTp"'>OCAR_MAKER_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocarOwnerNm"'>OCAR_OWNER_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocarMakerNm"'>OCAR_MAKER_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocarVinNo"'>OCAR_VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocarRcptNo"'>OCAR_RCPT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocarRcptPliblDt"'>OCAR_RCPT_PLIBL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocarNo"'>OCAR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocarDlrCd"'>OCAR_DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ncarOwnerNm"'>NCAR_OWNER_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ssnCrnNo"'>SSN_CRN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ncarVinNo"'>NCAR_VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ncarCarlineCd"'>NCAR_CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ncarGradeCd"'>NCAR_GRADE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "tmrCd"'>TMR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "tmrNm"'>TMR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "tmrYy"'>TMR_YY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "evalRsltCd"'>EVAL_RSLT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "payAmt"'>PAY_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "mayYyMmDt"'>MAY_YY_MM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "payYyMmDt"'>PAY_YY_MM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    UPLOAD_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        UPLOAD_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+
+	</select>
+
+	<!-- 목록 갯수 - 중고차치환판매결과조회  -->
+	<select id="selectExchResultByConditionCnt" parameterType="ExchResultSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM (
+                SELECT ROW_NUMBER() OVER(PARTITION BY A.DLR_CD, A.OCAR_VIN_NO ORDER BY A.UPLOAD_DT DESC, A.SEQ DESC) AS RN
+                     , A.*
+                  FROM SA_0141T A
+                ) SA0141
+         WHERE SA0141.RN = 1
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND SA0141.DLR_CD  = #{sDlrCd}
+         </if>
+         <if test='sSdptCd != null and sSdptCd != ""'>
+           AND SA0141.SDPT_CD = #{sSdptCd}
+         </if>
+         <if test='sOfficeCd != null and sOfficeCd != ""'>
+           AND SA0141.OFFICE_CD = #{sOfficeCd}
+         </if>
+         <if test='sSungCd != null and sSungCd != ""'>
+           AND SA0141.SUNG_CD = #{sSungCd}
+         </if>
+         <if test='sCityCd != null and sCityCd != ""'>
+           AND SA0141.CITY_CD = #{sCityCd}
+         </if>
+         <if test='sUploadStartDt != null and sUploadEndDt != null'>
+           AND SA0141.UPLOAD_DT <![CDATA[>=]]> TRUNC(#{sUploadStartDt},'DD')
+           AND SA0141.UPLOAD_DT <![CDATA[<]]> TRUNC(#{sUploadEndDt},'DD')+1
+         </if>
+         <if test='sPayYyMmDt != null and sPayYyMmDt != ""'>
+           AND SA0141.PAY_YY_MM_DT = #{sPayYyMmDt}
+         </if>
+         <if test='sVinNo != null and sVinNo != ""'>
+           AND SA0141.OCAR_VIN_NO LIKE '%' || #{sVinNo} || '%'
+         </if>
+	</select>
+
+
+    <!-- 파일업로드 등록 -->
+    <insert id="insertExchRegist" parameterType="ExchResultVO" >
+        INSERT INTO SA_0141T
+        (UPLOAD_DT,SEQ
+        ,DLR_CD,EXCH_TP
+        ,DLR_NM
+        ,CITY_CD
+        ,SUNG_CD
+        ,OFFICE_CD
+        ,SDPT_CD
+        ,OCAR_MAKER_TP,OCAR_OWNER_NM,OCAR_MAKER_NM,OCAR_VIN_NO,OCAR_RCPT_NO,OCAR_RCPT_PUBL_DT
+        ,OCAR_NO,OCAR_DLR_CD,NCAR_OWNER_NM,SSN_CRN_NO,NCAR_VIN_NO,NCAR_CARLINE_CD
+        ,NCAR_GRADE_CD,TMR_CD,TMR_MM,TMR_YY,EVAL_RSLT_CD,PAY_AMT,MAT_YY_MM_DT,PAY_YY_MM_DT
+        ,REG_USR_ID,REG_DT,UPDT_USR_ID,UPDT_DT
+        )
+        VALUES
+        (SYSDATE,(SELECT NVL(MAX(SEQ),0)+1 FROM SA_0141T)
+        ,#{dlrCd},#{exchTp}
+        ,(SELECT DLR_NM FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+        ,(SELECT SALE_DLR_CITY_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+        ,(SELECT SALE_DLR_SUNG_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+        ,(SELECT DIST_OFFICE_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+        ,(SELECT SDPT_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+        ,#{ocarMakerTp},#{ocarOwnerNm},#{ocarMakerNm},#{ocarVinNo},#{ocarRcptNo},TO_DATE(#{ocarRcptPublDtS},'yyyymmdd')
+        ,#{ocarNo},#{ocarDlrCd},#{ncarOwnerNm},#{ssnCrnNo},#{ncarVinNo},#{ncarCarlineCd}
+        ,#{ncarGradeCd},#{tmrCd},#{tmrMm},#{tmrYy},#{evalRsltCd},#{payAmt},#{mayYyMmDt},#{payYyMmDt}
+        ,#{regUsrId},SYSDATE,#{regUsrId},SYSDATE
+        )
+		<selectKey resultType="int" keyProperty="seq" order="AFTER">
+            SELECT MAX(SEQ) AS seq FROM SA_0141T
+		</selectKey>
+    </insert>
+
+
+    <!-- 파일업로드 등록 -->
+    <insert id="insertInterfaceExchRegist" parameterType="ExchResultVO" >
+        INSERT INTO SA_0141IS
+        (UPLOAD_DT,SEQ
+        ,DLR_CD,EXCH_TP
+        ,DLR_NM
+        ,CITY_CD
+        ,SUNG_CD
+        ,OFFICE_CD
+        ,SDPT_CD
+        ,OCAR_MAKER_TP,OCAR_OWNER_NM,OCAR_MAKER_NM,OCAR_VIN_NO,OCAR_RCPT_NO,OCAR_RCPT_PUBL_DT
+        ,OCAR_NO,OCAR_DLR_CD,NCAR_OWNER_NM,SSN_CRN_NO,NCAR_VIN_NO,NCAR_CARLINE_CD
+        ,NCAR_GRADE_CD,TMR_CD,TMR_MM,TMR_YY,EVAL_RSLT_CD,PAY_AMT,MAT_YY_MM_DT,PAY_YY_MM_DT
+        ,REG_USR_ID,REG_DT,UPDT_USR_ID,UPDT_DT
+        )
+        VALUES
+        (TO_CHAR(SYSDATE, 'YYYYMMDD HH24MISS'),#{seq}
+        ,#{dlrCd},#{exchTp}
+        ,(SELECT DLR_NM FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+        ,(SELECT SALE_DLR_CITY_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+        ,(SELECT SALE_DLR_SUNG_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+        ,(SELECT DIST_OFFICE_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+        ,(SELECT SDPT_CD FROM CM_0101T WHERE DLR_CD = #{dlrCd})
+        ,#{ocarMakerTp},#{ocarOwnerNm},#{ocarMakerNm},#{ocarVinNo},#{ocarRcptNo},TO_DATE(#{ocarRcptPublDtS},'yyyymmdd')
+        ,#{ocarNo},#{ocarDlrCd},#{ncarOwnerNm},#{ssnCrnNo},#{ncarVinNo},#{ncarCarlineCd}
+        ,#{ncarGradeCd},#{tmrCd},#{tmrMm},#{tmrYy},#{evalRsltCd},#{payAmt},#{mayYyMmDt},#{payYyMmDt}
+        ,#{regUsrId},SYSDATE,#{regUsrId},SYSDATE
+        )
+    </insert>
+
+
+
+</mapper>

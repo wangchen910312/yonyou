@@ -1,0 +1,783 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="ds1" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sGoodsContractNo"/>
+<O>
+<![CDATA[G20170000000001946]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT
+     T1.DLR_CD                                              -- 딜러코드
+    ,(SELECT DLR_NM FROM CM_0101T WHERE DLR_CD = T1.DLR_CD) AS DLR_NM
+    ,T1.GOODS_CONTRACT_NO                                   -- 용품계약번호
+    ,T1.GOODS_TP                                            -- 경품업무유형
+    ,T1.GOODS_CONTRACT_DT                                   -- 용품계약일자
+    ,T1.CONTRACT_CUST_NO                                    -- 계약고객번호
+    ,T3.CUST_NM AS CONTRACT_CUST_NM                         -- 계약고객명
+    ,T3.TEL_NO                                              -- 계약고객전화
+    ,T1.CONTRACT_CUST_TP                                    -- 계약고객유형
+    ,T1.PCON_CUST_NO                                        -- 연계인고객번호
+    ,T4.CUST_NM AS PCON_CUST_NM                             -- 연계인명
+    ,T1.TEL_NO                                              -- 전화번호
+    ,T1.CAR_BRAND_CD                                        -- 차량브랜드코드
+    ,T1.CARLINE_CD                                          -- 차종코드
+    ,FN_GET_CARLINE_NM(T1.CARLINE_CD) AS CARLINE_NM         -- 차종명
+    ,T1.MODEL_CD                                            -- 모델코드
+    ,FN_GET_MODEL_NM(T1.MODEL_CD) AS MODEL_NM               -- 모델명
+    ,T1.OCN_CD                                              -- OCN코드
+    ,FN_GET_OCN_NM(T1.MODEL_CD, T1.OCN_CD) AS OCN_NM        -- OCN명
+    ,T1.EXT_COLOR_CD                                        -- 외장색상코드
+    ,FN_GET_EXT_COLOR_NM(T1.EXT_COLOR_CD) AS EXT_COLOR_NM   -- 외장색상명
+    ,T1.INT_COLOR_CD                                        -- 내장색상코드
+    ,FN_GET_INT_COLOR_NM(T1.INT_COLOR_CD) AS INT_COLOR_NM   -- 내장색상명
+    ,T5.VIN_NO                                              -- 차대번호
+    ,T1.CAR_REG_NO                                          -- 차량등록번호
+    ,T1.SALE_CONTRACT_NO                                    -- 판매계약번호
+    ,T1.EXPC_GI_END_DT                                      -- 예정출고완료일자
+    ,T1.EQIP_PRSN_ID                                        -- 설치담당자ID
+    ,T1.REAL_DL_DT                                          -- 실제인도일자
+    ,T1.GOODS_AMT                                           -- 용품금액
+    ,T1.PREN_AMT                                            -- 증정금액
+    ,T1.GOODS_REAL_AMT                                      -- 용품실제금액
+    ,T1.ADD_PREN_AMT                                        -- 추가증정금액
+    ,T1.CUST_PAY_AMT                                        -- 고객지불금액
+    ,T1.CONTRACT_STAT_CD                                    -- 용품주문상태
+    ,T2.GOODS_NM                                            -- 용품명
+    ,T2.GOODS_CNT                                           -- 용품목록수
+    ,T2.GOODS_QTY
+    ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = T1.REG_USR_ID) AS REG_USR_NM
+    ,T6.RETURN_DT                                           -- 최종반품일
+    ,T1.REG_DT                                              -- 판매일자
+    ,CASE WHEN T1.CONTRACT_STAT_CD = '30' OR T1.CONTRACT_STAT_CD = '40'
+          THEN TO_CHAR(T1.REG_DT,'YYYY-MM-DD')
+          ELSE ''
+          END AS GOOD_SALE_DT
+    ,CASE WHEN T1.CONTRACT_STAT_CD = '30' OR T1.CONTRACT_STAT_CD = '40'
+          THEN TO_CHAR(T1.REG_DT,'HH24:MI:SS')
+          ELSE ''
+          END AS GOOD_SALE_TIME
+FROM SA_0261T T1
+LEFT JOIN (
+    SELECT
+         V1.DLR_CD
+        ,V1.GOODS_CONTRACT_NO
+        ,WM_CONCAT(NVL(V1.GOODS_NM, V2.ITEM_NM)) AS GOODS_NM
+        ,SUM(V1.GOODS_CNT) AS GOODS_QTY
+        ,SUM(CASE WHEN V1.STAT_CD IN ('30', '40') THEN V1.GOODS_CNT * -1 ELSE V1.GOODS_CNT END) AS GOODS_CNT
+    FROM SA_0262T V1
+    LEFT JOIN PT_0201T V2 ON V1.DLR_CD = V2.DLR_CD AND V1.GOODS_CD = V2.ITEM_CD
+    GROUP BY V1.DLR_CD, V1.GOODS_CONTRACT_NO
+) T2 ON T1.DLR_CD = T2.DLR_CD AND T1.GOODS_CONTRACT_NO = T2.GOODS_CONTRACT_NO
+LEFT JOIN CR_0101T T3 ON T1.CONTRACT_CUST_NO = T3.CUST_NO
+LEFT JOIN CR_0101T T4 ON T1.PCON_CUST_NO = T4.CUST_NO
+LEFT JOIN SA_0201T T5 ON T1.DLR_CD = T5.DLR_CD AND T1.SALE_CONTRACT_NO = T5.CONTRACT_NO
+LEFT JOIN (
+    SELECT
+    	V1.DLR_CD
+        ,V1.GOODS_CONTRACT_NO
+        ,MAX(V1.REG_DT) AS RETURN_DT
+  	FROM SA_0262T V1
+   	WHERE
+   		V1.DLR_CD = '${sDlrCd}'
+
+      		AND V1.GOODS_CONTRACT_NO = '${sGoodsContractNo}'
+
+       	AND V1.STAT_CD = '40'
+    GROUP BY V1.DLR_CD, V1.GOODS_CONTRACT_NO
+) T6 ON T1.DLR_CD = T6.DLR_CD AND T1.GOODS_CONTRACT_NO = T6.GOODS_CONTRACT_NO
+WHERE T1.DLR_CD = '${sDlrCd}'
+  AND T1.GOODS_CONTRACT_NO = '${sGoodsContractNo}']]></Query>
+</TableData>
+<TableData name="ds2" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sGoodsContractNo"/>
+<O>
+<![CDATA[G20170000000001946]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT A.DLR_CD
+     , A.GOODS_CONTRACT_NO
+     , A.SEQ
+     , A.GOODS_CD
+     , A.GOODS_NM
+     , A.GOODS_CNT
+     , A.GOODS_UNIT_CD
+     , A.RETL_PRC
+     , A.RETL_PRC2
+     , A.TAX_DDCT_PRC
+     , A.TAX_DDCT_PRC2
+     , A.DC_RATE
+     , A.SALE_TOT_AMT
+     , A.SALE_AMT
+     , A.RETL_TOT_AMT
+     , A.TOT_AMT
+     , A.PKG_ITEM_CD
+     , A.GR_STRGE_CD
+     , A.GI_STRGE_CD
+     , A.DC_AMT
+     , A.MVT_DOC_YY_MM
+     , A.MVT_DOC_NO
+     , A.MVT_DOC_LINE_NO
+     , A.EXPC_GI_END_DT
+     , A.EQIP_PRSN_ID
+     , A.REAL_DL_DT
+     , A.EQIP_COST_AMT
+     , A.EXPC_EQIP_DT
+     , A.EQIP_END_DT
+     , A.ORG_RETL_PRC
+     , A.STAT_CD
+     , A.REG_DT
+     , A.RETURN_DT
+     , A.PRE_RETURN_QTY
+     , A.STOCK_QTY
+     , A.AVLB_STOCK_QTY
+     , A.RESV_STOCK_QTY
+     , A.CLAM_STOCK_QTY
+     , A.BORROW_QTY
+     , A.RENT_QTY
+  FROM (
+        SELECT   T1.DLR_CD
+                ,T1.GOODS_CONTRACT_NO
+                ,T1.SEQ
+                ,T1.GOODS_CD
+                ,NVL(T1.GOODS_NM, T2.ITEM_NM) AS GOODS_NM
+				,CASE WHEN (T1.STAT_CD = '30' OR T1.STAT_CD = '40' )
+				      THEN T1.GOODS_CNT * -1
+			          ELSE T1.GOODS_CNT
+		          END AS GOODS_CNT
+                ,T1.GOODS_UNIT_CD
+                ,CASE WHEN (T1.STAT_CD = '30' OR T1.STAT_CD = '40' )
+                      THEN T1.RETL_PRC * -1
+			          ELSE T1.RETL_PRC
+		          END AS RETL_PRC
+                ,T1.RETL_PRC AS RETL_PRC2
+                ,CASE WHEN (T1.STAT_CD = '30' OR T1.STAT_CD = '40' )
+                      THEN ROUND(T1.RETL_PRC/(FN_GET_VAT(TO_CHAR(T6.GOODS_CONTRACT_DT, 'YYYYMMDD'), 'ALL')+1), 2) * -1
+			          ELSE ROUND(T1.RETL_PRC/(FN_GET_VAT(TO_CHAR(T6.GOODS_CONTRACT_DT, 'YYYYMMDD'), 'ALL')+1), 2)
+		          END AS TAX_DDCT_PRC
+                ,ROUND(T1.RETL_PRC/(FN_GET_VAT(TO_CHAR(T6.GOODS_CONTRACT_DT, 'YYYYMMDD'), 'ALL')+1), 2)  AS TAX_DDCT_PRC2
+                ,T1.DC_RATE / 100 AS DC_RATE
+                ,CASE WHEN (T1.STAT_CD = '30' OR T1.STAT_CD = '40' )
+                      THEN ROUND(T1.SALE_AMT * T1.GOODS_CNT , 2) * -1
+			          ELSE ROUND(T1.SALE_AMT * T1.GOODS_CNT, 2)
+		          END AS SALE_TOT_AMT
+                ,T1.SALE_AMT
+                ,CASE WHEN T1.STAT_CD = '30' OR T1.STAT_CD = '40' THEN  (T1.RETL_TOT_AMT*-1 )ELSE T1.RETL_TOT_AMT END AS RETL_TOT_AMT
+                ,CASE WHEN (T1.STAT_CD = '30' OR T1.STAT_CD = '40' )
+                      THEN T1.TOT_AMT * -1
+			          ELSE T1.TOT_AMT
+		          END AS TOT_AMT
+                --,T1.TOT_AMT AS TOT_AMT
+                ,T1.PKG_ITEM_CD
+                ,T1.GR_STRGE_CD
+                ,T1.GI_STRGE_CD
+   		 	    , CASE WHEN T1.STAT_CD = '30'  THEN T1.DC_AMT * -1
+			           WHEN T1.STAT_CD = '40'  THEN T1.DC_AMT * -1
+			           ELSE T1.DC_AMT
+			       END AS DC_AMT
+                ,T1.MVT_DOC_YY_MM
+                ,T1.MVT_DOC_NO
+                ,T1.MVT_DOC_LINE_NO
+                ,T1.EXPC_GI_END_DT
+                ,T1.EQIP_PRSN_ID
+                ,T1.REAL_DL_DT
+                ,T1.EQIP_COST_AMT AS EQIP_COST_AMT
+                ,T1.EXPC_EQIP_DT
+                ,T1.EQIP_END_DT
+                ,T3.RETL_PRC AS ORG_RETL_PRC
+                ,T1.STAT_CD
+                ,T1.REG_DT
+                ,T4.RETURN_DT
+                ,NVL(T4.PRE_RETURN_QTY, 0) AS PRE_RETURN_QTY
+                ,NVL(T5.AVLB_STOCK_QTY,0) + NVL(T5.RESV_STOCK_QTY,0) - NVL(T5.BORROW_QTY,0) + NVL(T5.RENT_QTY,0) AS STOCK_QTY
+                ,NVL(T5.AVLB_STOCK_QTY,0) AS AVLB_STOCK_QTY
+                ,NVL(T5.RESV_STOCK_QTY,0) AS RESV_STOCK_QTY
+                ,NVL(T5.CLAM_STOCK_QTY,0) AS CLAM_STOCK_QTY
+                ,NVL(T5.BORROW_QTY,0) AS BORROW_QTY
+                ,NVL(T5.RENT_QTY,0) AS RENT_QTY
+            FROM SA_0262T T1
+            LEFT OUTER JOIN PT_0201T T2 ON T1.DLR_CD = T2.DLR_CD AND T1.GOODS_CD = T2.ITEM_CD
+            LEFT OUTER JOIN SA_0281T T3 ON T1.DLR_CD = T3.DLR_CD AND T1.GI_STRGE_CD = T3.STRGE_CD AND T1.GOODS_CD = T3.ITEM_CD
+            LEFT OUTER JOIN  (
+                                   SELECT   A.DLR_CD
+                                           ,A.GOODS_CONTRACT_NO
+                                           ,A.GOODS_CD
+                                           ,SUM(A.GOODS_CNT) AS PRE_RETURN_QTY
+                                           ,MAX(A.REG_DT) AS RETURN_DT
+                                     FROM   SA_0262T A
+                                    WHERE   A.DLR_CD               = '${sDlrCd}'
+                                      AND   A.GOODS_CONTRACT_NO    = '${sGoodsContractNo}'
+                                      AND   A.STAT_CD              = '40'
+                                    GROUP BY  A.DLR_CD
+                                             ,A.GOODS_CONTRACT_NO
+                                             ,A.GOODS_CD
+                             ) T4
+                   ON T1.DLR_CD              = T4.DLR_CD
+                  AND T1.GOODS_CONTRACT_NO   = T4.GOODS_CONTRACT_NO
+                  AND T1.GOODS_CD            = T4.GOODS_CD
+            LEFT OUTER JOIN  DMSDB.PT_0301T T5
+                   ON T1.DLR_CD      = T5.DLR_CD
+                  AND T1.GI_STRGE_CD = T5.STRGE_CD
+                  AND T1.GOODS_CD    = T5.ITEM_CD
+            LEFT OUTER JOIN SA_0261T T6 ON T1.DLR_CD = T6.DLR_CD AND T1.GOODS_CONTRACT_NO = T6.GOODS_CONTRACT_NO
+            WHERE T1.DLR_CD            = '${sDlrCd}'
+              AND T1.GOODS_CONTRACT_NO = '${sGoodsContractNo}'
+    ) A
+ORDER BY A.DLR_CD, A.GOODS_CONTRACT_NO,A.SEQ, A.GOODS_CD
+]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="0" T="6"/>
+<FR F="8" T="8"/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1447800,1447800,723900,723900,723900,723900,1219200,723900,1409700,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[1485900,4032000,5219700,2160000,2857500,2592000,2736000,2016000,2880000,0,0,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" cs="9" s="0">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="DLR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="1" cs="9" s="1">
+<O>
+<![CDATA[出库单]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="2" cs="2" s="2">
+<O>
+<![CDATA[精品合同编号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="2" cs="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="GOODS_CONTRACT_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="2" s="2">
+<O>
+<![CDATA[出库日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="2" cs="4" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="GOOD_SALE_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="3" cs="2" s="2">
+<O>
+<![CDATA[供应商名称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="3" cs="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="DLR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="3" s="2">
+<O>
+<![CDATA[出库时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="3" cs="4" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="GOOD_SALE_TIME"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="4" cs="2" s="2">
+<O>
+<![CDATA[备注]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="4" cs="2" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="4" s="2">
+<O>
+<![CDATA[出库确认者]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="4" cs="4" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="REG_USR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="5" cs="9" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="6" s="4">
+<O>
+<![CDATA[序号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="6" s="4">
+<O>
+<![CDATA[精品代码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="6" s="4">
+<O>
+<![CDATA[精品名称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="6" s="4">
+<O>
+<![CDATA[计量单位]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="6" s="4">
+<O>
+<![CDATA[数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="6" s="4">
+<O>
+<![CDATA[单价(含税)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="6" s="4">
+<O>
+<![CDATA[单价(不含税)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="6" s="4">
+<O>
+<![CDATA[优惠率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="6" s="4">
+<O>
+<![CDATA[合计金额(元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="7" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="SEQ"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[条件属性1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[&A8 % 18 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.PageHighlightAction">
+<P i="1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0" multiNumber="18"/>
+</C>
+<C c="1" r="7" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="GOODS_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="7" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="GOODS_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="7" s="7">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="GOODS_UNIT_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="7" s="8">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="GOODS_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="7" s="9">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="RETL_PRC2"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="7" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="TAX_DDCT_PRC2"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="7" s="10">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="DC_RATE"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="7" s="9">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="SALE_TOT_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="7">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="RETL_PRC"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="10" r="7">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="TAX_DDCT_PRC"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="7">
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="8" cs="2" s="2">
+<O>
+<![CDATA[精品管理员]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="8" cs="2" s="3">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="8" s="2">
+<O>
+<![CDATA[总金额(元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="8" s="11">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(J8)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="8" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(K8)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="8" s="12">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="8" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(I8)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting>
+<Margin top="720000" left="720000" bottom="720000" right="720000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="1" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="1" size="104"/>
+<Background name="ColorBackground" color="-2171170"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="ColorBackground" color="-4144960"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="ColorBackground" color="-4144960"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0%]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : SupplyRuleDAO_SqlMap.xml
+    Description : 공급률관리
+    author In Bo Shim
+    since 2016. 9. 09.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 09. 09.     In Bo Shim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.par.pmm.service.dao.SupplyRuleDAO">
+
+    <!-- 공급률정보를 추가한다. -->
+    <insert id="insertSupplyRule" parameterType="SupplyRuleVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.SupplyRuleVODAO.insertSupplyRuleVO] */
+        INSERT INTO PT_0305T
+        (
+            DLR_CD
+            ,PLT_CD
+            ,ABC_IND
+            ,ABC_IND_SALE_RATE
+            ,ABC_IND_PRC
+            ,PURC_ORD_CYCLE_VAL
+            ,PURC_ORD_OPER_LVL_VAL
+            ,REQ_ORD_QTY
+            ,STD_BIZ_ORD_QTY
+            ,SFTY_STOCK_QTY
+            ,AVG_OBT_QTY
+            ,REG_USR_ID
+            ,REG_DT
+        )
+        VALUES
+        (
+            #{dlrCd}
+            ,#{pltCd}
+            ,#{abcInd}
+            ,#{abcIndSaleRate}
+            ,#{abcIndPrc}
+            ,#{purcOrdCycleVal}
+            ,#{purcOrdOperLvlVal}
+            ,#{reqOrdQty}
+            ,#{stdBizOrdQty}
+            ,#{sftyStockQty}
+            ,#{avgObtQty}
+            ,#{regUsrId}
+            ,SYSDATE
+        )
+    </insert>
+
+    <!-- 공급률정보를수정한다. -->
+    <update id="updateSupplyRule" parameterType="SupplyRuleVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.SupplyRuleVODAO.updateSupplyRuleVO] */
+        UPDATE DMSDB.PT_0305T    --안전재고산출기간별가중치정보
+        SET
+            ABC_IND_SALE_RATE = #{abcIndSaleRate}
+            ,ABC_IND_PRC = #{abcIndPrc}
+            ,PURC_ORD_CYCLE_VAL = #{purcOrdCycleVal}
+            ,PURC_ORD_OPER_LVL_VAL = #{purcOrdOperLvlVal}
+            ,REQ_ORD_QTY = #{reqOrdQty}
+            ,STD_BIZ_ORD_QTY = #{stdBizOrdQty}
+            ,SFTY_STOCK_QTY = #{sftyStockQty}
+            ,AVG_OBT_QTY = #{avgObtQty}
+            ,UPDT_USR_ID = #{updtUsrId}
+            ,UPDT_DT = SYSDATE
+        WHERE 1 = 1
+        AND DLR_CD = #{dlrCd}
+        AND PLT_CD = #{pltCd}
+        <if test='abcInd != null and abcInd != ""'>
+        AND ABC_IND = #{abcInd}
+        </if>
+    </update>
+
+    <!-- 공급률정보를 삭제한다. -->
+    <delete id="deleteSupplyRule" parameterType="SupplyRuleVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.SupplyRuleVODAO.deleteSupplyRuleVO] */
+        DELETE FROM PT_0305T
+        WHERE DLR_CD = #{dlrCd}
+        AND PLT_CD = #{pltCd}
+        <if test='abcInd != null and abcInd != ""'>
+        AND ABC_IND = #{abcInd}
+        </if>
+    </delete>
+
+    <!-- 공급률정보를 조회한다. -->
+    <select id="selectSupplyRuleByKey" parameterType="map" resultType="SupplyRuleVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.SupplyRuleVODAO.selectSupplyRuleVOByKey] */
+        SELECT * FROM PT_0305T
+        WHERE DLR_CD = #{dlrCd}
+        AND PLT_CD = #{pltCd}
+        <if test='abcInd != null and abcInd != ""'>
+        AND ABC_IND = #{abcInd}
+        </if>
+    </select>
+
+    <!-- 피벗형 공급률정보를 조회한다. -->
+    <select id="selectSupplyRulesPivotByCondition" parameterType="SupplyRuleSearchVO" resultType="SupplyRulePivotVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.SupplyRuleVODAO.selectSupplyRulesPivotByCondition] */
+
+        SELECT * from (
+           SELECT '订单频次' AS ABC_IND_TP, ABC_IND, REQ_ORD_QTY
+           FROM PT_0305T T
+           WHERE DLR_CD = #{sDlrCd}
+           AND PLT_CD = #{sPltCd}
+        )
+        PIVOT
+        (
+           MAX(REQ_ORD_QTY)
+           FOR ABC_IND IN ('A1'AS "A1",'A2' AS "A2",'A3' AS "A3",'A4' AS "A4",'B1' AS "B1",'B2' AS "B2",'B3' AS "B3",'B4' AS "B4",'C1' AS "C1",'C2' AS "C2",'C3' AS "C3",'C4' AS "C4",'D1' AS "D1",'D2' AS "D2",'E1' AS "E1",'E2' AS "E2",'E3' AS "E3",'E4' AS "E4")
+        )
+        UNION ALL
+        SELECT * from (
+           SELECT '到货频次' AS ABC_IND_TP, ABC_IND, PURC_ORD_CYCLE_VAL
+           FROM PT_0305T T
+           WHERE DLR_CD = #{sDlrCd}
+           AND PLT_CD = #{sPltCd}
+        )
+        PIVOT
+        (
+           MAX(PURC_ORD_CYCLE_VAL)
+           FOR ABC_IND IN ('A1'AS "A1",'A2' AS "A2",'A3' AS "A3",'A4' AS "A4",'B1' AS "B1",'B2' AS "B2",'B3' AS "B3",'B4' AS "B4",'C1' AS "C1",'C2' AS "C2",'C3' AS "C3",'C4' AS "C4",'D1' AS "D1",'D2' AS "D2",'E1' AS "E1",'E2' AS "E2",'E3' AS "E3",'E4' AS "E4")
+        )
+        UNION ALL
+        SELECT * from (
+           SELECT '安全库存系数' AS ABC_IND_TP, ABC_IND, SFTY_STOCK_QTY
+           FROM PT_0305T T
+           WHERE DLR_CD = #{sDlrCd}
+           AND PLT_CD = #{sPltCd}
+        )
+        PIVOT
+        (
+           MAX(SFTY_STOCK_QTY)
+           FOR ABC_IND IN ('A1'AS "A1",'A2' AS "A2",'A3' AS "A3",'A4' AS "A4",'B1' AS "B1",'B2' AS "B2",'B3' AS "B3",'B4' AS "B4",'C1' AS "C1",'C2' AS "C2",'C3' AS "C3",'C4' AS "C4",'D1' AS "D1",'D2' AS "D2",'E1' AS "E1",'E2' AS "E2",'E3' AS "E3",'E4' AS "E4")
+        )
+        UNION ALL
+        SELECT * from (
+           SELECT '特殊影响' AS ABC_IND_TP, ABC_IND, PURC_ORD_OPER_LVL_VAL
+           FROM PT_0305T T
+           WHERE DLR_CD = #{sDlrCd}
+           AND PLT_CD = #{sPltCd}
+        )
+        PIVOT
+        (
+           MAX(PURC_ORD_OPER_LVL_VAL)
+           FOR ABC_IND IN ('A1'AS "A1",'A2' AS "A2",'A3' AS "A3",'A4' AS "A4",'B1' AS "B1",'B2' AS "B2",'B3' AS "B3",'B4' AS "B4",'C1' AS "C1",'C2' AS "C2",'C3' AS "C3",'C4' AS "C4",'D1' AS "D1",'D2' AS "D2",'E1' AS "E1",'E2' AS "E2",'E3' AS "E3",'E4' AS "E4")
+        )
+
+    </select>
+
+    <!-- 공급률정보 목록을 조회한다. -->
+    <select id="selectSupplyRulesByCondition" parameterType="SupplyRuleSearchVO" resultType="SupplyRuleVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.SupplyRuleVODAO.selectSupplyRuleVOsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    DLR_CD
+                    ,PLT_CD
+                    ,ABC_IND
+                    ,ABC_IND_SALE_RATE
+                    ,ABC_IND_PRC
+                    ,PURC_ORD_CYCLE_VAL
+                    ,PURC_ORD_OPER_LVL_VAL
+                    ,REQ_ORD_QTY
+                    ,STD_BIZ_ORD_QTY
+                    ,SFTY_STOCK_QTY
+                    ,AVG_OBT_QTY
+                    ,REG_USR_ID
+                    ,REG_DT
+                    ,UPDT_USR_ID
+                    ,UPDT_DT
+                FROM PT_0305T
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND DLR_CD LIKE '%'||#{sDlrCd}||'%'
+                    </if>
+
+                    <if test='sPltCd != null and sPltCd != ""'>
+                        AND PLT_CD LIKE '%'||#{sPltCd}||'%'
+                    </if>
+
+                    <if test='sAbcInd != null and sAbcInd != ""'>
+                        AND ABC_IND = #{sAbcInd}
+                    </if>
+
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "bpCd"'>BP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 공급률정보 카운트를 조회한다. -->
+    <select id="selectSupplyRulesByConditionCnt" parameterType="SupplyRuleSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.pmm.service.dao.SupplyRuleVODAO.selectSupplyRuleVOsByConditionCnt] */
+        SELECT count(*) FROM PT_0305T
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND DLR_CD LIKE '%'||#{sDlrCd}||'%'
+            </if>
+
+            <if test='sPltCd != null and sPltCd != ""'>
+                AND PLT_CD LIKE '%'||#{sPltCd}||'%'
+            </if>
+
+            <if test='sAbcInd != null and sAbcInd != ""'>
+                AND ABC_IND = #{sAbcInd}
+            </if>
+
+        </where>
+    </select>
+
+
+
+</mapper>

@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CardIssueDAO_SqlMap.xml
+    Description : 카드발급 이력관리
+    author Hyun Ho Kim
+    since 2016. 05. 12.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 05. 12.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.dmm.service.dao.CardIssueDAO">
+    <insert id="insertCardIssue"  parameterType="CardIssueVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.CardIssueDAO.insertCardIssue] */
+        INSERT INTO CR_0813T
+        (
+            DLR_CD
+            ,MEMBERSHIP_NO
+            ,CARD_TP_CD
+            ,CARD_NO
+            ,USE_YN
+            ,REG_USR_ID
+            ,REG_DT
+        )
+        VALUES
+        (
+            #{dlrCd}
+            ,#{membershipNo}
+            ,#{cardTpCd}
+            ,#{cardNo}
+            ,#{useYn}
+            ,#{regUsrId}
+            ,SYSDATE
+        )
+    </insert>
+
+    <select id="selectCardIssueByKey" parameterType="CardIssueSearchVO" resultType="CardIssueVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.CardIssueDAO.selectCardIssueByKey] */
+        SELECT  DLR_CD
+                ,MEMBERSHIP_NO
+                ,CARD_TP_CD
+                ,CARD_NO
+                ,USE_YN
+                ,REG_USR_ID
+                ,REG_DT
+                ,UPDT_USR_ID
+                ,UPDT_DT
+        FROM    CR_0813T
+        WHERE   DLR_CD = #{sDlrCd}
+
+        <if test='(sMembershipNo != null) and (sMembershipNo != "")'>
+            AND MEMBERSHIP_NO = #{sMembershipNo}
+        </if>
+        <if test='(sCardNo != null) and (sCardNo != "")'>
+            AND CARD_NO = #{sCardNo}
+        </if>
+        
+        <if test='(sCardTpCd != null) and (sCardTpCd != "")'>
+            AND CARD_TP_CD = #{sCardTpCd}
+        
+            <choose>
+                <when test='sCardTpCd == "01"'>
+                    AND USE_YN = 'Y'
+                </when>
+                <otherwise>
+                
+                </otherwise>
+            </choose>
+                    
+        </if>
+        
+    </select>
+
+        <!-- 멤버십 충전카드 목록수를 조회한다. -->
+    <select id="selectTransCardsByConditionCnt" parameterType="CardIssueSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.CardIssueDAO.selectTransCardsByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    (SELECT     A.DLR_CD
+                            ,A.MEMBERSHIP_NO
+                            ,A.CARD_TP_CD
+                            ,A.CARD_NO
+                            ,A.REG_DT
+                            ,SUM(B.REAL_TOT_AMT) as REAL_TOT_AMT
+                    FROM    CR_0813T A LEFT OUTER JOIN CR_0803T B
+                            ON A.DLR_CD = B.DLR_CD
+                            AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+                            AND A.CARD_TP_CD = B.CARD_TP_CD
+                            AND A.CARD_NO = B.CARD_NO
+                    WHERE   A.DLR_CD = #{sDlrCd}
+                    AND A.MEMBERSHIP_NO = #{sMembershipNo}
+                    AND A.CARD_TP_CD = '02'
+                    AND A.USE_YN = 'Y'
+                    GROUP BY A.DLR_CD, A.MEMBERSHIP_NO, A.CARD_TP_CD, A.CARD_NO, A.REG_DT
+                )
+    </select>
+
+    <!-- 멤버십 충전카드 정보 목록을 조회한다. -->
+    <select id="selectTransCardsByCondition" parameterType="CardIssueSearchVO" resultType="CardIssueVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.CardIssueDAO.selectTransCardsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT  A.DLR_CD
+                            ,A.MEMBERSHIP_NO
+                            ,A.CARD_TP_CD
+                            ,A.CARD_NO
+                            ,A.REG_DT
+                            ,SUM(B.REAL_TOT_AMT) as REAL_TOT_AMT
+                    FROM    CR_0813T A LEFT OUTER JOIN CR_0803T B
+                            ON A.DLR_CD = B.DLR_CD
+                            AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+                            AND A.CARD_TP_CD = B.CARD_TP_CD
+                            AND A.CARD_NO = B.CARD_NO
+                    WHERE   A.DLR_CD = #{sDlrCd}
+                    AND A.MEMBERSHIP_NO = #{sMembershipNo}
+                    AND A.CARD_TP_CD = '02'
+                    AND A.USE_YN = 'Y'
+                    GROUP BY A.DLR_CD, A.MEMBERSHIP_NO, A.CARD_TP_CD, A.CARD_NO, A.REG_DT
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "pointHisNo"'>B.POINT_HIS_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cardNo"'>A.CARD_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "pointCd"'>B.POINT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "pointTp"'>B.POINT_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "occrPointVal"'>B.OCCR_POINT_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "occrDt"'>B.OCCR_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "deptNm"'>B.DEPT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "prsnId"'>B.PRSN_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        A.REG_DT DESC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            A.REG_DT DESC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 양수자의 멤버십 충전카드 정보 목록을 조회한다. -->
+    <select id="selectTrsfCardNoByCondition" parameterType="CardIssueSearchVO" resultType="CardIssueVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.CardIssueDAO.selectTrsfCardNoByCondition] */
+        SELECT  DLR_CD
+                ,MEMBERSHIP_NO
+                ,CARD_TP_CD
+                ,CARD_NO
+                ,USE_YN
+                ,REG_USR_ID
+                ,REG_DT
+                ,UPDT_USR_ID
+                ,UPDT_DT
+        FROM    CR_0813T
+        WHERE   DLR_CD = #{sDlrCd}
+        AND     MEMBERSHIP_NO = #{sMembershipNo}
+        AND     USE_YN = 'Y'
+        <if test='(sCardTpCd != null) and (sCardTpCd != "")'>
+            AND CARD_TP_CD  = #{sCardTpCd}
+        </if>
+    </select>
+
+    <update id="updateCardIssue"  parameterType="CardIssueVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.CardIssueDAO.updateCardIssue] */
+        UPDATE  CR_0813T    --멤버십 가입 카드
+        SET     USE_YN = #{useYn}
+                ,UPDT_USR_ID    = #{updtUsrId}          --수정자ID
+                ,UPDT_DT        = SYSDATE               --수정일자
+        WHERE   DLR_CD         = #{dlrCd}                --딜러코드
+          AND     MEMBERSHIP_NO = #{membershipNo}
+          AND   CARD_TP_CD     = #{cardTpCd}             --카드타입
+        <if test='(cardNo != null) and (cardNo != "")'>
+          AND   CARD_NO        = #{cardNo}               --카드번호
+        </if>
+    </update>
+    
+    <!-- 포인트 카드번호 수량 확인 -->
+    <select id="selectCardIssueByConditionCnt" parameterType="CardIssueSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.CardIssueDAO.selectCardIssueByConditionCnt] */
+        SELECT
+            COUNT(*) AS CNT
+        FROM CR_0813T
+        WHERE DLR_CD = #{sDlrCd}
+        AND CARD_NO = #{sCardNo}
+        AND CARD_TP_CD = #{sCardTpCd}
+    </select>
+    
+</mapper>

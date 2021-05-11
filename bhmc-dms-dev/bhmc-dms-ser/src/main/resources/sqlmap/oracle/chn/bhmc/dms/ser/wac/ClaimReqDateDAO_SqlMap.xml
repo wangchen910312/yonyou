@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : ClaimRequestDAO_SqlMap.xml
+    Description : 클레임 요청 에 관한 데이터처리
+    author Kwon Ki Hyun
+    since 2016. 02. 29.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 05. 17.  Kwon Ki Hyun     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.wac.service.dao.ClaimReqDateDAO">
+
+    <!-- 일자별로 클레임요청 현황을 조회한다. -->
+    <select id="selectClaimReqDateMastersByCondition" parameterType="ClaimReqDateSearchVO" resultType="ClaimReqDateVO">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimReqDateDAO.selectClaimReqDateMastersByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+               SELECT  CLAIM_CONFIRM_DT               --클레임확정일자
+                       ,COUNT(1) AS CLAIM_CNT         --클레임 건수
+                       ,SUM(CONFIRM_LBR_AMT + CONFIRM_ITEM_AMT + CONFIRM_SUB_LBR_AMT ) AS CLAIM_TOT_AMT
+                       ,SUM(CONFIRM_LBR_AMT ) AS CONFIRM_LBR_AMT          --확정공임금액
+                       ,SUM(CONFIRM_ITEM_AMT ) AS CONFIRM_ITEM_AMT        --확정품목금액
+                       ,SUM(CONFIRM_SUB_LBR_AMT ) AS CONFIRM_SUB_LBR_AMT  --확정외주공임금액
+                       ,MAX(CLAIM_REQ_DT) AS CLAIM_REQ_DT --클레임 청구일자
+                 FROM  SE_0710T
+                <where>
+                    AND DLR_CD = #{sDlrCd}
+                    AND CLAIM_STAT_CD = 'A'
+                <if test='sClaimReqFromDt != null and sClaimReqToDt != null'>
+                    AND TO_CHAR(CLAIM_REQ_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimReqFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimReqToDt},'YYYYMMDD')
+                </if>
+                <if test='sClaimConfirmFromDt != null and sClaimConfirmToDt != null'>
+                    AND TO_CHAR(CLAIM_CONFIRM_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimConfirmFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimConfirmToDt},'YYYYMMDD')
+                </if>
+                </where>
+                GROUP BY CLAIM_CONFIRM_DT
+                ORDER BY
+                <choose>
+                        <when test='sort != null'>
+                                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                        <choose>
+                                                <when test='item.field == "claimConfirmDtFormat"'> CLAIM_CONFIRM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                                <when test='item.field == "claimCnt"'>             CLAIM_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                                <when test='item.field == "claimTotAmt"'>          CLAIM_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                                <when test='item.field == "confirmLbrAmt"'>        CONFIRM_LBR_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                                <when test='item.field == "confirmItemAmt"'>       CONFIRM_ITEM_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                                <when test='item.field == "confirmSubLbrAmt"'>     CONFIRM_SUB_LBR_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                                <when test='item.field == "claimReqDtFormat"'>     CLAIM_REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                                <otherwise>
+                                                CLAIM_CONFIRM_DT
+                                                </otherwise>
+                                        </choose>
+                                </foreach>
+                        </when>
+                        <otherwise>
+                        CLAIM_CONFIRM_DT
+                        </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 일자별로 클레임요청 현황 목록수를 조회한다. -->
+    <select id="selectClaimReqDateMastersByConditionCnt" parameterType="ClaimReqDateSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimReqDateDAO.selectClaimReqDateMastersByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM (SELECT CLAIM_CONFIRM_DT
+                FROM SE_0710T
+             <where>
+                 AND DLR_CD = #{sDlrCd}
+                 AND CLAIM_STAT_CD = 'A'
+             <if test='sClaimReqFromDt != null and sClaimReqToDt != null'>
+                 AND TO_CHAR(CLAIM_REQ_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimReqFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimReqToDt},'YYYYMMDD')
+             </if>
+             <if test='sClaimConfirmFromDt != null and sClaimConfirmToDt != null'>
+                    AND TO_CHAR(CLAIM_CONFIRM_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimConfirmFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimConfirmToDt},'YYYYMMDD')
+                </if>
+             </where>
+             GROUP BY CLAIM_CONFIRM_DT)
+    </select>
+
+
+    <!-- 일자별로 클레임요청 상세현황을 조회한다. -->
+    <select id="selectClaimReqDateDetailsByCondition" parameterType="ClaimReqDateSearchVO" resultType="ClaimReqDateVO">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimReqDateDAO.selectClaimReqDateDetailsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+               SELECT  RO_DOC_NO                    --RO문서번호
+                       ,CLAIM_DOC_NO                --클레임문서번호
+                       ,CLAIM_REQ_DT                --클레임청구일자
+                       ,VIN_NO                      --차대번호
+                       ,SUM(CONFIRM_LBR_AMT + CONFIRM_ITEM_AMT + CONFIRM_SUB_LBR_AMT ) AS CLAIM_TOT_AMT
+                       ,SUM(CONFIRM_LBR_AMT ) AS CONFIRM_LBR_AMT          --확정공임금액
+                       ,SUM(CONFIRM_ITEM_AMT ) AS CONFIRM_ITEM_AMT        --확정품목금액
+                       ,SUM(CONFIRM_SUB_LBR_AMT ) AS CONFIRM_SUB_LBR_AMT  --확정외주공임금액
+                 FROM  SE_0710T
+                <where>
+                    AND DLR_CD = #{sDlrCd}
+                    AND CLAIM_STAT_CD = 'A'
+                    <!--AND TO_CHAR(CLAIM_REQ_DT,'YYYYMMDD') = TO_CHAR(#{sClaimReqDt},'YYYYMMDD') -->
+                     <if test='sClaimReqDt != null'>  <!-- 日索赔现况 根据选择日期进行查询 更改 贾明 2018-9-11 -->
+                         AND TO_CHAR(CLAIM_CONFIRM_DT,'YYYYMMDD') = TO_CHAR(#{sClaimReqDt},'YYYYMMDD')
+                     </if>
+                </where>
+                GROUP BY CLAIM_DOC_NO, VIN_NO, RO_DOC_NO, CLAIM_REQ_DT
+                ORDER BY
+                <choose>
+                        <when test='sort != null'>
+                                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                        <choose>
+                                                <when test='item.field == "roDocNo"'>              RO_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                                <when test='item.field == "claimDocNo"'>           CLAIM_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                                <when test='item.field == "claimReqDtFormat"'>     CLAIM_REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                                <when test='item.field == "vinNo"'>                VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                                                <when test='item.field == "claimTotAmt"'>          CLAIM_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                                <when test='item.field == "confirmLbrAmt"'>        CONFIRM_LBR_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                                <when test='item.field == "confirmItemAmt"'>       CONFIRM_ITEM_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                                <when test='item.field == "confirmSubLbrAmt"'>     CONFIRM_SUB_LBR_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                                <otherwise>
+                                                CLAIM_DOC_NO, VIN_NO, RO_DOC_NO, CLAIM_REQ_DT
+                                                </otherwise>
+                                        </choose>
+                                </foreach>
+                        </when>
+                        <otherwise>
+                        CLAIM_DOC_NO, VIN_NO, RO_DOC_NO, CLAIM_REQ_DT
+                        </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 일자별로 클레임요청 상세현황 목록수를 조회한다. -->
+    <select id="selectClaimReqDateDetailsByConditionCnt" parameterType="ClaimReqDateSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimReqDateDAO.selectClaimReqDateDetailsByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM (SELECT CLAIM_DOC_NO, VIN_NO, RO_DOC_NO, CLAIM_REQ_DT
+                FROM SE_0710T
+             <where>
+                 AND DLR_CD = #{sDlrCd}
+                 AND CLAIM_STAT_CD = 'A'
+                 <!-- AND TO_CHAR(CLAIM_REQ_DT,'YYYYMMDD') = TO_CHAR(#{sClaimReqDt},'YYYYMMDD') -->
+                  <if test='sClaimReqDt != null'>  <!-- 日索赔现况 根据选择日期进行查询 更改 贾明 2018-9-11 -->
+                         AND TO_CHAR(CLAIM_CONFIRM_DT,'YYYYMMDD') = TO_CHAR(#{sClaimReqDt},'YYYYMMDD')
+                   </if>
+             </where>
+             GROUP BY CLAIM_DOC_NO, VIN_NO, RO_DOC_NO, CLAIM_REQ_DT)
+    </select>
+
+</mapper>

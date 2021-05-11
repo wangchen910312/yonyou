@@ -1,0 +1,638 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : BatSalesOpptDAO_SqlMap.xml
+    Description : 배치작업에 관한 데이터처리
+    author Kyo Jin LEE
+    since 2016. 2. 24.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 02. 24.     Kyo Jin LEE     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.bat.crm.cso.service.dao.BatSalesOpptDAO">
+
+    <parameterMap id="paramMap" type="hashMap">
+        <parameter property="dlrCd" mode="IN" jdbcType="VARCHAR" javaType="java.lang.String" />
+        <parameter property="month" mode="IN" jdbcType="VARCHAR" javaType="java.lang.String" />
+        <parameter property="regUsrId" mode="IN" jdbcType="VARCHAR" javaType="java.lang.String" />
+        <parameter property="updtUsrId" mode="IN" jdbcType="VARCHAR" javaType="java.lang.String" />
+        <parameter property="result" mode="OUT" jdbcType="VARCHAR" javaType="string" />
+    </parameterMap>
+
+    <!-- SalesOppt 정보를 수집한다. -->
+<!--     <select id="selectSalesOpptDmsDcs" statementType="CALLABLE" parameterType="hashMap"> -->
+<!--          { call SP_CRM_DMS_DCS_SALESOPPT( -->
+<!--            #{dlrCd, mode=IN, jdbcType=VARCHAR} -->
+<!--          , #{regUsrId, mode=IN, jdbcType=VARCHAR} -->
+<!--          , #{updtUsrId, mode=IN, jdbcType=VARCHAR} -->
+<!--          , #{result, mode=OUT, jdbcType=VARCHAR} -->
+<!--          ) } -->
+<!--     </select> -->
+
+    <!-- 판매기회 추적추진 전달 통계를 위한 정보 수집 -->
+    <!-- 전달 '추적추진'신규, 전패 카운터 수집 -->
+    <select id="selectSalesOpptTrackingCollectMonth" statementType="CALLABLE" parameterType="hashMap">
+         { call SP_CRM_STATS_OPPT_MONTH(
+           #{dlrCd, mode=IN, jdbcType=VARCHAR}
+         , #{month, mode=IN, jdbcType=VARCHAR}
+         , #{result, mode=OUT, jdbcType=VARCHAR}
+         ) }
+    </select>
+
+    <!-- SalesOppt 정보를 수집한다. -->
+    <select id="selectSalesOpptDmsDcs" statementType="CALLABLE" parameterType="hashMap">
+         { call SP_CRM_DMS_DCS_SALESOPPT(
+           #{dlrCd, mode=IN, jdbcType=VARCHAR}
+         , #{regUsrId, mode=IN, jdbcType=VARCHAR}
+         , #{updtUsrId, mode=IN, jdbcType=VARCHAR}
+         , #{result, mode=OUT, jdbcType=VARCHAR}
+         ) }
+    </select>
+
+    <!-- 판매기회 DMS IR에서 T 테이블로 데이터를 처리한다. -->
+    <select id="selectSalesOpptDmsOri" statementType="CALLABLE" parameterType="hashMap">
+         { call SP_CRM_DMS_ORI_SALESOPPT() }
+    </select>
+
+    <!-- ShowRoom 정보를 수집한다. -->
+    <select id="selectShowRoomDmsDcs" statementType="CALLABLE" parameterType="hashMap">
+         { call SP_CRM_DMS_DCS_SHOWROOM(
+           #{dlrCd, mode=IN, jdbcType=VARCHAR}
+         , #{regUsrId, mode=IN, jdbcType=VARCHAR}
+         , #{updtUsrId, mode=IN, jdbcType=VARCHAR}
+         , #{result, mode=OUT, jdbcType=VARCHAR}
+         ) }
+    </select>
+
+
+<!-- 판매기회 수신 처리를 위한  xml 시작  -->
+    <!-- 판매기회 인터페이스 수신 데이터 건수-->
+    <select id="selectSalesOpptIfReceiveByConditionCnt" parameterType="BatSalesOpptProcessMgmtSearchVO" resultType="int">
+    /* [chn.bhmc.dms.bat.crm.cso.service.dao.BatSalesOpptDAO.selectSalesOpptIfReceiveByConditionCnt] */
+        SELECT COUNT(T1.SIEBEL_LEAD_ROW_ID) AS VALUE
+        FROM CR_0211IR T1
+        <include refid="searchWhereIfReceive" />
+    </select>
+
+    <!-- 판매기회 인터페이스 수신 데이터 목록-->
+    <select id="selectSalesOpptIfReceiveByCondition" parameterType="BatSalesOpptProcessMgmtSearchVO" resultType="BatSalesOpptProcessMgmtVO">
+    /* [chn.bhmc.dms.bat.crm.cso.service.dao.BatSalesOpptDAO.selectSalesOpptIfReceiveByCondition] */
+        SELECT
+            DLR_CD                      --딜러코드
+           ,SEQ                         --일련번호
+           ,SIEBEL_LEAD_ROW_ID          --SIEBEL LEAD 일련번호
+           ,CUST_NO                     --고객번호
+           ,SIEBEL_ROW_ID               --SIEBEL 고객번호
+           ,CUST_NM                     --고객명
+           ,CUST_TP                     --고객유형(CRM001)
+           ,EMAIL_NM                    --이메일명
+           ,WECHAT_ID                   --위쳇ID
+           ,TEL_NO                      --전화번호
+           ,HP_NO                       --휴대폰번호
+           ,OFFICE_TEL_NO               --직장전화번호
+           ,SEX_CD                      --성별코드(COM017)
+           ,INFO_TP                     --정보유형 (CRM366)
+           ,PAY_TP                      --지불방식 (CRM368)
+           ,INTR_CARLINE_CD             --의향차종
+           ,INTR_MODEL_CD               --의향모델
+           ,INTR_COLOR_CD               --의향색상 ( SA_0107T)
+           ,HOLD_TP                     --확보유형(CRM008)
+           ,HOLD_DETL_TP_SEQ            --확보 상세유형 일련번호
+           ,HOLD_DETL_TP_NM             --확보 상세유형 명
+           ,LOCAL_CAR_REG_NO_YN         --현지번호판여부
+           ,ESTIMATE_CONT               --견적정보
+           ,SALES_CONT                  --프로모션내용
+           ,REMARK                      --비고설명
+           ,LEAD_STAT_CD                --리드상태 (CRM375)
+           ,TRACE_GRADE_CD              --추적등급 (CRM363)
+           ,VALID_GRADE_CD              --유효성판단 (CRM364)
+           ,INVALID_CAU_CD              --무효원인 (CRM365)
+           ,FAIL_CAU_CD                 --전패원인 (CRM369)
+           ,FAIL_CAU_REASON_CONT        --전패원인분석
+           ,RVSIT_YN                    --재방문여부
+           ,VSIT_RESV_DT                --방문예약시간
+           ,VSIT_DT                     --방문시간
+           ,VSIT_PRSN_CNT               --방문인원수
+           ,VSIT_END_DT                 --떠난시간
+           ,PURC_SEL_CARLINE_CD         --구매선택차종
+           ,PURC_SEL_MODEL_CD           --구매선택모델
+           ,EXPC_PURC_HM_CD             --예상구매시간코드(CRM372)
+           ,EXPC_PURC_DT                --예상구매일
+           ,EXPC_DEAL_PRC               --예상거래가격
+           ,MNG_SC_ID                   --담당자 ID
+           ,DEL_YN                      --삭제여부
+           ,BHMC_YN                     --BHMC여부
+           ,REG_USR_ID                  --등록자ID
+           ,REG_DT                      --등록일자
+           ,UPDT_USR_ID                 --수정자ID
+           ,UPDT_DT                     --수정일자
+           ,IFRESULT                    --인터페이스결과코드
+           ,IFFAILMSG                   --인터페이스실패메세지
+           ,CREATEDATE                  --인터페이스생성일자
+           ,UPDATEDATE                  --인터페이스수정일자
+           ,IF_REG_DT                   --인터페이스등록일자
+           ,BAT_STAT_CD                 --배치상태코드
+           ,BAT_RSLT_DT                 --배치결과일자
+           ,BAT_MESG_CONT               --배치메세지내용
+        FROM CR_0211IR     --판매기회관리수신I/F(DMS)
+        <include refid="searchWhereIfReceive" />
+        ORDER BY REG_DT ASC
+    </select>
+
+    <!-- 판매기회 인터페이스 수신 데이터 검색조건 -->
+    <sql id="searchWhereIfReceive">
+        <where>
+            AND BAT_STAT_CD IS NULL
+        </where>
+    </sql>
+
+    <update id="updateSalesOpptIfReceive" parameterType="BatSalesOpptProcessMgmtVO">
+    /* [chn.bhmc.dms.bat.crm.cso.service.dao.BatSalesOpptDAO.updateSalesOpptIfReceive] */
+        UPDATE CR_0211IR
+        SET
+            BAT_STAT_CD = #{batStatCd}
+            , BAT_RSLT_DT = SYSDATE
+            , BAT_MESG_CONT = #{batMesgCont}
+        WHERE SIEBEL_LEAD_ROW_ID = #{siebelLeadRowId}
+    </update>
+
+    <delete id="deleteSalesOpptIfReceive" parameterType="BatSalesOpptProcessMgmtVO">
+    /* [chn.bhmc.dms.bat.crm.cso.service.dao.BatSalesOpptDAO.deleteSalesOpptIfReceive] */
+        DELETE CR_0211IR
+        WHERE SIEBEL_LEAD_ROW_ID = #{siebelLeadRowId}
+    </delete>
+
+    <!-- 판매기회정보를 저장한다. -->
+    <insert id="insertSalesOpptDup" parameterType="BatSalesOpptProcessMgmtVO">
+    /* [chn.bhmc.dms.bat.crm.cso.service.dao.BatSalesOpptDAO.insertSalesOpptDup] */
+        INSERT INTO CR_0218T    --판매기회중복이력
+        (
+          DUP_SEQ                     --DUP_SEQ
+         ,DLR_CD                      --딜러코드
+         ,SEQ                         --일련번호
+         ,SIEBEL_LEAD_ROW_ID          --SIEBEL LEAD 일련번호
+         ,CUST_NO                     --고객번호
+         ,SIEBEL_ROW_ID               --SIEBEL 고객번호
+         ,CUST_NM                     --고객명
+         ,CUST_TP                     --고객유형(CRM001)
+         ,EMAIL_NM                    --이메일명
+         ,WECHAT_ID                   --위쳇ID
+         ,TEL_NO                      --전화번호
+         ,HP_NO                       --휴대폰번호
+         ,OFFICE_TEL_NO               --직장전화번호
+         ,SEX_CD                      --성별코드(COM017)
+         ,INFO_TP                     --정보유형 (CRM366)
+         ,PAY_TP                      --지불방식 (CRM368)
+         ,INTR_CARLINE_CD             --의향차종
+         ,INTR_MODEL_CD               --의향모델
+         ,INTR_COLOR_CD               --의향색상 ( SA_0107T)
+         ,HOLD_TP                     --확보유형(CRM008)
+         ,HOLD_DETL_TP_SEQ            --확보 상세유형 일련번호
+         ,HOLD_DETL_TP_NM             --확보 상세유형 명
+         ,LOCAL_CAR_REG_NO_YN         --현지번호판여부
+         ,ESTIMATE_CONT               --견적정보
+         ,SALES_CONT                  --프로모션내용
+         ,REMARK                      --비고설명
+         ,LEAD_STAT_CD                --리드상태 (CRM375)
+         ,TRACE_GRADE_CD              --추적등급 (CRM363)
+         ,VALID_GRADE_CD              --유효성판단 (CRM364)
+         ,INVALID_CAU_CD              --무효원인 (CRM365)
+         ,FAIL_CAU_CD                 --전패원인 (CRM369)
+         ,FAIL_CAU_REASON_CONT        --전패원인분석
+         ,RVSIT_YN                    --재방문여부
+         ,VSIT_RESV_DT                --방문예약시간
+         ,VSIT_DT                     --방문시간
+         ,VSIT_PRSN_CNT               --방문인원수
+         ,VSIT_END_DT                 --떠난시간
+         ,PURC_SEL_CARLINE_CD         --구매선택차종
+         ,PURC_SEL_MODEL_CD           --구매선택모델
+         ,EXPC_PURC_HM_CD             --예상구매시간코드(CRM372)
+         ,EXPC_PURC_DT                --예상구매일
+         ,EXPC_DEAL_PRC               --예상거래가격
+         ,MNG_SC_ID                   --담당자 ID
+         ,DEL_YN                      --삭제여부
+         ,BHMC_YN                     --BHMC여부
+         ,REG_USR_ID                  --등록자ID
+         ,REG_DT                      --등록일자
+         ,UPDT_USR_ID                 --수정자ID
+         ,UPDT_DT                     --수정일자
+         ,BAT_STAT_CD                 --배치상태코드
+         ,BAT_RSLT_DT                 --배치결과일자
+         ,BAT_MESG_CONT               --배치메세지내용
+        )
+        VALUES
+        (
+          SEQ_CR_0218T.NEXTVAL
+         ,#{dlrCd}                      --딜러코드
+         ,#{seq}                        --일련번호
+         ,#{siebelLeadRowId}            --SIEBEL LEAD 일련번호
+         ,#{custNo}                     --고객번호
+         ,#{siebelRowId}                --SIEBEL 고객번호
+         ,#{custNm}                     --고객명
+         ,#{custTp}                     --고객유형(CRM001)
+         ,#{emailNm}                    --이메일명
+         ,#{wechatId}                   --위쳇ID
+         ,#{telNo}                      --전화번호
+         ,#{hpNo}                       --휴대폰번호
+         ,#{officeTelNo}                --직장전화번호
+         ,#{sexCd}                      --성별코드(COM017)
+         ,#{infoTp}                     --정보유형 (CRM366)
+         ,#{payTp}                      --지불방식 (CRM368)
+         ,#{intrCarlineCd}              --의향차종
+         ,#{intrModelCd}                --의향모델
+         ,#{intrColorCd}                --의향색상 ( SA_0107T)
+         ,#{holdTp}                     --확보유형(CRM008)
+         ,#{holdDetlTpSeq}              --확보 상세유형 일련번호
+         ,#{holdDetlTpNm}               --확보 상세유형 명
+         ,#{localCarRegNoYn}            --현지번호판여부
+         ,#{estimateCont}               --견적정보
+         ,#{salesCont}                  --프로모션내용
+         ,#{remark}                     --비고설명
+         ,#{leadStatCd}                 --리드상태 (CRM375)
+         ,#{traceGradeCd}               --추적등급 (CRM363)
+         ,#{validGradeCd}               --유효성판단 (CRM364)
+         ,#{invalidCauCd}               --무효원인 (CRM365)
+         ,#{failCauCd}                  --전패원인 (CRM369)
+         ,#{failCauReasonCont}          --전패원인분석
+         ,#{rvsitYn}                    --재방문여부
+         ,#{vsitResvDt}                 --방문예약시간
+         ,#{vsitDt}                     --방문시간
+         ,#{vsitPrsnCnt}                --방문인원수
+         ,#{vsitEndDt}                  --떠난시간
+         ,#{purcSelCarlineCd}           --구매선택차종
+         ,#{purcSelModelCd}             --구매선택모델
+         ,#{expcPurcHmCd}               --예상구매시간코드(CRM372)
+         ,#{expcPurcDt}                 --예상구매일
+         ,#{expcDealPrc}                --예상거래가격
+         ,#{mngScId}                    --담당자 ID
+         ,#{delYn}                      --삭제여부
+         ,#{bhmcYn}                     --BHMC여부
+         ,#{regUsrId}                   --등록자ID
+         ,SYSDATE                      --등록일자
+         ,#{updtUsrId}                  --수정자ID
+         ,SYSDATE                     --수정일자
+         ,#{batStatCd}                  --배치상태코드
+         ,SYSDATE                  --배치결과일자
+         ,#{batMesgCont}                --배치메세지내용
+        )
+    </insert>
+<!-- 판매기회 수신 처리를 위한  xml 끝  -->
+
+    <!-- 판매기회 인터페이스 정보 검색조건   AND T1.DLR_CD  -->
+    <sql id="searchWhere">
+        <where>
+            AND BAT_STAT_CD IS NULL
+        </where>
+    </sql>
+
+    <!-- 판매기회 인터페이스 정보 목록수를 조회한다. -->
+    <select id="selectSalesOpptProcessDmsOriginalByConditionCnt" parameterType="BatSalesOpptProcessMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.bat.crm.cso.service.dao.BatSalesOpptDAO.selectSalesOpptProcessDmsOriginalByConditionCnt] */
+        SELECT COUNT(T1.SIEBEL_LEAD_ROW_ID) AS VALUE
+        FROM CR_0218T T1
+        <include refid="searchWhere" />
+    </select>
+
+    <!-- 판매기회 정보 목록을 조회한다. -->
+    <select id="selectSalesOpptProcessDmsOriginalByCondition" parameterType="BatSalesOpptProcessMgmtSearchVO" resultType="BatSalesOpptProcessMgmtVO">
+        /* [chn.bhmc.dms.bat.crm.cso.service.dao.BatSalesOpptDAO.selectSalesOpptProcessDmsOriginalByCondition] */
+        SELECT
+            T1.DUP_SEQ
+            , T1.DLR_CD
+            , T1.SEQ
+            , T1.SIEBEL_LEAD_ROW_ID
+            , T1.CUST_NO
+            , T1.SIEBEL_ROW_ID
+            , T1.CUST_NM
+            , T1.CUST_TP
+            , T1.EMAIL_NM
+            , T1.WECHAT_ID
+            , T1.TEL_NO
+            , T1.HP_NO
+            , T1.OFFICE_TEL_NO
+            , T1.SEX_CD
+            , T1.INFO_TP
+            , T1.PAY_TP
+            , T1.INTR_CARLINE_CD
+            , T1.INTR_MODEL_CD
+            , T1.INTR_COLOR_CD
+            , T1.HOLD_TP
+            , T1.HOLD_DETL_TP_SEQ
+            , T1.HOLD_DETL_TP_NM
+            , T1.EXPC_PURC_HM_CD
+            , T1.LOCAL_CAR_REG_NO_YN
+            , T1.ESTIMATE_CONT
+            , T1.SALES_CONT
+            , T1.REMARK
+            , T1.LEAD_STAT_CD
+            , T1.TRACE_GRADE_CD
+            , T1.VALID_GRADE_CD
+            , T1.INVALID_CAU_CD
+            , T1.FAIL_CAU_CD
+            , T1.FAIL_CAU_REASON_CONT
+            , T1.RVSIT_YN
+            , T1.VSIT_RESV_DT
+            , T1.VSIT_DT
+            , T1.VSIT_PRSN_CNT
+            , T1.VSIT_END_DT
+            , T1.PURC_SEL_CARLINE_CD
+            , T1.PURC_SEL_MODEL_CD
+            , T1.EXPC_PURC_DT
+            , T1.EXPC_DEAL_PRC
+            , T1.MNG_SC_ID
+            , T1.DEL_YN
+            , T1.BHMC_YN
+            , T1.REG_USR_ID
+            , T1.REG_DT
+            , T1.UPDT_USR_ID
+            , T1.UPDT_DT
+        FROM CR_0218T T1
+        <include refid="searchWhere" />
+        ORDER BY T1.UPDT_DT ASC
+    </select>
+
+    <!-- 판매기회 인터페이스 정보 목록수를 조회한다. -->
+    <select id="selectSalesOpptProcessByConditionCnt" parameterType="BatSalesOpptProcessMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.bat.crm.cso.service.dao.BatSalesOpptDAO.selectSalesOpptProcessByConditionCnt] */
+        SELECT COUNT(T1.SEQ) AS VALUE
+          FROM CR_0211T T1
+          INNER JOIN CR_0101T T2 ON T1.DLR_CD = T2.DLR_CD AND T1.CUST_NO = T2.CUST_NO
+         WHERE 1=1
+           <if test='sLeadStatCd != null and sLeadStatCd != ""'>
+           AND T1.LEAD_STAT_CD NOT IN ('01','02','03','04','05')
+           </if>
+           <if test='sCustNo != null and sCustNo != ""'>
+           AND T1.CUST_NO = #{sCustNo}
+           </if>
+           <if test='sSiebelRowId != null and sSiebelRowId != ""'>
+           AND T2.SIEBEL_ROW_ID = #{sSiebelRowId}
+           </if>
+    </select>
+
+    <update id="updateSalesOpptProcessDupMgmt" parameterType="BatSalesOpptProcessMgmtVO">
+    /* [chn.bhmc.dms.bat.crm.cso.service.dao.SalesOpptProcessMgmtDAO.updateSalesOpptProcessDupMgmt] */
+    UPDATE CR_0218T
+    SET
+        BAT_STAT_CD= #{batStatCd}
+        , BAT_RSLT_DT = SYSDATE
+        , BAT_MESG_CONT = #{batMesgCont}
+    WHERE DUP_SEQ = #{dupSeq}
+    </update>
+
+    <!-- 판매기회정보를 업데이트 한다. -->
+    <update id="updateSalesOpptProcessMgmt" parameterType="BatSalesOpptProcessMgmtVO">
+    /* [chn.bhmc.dms.bat.crm.cso.service.dao.SalesOpptProcessMgmtDAO.updateSalesOpptProcessMgmt] */
+    UPDATE CR_0211T    --판매기회관리
+      SET
+             SEQ                  = #{seq}                        --일련번호
+          <if test='bhmcYn != null '>
+            ,BHMC_YN              = #{bhmcYn}                     --BHMC여부
+          </if>
+          <if test='siebelRowId != null '>
+            ,SIEBEL_ROW_ID        = #{siebelRowId}                --SIEBEL ROW ID
+          </if>
+          <if test='docId != null '>
+            ,DOC_ID               = #{docId}                      --문서ID
+          </if>
+          <if test='withPrsnNm != null '>
+            ,WITH_PRSN_NM         = #{withPrsnNm}                 --동행자명
+          </if>
+          <if test='rvsitYn != null '>
+            ,RVSIT_YN             = #{rvsitYn}                    --재방문여부
+          </if>
+          <if test='vsitResvDt != null '>
+            ,VSIT_RESV_DT         = #{vsitResvDt}                 --방문예약일자
+          </if>
+          <if test='vsitDt != null '>
+              ,VSIT_DT              = #{vsitDt}                     --방문일자
+          </if>
+          <if test='vsitPrsnCnt != null '>
+             ,VSIT_PRSN_CNT        = #{vsitPrsnCnt}                --방문자수
+          </if>
+          <if test='vsitEndDt != null '>
+             ,VSIT_END_DT          = #{vsitEndDt}                  --방문종료일자
+          </if>
+          <if test='infoTp != null '>
+             ,INFO_TP              = #{infoTp}                     --정보유형
+          </if>
+          <if test='holdTp != null '>
+             ,HOLD_TP              = #{holdTp}             --정보경로
+          </if>
+          <if test='holdDetlTpSeq != null '>
+             ,HOLD_DETL_TP_SEQ              = #{holdDetlTpSeq}      --정보경로상세
+          </if>
+          <if test='payTp != null '>
+              ,PAY_TP               = #{payTp}                      --지불유형
+          </if>
+          <if test='intrCarlineCd != null '>
+              ,INTR_CARLINE_CD      = #{intrCarlineCd}              --관심차종코드
+          </if>
+          <if test='intrModelCd != null '>
+              ,INTR_MODEL_CD        = #{intrModelCd}                --관심모델코드
+          </if>
+          <if test='natNofScheNo != null '>
+              ,NAT_NOF_SCHE_NO      = #{natNofScheNo}               --현지번호판예정번호
+          </if>
+          <if test='estimateCont != null '>
+              ,ESTIMATE_CONT        = #{estimateCont}               --견적내용
+          </if>
+          <if test='salesCont != null '>
+              ,SALES_CONT           = #{salesCont}                  --영업내용
+          </if>
+          <if test='remark != null '>
+             ,REMARK               = #{remark}                     --비고
+          </if>
+          <if test='leadLvlCd != null '>
+              ,LEAD_LVL_CD          = #{leadLvlCd}                  --리드레벨코드
+          </if>
+          <if test='leadStatCd != null '>
+              ,LEAD_STAT_CD         = #{leadStatCd}                 --리드상태코드
+          </if>
+          <if test='intrColorCd != null '>
+              ,INTR_COLOR_CD        = #{intrColorCd}                --선호색상코드
+          </if>
+          <if test='traceGradeCd != null '>
+              ,TRACE_GRADE_CD       = #{traceGradeCd}               --추적등급코드
+          </if>
+          <if test='validGradeCd != null '>
+             ,VALID_GRADE_CD       = #{validGradeCd}               --유효등급코드
+          </if>
+          <if test='invalidCauCd != null '>
+             ,INVALID_CAU_CD       = #{invalidCauCd}               --무효원인코드
+          </if>
+          <if test='failCauCd != null '>
+              ,FAIL_CAU_CD          = #{failCauCd}                  --실패원인코드
+          </if>
+          <if test='failCauReasonCont != null '>
+             ,FAIL_CAU_REASON_CONT = #{failCauReasonCont}          --실패원인사유내용
+          </if>
+          <if test='purcSelCarlineCd != null '>
+             ,PURC_SEL_CARLINE_CD  = #{purcSelCarlineCd}           --구매선택차종코드
+          </if>
+          <if test='purcSelModelCd != null '>
+             ,PURC_SEL_MODEL_CD    = #{purcSelModelCd}             --구매선택모델코드
+          </if>
+          <if test='expcPurcHmCd != null '>
+             ,EXPC_PURC_HM_CD      = #{expcPurcHmCd}               --예상구매시간코드
+          </if>
+          <if test='expcPurcDt != null '>
+             ,EXPC_PURC_DT         = #{expcPurcDt}                 --예상구매일자
+          </if>
+          <if test='expcDealPrc != null '>
+             ,EXPC_DEAL_PRC        = #{expcDealPrc}                --예상거래가격
+          </if>
+          <if test='traceDt != null '>
+             ,TRACE_DT             = #{traceDt}                    --추적일자
+          </if>
+          <if test='traceMthCd != null '>
+             ,TRACE_MTH_CD         = #{traceMthCd}                 --추적방법코드
+          </if>
+          <if test='nextTraceDt != null '>
+             ,NEXT_TRACE_DT        = #{nextTraceDt}                --다음추적일자
+          </if>
+          <if test='nextTraceMthCd != null '>
+             ,NEXT_TRACE_MTH_CD    = #{nextTraceMthCd}             --다음추적방법코드
+          </if>
+          <if test='mngScId != null '>
+             ,MNG_SC_ID    = #{mngScId}             --담당자
+          </if>
+          <if test='exhvFlakSeq != null '>
+             ,EXHV_FLAK_SEQ    = #{exhvFlakSeq}                    --전시장 방문번호
+          </if>
+          <if test='dupSeq != null '>
+             ,DUP_SEQ    = #{dupSeq}                    --판매기회중복이력일련번호
+          </if>
+            ,UPDT_USR_ID          = #{updtUsrId}                  --수정자ID
+            ,UPDT_DT              = SYSDATE                     --수정일자
+     WHERE 1 = 1
+       AND DLR_CD               = #{dlrCd}                      --딜러코드
+       AND SEQ                  = #{seq}                        --일련번호
+    </update>
+
+    <!-- 판매기회정보를 저장한다. -->
+    <insert id="insertSalesOpptProcessMgmt" parameterType="SalesOpptProcessMgmtVO">
+    /* [chn.bhmc.dms.bat.crm.cso.service.dao.SalesOpptProcessMgmtDAO.insertSalesOpptProcessMgmt] */
+    INSERT INTO CR_0211T    --판매기회관리
+    (
+      SEQ                         --일련번호
+     ,DLR_CD                      --딜러코드
+     ,CUST_NO                     --고객번호
+     ,DEL_YN                      --삭제여부
+     ,BHMC_YN                     --BHMC여부
+     ,SIEBEL_ROW_ID               --SIEBEL ROW ID
+     ,DOC_ID                      --문서ID
+     ,WITH_PRSN_NM                --동행자명
+     ,RVSIT_YN                    --재방문여부
+     ,VSIT_RESV_DT                --방문예약일자
+     ,VSIT_DT                     --방문일자
+     ,VSIT_PRSN_CNT               --방문자수
+     ,VSIT_END_DT                 --방문종료일자
+     ,INFO_TP                     --정보유형
+     ,HOLD_TP                --정보경로
+     ,HOLD_DETL_TP_SEQ            --정보경로상세
+     ,PAY_TP                      --지불유형
+     ,INTR_CARLINE_CD             --관심차종코드
+     ,INTR_MODEL_CD               --관심모델코드
+     ,NAT_NOF_SCHE_NO             --현지번호판예정번호
+     ,ESTIMATE_CONT               --견적내용
+     ,SALES_CONT                  --영업내용
+     ,REMARK                      --비고
+     ,LEAD_LVL_CD                 --리드레벨코드
+     ,LEAD_STAT_CD                --리드상태코드
+     ,INTR_COLOR_CD               --선호색상코드
+     ,TRACE_GRADE_CD              --추적등급코드
+     ,VALID_GRADE_CD              --유효등급코드
+     ,INVALID_CAU_CD              --무효원인코드
+     ,FAIL_CAU_CD                 --실패원인코드
+     ,FAIL_CAU_REASON_CONT        --실패원인사유내용
+     ,PURC_SEL_CARLINE_CD         --구매선택차종코드
+     ,PURC_SEL_MODEL_CD           --구매선택모델코드
+     ,EXPC_PURC_HM_CD             --예상구매시간코드
+     ,EXPC_PURC_DT                --예상구매일자
+     ,EXPC_DEAL_PRC               --예상거래가격
+     ,TRACE_DT                    --추적일자
+     ,TRACE_MTH_CD                --추적방법코드
+     ,NEXT_TRACE_DT               --다음추적일자
+     ,NEXT_TRACE_MTH_CD           --다음추적방법코드
+     ,MNG_SC_ID                   --관리직원
+     ,EXHV_FLAK_SEQ
+     ,DUP_SEQ
+     ,REG_USR_ID                  --등록자ID
+     ,REG_DT                      --등록일자
+     ,UPDT_USR_ID                 --수정자ID
+     ,UPDT_DT                     --수정일자
+    )
+    VALUES
+    (
+      SEQ_CR_0211T.NEXTVAL          --일련번호
+     ,#{dlrCd}                      --딜러코드
+     ,#{custNo}                     --고객번호
+     ,'N'                           --삭제여부
+     ,#{bhmcYn}                     --BHMC여부
+     ,#{siebelLeadRowId}                --SIEBEL ROW ID
+     ,#{docId}                      --문서ID
+     ,#{withPrsnNm}                 --동행자명
+     ,#{rvsitYn}                    --재방문여부
+     ,#{vsitResvDt}                 --방문예약일자
+     ,#{vsitDt}                     --방문일자
+     ,#{vsitPrsnCnt}                --방문자수
+     ,#{vsitEndDt}                  --방문종료일자
+     ,#{infoTp}                     --정보유형
+     ,#{holdTp}                 --정보경로
+     ,#{holdDetlTpSeq}              --정보경로상세
+     ,#{payTp}                      --지불유형
+     ,#{intrCarlineCd}              --관심차종코드
+     ,#{intrModelCd}                --관심모델코드
+     ,#{localCarRegNoYn}               --현지번호판예정번호
+     ,#{estimateCont}               --견적내용
+     ,#{salesCont}                  --영업내용
+     ,#{remark}                     --비고
+     ,#{leadLvlCd}                  --리드레벨코드
+     ,#{leadStatCd}                 --리드상태코드
+     ,#{intrColorCd}                --선호색상코드
+     ,#{traceGradeCd}               --추적등급코드
+     ,#{validGradeCd}               --유효등급코드
+     ,#{invalidCauCd}               --무효원인코드
+     ,#{failCauCd}                  --실패원인코드
+     ,#{failCauReasonCont}          --실패원인사유내용
+     ,#{purcSelCarlineCd}           --구매선택차종코드
+     ,#{purcSelModelCd}             --구매선택모델코드
+     ,#{expcPurcHmCd}               --예상구매시간코드
+     ,#{expcPurcDt}                 --예상구매일자
+     ,#{expcDealPrc}                --예상거래가격
+     ,#{traceDt}                    --추적일자
+     ,#{traceMthCd}                 --추적방법코드
+     ,#{nextTraceDt}                --다음추적일자
+     ,#{nextTraceMthCd}             --다음추적방법코드
+     ,#{mngScId}                    --관리직원ID
+     ,#{exhvFlakSeq}                    --전시장 방문번호
+     ,#{dupSeq}
+     ,#{regUsrId}                   --등록자ID
+     , SYSDATE                      --등록일자
+     ,#{regUsrId}                   --수정자ID
+     , SYSDATE                      --수정일자
+    )
+    </insert>
+
+   <!-- 판매기회 정보 목록수를 조회한다. -->
+    <select id="selectSalesOpptProcessMgmtsByCondition" parameterType="BatSalesOpptProcessMgmtSearchVO" resultType="String">
+        /* [chn.bhmc.dms.bat.crm.cso.service.dao.SalesOpptProcessMgmtDAO.selectSalesOpptProcessMgmtsByCondition] */
+        SELECT T1.SEQ
+          FROM CR_0211T T1
+          INNER JOIN CR_0101T T2 ON T1.DLR_CD = T2.DLR_CD AND T1.CUST_NO = T2.CUST_NO
+         WHERE 1=1
+           <if test='sLeadStatCd != null and sLeadStatCd != ""'>
+           AND T1.LEAD_STAT_CD NOT IN ('01','02','03','04','05')
+           </if>
+           <if test='sCustNo != null and sCustNo != ""'>
+           AND T1.CUST_NO = #{sCustNo}
+           </if>
+           <if test='sSiebelRowId != null and sSiebelRowId != ""'>
+           AND T2.SIEBEL_ROW_ID = #{sSiebelRowId}
+           </if>
+    </select>
+
+</mapper>

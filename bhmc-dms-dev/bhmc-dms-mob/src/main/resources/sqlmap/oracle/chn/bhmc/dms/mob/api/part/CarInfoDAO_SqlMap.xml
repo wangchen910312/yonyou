@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.mob.api.part.dao.PartCarInfoDAO">
+
+    
+    <select id="selectCarListsByCondition" parameterType="CarInfoSearchVO" resultType="chn.bhmc.dms.mob.api.part.vo.CarInfoVO">
+        SELECT A.CARLINE_CD         -- 차종코드
+             , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+             , FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM_NC
+             , A.CARLINE_EN_NM      -- 차종영문명
+          FROM SA_0101T A           -- 차종마스터
+         WHERE 1 = 1
+         <if test='useYn != null and useYn != ""'>
+           AND A.USE_YN = #{useYn}  -- 사용여부
+         </if>
+         <if test='carlineCd != null and carlineCd != ""'>
+           AND A.CARLINE_CD = #{carlineCd}
+         </if>
+           AND A.START_DT <![CDATA[ <= ]]> SYSDATE      -- 시작일
+           AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+         GROUP BY A.CARLINE_CD
+                , A.CARLINE_NM
+                , A.CARLINE_EN_NM
+         ORDER BY A.CARLINE_CD, A.CARLINE_NM
+    </select>
+    
+	<select id="selectModelListsByCondition" parameterType="CarInfoSearchVO" resultType="chn.bhmc.dms.mob.api.part.vo.CarInfoVO">
+    	/*차관가져오기로 변경. 2016.09.11 Lee.K*/
+        SELECT SUBSTR(A.MODEL_CD, 1, 2) AS CARLINE_CD
+             , A.MODEL_CD
+             , '['||A.MODEL_CD||']'||(DECODE(MAX(A.FSCP_CHM_MMM), NULL, MAX(B.MODEL_NM), MAX(A.FSCP_CHM_MMM))) AS MODEL_NM
+             , DECODE(MAX(A.FSCP_CHM_MMM), NULL, MAX(B.MODEL_NM), MAX(A.FSCP_CHM_MMM)) AS MODEL_NM_NC
+             , MAX(B.MODEL_EN_NM) AS MODEL_EN_NM
+          FROM SA_0105T A, SA_0102T B
+         WHERE 1 = 1
+           AND A.MODEL_CD = B.MODEL_CD
+           AND A.START_DT <![CDATA[ <= ]]> SYSDATE
+           AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1
+         <if test='useYn != null and useYn != ""'>
+           AND A.USE_YN = #{useYn}  -- 사용여부
+           AND B.USE_YN = #{useYn}
+         </if>
+         <if test='carlineCd != null and carlineCd != ""'>
+           AND B.CARLINE_CD = #{carlineCd}
+         </if>
+          GROUP BY A.MODEL_CD
+         ORDER BY MODEL_CD ASC
+    </select>
+  
+</mapper>

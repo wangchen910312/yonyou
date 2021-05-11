@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="IDCC_DS" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sValidGradeCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDateFormat"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sLeadStatCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRegEndDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRegStartDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT REG_USR_ID
+     , FN_GET_USER_NM(REG_USR_ID) AS REG_USR_NM
+     , ROUND(SUM(CALL_MI) / COUNT(SEQ)) AS CALL_AVG
+	FROM (
+		SELECT T4.REG_USR_ID
+		      , (T4.CALL_END_DT - T4.CALL_START_DT) * 24 * 60 * 60 AS CALL_MI
+		      , T4.SEQ
+		FROM CR_0213T T4, (
+				SELECT
+				MIN(T3.SEQ) KEEP(DENSE_RANK FIRST ORDER BY T3.SALE_OPPT_SEQ) AS SEQ
+				, T3.SALE_OPPT_SEQ
+				FROM (	 SELECT 
+					      CALL.SEQ
+					      , CALL.SALE_OPPT_SEQ
+					   FROM CR_0223T OPPT 
+					  INNER JOIN CR_0213T CALL ON OPPT.DLR_CD = CALL.DLR_CD AND CALL.C_SEQ = OPPT.C_SEQ
+					  INNER JOIN CR_0101T C ON OPPT.DLR_CD = C.DLR_CD AND OPPT.CUST_NO = C.CUST_NO
+					  WHERE OPPT.DLR_CD = '${sDlrCd}'
+					    AND OPPT.INFO_TP = '02' --IDCC    
+					    AND CALL.CALL_START_DT IS NOT NULL 
+				        ${IF(LEN(sRegStartDt) = 0 , "", " AND TO_CHAR(OPPT.LEAD_START_DT,'"+sDateFormat+"') BETWEEN '"+sRegStartDt+"' AND '"+sRegEndDt+"'") } --리드시작일
+				        ${IF(LEN(sLeadStatCd) = 0 , "", " AND CALL.LEAD_STAT_CD = '"+sLeadStatCd+"'") } -- 리드상태
+					   ${IF(LEN(sValidGradeCd) = 0 , "", " AND OPPT.VALID_GRADE_CD = '"+sValidGradeCd+"'") } -- 유효여부
+				) T3
+				GROUP BY T3.SALE_OPPT_SEQ
+			) T5
+		WHERE T4.DLR_CD = '${sDlrCd}'
+		  AND T4.SEQ = T5.SEQ
+	)
+GROUP BY REG_USR_ID;
+]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[720000,1296000,1296000,1296000,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[720000,4152900,5562600,0,2743200,2743200,2743200,2743200,2743200,2743200,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="1" s="0">
+<O>
+<![CDATA[负责人]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="1" s="0">
+<O>
+<![CDATA[平均通话时长]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="2" s="1">
+<O t="DSColumn">
+<Attributes dsName="IDCC_DS" columnName="REG_USR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="2" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="IDCC_DS" columnName="CALL_AVG"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[CONCATENATE(TRUNC($$$/60),"分 ",MOD($$$,60),"秒")]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand/>
+</C>
+<C c="3" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="IDCC_DS" columnName="CALL_AVG"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand/>
+</C>
+<C c="1" r="3" s="3">
+<O>
+<![CDATA[整体]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="3" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=CONCATENATE(TRUNC(AVERAGE(D3)/60),"分 ",MOD(AVERAGE(D3),60),"秒")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="7" s="5">
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting>
+<PaperSize width="33912000" height="46411200"/>
+<Margin top="1152000" left="1152000" bottom="1152000" right="1152000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Microsoft YaHei UI" style="1" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Verdana" style="1" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<Format class="java.text.SimpleDateFormat">
+<![CDATA[mm:ss.0]]></Format>
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

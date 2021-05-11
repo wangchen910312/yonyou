@@ -1,0 +1,2388 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20170720" releaseVersion="9.0.0">
+<TableDataMap>
+<TableData name="CM_0101T" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="CUST_ID"/>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=$$$]]></Attributes>
+</O>
+</Parameter>
+<Parameter>
+<Attributes name="locale"/>
+<O>
+<![CDATA[zh]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[CVA]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT CUST_NM
+             ,FN_CMM_CD_NM('DCS','CRM001', CUST_TP, '${locale}') CUST_TP
+             ,FN_CMM_CD_NM('DCS','CRM023', CUST_CD, '${locale}') CUST_CD
+             ,CUST_ID
+             ,FN_CMM_CD_NM('DCS','CRM017', SEX_CD, '${locale}') SEX_CD
+             ,FN_CMM_CD_NM('DCS','CRM024', MATH_DOC_TP, '${locale}') MATH_DOC_TP
+             ,SSN_CRN_NO
+             ,DECODE(SSN_CRN_NO_VALID_YN,'N','E','') AS SSN_CRN_NO_VALID_YN
+             ,HP_NO
+             ,DECODE(HP_NO_VALID_YN,'N','E','') AS HP_NO_VALID_YN
+             ,BIRTH_DT
+             ,HP_NO_INVLD_YN
+             ,HP_NO_ADD_IMPOS_YN
+             ,TEL_NO
+             ,WECHAT_ID
+             ,QQ_ID
+             ,DECODE(EMAIL_NM_VALID_YN,'N','E','') AS EMAIL_NM_VALID_YN
+             ,EMAIL_NM
+FROM CM_0101T
+WHERE CUST_ID = '${CUST_ID}']]></Query>
+</TableData>
+<TableData name="CM_0102T" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="CUST_ID"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="locale"/>
+<O>
+<![CDATA[zh]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[CVA]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT FN_CMM_CD_NM('DCS','CRM033', ADDR_TP, '${locale}') AS ADDR_TP
+             ,ZIP_CD
+             ,SUNG_NM
+             ,CITY_NM
+             ,DIST_NM
+             ,ADDR_DETL_CONT
+FROM CM_0102T
+WHERE CUST_ID = '${CUST_ID}']]></Query>
+</TableData>
+<TableData name="CH_1000T - CH_0512T - CH_0510T - CH_0511T - CM_0101T" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="CUST_ID"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="locale"/>
+<O>
+<![CDATA[zh]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[CVA]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[WITH BM_POINT_SUM AS (
+SELECT A.CUST_ID, SUM(VALUE) POINT_TOTAL, SUM(VALUE_USED) POINT_USED  
+FROM CH_1000T A
+          INNER JOIN CH_0512T B ON (A.EVENT_NO = B.EVENT_NO AND A.SRC_SYS_CD = B.SRC_SYS_CD AND A.EVENT_TYPE= B.EVENT_TYPE)
+WHERE A.CUST_ID = '${CUST_ID}'
+     AND A.EVENT_TYPE = '030'
+GROUP BY A.CUST_ID
+),
+BM_CARD_SUM AS (
+SELECT A.CUST_ID, COUNT(B.CARD_CODE) CARD_SEND_CNT, COUNT(DISTINCT C.CARD_ID) CARD_USED_CNT -- 카드 중복사용 가능해서 distinct함
+FROM CH_1000T A
+          INNER JOIN CH_0510T B ON (A.EVENT_NO = B.EVENT_NO AND A.SRC_SYS_CD = B.SRC_SYS_CD AND A.EVENT_TYPE= B.EVENT_TYPE)
+    LEFT OUTER JOIN CH_0511T C ON (C.CARD_ID = B.CARD_CODE)
+WHERE A.CUST_ID = '${CUST_ID}'
+     AND A.EVENT_TYPE = '028'
+GROUP BY A.CUST_ID
+)
+SELECT DECODE(A.BLUE_MEMBERSHIP_NO,NULL,'NO','YES') MEMBERSHIP_STATUS
+             , A. BLUE_MEMBERSHIP_NO
+    , FN_CMM_CD_NM('DCS','CRM806', A.BLUE_GRADE_NM, '${locale}') BLUE_GRADE_NM
+    , A.BLUE_MEMBERSHIP_JOIN_DT
+    ,B.POINT_TOTAL
+    ,B.POINT_USED
+    ,B.POINT_TOTAL - B.POINT_USED POINT_AVAILABLE
+    ,C.CARD_SEND_CNT
+    ,C.CARD_USED_CNT
+    ,C.CARD_SEND_CNT - C.CARD_USED_CNT CARD_AVAILABLE_CNT
+    ,rownum AS ROW_NUM
+FROM CM_0101T A
+           LEFT OUTER JOIN BM_POINT_SUM B ON (B.CUST_ID = A.CUST_ID)
+           LEFT OUTER JOIN BM_CARD_SUM C ON (C.CUST_ID = A.CUST_ID) 
+WHERE A.CUST_ID = '${CUST_ID}']]></Query>
+</TableData>
+<TableData name="CH_1000T - CH_0512T - CH_0510T - CH_0509T(2)" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="CUST_ID"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[CVA]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT A.*, rownum AS ROW_NUM
+FROM (SELECT 'POINT' TRAN_TYPE, B.VALUE, NULL CARD_NM,  B.REG_DT, B.INTEGRAL_END_DT, NULL CONSUME_DT  
+FROM CH_1000T A
+          INNER JOIN CH_0512T B ON (A.EVENT_NO = B.EVENT_NO AND A.SRC_SYS_CD = B.SRC_SYS_CD AND A.EVENT_TYPE= B.EVENT_TYPE)
+WHERE A.CUST_ID = '${CUST_ID}'
+     AND A.EVENT_TYPE = '030'
+UNION ALL
+SELECT 'COUPON' TRAN_TYPE, NULL VALUE, D.CARD_NM, B.REG_DT, NULL INTEGRAL_END_DT, C.CONSUME_DT
+FROM CH_1000T A
+          INNER JOIN CH_0510T B ON (A.EVENT_NO = B.EVENT_NO AND A.SRC_SYS_CD = B.SRC_SYS_CD AND A.EVENT_TYPE= B.EVENT_TYPE)
+    LEFT OUTER JOIN CH_0511T C ON (C.CARD_ID = B.CARD_CODE)
+    INNER JOIN CH_0509T D ON (D.ID = B.CARD_ID) 
+WHERE A.CUST_ID = '${CUST_ID}'
+     AND A.EVENT_TYPE = '028'
+ORDER BY 4 DESC) A]]></Query>
+</TableData>
+</TableDataMap>
+<ReportWebAttr>
+<ServerPrinter/>
+<WebPageContent>
+<Listener event="afterload">
+<JavaScript class="com.fr.js.JavaScriptImpl">
+<Parameters/>
+<Content>
+<![CDATA[contentPane.makeHighlight('#E6E6E6','mouseover');]]></Content>
+</JavaScript>
+</Listener>
+<ToolBars>
+<ToolBarManager>
+<Location>
+<Embed position="1"/>
+</Location>
+<ToolBar>
+<Widget class="com.fr.report.web.button.page.First">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-First')}]]></Text>
+<IconName>
+<![CDATA[first]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Previous">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Previous')}]]></Text>
+<IconName>
+<![CDATA[previous]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.PageNavi">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Next">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Next')}]]></Text>
+<IconName>
+<![CDATA[next]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Last">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Last')}]]></Text>
+<IconName>
+<![CDATA[last]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.FlashPrint">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Print[Client]A')}]]></Text>
+<IconName>
+<![CDATA[flashprint]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.Print">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Print')}]]></Text>
+<IconName>
+<![CDATA[print]]></IconName>
+<PrintButtons/>
+</Widget>
+<Widget class="com.fr.report.web.button.Export">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Export')}]]></Text>
+<IconName>
+<![CDATA[export]]></IconName>
+<Buttons pdf="true" excelP="true" excelO="true" excelS="true" word="true" image="true" html="true"/>
+</Widget>
+<Widget class="com.fr.report.web.button.Email">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Email')}]]></Text>
+<IconName>
+<![CDATA[email]]></IconName>
+</Widget>
+</ToolBar>
+</ToolBarManager>
+</ToolBars>
+<WebPage isPage="false" isShowAsImage="false" isAutoScale="false" isTDHeavy="false"/>
+</WebPageContent>
+<WebViewContent>
+<ToolBars>
+<ToolBarManager>
+<Location>
+<Embed position="1"/>
+</Location>
+<ToolBar>
+<Widget class="com.fr.report.web.button.PageSetup">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('PageSetup-Page_Setup')}]]></Text>
+<IconName>
+<![CDATA[pagesetup]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.PrintPreview">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('PrintP-Print_Preview')}]]></Text>
+<IconName>
+<![CDATA[preview]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.FlashPrint">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Print[Client]A')}]]></Text>
+<IconName>
+<![CDATA[flashprint]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.Print">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Print')}]]></Text>
+<IconName>
+<![CDATA[print]]></IconName>
+<PrintButtons/>
+</Widget>
+<Widget class="com.fr.report.web.button.Export">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Export')}]]></Text>
+<IconName>
+<![CDATA[export]]></IconName>
+<Buttons pdf="true" excelP="true" excelO="true" excelS="true" word="true" image="true" html="true"/>
+</Widget>
+<Widget class="com.fr.report.web.button.Email">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Email')}]]></Text>
+<IconName>
+<![CDATA[email]]></IconName>
+</Widget>
+</ToolBar>
+</ToolBarManager>
+</ToolBars>
+<SortFuncCheck check="true"/>
+<ConditionFuncCheck check="true"/>
+<ListFuncCheck check="true"/>
+</WebViewContent>
+<WebWriteContent>
+<ToolBars>
+<ToolBarManager>
+<Location>
+<Embed position="1"/>
+</Location>
+<ToolBar>
+<Widget class="com.fr.report.web.button.write.Submit">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Submit')}]]></Text>
+<IconName>
+<![CDATA[submit]]></IconName>
+<Verify failVerifySubmit="false" value="true"/>
+<Sheet onlySubmitSelect="false"/>
+</Widget>
+<Widget class="com.fr.report.web.button.write.Verify">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Verify-Data_Verify')}]]></Text>
+<IconName>
+<![CDATA[verify]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.FlashPrint">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Print[Client]A')}]]></Text>
+<IconName>
+<![CDATA[flashprint]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.Print">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Print')}]]></Text>
+<IconName>
+<![CDATA[print]]></IconName>
+<PrintButtons/>
+</Widget>
+<Widget class="com.fr.report.web.button.Export">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Export')}]]></Text>
+<IconName>
+<![CDATA[export]]></IconName>
+<Buttons pdf="true" excelP="true" excelO="true" excelS="true" word="true" image="true" html="true"/>
+</Widget>
+<Widget class="com.fr.report.web.button.Email">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Email')}]]></Text>
+<IconName>
+<![CDATA[email]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.write.AppendColumnRow">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Add')}${i18n('Record')}]]></Text>
+<IconName>
+<![CDATA[appendcolumn]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.write.ShowCellValue">
+<WidgetAttr description="">
+<PrivilegeControl/>
+</WidgetAttr>
+<widgetValue/>
+<LabelAttr verticalcenter="true" textalign="0" autoline="false"/>
+<FRFont name="SimSun" style="0" size="72"/>
+<border style="0" color="-723724"/>
+</Widget>
+</ToolBar>
+</ToolBarManager>
+</ToolBars>
+<SelectedColor/>
+<WebWrite SheetPosition="1"/>
+<RptLocation isShowAtLeft="true"/>
+<UnloadCheck/>
+<ShowWidgets/>
+<OtherAttr isAutoStash="false"/>
+</WebWriteContent>
+</ReportWebAttr>
+<Report class="com.fr.report.worksheet.WorkSheet" name="조회1">
+<ReportPageAttr>
+<HR F="0" T="18"/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1828800,288000,432000,1152000,1152000,1152000,1152000,1152000,1152000,288000,864000,1440000,720000,1152000,1152000,1152000,1152000,1152000,1008000,1008000,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1008000,1008000,1008000,1008000,1008000,1008000,1008000,1008000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" cs="3" s="0">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.comm_lbl.go_to_main_page")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="HOME">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<Parameters/>
+<TargetFrame>
+<![CDATA[_self]]></TargetFrame>
+<Features width="600" height="400"/>
+<ReportletName showPI="true" byPost="true">
+<![CDATA[/cva/SCR_360_Main.cpt]]></ReportletName>
+</JavaScript>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
+<Expand/>
+</C>
+<C c="3" r="0" cs="22" s="1">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=I18N("cva.report_lbl.customer_basic_information")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<CellGUIAttr/>
+<CellPageAttr/>
+<Expand/>
+</C>
+<C c="0" r="1" cs="28" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="3" cs="3" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.customer_name")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="3" cs="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="CM_0101T" columnName="CUST_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="3" cs="3" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.cellphone_number")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="3" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CM_0101T" columnName="HP_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="13" r="3" s="6">
+<O t="DSColumn">
+<Attributes dsName="CM_0101T" columnName="HP_NO_VALID_YN"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="3" cs="3" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.identification_number_type")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="3" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CM_0101T" columnName="MATH_DOC_TP"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="21" r="3" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="3" cs="3" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.customer_type")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="3" cs="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="CM_0101T" columnName="CUST_TP"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="4" cs="3" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.sex")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="4" cs="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="CM_0101T" columnName="SEX_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="4" cs="3" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.email")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="4" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CM_0101T" columnName="EMAIL_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="13" r="4" s="6">
+<O t="DSColumn">
+<Attributes dsName="CM_0101T" columnName="EMAIL_NM_VALID_YN"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="4" cs="3" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.identification_number")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="4" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CM_0101T" columnName="SSN_CRN_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="21" r="4" s="6">
+<O t="DSColumn">
+<Attributes dsName="CM_0101T" columnName="SSN_CRN_NO_VALID_YN"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="22" r="4" cs="3" s="9">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.lead_owned_customer")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="4" cs="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="CM_0101T" columnName="CUST_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="5" cs="3" s="9">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.birthday")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="5" cs="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="CM_0101T" columnName="BIRTH_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="5" cs="3" s="9">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.wechat")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="5" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CM_0101T" columnName="WECHAT_ID"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="13" r="5" s="10">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="5" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="5" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="5" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="5" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="5" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="5" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="5" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="5" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="5" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="5" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="5" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="5" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="5" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="7" cs="3" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.address_type")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="7" cs="3" s="13">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.zip_code")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="7" cs="3" s="13">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.comm_lbl.castle")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="7" cs="3" s="13">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.city")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="7" cs="3" s="13">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.area")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="7" cs="13" s="14">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.address_detail_content")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="8" cs="3" s="15">
+<O t="DSColumn">
+<Attributes dsName="CM_0102T" columnName="ADDR_TP"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="8" cs="3" s="15">
+<O t="DSColumn">
+<Attributes dsName="CM_0102T" columnName="ZIP_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="8" cs="3" s="15">
+<O t="DSColumn">
+<Attributes dsName="CM_0102T" columnName="SUNG_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="8" cs="3" s="15">
+<O t="DSColumn">
+<Attributes dsName="CM_0102T" columnName="CITY_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="12" r="8" cs="3" s="15">
+<O t="DSColumn">
+<Attributes dsName="CM_0102T" columnName="DIST_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="15" r="8" cs="13" s="15">
+<O t="DSColumn">
+<Attributes dsName="CM_0102T" columnName="ADDR_DETL_CONT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="9" cs="28" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="33" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="34" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="35" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="36" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="37" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="38" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="39" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="40" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="41" r="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="33" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="34" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="35" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="36" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="37" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="38" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="39" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="40" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="41" r="10" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="11" cs="4" s="17">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.vehicle_information_purchase_history")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="네트워크문서1">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<Parameters/>
+<TargetFrame>
+<![CDATA[_self]]></TargetFrame>
+<Features width="600" height="400"/>
+<ReportletName extendParameters="true" showPI="true" byPost="true">
+<![CDATA[/cva/SCR_360_01.cpt]]></ReportletName>
+</JavaScript>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
+<Expand/>
+</C>
+<C c="4" r="11" cs="3" s="18">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.contact_information")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="네트워크문서1">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<Parameters/>
+<TargetFrame>
+<![CDATA[_self]]></TargetFrame>
+<Features width="600" height="400"/>
+<ReportletName extendParameters="true" showPI="true" byPost="true">
+<![CDATA[/cva/SCR_360_02.cpt]]></ReportletName>
+</JavaScript>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
+<Expand/>
+</C>
+<C c="7" r="11" cs="3" s="18">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.test_drive_information")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="네트워크문서1">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<Parameters/>
+<TargetFrame>
+<![CDATA[_self]]></TargetFrame>
+<Features width="600" height="400"/>
+<ReportletName extendParameters="true" showPI="true" byPost="true">
+<![CDATA[/cva/SCR_360_03.cpt]]></ReportletName>
+</JavaScript>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
+<Expand/>
+</C>
+<C c="10" r="11" cs="3" s="18">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.campaign_name")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="네트워크문서1">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<Parameters/>
+<TargetFrame>
+<![CDATA[_self]]></TargetFrame>
+<Features width="600" height="400"/>
+<ReportletName extendParameters="true" showPI="true" byPost="true">
+<![CDATA[/cva/SCR_360_04.cpt]]></ReportletName>
+</JavaScript>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
+<Expand/>
+</C>
+<C c="13" r="11" cs="3" s="18">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.customer_care")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="네트워크문서1">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<Parameters/>
+<TargetFrame>
+<![CDATA[_self]]></TargetFrame>
+<Features width="600" height="400"/>
+<ReportletName extendParameters="true" showPI="true" byPost="true">
+<![CDATA[/cva/SCR_360_05.cpt]]></ReportletName>
+</JavaScript>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
+<Expand/>
+</C>
+<C c="16" r="11" cs="3" s="19">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.satisfaction_investigation")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="네트워크문서1">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<Parameters/>
+<TargetFrame>
+<![CDATA[_self]]></TargetFrame>
+<Features width="600" height="400"/>
+<ReportletName extendParameters="true" showPI="true" byPost="true">
+<![CDATA[/cva/SCR_360_06.cpt]]></ReportletName>
+</JavaScript>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
+<Expand/>
+</C>
+<C c="19" r="11" cs="3" s="20">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.bm_membership")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="네트워크문서1">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<Parameters/>
+<TargetFrame>
+<![CDATA[_self]]></TargetFrame>
+<Features width="600" height="400"/>
+<ReportletName extendParameters="true" showPI="true" byPost="true">
+<![CDATA[/cva/SCR_360_07.cpt]]></ReportletName>
+</JavaScript>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
+<Expand/>
+</C>
+<C c="22" r="11" cs="3" s="21">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.maintenance_information")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="네트워크문서1">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<Parameters/>
+<TargetFrame>
+<![CDATA[_self]]></TargetFrame>
+<Features width="600" height="400"/>
+<ReportletName extendParameters="true" showPI="true" byPost="true">
+<![CDATA[/cva/SCR_360_08.cpt]]></ReportletName>
+</JavaScript>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
+<Expand/>
+</C>
+<C c="25" r="11" cs="3" s="19">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.dealer_information")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<NameJavaScriptGroup>
+<NameJavaScript name="네트워크문서1">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<JavaScript class="com.fr.js.ReportletHyperlink">
+<Parameters/>
+<TargetFrame>
+<![CDATA[_self]]></TargetFrame>
+<Features width="600" height="400"/>
+<ReportletName extendParameters="true" showPI="true" byPost="true">
+<![CDATA[/cva/SCR_360_09.cpt]]></ReportletName>
+</JavaScript>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
+<Expand/>
+</C>
+<C c="28" r="11" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="11" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="11" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="11" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="11" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="12" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="13" cs="4" s="23">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.membership_status")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="13" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0511T - CM_0101T" columnName="MEMBERSHIP_STATUS"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="13" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="13" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="13" cs="4" s="23">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.point_acquisition")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="13" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0511T - CM_0101T" columnName="POINT_TOTAL"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="18" r="13" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="13" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="13" cs="4" s="23">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.coupon_acquisition")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="13" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0511T - CM_0101T" columnName="CARD_SEND_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="28" r="13" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="13" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="13" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="13" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="13" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="33" r="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="34" r="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="35" r="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="36" r="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="37" r="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="38" r="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="39" r="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="40" r="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="41" r="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="42" r="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="14" cs="4" s="24">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.membership_number")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="14" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0511T - CM_0101T" columnName="BLUE_MEMBERSHIP_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="14" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="14" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="14" cs="4" s="24">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.point_consumption")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="14" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0511T - CM_0101T" columnName="POINT_USED"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="18" r="14" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="14" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="14" cs="4" s="24">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.coupon_consumption")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="14" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0511T - CM_0101T" columnName="CARD_USED_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="28" r="14" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="14" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="14" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="14" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="14" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="15" cs="4" s="24">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.membership_grade")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="15" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0511T - CM_0101T" columnName="BLUE_GRADE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="15" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="15" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="15" cs="4" s="25">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.point_available")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="15" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0511T - CM_0101T" columnName="POINT_AVAILABLE"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="18" r="15" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="15" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="15" cs="4" s="25">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.coupon_available")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="15" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0511T - CM_0101T" columnName="CARD_AVAILABLE_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="16" cs="4" s="25">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.membership_date")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="16" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0511T - CM_0101T" columnName="BLUE_MEMBERSHIP_JOIN_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="16" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="16" s="26">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="16" s="26">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="16" s="26">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="16" s="26">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="17" s="22">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="18" cs="3" s="27">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.number")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="18" cs="4" s="27">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.content")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="18" cs="3" s="27">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.point_occurrence")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="18" cs="3" s="27">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.coupon_occurrence")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="18" cs="5" s="27">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.occurrence_date")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="18" cs="5" s="27">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.point_expire_date")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="18" cs="5" s="27">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cva.indiv_lbl.coupon_use_date")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="19" cs="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0509T(2)" columnName="ROW_NUM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="19" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0509T(2)" columnName="TRAN_TYPE"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="19" cs="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0509T(2)" columnName="VALUE"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="10" r="19" cs="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0509T(2)" columnName="CARD_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="13" r="19" cs="5" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0509T(2)" columnName="REG_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="18" r="19" cs="5" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0509T(2)" columnName="INTEGRAL_END_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="23" r="19" cs="5" s="4">
+<O t="DSColumn">
+<Attributes dsName="CH_1000T - CH_0512T - CH_0510T - CH_0509T(2)" columnName="CONSUME_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="28800000" height="42768000"/>
+<Margin top="576000" left="720000" bottom="286560" right="574560"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="false" windowPosition="1" align="0" useParamsTemplate="false"/>
+<PWTitle>
+<![CDATA[参数]]></PWTitle>
+<Parameter>
+<Attributes name="row"/>
+<O t="I">
+<![CDATA[20]]></O>
+</Parameter>
+<Background name="ColorBackground" color="-1184275"/>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="1" size="104" foreground="-16777088" underline="1"/>
+<Background name="ColorBackground" color="-1"/>
+<Border>
+<Top color="-1"/>
+<Bottom style="1" color="-1"/>
+<Left color="-1"/>
+<Right color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="SimSun" style="1" size="144" foreground="-15651490"/>
+<Background name="NullBackground"/>
+<Border>
+<Top color="-16691294"/>
+<Bottom color="-16691294"/>
+<Left color="-16691294"/>
+<Right color="-16691294"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="ColorBackground" color="-15651490"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="SimSun" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-15651490"/>
+<Border>
+<Top color="-1"/>
+<Bottom style="1" color="-1"/>
+<Left color="-1"/>
+<Right color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72" foreground="-15651490"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1" color="-15651490"/>
+<Bottom style="1" color="-15651490"/>
+<Left color="-15651490"/>
+<Right color="-15651490"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="SimSun" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-15651490"/>
+<Border>
+<Top style="1" color="-15651490"/>
+<Bottom color="-15651490"/>
+<Left color="-15651490"/>
+<Right color="-15651490"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72" foreground="-15651490"/>
+<Background name="ColorBackground" color="-2039584"/>
+<Border>
+<Top style="1" color="-15651490"/>
+<Bottom style="1" color="-15651490"/>
+<Left color="-15651490"/>
+<Right color="-15651490"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="72" foreground="-15651490"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1" color="-15651490"/>
+<Bottom style="1" color="-15651490"/>
+<Left color="-15651490"/>
+<Right color="-15651490"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="SimSun" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-15651490"/>
+<Border>
+<Top style="1" color="-1"/>
+<Bottom style="1" color="-1"/>
+<Left color="-1"/>
+<Right color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="SimSun" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-15651490"/>
+<Border>
+<Top color="-15651490"/>
+<Bottom style="2" color="-15651490"/>
+<Left color="-15651490"/>
+<Right color="-15651490"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top color="-15651490"/>
+<Bottom style="1" color="-15651490"/>
+<Left color="-15651490"/>
+<Right color="-15651490"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="72" foreground="-15651490"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="SimSun" style="0" size="72" foreground="-15651490"/>
+<Background name="ColorBackground" color="-2565928"/>
+<Border>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="SimSun" style="0" size="72" foreground="-15651490"/>
+<Background name="ColorBackground" color="-2565928"/>
+<Border>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="SimSun" style="0" size="72" foreground="-15651490"/>
+<Background name="ColorBackground" color="-2565928"/>
+<Border>
+<Left style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72" foreground="-15651490"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top color="-5592406"/>
+<Bottom color="-5592406"/>
+<Left color="-5592406"/>
+<Right color="-5592406"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="0" paddingRight="0">
+<FRFont name="SimSun" style="0" size="72" foreground="-15651490" underline="1"/>
+<Background name="ColorBackground" color="-1"/>
+<Border>
+<Top style="1" color="-15651490"/>
+<Bottom style="1" color="-15651490"/>
+<Left color="-15651490"/>
+<Right style="1" color="-15651490"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="SimSun" style="0" size="72" foreground="-15651490" underline="1"/>
+<Background name="ColorBackground" color="-1"/>
+<Border>
+<Top style="1" color="-15651490"/>
+<Bottom style="1" color="-15651490"/>
+<Left style="1" color="-15651490"/>
+<Right style="1" color="-15651490"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="SimSun" style="0" size="72" foreground="-15651490" underline="1"/>
+<Background name="ColorBackground" color="-1"/>
+<Border>
+<Top style="1" color="-15651490"/>
+<Bottom style="1" color="-15651490"/>
+<Left style="1" color="-15651490"/>
+<Right color="-15651490"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="SimSun" style="1" size="72" foreground="-1" underline="1"/>
+<Background name="ColorBackground" color="-15651490"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="SimSun" style="0" size="72" foreground="-15651490" underline="1"/>
+<Background name="ColorBackground" color="-1"/>
+<Border>
+<Top style="1" color="-15651490"/>
+<Bottom style="1" color="-15651490"/>
+<Left color="-15651490"/>
+<Right style="1" color="-15651490"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-15651490"/>
+<Border>
+<Top color="-1"/>
+<Bottom style="1" color="-1"/>
+<Left color="-1"/>
+<Right color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-15651490"/>
+<Border>
+<Top style="1" color="-1"/>
+<Bottom style="1" color="-1"/>
+<Left color="-1"/>
+<Right color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-15651490"/>
+<Border>
+<Top color="-15651490"/>
+<Bottom style="2" color="-15651490"/>
+<Left color="-15651490"/>
+<Right color="-15651490"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top color="-15651490"/>
+<Bottom color="-15651490"/>
+<Left color="-15651490"/>
+<Right color="-15651490"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-15651490"/>
+<Border>
+<Top color="-1"/>
+<Bottom color="-1"/>
+<Left style="1" color="-1"/>
+<Right style="1" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="JAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID/>
+<TemplateIdAttMark class="com.fr.base.iofileattr.TemplateIdAttrMark">
+<TemplateIdAttMark TemplateId="a390138f-1ad4-4819-a060-8a79960b6555"/>
+</TemplateIdAttMark>
+</WorkBook>

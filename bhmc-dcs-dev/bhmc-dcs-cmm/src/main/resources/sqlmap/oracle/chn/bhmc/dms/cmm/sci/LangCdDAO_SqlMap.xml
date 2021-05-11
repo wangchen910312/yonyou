@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : LangCdDao_SqlMap.xml
+    Description : 달력 Lang CD 관한 데이터처리
+    author Byoung Chul Jeon
+    since 2015. 4. 19.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 04. 19.     Byoung Chul Jeon     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.sci.service.dao.LangCdDAO">
+
+    <!-- 달력 언어 설정을 추가한다. -->
+    <insert id="insertLangCd" parameterType="LangCdVO">
+        /* [chn.bhmc.dms.cmm.calendar.service.dao.LangCdDAO.insertLangCd] */
+        INSERT INTO CM_0209T (
+        	 CALENDAR_ID
+            ,LANG_CD
+            ,CALENDAR_TXT
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+        ) VALUES (
+             #{calendarId}
+            ,#{langCd}
+            ,#{calendarTxt}
+            ,#{regUsrId}
+            ,SYSDATE
+            ,#{updtUsrId}
+            ,SYSDATE
+        )
+    </insert>
+
+    <!-- 달력 언어 설정을 수정한다. -->
+    <update id="updateLangCd" parameterType="LangCdVO">
+        /* [chn.bhmc.dms.cmm.calendar.service.dao.LangCdDAO.updateLangCd] */
+        UPDATE CM_0209T SET 
+        	 LANG_CD = #{langCd}
+            ,CALENDAR_TXT = #{calendarTxt}
+            ,UPDT_USR_ID = #{updtUsrId}
+            ,UPDT_DT = SYSDATE
+         WHERE CALENDAR_ID = #{calendarId}
+    </update>
+
+    <!-- 달력 언어 설정을 삭제한다. -->
+    <delete id="deleteLangCd" parameterType="LangCdVO">
+        /* [chn.bhmc.dms.cmm.calendar.service.dao.LangCdDAO.deleteLangCd] */
+    	DELETE FROM CM_0209T
+        WHERE CALENDAR_ID = #{calendarId}
+    </delete>
+
+    <!-- 달력 언어 설정 목록을 조회한다. -->
+    <select id="selectLangCdByCondition" parameterType="LangCdSearchVO" resultType="LangCdVO">
+        /* [chn.bhmc.dms.cmm.calendar.service.dao.LangCdDAO.selectLangCdByCondition] */
+        SELECT ROWNUM AS RNUM , T1.*
+        FROM (
+        	SELECT 
+        		 CALENDAR_ID
+                ,LANG_CD
+                ,CALENDAR_TXT
+                ,REG_USR_ID
+                ,REG_DT
+                ,UPDT_USR_ID
+                ,UPDT_DT
+           	FROM CM_0209T
+	        WHERE T1.CALENDAR_ID = #{sCalendarId}
+	        ORDER BY
+	        <choose>
+	            <when test='sort != null'>
+	                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+	                    <choose>
+	                        <when test='item.field == "calendarId"'>CALENDAR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+	                        <when test='item.field == "langCd"'>LANG_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+	                        <when test='item.field == "calendarTxt"'>CALENDAR_TXT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+	                        <otherwise>
+	                            CALENDAR_ID DESC
+	                        </otherwise>
+	                    </choose>
+	                </foreach>
+	            </when>
+	            <otherwise>
+	                CALENDAR_ID DESC
+	            </otherwise>
+	        </choose>
+		) T1
+    </select>
+
+    <!-- 달력 언어 설정 목록을 조회한다. -->
+    <select id="selectLangCdByCnt" parameterType="LangCdSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.calendar.service.dao.LangCdDAO.selectLangCdByCnt] */
+        SELECT COUNT(*) VALUE
+        FROM CM_0209T
+        WHERE T1.CALENDAR_ID = #{sCalendarId}
+    </select>
+</mapper>

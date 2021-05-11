@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.trm.service.dao.FundStatusDAO">
+
+    <!-- 월별 자금현황을 갯수를 조회한다.  -->
+    <select id="selectFundStatusByConditionCnt" parameterType="FundStatusSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.trm.service.dao.FundStatusDAO.selectFundStatusByConditionCnt] */
+    SELECT COUNT(*)
+      FROM (
+            SELECT #{sDlrCd}
+                 , #{sYy}
+                 , #{sMm}
+              FROM SA_0159T
+             WHERE 1 = 1
+             <if test='sYy != null and sYy != ""'>
+               AND YY = #{sYy}               --년도
+             </if>
+             <if test='sMm != null and sMm != ""'>
+               AND MM = #{sMm}               --월
+             </if>
+             <if test='sDlrCd != null and sDlrCd != ""'>
+               AND DLR_CD = #{sDlrCd}        --딜러코드
+             </if>
+              GROUP BY YY, MM, DLR_CD
+            )
+    </select>
+
+    <!-- 월별 자금현황을 조회한다. -->
+    <select id="selectFundStatusByCondition" parameterType="FundStatusSearchVO" resultType="FundStatusVO">
+    /* [chn.bhmc.dms.sal.trm.service.dao.FundStatusDAO.selectFundStatusByCondition] */
+        SELECT DLR_CD
+             , YY
+             , MM
+             , YY ||'-'|| MM      AS YY_MM_DD
+             , SUM(NVL(CASH_DPST_AMT,0)) AS CASH_AMT
+             , SUM(NVL(PRT2_DPST_AMT,0)) AS PRT2_AMT
+             , SUM(NVL(PRT3_DPST_AMT,0)) AS PRT3_AMT
+             , SUM(NVL(PRC_CHG_DPST_AMT,0)) AS PRC_CHG_AMT
+             , SUM(NVL(INCN_DPST_AMT,0)) AS INCN_AMT
+
+             , SUM(NVL(CASH_DPST_AMT,0)) AS CASH_DPST_AMT
+             , SUM(NVL(PRT2_DPST_AMT,0)) AS PRT2_DPST_AMT
+             , SUM(NVL(PRT3_DPST_AMT,0)) AS PRT3_DPST_AMT
+             , SUM(NVL(TOT_DPST_AMT,0))  AS TOT_DPST_AMT
+
+             , SUM(NVL(CASH_WDRW_AMT,0)) AS WDRW_CASH_AMT
+             , SUM(NVL(PRT2_WDRW_AMT,0)) AS WDRW_PRT2_AMT
+             , SUM(NVL(PRT3_WDRW_AMT,0)) AS WDRW_PRT3_AMT
+             , SUM(NVL(TOT_WDRW_AMT,0))  AS WDRW_AMT
+
+             , SUM(NVL(CASH_BAL_AMT,0))  AS CASH_BAL_AMT
+             , SUM(NVL(PRT2_BAL_AMT,0))  AS PRT2_BAL_AMT
+             , SUM(NVL(PRT3_BAL_AMT,0))  AS PRT3_BAL_AMT
+             , SUM(NVL(TOT_BAL_AMT,0))   AS TOT_BAL_AMT
+          FROM SA_0159T
+         WHERE 1 = 1
+         <if test='sYy != null and sYy != ""'>
+           AND YY = #{sYy}               --년도
+         </if>
+         <if test='sMm != null and sMm != ""'>
+           AND MM = #{sMm}               --월
+         </if>
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND DLR_CD = #{sDlrCd}        --딜러코드
+         </if>
+          GROUP BY YY, MM, DLR_CD
+    </select>
+
+    <!-- 전월 자금현황을 갯수를 조회한다. -->
+    <select id="selectBeforeAmtInfoSearchCnt" parameterType="FundStatusSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.trm.service.dao.FundStatusDAO.selectFundStatusByCondition] */
+        SELECT COUNT(*) AS VALUE
+          FROM (
+                SELECT ROW_NUMBER() OVER(PARTITION BY DLR_CD ORDER BY DD DESC) AS RN
+                     , DLR_CD
+                     , YY
+                     , MM
+                     , DD
+                     , NVL(PRC_CHG_DPST_AMT,0) AS BF_PRC_CHG_AMT
+                     , NVL(INCN_DPST_AMT,0) AS BF_INCN_AMT
+                     , NVL(CASH_BAL_AMT,0) AS BF_CASH_BAL_AMT
+                     , NVL(PRT2_BAL_AMT,0) AS BF_PRT2_BAL_AMT
+                     , NVL(PRT3_BAL_AMT,0) AS BF_PRT3_BAL_AMT
+                     , NVL(TOT_BAL_AMT,0)  AS BF_TOT_BAL_AMT
+                  FROM SA_0159T
+                 WHERE 1 = 1
+                 <if test='sYy != null and sYy != ""'>
+                   AND YY = #{sYy}               --년도
+                 </if>
+                 <if test='sMm != null and sMm != ""'>
+                   AND MM = #{sMm}               --월
+                 </if>
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND DLR_CD = #{sDlrCd}        --딜러코드
+                 </if>
+            ) WHERE RN = 1
+    </select>
+
+    <!-- 전월 자금현황을 조회한다. -->
+    <select id="selectBeforeAmtInfoSearch" parameterType="FundStatusSearchVO" resultType="FundStatusReplace">
+    /* [chn.bhmc.dms.sal.trm.service.dao.FundStatusDAO.selectFundStatusByCondition] */
+        SELECT DLR_CD
+              ,YY
+              ,MM
+              ,DD
+              ,BF_PRC_CHG_AMT
+              ,BF_INCN_AMT
+              ,BF_CASH_BAL_AMT
+              ,BF_PRT2_BAL_AMT
+              ,BF_PRT3_BAL_AMT
+              ,BF_TOT_BAL_AMT
+          FROM (
+                SELECT ROW_NUMBER() OVER(PARTITION BY DLR_CD ORDER BY DD DESC) AS RN
+                     , DLR_CD
+                     , YY
+                     , MM
+                     , DD
+                     , NVL(PRC_CHG_DPST_AMT,0) AS BF_PRC_CHG_AMT
+                     , NVL(INCN_DPST_AMT,0) AS BF_INCN_AMT
+                     , NVL(CASH_BAL_AMT,0) AS BF_CASH_BAL_AMT
+                     , NVL(PRT2_BAL_AMT,0) AS BF_PRT2_BAL_AMT
+                     , NVL(PRT3_BAL_AMT,0) AS BF_PRT3_BAL_AMT
+                     , NVL(TOT_BAL_AMT,0)  AS BF_TOT_BAL_AMT
+                  FROM SA_0159T
+                 WHERE 1 = 1
+                 <if test='sYy != null and sYy != ""'>
+                   AND YY = #{sYy}               --년도
+                 </if>
+                 <if test='sMm != null and sMm != ""'>
+                   AND MM = #{sMm}               --월
+                 </if>
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND DLR_CD = #{sDlrCd}        --딜러코드
+                 </if>
+            ) WHERE RN = 1
+    </select>
+
+    <!-- 일별 자금현황을 갯수를 조회한다.  -->
+    <select id="selectFundStatusDaysByConditionCnt" parameterType="FundStatusSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.trm.service.dao.FundStatusDAO.selectFundStatusDaysByConditionCnt] */
+        SELECT COUNT(*)
+          FROM SA_0159T
+         WHERE 1 = 1
+         <if test='sYy != null and sYy != ""'>
+           AND YY = #{sYy}               --년도
+         </if>
+         <if test='sMm != null and sMm != ""'>
+           AND MM = #{sMm}               --월
+         </if>
+         <if test='sMm != null and sMm != ""'>
+           AND MM = #{sMm}               --월
+         </if>
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND DLR_CD = #{sDlrCd}        --딜러코드
+         </if>
+    </select>
+
+    <!-- 일별 자금현황을 조회한다. -->
+    <select id="selectFundStatusDaysByCondition" parameterType="FundStatusSearchVO" resultType="FundStatusVO">
+    /* [chn.bhmc.dms.sal.trm.service.dao.FundStatusDAO.selectFundStatusDaysByCondition] */
+        SELECT DLR_CD
+             , YY
+             , MM
+             , DD
+             , YY ||'-'|| MM ||'-'|| DD     AS YY_MM_DD
+             , NVL(CASH_DPST_AMT,0)    AS CASH_AMT
+             , NVL(PRT2_DPST_AMT,0)    AS PRT2_AMT
+             , NVL(PRT3_DPST_AMT,0)    AS PRT3_AMT
+             , NVL(PRC_CHG_DPST_AMT,0) AS PRC_CHG_AMT
+             , NVL(INCN_DPST_AMT,0)    AS INCN_AMT
+
+             , NVL(CASH_DPST_AMT,0) AS CASH_DPST_AMT
+             , NVL(PRT2_DPST_AMT,0) AS PRT2_DPST_AMT
+             , NVL(PRT3_DPST_AMT,0) AS PRT3_DPST_AMT
+             , NVL(TOT_DPST_AMT,0)  AS TOT_DPST_AMT
+
+             , NVL(CASH_WDRW_AMT,0) AS WDRW_CASH_AMT
+             , NVL(PRT2_WDRW_AMT,0) AS WDRW_PRT2_AMT
+             , NVL(PRT3_WDRW_AMT,0) AS WDRW_PRT3_AMT
+             , NVL(TOT_WDRW_AMT,0)  AS WDRW_AMT
+
+             , NVL(CASH_BAL_AMT,0)  AS CASH_BAL_AMT
+             , NVL(PRT2_BAL_AMT,0)  AS PRT2_BAL_AMT
+             , NVL(PRT3_BAL_AMT,0)  AS PRT3_BAL_AMT
+             , NVL(TOT_BAL_AMT,0)   AS TOT_BAL_AMT
+          FROM SA_0159T
+         WHERE 1 = 1
+         <if test='sYy != null and sYy != ""'>
+           AND YY = #{sYy}               --년도
+         </if>
+         <if test='sMm != null and sMm != ""'>
+           AND MM = #{sMm}               --월
+         </if>
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND DLR_CD = #{sDlrCd}        --딜러코드
+         </if>
+         ORDER BY DLR_CD ASC, YY ASC, MM ASC, DD ASC
+    </select>
+
+
+</mapper>

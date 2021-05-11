@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.mob.api.sales.dao.SalesCarInfoDAO">
+
+  
+    <select id="selectCarListsByCondition" parameterType="CarInfoSearchVO" resultType="chn.bhmc.dms.mob.api.sales.vo.CarInfoVO">
+        SELECT A.CARLINE_CD         -- 차종코드
+             , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+             , FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM_NC
+             , A.CARLINE_EN_NM      -- 차종영문명
+          FROM SA_0101T A           -- 차종마스터
+         WHERE 1 = 1
+         <if test='useYn != null and useYn != ""'>
+           AND A.USE_YN = #{useYn}  -- 사용여부
+         </if>
+         <if test='carlineCd != null and carlineCd != ""'>
+           AND A.CARLINE_CD = #{carlineCd}
+         </if>
+           AND A.START_DT <![CDATA[ <= ]]> SYSDATE      -- 시작일
+           AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+         GROUP BY A.CARLINE_CD
+                , A.CARLINE_NM
+                , A.CARLINE_EN_NM
+         ORDER BY A.CARLINE_CD, A.CARLINE_NM
+    </select>
+ <select id="selectBarcodeCarVinsByCondition" parameterType="CarInfoSearchVO" resultType="chn.bhmc.dms.mob.api.sales.vo.CarInfoVO">
+        SELECT *
+          FROM (
+                SELECT A.*
+                     , (SELECT SIGNOFF_DT FROM SA_0121T WHERE ORD_DLR_CD = A.ORD_DLR_CD AND VIN_NO = A.VIN_NO) AS SIGNOFF_DT
+                  FROM (
+                        SELECT VIN_NO
+                             , VIN_NO1
+                             , VIN_NO2
+                             , #{barCode} AS BAR_CODE
+                             , CAR_STAT_CD
+                             , MAX(ORD_DLR_CD) AS ORD_DLR_CD
+                          FROM SA_0121T
+                         WHERE ORD_DLR_CD = #{dlrCd}
+                           AND VIN_NO2 = SUBSTR(#{barCode}, 3, 8)
+                           AND CARLINE_CD = ( SELECT CARLINE_CD
+                                               FROM SA_0119T
+                                              WHERE BARS_CD = SUBSTR(#{barCode}, 1, 2)
+                                              GROUP BY BARS_CD, CARLINE_CD
+                                            )
+                         GROUP BY VIN_NO, VIN_NO1, VIN_NO2, CAR_STAT_CD
+                       ) A
+                 ORDER BY SIGNOFF_DT DESC
+                ) A
+           WHERE ROWNUM = '1'
+    </select>
+    <!-- 바코드로 차량코드와 차량명 조회 -->
+    <select id="selectBarcodeCarNmByCondition" parameterType="CarInfoSearchVO" resultType="chn.bhmc.dms.mob.api.sales.vo.CarInfoVO">
+        SELECT CARLINE_CD
+             , FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_NM
+             , FN_GET_CARLINE_NM_NC(CARLINE_CD) AS CARLINE_NM_NC
+          FROM SA_0119T
+         WHERE BARS_CD = SUBSTR(#{barCode}, 1, 2)
+         GROUP BY BARS_CD, CARLINE_CD
+    </select>
+
+</mapper>

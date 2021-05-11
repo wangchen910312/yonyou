@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : ClaimInvoiceRequestServiceDao.xml
+    Description : 
+    author yixd
+    since 2021年4月8日
+    version 1.0
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.wac.service.dao.ClaimInvoiceReceptionDao">
+	
+	<!-- 查询结算单数量 yixd 2021年4月12日21:03:04 -->
+	<select id="selectClaimInvoiceReceptionForInvoiceByInvoiceCnt" parameterType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceSearchVO" resultType="int">
+     SELECT count(*)
+     FROM (    
+        select ROWNUM AS RNUM , T1.* 
+		from(
+		    select invoice.DLR_CD,
+			       (select DLR_NM from CM_0101T where DLR_CD = invoice.DLR_CD) as DLR_NM,
+			       pack.INVC_NO,
+			       invoice.RECEIPT_TP,
+			       pack.invc_Dt,
+			       pack.invc_Claim_Tot_Amt,
+			       pack.ddct_Tot_Amt,
+			       pack.confirm_Tot_Amt,
+			       invoice.TRSF_NO,
+			       invoice.EXPS_CMP_NM,
+			       invoice.TRSF_TP,
+			       invoice.FAIL_MSG,
+			       invoice.FAIL_REMARK,
+			       invoice.REMARK,
+			       invoice.SENDER_NM,
+			       invoice.SENDER_TELNO,
+			       invoice.SENDER_ADDR,
+			       invoice.CANCEL_YN
+			  from se_0930t pack 
+			  left join SE_0960T invoice on invoice.INVC_NO = pack.INVC_NO
+			 where 1 = 1
+		    
+            <if test='sinvcNo != null and sinvcNo != "" '>
+            AND invoice.INVC_NO = #{sinvcNo}
+            </if>
+            <if test='sinvcsFromDt !=null'>
+            AND pack.invc_Dt <![CDATA[>=]]> #{sinvcsFromDt}
+            </if>
+            <if test='sinvcsToDt !=null'>
+            AND pack.invc_Dt <![CDATA[<=]]> #{sinvcsToDt}+1
+            </if>
+            <if test='sreceiptTp != null and sreceiptTp != "" '>
+            AND invoice.RECEIPT_TP = #{sreceiptTp}
+            </if>
+            <if test='strsfTp != null and strsfTp != "" '>
+            AND invoice.TRSF_TP = #{strsfTp}
+            </if>
+		    ORDER BY pack.invc_Dt desc
+		) T1
+		<where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+              AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+            </if>
+        </where>
+    )<where>
+        <if test='firstIndex != -1 and lastIndex != -1'>
+            RNUM > #{firstIndex}
+        </if>
+    </where>
+    </select>
+	
+	
+	<!-- 查询结算单列表信息 yixd 2021年4月12日20:32:30 -->
+	<select id="selectClaimInvoiceReceptionForInvoiceByInvoicel" parameterType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceSearchVO" resultType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceVO">
+     SELECT *
+     FROM (    
+        select ROWNUM AS RNUM , T1.* 
+		from(
+		    select invoice.DLR_CD,
+			       (select DLR_NM from CM_0101T where DLR_CD = invoice.DLR_CD) as DLR_NM,
+			       pack.INVC_NO,
+			       -- invoice.RECEIPT_TP,
+			       (case when invoice.RECEIPT_TP is null then '01' else invoice.RECEIPT_TP end) RECEIPT_TP,
+			       pack.invc_Dt,
+			       pack.invc_Claim_Tot_Amt,
+			       pack.ddct_Tot_Amt,
+			       pack.confirm_Tot_Amt,
+			       invoice.TRSF_NO,
+			       invoice.EXPS_CMP_NM,
+			       invoice.TRSF_TP,
+			       invoice.FAIL_MSG,
+			       invoice.FAIL_REMARK,
+			       invoice.REMARK,
+			       invoice.SENDER_NM,
+			       invoice.SENDER_TELNO,
+			       invoice.SENDER_ADDR,
+			       invoice.CANCEL_YN
+			  from  se_0930t pack
+			  left join SE_0960T invoice on invoice.INVC_NO = pack.INVC_NO
+			 where 1 = 1
+		    
+            <if test='sinvcNo != null and sinvcNo != "" '>
+            AND invoice.INVC_NO = #{sinvcNo}
+            </if>
+            <if test='sinvcsFromDt !=null'>
+            AND pack.invc_Dt <![CDATA[>=]]> #{sinvcsFromDt}
+            </if>
+            <if test='sinvcsToDt !=null'>
+            AND pack.invc_Dt <![CDATA[<=]]> #{sinvcsToDt}+1
+            </if>
+            <if test='sreceiptTp != null and sreceiptTp != "" '>
+            AND invoice.RECEIPT_TP = #{sreceiptTp}
+            </if>
+            <if test='strsfTp != null and strsfTp != "" '>
+            AND invoice.TRSF_TP = #{strsfTp}
+            </if>
+		    ORDER BY pack.invc_Dt desc
+		) T1
+		<where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+              AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+            </if>
+        </where>
+    )<where>
+        <if test='firstIndex != -1 and lastIndex != -1'>
+            RNUM > #{firstIndex}
+        </if>
+    </where>
+    </select>
+    
+    <!-- 查询发票单列表信息 yixd 2021年4月12日20:32:40 -->
+    <select id="selectClaimInvoiceDetailForInvoiceByInvoicel" parameterType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceDetailSearchVO" resultType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceDetailVO">
+     SELECT *
+     FROM (	
+    	select ROWNUM AS RNUM , T1.* 
+		from(
+	    	select 
+			  t.RECEIPT_CD,t.RECEIPT_NO,
+			  t.BUY_NM,t.TAXPAYER_ID_CD,
+			  t.RECEIPT_ISS_DT,t.SUM_AMT,t.REMARK,t.SETTLEMENT_NO
+			from SA_0502T t
+			where t.SETTLEMENT_NO = #{settlementNo}
+			and t.CLAIM_YN ='Y'
+			
+			<if test='searchFlag != "05" '>
+			and t.RECEIPT_STATUS = '01'
+			</if>
+			<if test='searchFlag != "01" '>
+			and t.RECEIPT_STATUS in ('01','05')
+			</if>
+			
+    	) T1
+    	<where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+              AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+            </if>
+        </where>
+    )<where>
+        <if test='firstIndex != -1 and lastIndex != -1'>
+            RNUM > #{firstIndex}
+        </if>
+    </where>
+    </select>
+    
+    <!-- 查询发票单数量 yixd 2021年4月12日21:02:39 -->
+    <select id="selectClaimInvoiceDetailForInvoiceByInvoiceCnt" parameterType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceDetailSearchVO" resultType="int">
+     SELECT count(*)
+     FROM (	
+    	select ROWNUM AS RNUM , T1.* 
+		from(
+	    	select 
+			  t.RECEIPT_CD,t.RECEIPT_NO,
+			  t.BUY_NM,t.TAXPAYER_ID_CD,
+			  t.RECEIPT_ISS_DT,t.SUM_AMT,t.REMARK
+			from SA_0502T t
+			where t.SETTLEMENT_NO = #{settlementNo}
+			and t.CLAIM_YN ='Y'
+			
+			<if test='searchFlag != "05" '>
+			and t.RECEIPT_STATUS = '01'
+			</if>
+			<if test='searchFlag != "01" '>
+			and t.RECEIPT_STATUS in ('01','05')
+			</if>
+			
+			
+    	) T1
+    	<where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+              AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+            </if>
+        </where>
+    )<where>
+        <if test='firstIndex != -1 and lastIndex != -1'>
+            RNUM > #{firstIndex}
+        </if>
+    </where>
+    </select>
+    
+    <!-- 根据结算报表编号查询结算单信息 yixd 2021年4月12日20:39:57 -->
+    <select id="selectClaimInvoiceReceptionByInvcNo" parameterType="String" resultType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceVO">
+    	select * from  SE_0960T invoice where invoice.INVC_NO = #{sinvcNo}
+    </select>
+    
+    <!-- 根据结算报表编号查询发票列表信息 yixd 2021年4月12日20:39:57 -->
+    <select id="selectClaimInvoiceDtsReceptionByInvcNo" parameterType="String" resultType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceDetailVO">
+    	select * from  SA_0502T invoice where invoice.SETTLEMENT_NO = #{invcNo} and invoice.RECEIPT_STATUS = '01' and invoice.CLAIM_YN ='Y'
+    </select>
+    
+    <!-- 查询系统默认纳税人识别号和发票抬头 yixd 2021年5月10日20:39:57 -->
+    <select id="selectClaimInvoiceTaxNo" parameterType="String" resultType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceTaxNoVO">
+    	select * from  SE_1167T
+    </select>
+     
+    <!-- 根据结算报表编号、发票号、发票代码查询发票信息 yixd 2021年4月12日20:39:57 -->
+    <select id="selectClaimInvoiceDetailReceptionByInvcNo" parameterType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceDetailVO" resultType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceDetailVO">
+    	select * from  SA_0502T invoice 
+    	where invoice.SETTLEMENT_NO = #{settlementNo} 
+    	and invoice.receipt_No = #{receiptNo} 
+    	and invoice.receipt_Cd  = #{receiptCd}
+    	and invoice.CLAIM_YN ='Y'
+    </select> 
+
+	<!-- 根据结算报表编号查询结算金额 yixd 2021年4月12日20:39:57 -->
+    <select id="selectClaimInvoiceBalanceAmtByInvcNo" parameterType="String" resultType="double">
+    	select nvl(sum(INVC_CLAIM_TOT_AMT),0) from  SE_0930T invoice where invoice.INVC_NO = #{sinvcNo}
+    </select>
+    
+    <!-- 根据结算报表编号查询发票金额的和 yixd 2021年4月12日20:39:57 -->
+    <select id="selectClaimInvoiceDetailSumAmtByInvcNo" parameterType="String" resultType="double">
+    	select nvl(sum(SUM_AMT),0) from  SA_0502T invoice where invoice.SETTLEMENT_NO = #{sinvcNo} and invoice.RECEIPT_STATUS = '01' and invoice.CLAIM_YN ='Y'
+    </select>
+
+
+    <!-- 取消存储 yixd 2021年4月14日14:17:28 --> 
+    <update id="updateClaimInvoiceCancel" parameterType="String">
+    		UPDATE SE_0960T 
+    		SET RECEIPT_TP = '01' --未开票
+	    	  , TRSF_TP    = '01' --未邮寄
+	    	  , CANCEL_YN    = 'Y' --取消
+	    	  , UPDT_DT   = SYSDATE
+    		WHERE 1=1
+    		AND INVC_NO = #{invcNo}
+    </update>
+    
+    <!-- 退票接收存储  yixd 2021年4月14日14:17:28 --> 
+    <update id="updateClaimInvoiceQuitReceive" parameterType="String">
+    		UPDATE SE_0960T 
+    		SET TRSF_TP    = '04' --未邮寄
+	    	  , UPDT_DT   = SYSDATE
+    		WHERE 1=1
+    		AND INVC_NO = #{invcNo}
+    </update>
+    
+    <!-- 保存索赔结算单发票主信息 -->
+    <insert id="insertClaimInvoice" parameterType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceVO">
+
+        INSERT INTO SE_0960T    --索赔结算单发票主表
+        (
+          DLR_CD                 --经销商代码
+         ,INVC_NO                --结算单单号
+         ,RECEIPT_TP             --开票状态
+         ,TRSF_TP                --快递状态 
+         ,EXPS_CMP_NM            --快递公司
+         ,TRSF_NO                --快递单号
+         ,REMARK                 --快递备注
+         ,SENDER_NM              --寄件人
+         ,SENDER_TELNO           --寄件人联系电话
+         ,SENDER_ADDR            --寄件人地址
+         ,REG_USR_ID             --录入人
+         ,REG_DT                 --录入日期
+        )
+        VALUES
+        (
+          #{dlrCd}                 --经销商代码
+         ,#{invcNo}                --结算单单号
+         ,#{receiptTp}             --开票状态
+         ,#{trsfTp}                --快递状态
+         ,#{expsCmpNm}             --快递公司
+         ,#{trsfNo}                --快递单号
+         ,#{remark}                --快递备注
+         ,#{senderNm}              --寄件人
+         ,#{senderTelno}           --寄件人联系电话
+         ,#{senderAddr}            --寄件人地址
+         ,#{regUsrId}              --录入人
+         ,SYSDATE                  --录入日期
+        )
+
+    </insert>
+    
+    <!-- 保存索赔结算单发票主信息 接口表 -->
+    <insert id="insertClaimInvoiceIS" parameterType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceVO">
+
+        INSERT INTO SE_0960IS    --索赔结算单发票主表 接口表
+        (
+          BAT_ID          --自增序列ID
+         ,DLR_CD                 --经销商代码
+         ,INVC_NO                --结算单单号
+         ,RECEIPT_TP             --开票状态
+         ,TRSF_TP                --快递状态 
+         ,EXPS_CMP_NM            --快递公司
+         ,TRSF_NO                --快递单号
+         ,REMARK                 --快递备注
+         ,SENDER_NM              --寄件人
+         ,SENDER_TELNO           --寄件人联系电话
+         ,SENDER_ADDR            --寄件人地址
+         ,REG_USR_ID             --录入人
+         ,REG_DT                 --录入日期
+         ,IFRESULT        		 --发送状态（默认'N'）
+         ,CREATEDATE      		 --创建日期字符串
+        )
+        VALUES
+        (
+         SEQ_SE_0960IS.NEXTVAL
+         ,#{dlrCd}                 --经销商代码
+         ,#{invcNo}                --结算单单号
+         ,#{receiptTp}             --开票状态
+         ,#{trsfTp}                --快递状态
+         ,#{expsCmpNm}             --快递公司
+         ,#{trsfNo}                --快递单号
+         ,#{remark}                --快递备注
+         ,#{senderNm}              --寄件人
+         ,#{senderTelno}           --寄件人联系电话
+         ,#{senderAddr}            --寄件人地址
+         ,#{regUsrId}              --录入人
+         ,SYSDATE                  --录入日期
+         ,'N'
+         ,to_char(SYSDATE,'yyyymmddhh24miss')
+        )
+
+    </insert>
+    
+    
+    <!-- 保存索赔结算单发票子表 接口表 -->
+    <insert id="insertClaimInvoiceDetailIS" parameterType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceDetailVO">
+
+		insert into SA_0502_4IS 
+		(
+		ID,RECEIPT_ID, CAR_ID, SEQ, 
+		VIN_NO, VIN_NO1, VIN_NO2, 
+		DLR_CD, TAXPAYER_ID_CD, RECEIPT_NO, 
+		RECEIPT_CD, BUY_NM, RECEIPT_ISS_DT, 
+		SCAN_SUM_AMT, CARLINE_CD, MODEL_CD, 
+		JEONGPAN_NO, EXT_COLOR_CD, WS_PRC, 
+		PLT_GI_DT, SUM_AMT, TAX_AMT, 
+		FILE_NO, FILE_SEQ, FILE_SIZE_VAL, 
+		TMR_CD, EVAL_RSLT_CD, ERR_UP_CD, 
+		SDLR_CD, REMARK, REG_USR_ID, 
+		REG_DT, UPDT_USR_ID, UPDT_DT, 
+		CERT_FST, CERT_2ND, 
+		CERT_3RD, CERT_2RT, CERT_3RT, 
+		SDLR_TP, SDLR_NM, RECEIPT_TYPE, 
+		CHECK_CODE, BUY_ADDR, BUY_PHONE, 
+		BUY_BANK, BUY_BANK_NO, SEL_NM, 
+		SEL_TAXPAYER_ID_CD, SEL_ADDR, SEL_PHONE, 
+		SEL_BANK, SEL_BANK_NO, PAYEE, 
+		CHECKER, DRAWER, RECEIPT_STATUS,
+		GERATER_FIVE_YN, CLAIM_YN, SETTLEMENT_NO, 
+		IFRESULT,CREATEDATE
+	    )
+        values 
+        (
+		SEQ_SA_0502_4IS.NEXTVAL,#{receiptId}, #{carId}, #{seq}, 
+		#{vinNo}, #{vinNo1}, #{vinNo2}, 
+		#{dlrCd}, #{taxpayerIdCd}, #{receiptNo}, 
+		#{receiptCd}, #{buyNm}, #{receiptIssDt}, 
+		#{scanSumAmt}, #{carlineCd}, #{modelCd}, 
+		#{jeongpanNo}, #{extColorCd}, #{wsPrc}, 
+		#{pltGiDt}, #{sumAmt}, #{taxAmt}, 
+		#{fileNo}, #{fileSeq}, #{fileSizeVal}, 
+		#{tmrCd}, #{evalRsltCd}, #{errUpCd}, 
+		#{sdlrCd}, #{remark}, #{regUsrId}, 
+		#{regDt}, #{updtUsrId}, #{updtDt}, 
+		#{certFst}, #{cert2nd}, 
+		#{cert3rd}, #{cert2rt}, #{cert3rt}, 
+		#{sdlrTp}, #{sdlrNm}, #{receiptType}, 
+		#{checkCode}, #{buyAddr}, #{buyPhone}, 
+		#{buyBank}, #{buyBankNo}, #{selNm}, 
+		#{selTaxpayerIdCd}, #{selAddr}, #{selPhone}, 
+		#{selBank}, #{selBankNo}, #{payee}, 
+		#{checker}, #{drawer}, #{receiptStatus}, 
+		#{geraterFiveYn}, #{claimYn}, #{settlementNo}, 
+		'N',to_char(SYSDATE,'yyyymmddhh24miss')
+	    )
+    </insert>
+    
+    
+ 	<!-- 保存-更新存储  yixd 2021年4月14日19:46:21 --> 
+    <update id="updateClaimInvoice" parameterType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceVO">
+    		UPDATE SE_0960T SET 
+	    		EXPS_CMP_NM 	= #{expsCmpNm}
+	    	  , TRSF_NO    		= #{trsfNo}
+	    	  , REMARK    		= #{remark}
+	    	  , SENDER_NM   	= #{senderNm}
+	    	  , SENDER_TELNO   	= #{senderTelno}
+	    	  , SENDER_ADDR 	= #{senderAddr}
+	    	  , UPDT_DT    		= SYSDATE
+	    	  , UPDT_USR_ID 	= #{updtUsrId}
+    		WHERE 1=1
+    		AND INVC_NO 	= #{invcNo}
+    </update>
+    
+    <!-- 提报-更新存储  yixd 2021年4月15日19:46:21 --> 
+    <update id="updateClaimInvoiceForSubmit" parameterType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceVO">
+    		UPDATE SE_0960T SET 
+    			RECEIPT_TP 		= #{receiptTp}
+    		  ,	TRSF_TP			= #{trsfTp}
+	    	  ,	EXPS_CMP_NM 	= #{expsCmpNm}
+	    	  , TRSF_NO    		= #{trsfNo}
+	    	  , REMARK    		= #{remark}
+	    	  , SENDER_NM   	= #{senderNm}
+	    	  , SENDER_TELNO   	= #{senderTelno}
+	    	  , SENDER_ADDR 	= #{senderAddr}
+	    	  , UPDT_DT    		= SYSDATE
+	    	  , UPDT_USR_ID 	= #{updtUsrId}
+    		WHERE 1=1
+    		AND INVC_NO 	= #{invcNo}
+    </update>
+    
+    <!-- 导出  yixd 2021年4月15日19:46:21 --> 
+    <select id="selectClaimInvoiceReceptionByExcel" parameterType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceSearchVO" resultType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceExcelVO">
+    	select invoices.DLR_CD,
+		       invoices.DLR_NM,
+		       invoices.INVC_NO,
+		       (select CMM_CD_NM
+		          from CM_0303T
+		         where CMM_CD = invoices.RECEIPT_TP
+		           and CMM_GRP_CD = 'SEF004') as RECEIPT_TP,
+		       invoices.invc_Dt,
+		       invoices.invc_Claim_Tot_Amt,
+		       invoices.ddct_Tot_Amt,
+		       invoices.confirm_Tot_Amt,
+		       invoices.TRSF_NO,
+		       invoices.EXPS_CMP_NM,
+		       (select CMM_CD_NM
+		          from CM_0303T
+		         where CMM_CD = invoices.TRSF_TP
+		           and CMM_GRP_CD = 'SEF005') as TRSF_TP,
+		       (select CMM_CD_NM
+		          from CM_0303T
+		         where CMM_CD = invoices.FAIL_MSG
+		           and CMM_GRP_CD = 'SEF006') as FAIL_MSG,
+		       invoices.FAIL_REMARK,
+		       invoices.SENDER_NM,
+		       invoices.SENDER_TELNO,
+		       invoices.SENDER_ADDR,
+		       t.RECEIPT_CD,
+		       t.BUY_NM,
+		       t.TAXPAYER_ID_CD,
+		       t.RECEIPT_ISS_DT,
+		       t.SUM_AMT,
+		       t.REMARK
+		  from (select invoice.DLR_CD,
+		               (select DLR_NM from CM_0101T where DLR_CD = invoice.DLR_CD) as DLR_NM,
+		               invoice.INVC_NO,
+		               invoice.RECEIPT_TP,
+		               pack.invc_Dt,
+		               pack.invc_Claim_Tot_Amt,
+		               pack.ddct_Tot_Amt,
+		               pack.confirm_Tot_Amt,
+		               invoice.TRSF_NO,
+		               invoice.EXPS_CMP_NM,
+		               invoice.TRSF_TP,
+		               invoice.FAIL_MSG,
+		               invoice.FAIL_REMARK,
+		               invoice.SENDER_NM,
+		               invoice.SENDER_TELNO,
+		               invoice.SENDER_ADDR
+		          from SE_0960T invoice
+		          left join se_0930t pack on invoice.INVC_NO = pack.INVC_NO
+		         where 1 = 1
+				
+				<if test='sinvcNo != null and sinvcNo != "" '>
+				AND invoice.INVC_NO = #{sinvcNo}
+				</if>
+				<if test='sinvcsFromDt !=null'>
+				AND pack.invc_Dt <![CDATA[>=]]> #{sinvcsFromDt}
+				</if>
+				<if test='sinvcsToDt !=null'>
+				AND pack.invc_Dt <![CDATA[<=]]> #{sinvcsToDt}+1
+				</if>
+				<if test='sreceiptTp != null and sreceiptTp != "" '>
+		        AND invoice.RECEIPT_TP = #{sreceiptTp}
+				</if>
+				<if test='strsfTp != null and strsfTp != "" '>
+				AND invoice.TRSF_TP = #{strsfTp}
+				</if>
+				
+				) invoices
+				
+				left join SA_0502T t on  t.SETTLEMENT_NO = invoices.INVC_NO and t.CLAIM_YN ='Y'
+    
+    </select>
+    
+    
+    <!-- 保存-删除 发票子表  yixd 2021年4月16日19:46:21 --> 
+    <update id="updateClaimInvoiceForDel" parameterType="chn.bhmc.dms.ser.wac.vo.ClaimInvoiceDetailVO">
+    		UPDATE SA_0502T SET
+    			RECEIPT_STATUS = '05'
+    		WHERE 1=1
+    		AND RECEIPT_CD 	= #{receiptCd}
+    		AND RECEIPT_NO 	= #{receiptNo}
+    		AND SETTLEMENT_NO 	= #{settlementNo}
+    		and CLAIM_YN ='Y'
+    </update>
+    
+</mapper>

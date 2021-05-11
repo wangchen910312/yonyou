@@ -1,0 +1,1744 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="membershipInfo" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sMembershipNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[-- *멤버십 목록 membership_info
+SELECT 
+     CR_0801T.DLR_CD
+     
+    ,CR_0101T.CUST_NM
+    ,CR_0801T.MEMBERSHIP_NO
+    ,CR_0101T.CUST_CD
+    ,(SELECT
+          NVL(CM0304T.CMM_CD_TXT, CM0303T.CMM_CD_NM)
+        FROM CM_0303T CM0303T, CM_0304T CM0304T
+          WHERE CM0303T.CMM_GRP_CD = CM0304T.CMM_GRP_CD
+          AND CM0303T.CMM_CD = CM0304T.CMM_CD
+          AND CM0304T.LANG_CD = 'zh'
+          AND CM0303T.CMM_GRP_CD = 'CRM001'
+          AND CM0303T.CMM_CD = CR_0101T.CUST_CD
+    ) AS CUST_CD_NM
+    ,CR_0101T.HP_NO
+    ,CR_0101T.TEL_NO
+    ,CR_0101T.PREF_COMM_MTH_CD
+    ,(SELECT
+          NVL(CM0304T.CMM_CD_TXT, CM0303T.CMM_CD_NM)
+        FROM CM_0303T CM0303T, CM_0304T CM0304T
+          WHERE CM0303T.CMM_GRP_CD = CM0304T.CMM_GRP_CD
+          AND CM0303T.CMM_CD = CM0304T.CMM_CD
+          AND CM0304T.LANG_CD = 'zh'
+          AND CM0303T.CMM_GRP_CD = 'CRM022'
+          AND CM0303T.CMM_CD = CR_0101T.PREF_COMM_MTH_CD
+    ) AS PREF_COMM_MTH_CD_NM
+    ,CR_0101T.PREF_COMM_NO
+    ,CR_0101T.EMAIL_NM
+    ,ADDR.ZIP_CD
+    ,ADDR.SUNG_NM || ' ' || ADDR.CITY_NM || ' ' || ADDR.DIST_NM || ' ' || ADDR.ADDR_DETL_CONT AS ADDR_FULL
+    ,CR_0101T.MATH_DOC_TP
+    ,(SELECT
+          NVL(CM0304T.CMM_CD_TXT, CM0303T.CMM_CD_NM)
+        FROM CM_0303T CM0303T, CM_0304T CM0304T
+          WHERE CM0303T.CMM_GRP_CD = CM0304T.CMM_GRP_CD
+          AND CM0303T.CMM_CD = CM0304T.CMM_CD
+          AND CM0304T.LANG_CD = 'zh'
+          AND CM0303T.CMM_GRP_CD = 'CRM024'
+          AND CM0303T.CMM_CD = CR_0101T.MATH_DOC_TP
+    ) AS MATH_DOC_TP_NM
+    ,CR_0101T.SSN_CRN_NO
+    ,CR_0801T.GRADE_CD
+    ,(SELECT  
+            GRADE_NM
+        FROM CR_0805T
+        WHERE 1=1
+        AND DLR_CD = CR_0801T.DLR_CD
+        AND GRADE_SEQ = CR_0801T.GRADE_CD 
+     ) AS GRADE_CD_NM
+    ,CR_0813T.CARD_NO
+    ,CR_0801T.LAST_POINT_VAL
+             
+/*
+    ,CR_0813T.CARD_TP_CD
+    ,CR_0801T.CUST_NO
+    ,CR_0801T.VIN_NO
+    ,CR_0801T.FILE_DOC_NO
+    ,CR_0801T.POINT_YN
+    ,CR_0801T.RECHARGE_YN
+    ,CR_0801T.REG_DT
+    ,CR_0101T.CUST_TP
+    
+    ,CR_0101T.PREF_CONTACT_MTH_CD
+    ,CR_0101T.PREF_CONTACT_TIME_CD
+
+    ,CR_0101T.OFFICE_NO
+    ,CAR_INFO.NCAR_DSTIN_CD
+    ,CAR_INFO.CARLINE_CD
+    ,CAR_INFO.CARLINE_NM
+    ,CAR_INFO.CARLINE_NM_NC
+    ,CAR_INFO.MODEL_CD
+    ,CAR_INFO.MODEL_NM
+    ,CAR_INFO.MODEL_NM_NC
+    ,CAR_INFO.CAR_NM
+    ,CAR_INFO.CAR_REG_NO
+
+    ,ADDR.SUNG_CD
+    ,ADDR.CITY_CD
+    ,ADDR.DIST_CD
+    ,ADDR.ADDR_DETL_CONT
+    ,ADDR.SUNG_NM
+    ,ADDR.CITY_NM
+    ,ADDR.DIST_NM
+*/    
+FROM  CR_0801T CR_0801T INNER JOIN CR_0101T CR_0101T
+      ON CR_0801T.DLR_CD = CR_0101T.DLR_CD
+      AND CR_0801T.CUST_NO = CR_0101T.CUST_NO
+      LEFT OUTER JOIN CR_0813T CR_0813T
+      ON CR_0801T.DLR_CD = CR_0813T.DLR_CD
+      AND CR_0801T.MEMBERSHIP_NO = CR_0813T.MEMBERSHIP_NO
+      AND CR_0813T.USE_YN = 'Y'
+      AND CR_0813T.CARD_TP_CD = '01'
+      LEFT OUTER JOIN (
+        SELECT SA_0201T.DLR_CD
+              ,SA_0201T.CONTRACT_CUST_NO
+              ,SA_0121T.VIN_NO
+              ,SA_0121T.NCAR_DSTIN_CD --신차량구분코드
+              ,SA_0201T.CARLINE_CD--차종코드
+              ,FN_GET_CARLINE_NM(SA_0201T.CARLINE_CD) AS CARLINE_NM --차종코드명
+              ,FN_GET_CARLINE_NM_NC(SA_0201T.CARLINE_CD) AS CARLINE_NM_NC --차종코드명
+              ,SA_0201T.MODEL_CD -- 모델코드
+              ,FN_GET_MODEL_NM(SA_0201T.MODEL_CD) AS MODEL_NM --모델코드명
+              ,FN_GET_MODEL_NM_NC(SA_0201T.MODEL_CD) AS MODEL_NM_NC --모델코드명
+              ,SA_0121T.CAR_NM -- 차량명
+              ,SA_0121T.CAR_REG_NO -- 차량등록번호
+        FROM  SA_0121T SA_0121T INNER JOIN SA_0201T SA_0201T
+              ON SA_0121T.CONTRACT_NO = SA_0201T.CONTRACT_NO
+              AND SA_0121T.DEL_YN = 'N'
+        WHERE 1=1
+      ) CAR_INFO
+      ON CR_0801T.DLR_CD = CAR_INFO.DLR_CD
+      AND CR_0801T.CUST_NO = CAR_INFO.CONTRACT_CUST_NO
+      AND CR_0801T.VIN_NO = CAR_INFO.VIN_NO
+      LEFT OUTER JOIN CR_0116T ADDR ON CR_0801T.CUST_NO = ADDR.REF_KEY_NM AND CR_0801T.DLR_CD = ADDR.DLR_CD AND ADDR.REF_TABLE_NM = 'CR_0101T' AND FLAG_YN = 'Y'
+                     
+WHERE 1=1
+--AND CR_0801T.DLR_CD = 'A07AA'
+--AND CR_0801T.MEMBERSHIP_NO = '12345-0987-1111' 
+AND CR_0801T.DLR_CD = '${sDlrCd}'
+AND CR_0801T.MEMBERSHIP_NO = '${sMembershipNo}'
+]]></Query>
+</TableData>
+<TableData name="membershipRechargeCard" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDateFormat"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sMembershipNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[-- *충전카드 목록      membershipRechargeCard
+SELECT 
+     NUMB
+    ,DLR_CD
+    ,MEMBERSHIP_NO
+    ,CARD_TP_CD
+    ,(SELECT
+          NVL(CM0304T.CMM_CD_TXT, CM0303T.CMM_CD_NM)
+        FROM CM_0303T CM0303T, CM_0304T CM0304T
+          WHERE CM0303T.CMM_GRP_CD = CM0304T.CMM_GRP_CD
+          AND CM0303T.CMM_CD = CM0304T.CMM_CD
+          AND CM0304T.LANG_CD = 'zh'
+          AND CM0303T.CMM_GRP_CD = 'CRM081'
+          AND CM0303T.CMM_CD = CARD_TP_CD
+    ) AS CARD_TP_CD_NM
+    ,CARD_NO
+    ,TO_CHAR(REG_DT,'${sDateFormat}') AS REG_DT
+    ,REAL_TOT_AMT
+    ,USR_NM
+FROM    (
+        SELECT  ROW_NUMBER() OVER (PARTITION BY A.CARD_NO ORDER BY A.DLR_CD, A.MEMBERSHIP_NO,B.POINT_HIS_SEQ DESC) NUMB
+                ,A.DLR_CD
+                ,A.MEMBERSHIP_NO
+                ,A.CARD_TP_CD
+                ,A.CARD_NO
+                ,A.REG_DT
+                ,NVL(B.REAL_TOT_AMT,0) AS REAL_TOT_AMT
+                ,USRT.USR_NM
+        FROM    CR_0813T A LEFT OUTER JOIN CR_0803T B
+                ON A.DLR_CD = B.DLR_CD
+                AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+                AND A.CARD_TP_CD = B.CARD_TP_CD
+                AND A.CARD_NO = B.CARD_NO
+                LEFT OUTER JOIN CM_0801T USRT ON A.REG_USR_ID = USRT.USR_ID
+                                     
+        WHERE 1=1
+        --AND A.DLR_CD = 'A07AA'
+        --AND A.MEMBERSHIP_NO = 'MA07AA20160800006'
+        AND A.DLR_CD = '${sDlrCd}'
+        AND A.MEMBERSHIP_NO = '${sMembershipNo}'
+        AND A.CARD_TP_CD = '02'
+        AND A.USE_YN = 'Y'
+        ORDER BY
+                             
+                A.REG_DT DESC
+                                 
+)
+WHERE NUMB = 1]]></Query>
+</TableData>
+<TableData name="membershipPackageCoupon" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDateFormat"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sMembershipNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[-- * 패키지 쿠폰 목록    membershipPackageCoupon
+SELECT  
+    DLR_CD
+    ,SEQ
+    ,MEMBERSHIP_NO
+    ,PKG_SEQ
+    ,PKG_NM
+    ,PKG_AMT
+    ,PKG_CONT
+    ,CUPN_SEQ
+    ,CUPN_NM
+    ,CUPN_CONT
+    ,TO_CHAR(CUPN_DEST_DT,'${sDateFormat}') AS CUPN_DEST_DT
+    ,CUPN_USE_YN
+    ,TO_CHAR(CUPN_USE_DT,'${sDateFormat}') AS CUPN_USE_DT
+    ,USE_DEPT_NM
+    ,USE_PRSN_ID
+    ,REG_USR_ID
+    ,TO_CHAR(REG_DT,'${sDateFormat}') AS REG_DT
+    ,UPDT_USR_ID
+    ,UPDT_DT
+    ,CUPN_NO
+FROM    CR_0816T
+WHERE 1=1
+--AND DLR_CD = 'A07AA'
+--AND MEMBERSHIP_NO = 'MA07AA20160900077'
+AND DLR_CD = '${sDlrCd}'
+AND MEMBERSHIP_NO = '${sMembershipNo}'
+ORDER BY PKG_NM DESC]]></Query>
+</TableData>
+<TableData name="membershipPointHiss" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sMembershipNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCustNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[-- * 포인트 이력 membershipPointHiss
+SELECT  
+     A.DLR_CD
+    ,A.MEMBERSHIP_NO
+    ,B.POINT_HIS_SEQ
+    ,A.CARD_TP_CD
+    ,A.CARD_NO
+    ,B.POINT_CD
+    ,(SELECT
+          NVL(CM0304T.CMM_CD_TXT, CM0303T.CMM_CD_NM)
+        FROM CM_0303T CM0303T, CM_0304T CM0304T
+          WHERE CM0303T.CMM_GRP_CD = CM0304T.CMM_GRP_CD
+          AND CM0303T.CMM_CD = CM0304T.CMM_CD
+          AND CM0304T.LANG_CD = 'zh'
+          AND CM0303T.CMM_GRP_CD = 'CRM802'
+          AND CM0303T.CMM_CD = B.POINT_CD
+    ) AS POINT_CD_NM
+    ,B.POINT_TP
+    ,B.OCCR_POINT_VAL
+    ,'('||B.POINT_TP||') '||TO_CHAR(B.OCCR_POINT_VAL,'FM9,999,999,999') AS OCCR_POINT_VAL2
+    ,B.LAST_POINT_VAL
+    ,B.REAL_TOT_AMT
+    ,B.OCCR_DT
+    ,B.DEPT_NM
+    ,B.PRSN_ID
+    ,D.USR_NM AS PRSN_NM
+    ,B.EXTC_DT
+    ,B.EXTC_TARG_YN
+    ,B.EXTC_TARG_POINT_VAL
+    ,C.CUST_NO
+    ,C.REG_DT
+FROM CR_0813T A
+INNER JOIN CR_0803T B ON A.DLR_CD = B.DLR_CD
+    AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+    AND A.CARD_TP_CD = B.CARD_TP_CD
+    AND A.CARD_NO = B.CARD_NO
+    AND A.USE_YN = 'Y'
+    AND A.CARD_TP_CD = '01'
+LEFT OUTER JOIN CR_0801T C ON A.MEMBERSHIP_NO = C.MEMBERSHIP_NO AND A.DLR_CD = C.DLR_CD
+LEFT OUTER JOIN CM_0801T D ON B.PRSN_ID = D.USR_ID AND A.DLR_CD = C.DLR_CD
+WHERE 1=1
+--AND A.DLR_CD = 'A07AA'
+--AND A.MEMBERSHIP_NO = 'MA07AA20160900017'
+--AND C.CUST_NO = 'CA07AA20160900023'
+AND A.DLR_CD = '${sDlrCd}'
+AND A.MEMBERSHIP_NO = '${sMembershipNo}'
+AND C.CUST_NO = '${sCustNo}'
+ORDER BY POINT_HIS_SEQ DESC]]></Query>
+</TableData>
+<TableData name="membershipRechargeHiss" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sMembershipNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCustNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[-- * 충전카드 이력 membershipRechargeHiss
+SELECT  
+     A.DLR_CD
+    ,A.MEMBERSHIP_NO
+    ,B.POINT_HIS_SEQ
+    ,A.CARD_TP_CD
+    ,A.CARD_NO
+    ,B.POINT_CD
+    ,(SELECT
+          NVL(CM0304T.CMM_CD_TXT, CM0303T.CMM_CD_NM)
+        FROM CM_0303T CM0303T, CM_0304T CM0304T
+          WHERE CM0303T.CMM_GRP_CD = CM0304T.CMM_GRP_CD
+          AND CM0303T.CMM_CD = CM0304T.CMM_CD
+          AND CM0304T.LANG_CD = 'zh'
+          AND CM0303T.CMM_GRP_CD = 'CRM802'
+          AND CM0303T.CMM_CD = B.POINT_CD
+    ) AS POINT_CD_NM
+    ,B.POINT_TP
+    ,B.OCCR_POINT_VAL
+    ,'('||B.POINT_TP||') '||TO_CHAR(B.OCCR_POINT_VAL,'FM9,999,999,999') AS OCCR_POINT_VAL2
+    ,B.LAST_POINT_VAL
+    ,B.REAL_TOT_AMT
+    ,B.OCCR_DT
+    ,B.DEPT_NM
+    ,B.PRSN_ID
+    ,D.USR_NM AS PRSN_NM
+    ,B.EXTC_DT
+    ,B.EXTC_TARG_YN
+    ,B.EXTC_TARG_POINT_VAL
+    ,C.CUST_NO
+    ,C.REG_DT
+FROM CR_0813T A
+INNER JOIN CR_0803T B ON A.DLR_CD = B.DLR_CD
+    AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+    AND A.CARD_TP_CD = B.CARD_TP_CD
+    AND A.CARD_NO = B.CARD_NO
+    AND A.USE_YN = 'Y'
+    AND A.CARD_TP_CD = '02'
+LEFT OUTER JOIN CR_0801T C ON A.MEMBERSHIP_NO = C.MEMBERSHIP_NO AND A.DLR_CD = C.DLR_CD
+LEFT OUTER JOIN CM_0801T D ON B.PRSN_ID = D.USR_ID AND A.DLR_CD = C.DLR_CD
+WHERE 1=1
+--AND A.DLR_CD = 'A07AA'
+--AND A.MEMBERSHIP_NO = 'MA07AA20160900017'
+--AND C.CUST_NO = 'CA07AA20160900023'
+AND A.DLR_CD = '${sDlrCd}'
+AND A.MEMBERSHIP_NO = '${sMembershipNo}'
+AND C.CUST_NO = '${sCustNo}'
+ORDER BY POINT_HIS_SEQ DESC]]></Query>
+</TableData>
+<TableData name="membershipGradeHiss" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sMembershipNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[-- *등급변경이력       membershipGradeHiss
+SELECT  
+     A.DLR_CD
+    ,A.MEMBERSHIP_NO
+    ,A.GRADE_CHG_HIS_SEQ
+    ,A.BEF_GRADE_CD
+    ,(SELECT  
+            GRADE_NM
+        FROM CR_0805T
+        WHERE 1=1
+        AND DLR_CD = A.DLR_CD
+        AND GRADE_SEQ = A.BEF_GRADE_CD 
+     ) AS BEF_GRADE_CD_NM
+    ,A.AFT_GRADE_CD
+    ,(SELECT  
+            GRADE_NM
+        FROM CR_0805T
+        WHERE 1=1
+        AND DLR_CD = A.DLR_CD
+        AND GRADE_SEQ = A.AFT_GRADE_CD 
+     ) AS AFT_GRADE_CD_NM
+    ,A.GRADE_CHG_DT
+    ,A.USE_YN
+    ,A.REG_USR_ID
+    ,A.REG_DT
+    ,A.UPDT_USR_ID
+    ,A.UPDT_DT
+    ,B.USR_NM
+FROM CR_0804T A LEFT OUTER JOIN CM_0801T B
+ON A.REG_USR_ID = B.USR_ID
+WHERE 1=1
+--AND A.DLR_CD = 'A07AA'
+--AND A.MEMBERSHIP_NO = 'MA07AA20160900017'
+AND A.DLR_CD = '${sDlrCd}'
+AND A.MEMBERSHIP_NO = '${sMembershipNo}'
+ORDER BY A.GRADE_CHG_DT DESC
+]]></Query>
+</TableData>
+<TableData name="membershipSpecialPoints" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sMembershipNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[-- *특별포인트        membershipSpecialPoints
+SELECT
+     CR0819T.DLR_CD                     --딜러코드
+    ,CR0819T.SEQ                        --일련번호
+    ,CR0819T.MEMBERSHIP_NO              --멤버쉽번호
+    ,CR0819T.PROVIDE_POINT_VAL          --부여포인트값
+    ,CR0819T.PROVIDE_REASON_CONT        --부여사유내용
+    ,CR0819T.SIGN_DOC_NO                --결제문서번호
+    ,CR0819T.REG_USR_ID                 --등록자ID
+    ,CR0819T.REG_DT                     --등록일자
+    ,CR0819T.UPDT_USR_ID                --수정자ID
+    ,CR0819T.UPDT_DT                    --수정일자
+    ,USRT.USR_NM AS REG_USR_NM           --등록자이름
+FROM CR_0819T CR0819T
+INNER JOIN CM_0801T USRT ON CR0819T.REG_USR_ID = USRT.USR_ID
+WHERE 1=1
+--AND CR0819T.DLR_CD = 'A07AA'                  --딜러코드
+--AND CR0819T.MEMBERSHIP_NO = 'MA07AA20160900017'    --멤버쉽번호
+AND CR0819T.DLR_CD = '${sDlrCd}'
+AND CR0819T.MEMBERSHIP_NO = '${sMembershipNo}'
+ORDER BY REG_DT DESC
+]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1296000,1008000,1008000,1008000,1008000,1008000,723900,723900,1296000,723900,723900,723900,1296000,723900,723900,723900,1296000,723900,723900,723900,1296000,723900,723900,723900,1296000,723900,723900,723900,1296000,723900,723900,723900,1296000,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[3600000,2880000,2880000,3600000,2880000,2880000,3600000,2880000,2880000,2743200,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" cs="3" s="0">
+<O>
+<![CDATA[会员信息]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1" s="1">
+<O>
+<![CDATA[客户姓名]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="1" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="CUST_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="1" s="1">
+<O>
+<![CDATA[会员号码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="1" cs="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="MEMBERSHIP_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="1" s="1">
+<O>
+<![CDATA[客户类型]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="1" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="CUST_CD_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="2" s="1">
+<O>
+<![CDATA[移动电话]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="2" cs="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="HP_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="2" s="1">
+<O>
+<![CDATA[固定电话]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="2" cs="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="TEL_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="2" s="1">
+<O>
+<![CDATA[主要联系方式]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="PREF_COMM_MTH_CD_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="2" s="4">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="PREF_COMM_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="3" s="1">
+<O>
+<![CDATA[电子邮件]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="3" cs="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="EMAIL_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="3" s="1">
+<O>
+<![CDATA[地址]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="3" s="3">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="ZIP_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="3" cs="4" s="3">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="ADDR_FULL"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="4" s="1">
+<O>
+<![CDATA[证件类型]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="4" cs="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="MATH_DOC_TP_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="4" s="1">
+<O>
+<![CDATA[证件号码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="4" cs="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="SSN_CRN_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="4" cs="3" s="4">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="5" s="1">
+<O>
+<![CDATA[等级]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="5" cs="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="GRADE_CD_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="5" s="1">
+<O>
+<![CDATA[积分卡号码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="5" cs="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="CARD_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="5" s="1">
+<O>
+<![CDATA[积分(可用)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="5" cs="2" s="5">
+<O t="DSColumn">
+<Attributes dsName="membershipInfo" columnName="LAST_POINT_VAL"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="8" cs="3" s="0">
+<O>
+<![CDATA[充值卡列表]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="9" s="6">
+<O>
+<![CDATA[序号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="9" cs="3" s="6">
+<O>
+<![CDATA[卡号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="9" s="6">
+<O>
+<![CDATA[金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="9" s="6">
+<O>
+<![CDATA[卡种类]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="9" cs="2" s="6">
+<O>
+<![CDATA[发卡日]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="9" s="6">
+<O>
+<![CDATA[录入人]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="10" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=seq()]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" left="B11" upParentDefault="false"/>
+</C>
+<C c="1" r="10" cs="3" s="3">
+<O t="DSColumn">
+<Attributes dsName="membershipRechargeCard" columnName="MEMBERSHIP_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="10" s="5">
+<O t="DSColumn">
+<Attributes dsName="membershipRechargeCard" columnName="REAL_TOT_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="10" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipRechargeCard" columnName="CARD_TP_CD_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="10" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipRechargeCard" columnName="REG_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="10" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipRechargeCard" columnName="USR_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="12" cs="3" s="0">
+<O>
+<![CDATA[套餐优惠券明细]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="13" s="6">
+<O>
+<![CDATA[序号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="13" s="6">
+<O>
+<![CDATA[套餐名]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="13" cs="2" s="6">
+<O>
+<![CDATA[优惠券名]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="13" s="6">
+<O>
+<![CDATA[优惠券号码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="13" s="6">
+<O>
+<![CDATA[优惠券失效日]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="13" s="6">
+<O>
+<![CDATA[是否使用优惠券]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="13" s="6">
+<O>
+<![CDATA[优惠券使用日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="13" s="6">
+<O>
+<![CDATA[发卡日]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="14" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=seq()]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand extendable="3" leftParentDefault="false" left="B15" upParentDefault="false"/>
+</C>
+<C c="1" r="14" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipPackageCoupon" columnName="PKG_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="14" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipPackageCoupon" columnName="CUPN_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="14" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipPackageCoupon" columnName="CUPN_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="14" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipPackageCoupon" columnName="CUPN_DEST_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="14" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipPackageCoupon" columnName="CUPN_USE_YN"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="14" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipPackageCoupon" columnName="CUPN_USE_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="14" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipPackageCoupon" columnName="REG_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="15">
+<PrivilegeControl/>
+<Expand extendable="1"/>
+</C>
+<C c="0" r="16" cs="3" s="0">
+<O>
+<![CDATA[积分记录]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="17" s="6">
+<O>
+<![CDATA[序号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="17" s="6">
+<O>
+<![CDATA[积分来源]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="17" cs="2" s="6">
+<O>
+<![CDATA[发生积分]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="17" cs="2" s="6">
+<O>
+<![CDATA[积分]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="17" cs="2" s="6">
+<O>
+<![CDATA[发生日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="17" s="6">
+<O>
+<![CDATA[责任人]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="18" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=seq()]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" left="B19"/>
+</C>
+<C c="1" r="18" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipPointHiss" columnName="POINT_CD_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="18" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipPointHiss" columnName="OCCR_POINT_VAL2"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="18" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipPointHiss" columnName="LAST_POINT_VAL"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="18" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipPointHiss" columnName="OCCR_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="18" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipPointHiss" columnName="PRSN_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="20" cs="3" s="0">
+<O>
+<![CDATA[充值卡记录]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="21" s="6">
+<O>
+<![CDATA[序号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="21" cs="2" s="6">
+<O>
+<![CDATA[卡号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="21" s="6">
+<O>
+<![CDATA[积分来源]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="21" s="6">
+<O>
+<![CDATA[金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="21" s="6">
+<O>
+<![CDATA[金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="21" cs="2" s="6">
+<O>
+<![CDATA[发生日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="21" s="6">
+<O>
+<![CDATA[责任人]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="22" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=seq()]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" left="B23"/>
+</C>
+<C c="1" r="22" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipRechargeHiss" columnName="CARD_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="22" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipRechargeHiss" columnName="POINT_CD_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="22" s="7">
+<O t="DSColumn">
+<Attributes dsName="membershipRechargeHiss" columnName="OCCR_POINT_VAL2"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="22" s="8">
+<O t="DSColumn">
+<Attributes dsName="membershipRechargeHiss" columnName="REAL_TOT_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="22" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipRechargeHiss" columnName="OCCR_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="22" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipRechargeHiss" columnName="PRSN_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="24" cs="3" s="0">
+<O>
+<![CDATA[等级变更记录]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="25" s="6">
+<O>
+<![CDATA[序号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="25" cs="2" s="6">
+<O>
+<![CDATA[变更前等级]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="25" cs="2" s="6">
+<O>
+<![CDATA[变更后等级]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="25" cs="2" s="6">
+<O>
+<![CDATA[变更日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="25" cs="2" s="6">
+<O>
+<![CDATA[等级变更日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="26" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=seq()]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" left="B27"/>
+</C>
+<C c="1" r="26" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipGradeHiss" columnName="BEF_GRADE_CD_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="26" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipGradeHiss" columnName="AFT_GRADE_CD_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="26" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipGradeHiss" columnName="GRADE_CHG_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="26" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipGradeHiss" columnName="USR_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="28" cs="3" s="0">
+<O>
+<![CDATA[特殊积分]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="29" s="6">
+<O>
+<![CDATA[会员号码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="29" s="6">
+<O>
+<![CDATA[序列号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="29" s="6">
+<O>
+<![CDATA[赠与特殊积分]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="29" s="6">
+<O>
+<![CDATA[赠与理由]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="29" cs="2" s="6">
+<O>
+<![CDATA[审批文件编号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="29" s="6">
+<O>
+<![CDATA[录入人]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="29" cs="2" s="6">
+<O>
+<![CDATA[录入日]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="30" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipSpecialPoints" columnName="MEMBERSHIP_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="30" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipSpecialPoints" columnName="SEQ"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="30" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipSpecialPoints" columnName="PROVIDE_POINT_VAL"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="30" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipSpecialPoints" columnName="PROVIDE_REASON_CONT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="30" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipSpecialPoints" columnName="SIGN_DOC_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="30" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipSpecialPoints" columnName="REG_USR_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="30" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipSpecialPoints" columnName="REG_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="32" cs="3" s="0">
+<O>
+<![CDATA[审批信息]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="33" s="6">
+<O>
+<![CDATA[审批层号码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="33" s="6">
+<O>
+<![CDATA[最终]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="33" s="6">
+<O>
+<![CDATA[区分]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="33" s="6">
+<O>
+<![CDATA[责任人]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="33" s="6">
+<O>
+<![CDATA[状态]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="33" s="6">
+<O>
+<![CDATA[结果]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="33" s="6">
+<O>
+<![CDATA[时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="33" s="6">
+<O>
+<![CDATA[建议]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting>
+<PaperSize width="33912000" height="46411200"/>
+<Margin top="986400" left="2743200" bottom="986400" right="2743200"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="1" size="96"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingRight="5">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="ColorBackground" color="-1315861"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="5">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingRight="5">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="ColorBackground" color="-1774089"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingRight="5">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingRight="5">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

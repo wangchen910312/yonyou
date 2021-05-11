@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.acc.service.dao.AccessoryItemInputDAO">
+
+    <!-- 용품입고 문서 목록을 조회한다 -->
+    <select id="selectAccessoryItemInputDocsByCondition" parameterType="AccessoryItemInputSearchVO" resultType="InvcVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemInputDAO.selectAccessoryItemInputDocsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM,K1.* FROM (
+                SELECT
+                     T1.DLR_CD                                                                  <!-- 딜러코드 -->
+                    ,T1.ETC_GR_DOC_NO AS INVC_DOC_NO                                            <!-- 입고문서번호 -->
+                    ,T1.STAT_CD AS INVC_STAT_CD                                                 <!-- 입고문서상태 -->
+                    ,MAX(T2.REG_DT) AS INVC_GR_DT                                               <!-- 입고일자 -->
+                    ,COUNT(*) AS ITEM_CNT                                                       <!-- 입고건수 -->
+                    ,CASE WHEN T1.MVT_TP ='03' THEN ABS(SUM(T2.QTY)) * -1 ELSE SUM(T2.QTY) END  AS ITEM_QTY <!-- 입고수량 -->
+                    ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = T1.REG_USR_ID) AS REG_USR_NM   <!-- 입고확인자명 -->
+                    ,T1.BP_CD                                                                   <!-- 업체코드 -->
+                    ,T3.BP_NM                                                                   <!-- 업체명 -->
+                    ,T3.BP_TP                                                                   <!-- 업체유형 -->
+                    ,CASE WHEN T1.MVT_TP ='03' THEN ABS(SUM(T2.TAX_AMT)) * -1 ELSE SUM(T2.TAX_AMT) END  AS VAT_AMT <!-- 세액 -->
+                    ,MAX(T2.DC_RATE) AS DC_RATE                                                 <!-- 세율 -->
+                    ,CASE WHEN T1.MVT_TP ='03' THEN ABS(SUM(T2.TAX_AMT+T2.TAX_DDCT_AMT)) * -1 ELSE SUM(T2.TAX_AMT+T2.TAX_DDCT_AMT) END  AS GR_TOT_INC_TAX_AMT <!-- 입고금액(세금포함) -->
+                    ,CASE WHEN T1.MVT_TP ='03' THEN ABS(SUM(T2.TAX_DDCT_AMT)) * -1 ELSE SUM(T2.TAX_DDCT_AMT) END  AS GR_TOT_AMT <!-- 입고금액(세금제외) -->
+                    ,T1.REG_DT                                                                  <!-- 입고문서생성일자 -->
+                    ,T1.MVT_TP AS INVC_TP                                                       <!-- 수불유형 -->
+                FROM PT_0621T T1
+                INNER JOIN PT_0622T T2 ON T1.DLR_CD = T2.DLR_CD AND T1.ETC_GR_DOC_NO = T2.ETC_GR_DOC_NO
+                INNER JOIN PT_0211T T3 ON T1.DLR_CD = T3.DLR_CD AND T1.BP_CD = T3.BP_CD
+                INNER JOIN PT_0201T T4 ON T1.DLR_CD = T4.DLR_CD AND T2.ITEM_CD = T4.ITEM_CD
+                WHERE
+                    T1.DLR_CD = #{sDlrCd}
+                    AND T1.STAT_CD != '03'
+                    AND T2.CANC_YN = 'N'
+                    <if test='sMvtTp != null and sMvtTp != ""'>
+                        AND T1.MVT_TP = #{sMvtTp}
+                    </if>
+                    <if test='sStatCd != null and sStatCd != ""'>
+                        AND T1.STAT_CD = #{sStatCd}
+                    </if>
+                    <if test='sBpTp != null and sBpTp != ""'>
+                        AND T3.BP_TP = #{sBpTp}
+                    </if>
+                    <if test='sBpCd != null and sBpCd != ""'>
+                        AND T1.BP_CD = #{sBpCd}
+                    </if>
+                    <if test='sBpNm != null and sBpNm != ""'>
+                        AND T3.BP_NM LIKE '%'|| #{sBpNm} ||'%'
+                    </if>
+                    <if test='sEtcGrDocNo != null and sEtcGrDocNo != ""'>
+                        AND T1.ETC_GR_DOC_NO LIKE '%'|| #{sEtcGrDocNo} ||'%'
+                    </if>
+                    <if test='sEtcGrDocTp != null and sEtcGrDocTp != ""'>
+                        AND T1.ETC_GR_DOC_TP = #{sEtcGrDocTp}
+                    </if>
+                    <if test='sInvcGrDtFr != null'>
+                        AND T2.REG_DT <![CDATA[>=]]> #{sInvcGrDtFr}
+                    </if>
+                    <if test='sInvcGrDtTo != null'>
+                        AND T2.REG_DT <![CDATA[<]]> #{sInvcGrDtTo} + 1
+                    </if>
+                    <if test='sRegDtFr != null'>
+                        AND T1.REG_DT <![CDATA[>=]]> #{sRegDtFr}
+                    </if>
+                    <if test='sRegDtTo != null'>
+                        AND T1.REG_DT <![CDATA[<]]> #{sRegDtTo} + 1
+                    </if>
+                    <if test='sItemCd != null and sItemCd != ""'>
+                        AND T2.ITEM_CD LIKE '%'|| #{sItemCd} ||'%'
+                    </if>
+                    <if test='sItemNm != null and sItemNm != ""'>
+                        AND T4.ITEM_NM LIKE '%'|| #{sItemNm} ||'%'
+                    </if>
+                    <if test='sGrStrgeCd != null and sGrStrgeCd != ""'>
+                        AND T2.STRGE_CD = #{sGrStrgeCd}
+                    </if>
+                GROUP BY T1.DLR_CD, T1.ETC_GR_DOC_NO, T1.STAT_CD, T1.REG_USR_ID, T1.BP_CD, T3.BP_NM, T3.BP_TP, T1.REG_DT, T1.MVT_TP
+                ORDER BY MAX(T2.REG_DT) DESC, T1.ETC_GR_DOC_NO DESC
+        ) K1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 용품입고 문서 목록수를 조회한다 -->
+    <select id="selectAccessoryItemInputDocsByConditionCnt" parameterType="AccessoryItemInputSearchVO" resultType="int">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemInputDAO.selectAccessoryItemInputDocsByConditionCnt] */
+        SELECT COUNT(*)
+        FROM (
+            SELECT T1.ETC_GR_DOC_NO
+            FROM PT_0621T T1
+            INNER JOIN PT_0622T T2 ON T1.DLR_CD = T2.DLR_CD AND T1.ETC_GR_DOC_NO = T2.ETC_GR_DOC_NO
+            INNER JOIN PT_0211T T3 ON T1.DLR_CD = T3.DLR_CD AND T1.BP_CD = T3.BP_CD
+            INNER JOIN PT_0201T T4 ON T1.DLR_CD = T4.DLR_CD AND T2.ITEM_CD = T4.ITEM_CD
+            WHERE
+                T1.DLR_CD = #{sDlrCd}
+                AND T1.STAT_CD != '03'
+                AND T2.CANC_YN = 'N'
+                <if test='sMvtTp != null and sMvtTp != ""'>
+                    AND T1.MVT_TP = #{sMvtTp}
+                </if>
+                <if test='sStatCd != null and sStatCd != ""'>
+                    AND T1.STAT_CD = #{sStatCd}
+                </if>
+                <if test='sBpTp != null and sBpTp != ""'>
+                    AND T3.BP_TP = #{sBpTp}
+                </if>
+                <if test='sBpCd != null and sBpCd != ""'>
+                    AND T1.BP_CD = #{sBpCd}
+                </if>
+                <if test='sBpNm != null and sBpNm != ""'>
+                    AND T3.BP_NM LIKE '%'|| #{sBpNm} ||'%'
+                </if>
+                <if test='sEtcGrDocNo != null and sEtcGrDocNo != ""'>
+                    AND T1.ETC_GR_DOC_NO LIKE '%'|| #{sEtcGrDocNo} ||'%'
+                </if>
+                <if test='sEtcGrDocTp != null and sEtcGrDocTp != ""'>
+                    AND T1.ETC_GR_DOC_TP = #{sEtcGrDocTp}
+                </if>
+                <if test='sInvcGrDtFr != null'>
+                    AND T2.REG_DT <![CDATA[>=]]> #{sInvcGrDtFr}
+                </if>
+                <if test='sInvcGrDtTo != null'>
+                    AND T2.REG_DT <![CDATA[<]]> #{sInvcGrDtTo} + 1
+                </if>
+                <if test='sRegDtFr != null'>
+                    AND T1.REG_DT <![CDATA[>=]]> #{sRegDtFr}
+                </if>
+                <if test='sRegDtTo != null'>
+                    AND T1.REG_DT <![CDATA[<]]> #{sRegDtTo} + 1
+                </if>
+                <if test='sItemCd != null and sItemCd != ""'>
+                    AND T2.ITEM_CD LIKE '%'|| #{sItemCd} ||'%'
+                </if>
+                <if test='sItemNm != null and sItemNm != ""'>
+                    AND T4.ITEM_NM LIKE '%'|| #{sItemNm} ||'%'
+                </if>
+                <if test='sGrStrgeCd != null and sGrStrgeCd != ""'>
+                    AND T2.STRGE_CD = #{sGrStrgeCd}
+                </if>
+            GROUP BY T1.ETC_GR_DOC_NO
+        ) K1
+    </select>
+
+    <!-- 용품입고 문서 품목을 조회한다 -->
+    <select id="selectAccessoryItemInputItemsByCondition" parameterType="AccessoryItemInputSearchVO" resultType="InvcItemVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemInputDAO.selectAccessoryItemInputItemsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM,K1.* FROM (
+                SELECT
+                    T1.DLR_CD                                   <!-- 딜러코드 -->
+                   ,T2.ETC_GR_DOC_NO AS INVC_DOC_NO             <!-- 입고문서번호 -->
+                   ,T2.ETC_GR_DOC_LINE_NO AS INVC_DOC_LINE_NO   <!-- 입고문서라인번호 -->
+                   ,T2.ITEM_CD                                  <!-- 품목코드 -->
+                   ,T4.ITEM_NM                                  <!-- 품목명 -->
+                   ,CASE WHEN T1.MVT_TP ='03' THEN ABS(T2.QTY) * -1 ELSE T2.QTY END AS GR_QTY   <!-- 입고수량 -->
+                   ,T2.UNIT_CD AS INVC_UNIT_CD                  <!-- 단위 -->
+                   ,CASE WHEN T1.MVT_TP ='03' THEN ABS(T2.PRC) * -1 ELSE T2.PRC END AS INVC_PRC <!-- 입고단가(세금포함) -->
+                   ,CASE WHEN T1.MVT_TP ='03' THEN ABS(T2.TAX_DDCT_PRC) * -1 ELSE  T2.TAX_DDCT_PRC END  AS TAX_DDCT_PRC <!-- 입고단가(세금제외) -->
+                   ,CASE WHEN T1.MVT_TP ='03' THEN ABS(NVL(T2.AMT,0)) * -1 ELSE NVL(T2.AMT,0) END AS GR_TOT_AMT         <!-- 입고금액(세금포함) -->
+                   ,CASE WHEN T1.MVT_TP ='03' THEN ABS(NVL(T2.TAX_DDCT_AMT,0)) * -1 ELSE NVL(T2.TAX_DDCT_AMT,0) END AS GR_TAX_DDCT_AMT   <!-- 입고금액(세금제외) -->
+                   ,T1.BP_CD                                    <!-- 업체코드 -->
+                   ,T3.BP_NM                                    <!-- 업체명 -->
+                   ,T3.BP_TP                                    <!-- 업체유형 -->
+                   ,T2.REG_DT AS INVC_GR_DT                     <!-- 송장입고일자 -->
+                   ,NVL(T5.AVLB_STOCK_QTY,0) + NVL(T5.RESV_STOCK_QTY,0) - NVL(T5.BORROW_QTY,0) + NVL(T5.RENT_QTY,0) AS STOCK_QTY <!-- 가용재고 -->
+                   ,T2.STRGE_CD AS GR_STRGE_CD                  <!-- 입고창고코드 -->
+                FROM PT_0621T T1
+                INNER JOIN PT_0622T T2 ON T1.DLR_CD = T2.DLR_CD AND T1.ETC_GR_DOC_NO = T2.ETC_GR_DOC_NO
+                INNER JOIN PT_0211T T3 ON T1.DLR_CD = T3.DLR_CD AND T1.BP_CD = T3.BP_CD
+                INNER JOIN PT_0201T T4 ON T1.DLR_CD = T4.DLR_CD AND T2.ITEM_CD = T4.ITEM_CD
+                LEFT JOIN PT_0301T T5 ON T1.DLR_CD = T5.DLR_CD AND T2.ITEM_CD = T5.ITEM_CD AND T2.STRGE_CD = T5.STRGE_CD
+                WHERE
+                    T1.DLR_CD = #{sDlrCd}
+                    AND T1.STAT_CD != '03'
+                    AND T2.CANC_YN = 'N'
+                    <if test='sMvtTp != null and sMvtTp != ""'>
+                        AND T1.MVT_TP = #{sMvtTp}
+                    </if>
+                    <if test='sStatCd != null and sStatCd != ""'>
+                        AND T1.STAT_CD = #{sStatCd}
+                    </if>
+                    <if test='sBpTp != null and sBpTp != ""'>
+                        AND T3.BP_TP = #{sBpTp}
+                    </if>
+                    <if test='sBpCd != null and sBpCd != ""'>
+                        AND T1.BP_CD = #{sBpCd}
+                    </if>
+                    <if test='sBpNm != null and sBpNm != ""'>
+                        AND T3.BP_NM LIKE '%'|| #{sBpNm} ||'%'
+                    </if>
+                    <if test='sEtcGrDocNo != null and sEtcGrDocNo != ""'>
+                        AND T1.ETC_GR_DOC_NO = #{sEtcGrDocNo}
+                    </if>
+                    <if test='sEtcGrDocTp != null and sEtcGrDocTp != ""'>
+                        AND T1.ETC_GR_DOC_TP = #{sEtcGrDocTp}
+                    </if>
+                    <if test='sInvcGrDtFr != null'>
+                        AND T2.REG_DT <![CDATA[>=]]> #{sInvcGrDtFr}
+                    </if>
+                    <if test='sInvcGrDtTo != null'>
+                        AND T2.REG_DT <![CDATA[<]]> #{sInvcGrDtTo} + 1
+                    </if>
+                    <if test='sRegDtFr != null'>
+                        AND T1.REG_DT <![CDATA[>=]]> #{sRegDtFr}
+                    </if>
+                    <if test='sRegDtTo != null'>
+                        AND T1.REG_DT <![CDATA[<]]> #{sRegDtTo} + 1
+                    </if>
+                    <if test='sItemCd != null and sItemCd != ""'>
+                        AND T2.ITEM_CD LIKE '%'|| #{sItemCd} ||'%'
+                    </if>
+                    <if test='sItemNm != null and sItemNm != ""'>
+                        AND T4.ITEM_NM LIKE '%'|| #{sItemNm} ||'%'
+                    </if>
+                    <if test='sGrStrgeCd != null and sGrStrgeCd != ""'>
+                        AND T2.STRGE_CD = #{sGrStrgeCd}
+                    </if>
+                ORDER BY
+                 <choose>
+                 <when test='sort != null'>
+                     <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                         <choose>
+                             <when test='item.field == "dlrCd"'>T2.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <when test='item.field == "itemCd"'>T2.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <when test='item.field == "itemNm"'>T2.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <when test='item.field == "grQty"'>T2.QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <when test='item.field == "invcUnitCd"'>T2.INVC_UNIT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <when test='item.field == "taxDdctPrc"'>T2.TAX_DDCT_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <when test='item.field == "invcPrc"'>T2.INVC_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <when test='item.field == "grTotAmt"'>T2.AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <when test='item.field == "grTaxDdctAmt"'>T2.TAX_DDCT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <when test='item.field == "bpCd"'>T2.BP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <when test='item.field == "bpNm"'>T3.BP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <when test='item.field == "invcGrDt"'>T2.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <otherwise>
+                                T1.DLR_CD ASC, T2.REG_DT DESC, T2.ETC_GR_DOC_NO DESC, T2.ETC_GR_DOC_LINE_NO ASC
+                             </otherwise>
+                         </choose>
+                     </foreach>
+                 </when>
+                 <otherwise>
+                    T1.DLR_CD ASC, T2.REG_DT DESC, T2.ETC_GR_DOC_NO DESC, T2.ETC_GR_DOC_LINE_NO ASC
+                 </otherwise>
+                 </choose>
+            ) K1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 용품입고 문서 품목수를 조회한다 -->
+    <select id="selectAccessoryItemInputItemsByConditionCnt" parameterType="AccessoryItemInputSearchVO" resultType="int">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemInputDAO.selectAccessoryItemInputItemsByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM PT_0621T T1
+        INNER JOIN PT_0622T T2 ON T1.DLR_CD = T2.DLR_CD AND T1.ETC_GR_DOC_NO = T2.ETC_GR_DOC_NO
+        INNER JOIN PT_0211T T3 ON T1.DLR_CD = T3.DLR_CD AND T1.BP_CD = T3.BP_CD
+        INNER JOIN PT_0201T T4 ON T1.DLR_CD = T4.DLR_CD AND T2.ITEM_CD = T4.ITEM_CD
+        WHERE
+            T1.DLR_CD = #{sDlrCd}
+            AND T1.STAT_CD != '03'
+            AND T2.CANC_YN = 'N'
+            <if test='sMvtTp != null and sMvtTp != ""'>
+                AND T1.MVT_TP = #{sMvtTp}
+            </if>
+            <if test='sStatCd != null and sStatCd != ""'>
+                AND T1.STAT_CD = #{sStatCd}
+            </if>
+            <if test='sBpTp != null and sBpTp != ""'>
+                AND T3.BP_TP = #{sBpTp}
+            </if>
+            <if test='sBpCd != null and sBpCd != ""'>
+                AND T1.BP_CD = #{sBpCd}
+            </if>
+            <if test='sBpNm != null and sBpNm != ""'>
+                AND T3.BP_NM LIKE '%'|| #{sBpNm} ||'%'
+            </if>
+            <if test='sEtcGrDocNo != null and sEtcGrDocNo != ""'>
+                AND T1.ETC_GR_DOC_NO = #{sEtcGrDocNo}
+            </if>
+            <if test='sEtcGrDocTp != null and sEtcGrDocTp != ""'>
+                AND T1.ETC_GR_DOC_TP = #{sEtcGrDocTp}
+            </if>
+            <if test='sInvcGrDtFr != null'>
+                AND T2.REG_DT <![CDATA[>=]]> #{sInvcGrDtFr}
+            </if>
+            <if test='sInvcGrDtTo != null'>
+                AND T2.REG_DT <![CDATA[<]]> #{sInvcGrDtTo} + 1
+            </if>
+            <if test='sRegDtFr != null'>
+                AND T1.REG_DT <![CDATA[>=]]> #{sRegDtFr}
+            </if>
+            <if test='sRegDtTo != null'>
+                AND T1.REG_DT <![CDATA[<]]> #{sRegDtTo} + 1
+            </if>
+            <if test='sItemCd != null and sItemCd != ""'>
+                AND T2.ITEM_CD LIKE '%'|| #{sItemCd} ||'%'
+            </if>
+            <if test='sItemNm != null and sItemNm != ""'>
+                AND T4.ITEM_NM LIKE '%'|| #{sItemNm} ||'%'
+            </if>
+            <if test='sGrStrgeCd != null and sGrStrgeCd != ""'>
+                AND T2.STRGE_CD = #{sGrStrgeCd}
+            </if>
+    </select>
+</mapper>

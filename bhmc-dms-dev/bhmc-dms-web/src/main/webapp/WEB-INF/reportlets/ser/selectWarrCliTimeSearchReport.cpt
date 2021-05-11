@@ -1,0 +1,647 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="ds1" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sCarlineCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sStartDt"/>
+<O>
+<![CDATA[2017]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCrNm"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0119]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCrNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[
+SELECT COLUMN_SEQ
+       ,COLUMN_NM
+       ,NVL(M1, 0) AS M1
+       ,NVL(M2, 0) AS M2
+       ,NVL(M3, 0) AS M3
+       ,NVL(M4, 0) AS M4
+       ,NVL(M5, 0) AS M5
+       ,NVL(M6, 0) AS M6
+       ,NVL(M7, 0) AS M7
+       ,NVL(M8, 0) AS M8
+       ,NVL(M9, 0) AS M9
+       ,NVL(M10, 0) AS M10
+       ,NVL(M11, 0) AS M11
+       ,NVL(M12, 0) AS M12
+FROM (
+    SELECT PRE_MM, COLUMN_SEQ, COLUMN_NM, COLUMN_VAL
+      FROM (
+            WITH T1 AS (
+                SELECT CLA.*
+                  FROM (
+                    SELECT CL.DLR_CD
+                          ,CL.CLAIM_DOC_NO
+                          ,CL.VIN_NO
+                          ,CL.RO_DOC_NO
+                          ,FN_SER_LTS_MODEL_CD(CL.VIN_NO) AS LTS_MODEL_CD
+                          ,CL.RO_TP
+                          ,TO_CHAR(CL.CLAIM_CONFIRM_DT,'MM') AS PRE_MM
+                          ,CL.REG_USR_ID
+                          ,CL.CLAIM_STAT_CD
+                          ,CL.CR_NO
+                          ,(SELECT MAK_NM
+                             FROM CR_0701T
+                            WHERE DLR_CD = CL.DLR_CD
+                              AND MAK_CD  = CL.CR_NO
+                              AND MAK_TP_CD = '03'
+                              AND HOST_CD   = '01') AS CR_NM
+                          ,CL.REQ_LBR_AMT
+                          ,CL.REQ_ITEM_AMT
+                          ,CL.REQ_VAT_AMT
+                          ,CL.REQ_SUB_LBR_AMT
+                          ,CL.REQ_SUB_ITEM_AMT
+                          ,CL.CONFIRM_LBR_AMT
+                          ,CL.CONFIRM_LBR_VAT_AMT
+                          ,CL.CONFIRM_ITEM_AMT
+                          ,CL.CONFIRM_ITEM_VAT_AMT
+                          ,CL.CONFIRM_SUB_LBR_AMT
+                          ,CL.CONFIRM_SUB_ITEM_AMT
+                          ,CL.CLAIM_VER_CD
+                      FROM SE_0710T CL, SE_0300T RO
+                     WHERE 1=1
+                       AND RO.DLR_CD    = CL.DLR_CD
+                       AND RO.RO_DOC_NO = CL.RO_DOC_NO
+                       AND RO.VIN_NO    = CL.VIN_NO
+                       AND RO.RO_TP     = CL.RO_TP
+                       AND CL.DLR_CD = '${sDlrCd}'
+                       AND CL.CLAIM_STAT_CD != 'C'
+                       AND TO_CHAR(CL.CLAIM_CONFIRM_DT,'YYYY') = '${sStartDt}'
+                       ${IF(LEN(sCrNo) <=0,""," AND CL.CR_NO ='" + sCrNo + "'")} -- 캠페인번호
+                ) CLA
+                WHERE 1=1
+                ${IF(LEN(sCarlineCd) <=0,""," AND CLA.LTS_MODEL_CD ='" + sCarlineCd + "'")} -- 차종명
+                ${IF(LEN(sCrNm) <=0,""," AND CLA.CR_NM ='" + sCrNm + "'")} -- 캠페인번호
+            )
+            SELECT 1 AS COLUMN_SEQ, '等待索赔申请台数' AS COLUMN_NM, COUNT(DISTINCT(VIN_NO)) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD = 'O'
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 1 AS COLUMN_SEQ, '等待索赔申请台数' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 2 AS COLUMN_SEQ, '等待索赔申请台次' AS COLUMN_NM, COUNT(CLAIM_DOC_NO) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD = 'O'
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 2 AS COLUMN_SEQ, '等待索赔申请台次' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 3 AS COLUMN_SEQ, '索赔申请台数' AS COLUMN_NM, COUNT(DISTINCT(VIN_NO)) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD != 'O'
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 3 AS COLUMN_SEQ, '索赔申请台数' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 4 AS COLUMN_SEQ, '索赔申请台次' AS COLUMN_NM, COUNT(CLAIM_DOC_NO) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD != 'O'
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 4 AS COLUMN_SEQ, '索赔申请台次' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 5 AS COLUMN_SEQ, '    一次索赔申请台次' AS COLUMN_NM, COUNT(CLAIM_DOC_NO) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD != 'O'
+               AND TO_NUMBER(CLAIM_VER_CD) = 0
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 5 AS COLUMN_SEQ, '    一次索赔申请台次' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 6 AS COLUMN_SEQ, '    一次索赔申请通过台次' AS COLUMN_NM, COUNT(CLAIM_DOC_NO) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD = 'A'
+               AND TO_NUMBER(CLAIM_VER_CD) = 0
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 6 AS COLUMN_SEQ, '    一次索赔申请通过台次' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 7 AS COLUMN_SEQ, '    索赔申请一次通过率' AS COLUMN_NM, ROUND(SUM(CASE WHEN(CLAIM_STAT_CD = 'A' AND TO_NUMBER(CLAIM_VER_CD) = 0) THEN 1 ELSE 0 END )/NULLIF(SUM(CASE WHEN(TO_NUMBER(CLAIM_VER_CD) = 0) THEN 1 ELSE 0 END),0), 2) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD != 'O'
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 7 AS COLUMN_SEQ, '    索赔申请一次通过率' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 8 AS COLUMN_SEQ, '索赔申请合计金额' AS COLUMN_NM, SUM(NVL(REQ_LBR_AMT, 0) + NVL(REQ_ITEM_AMT, 0) + NVL(REQ_VAT_AMT, 0) + NVL(REQ_SUB_LBR_AMT, 0) + NVL(REQ_SUB_ITEM_AMT, 0)) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD != 'O'
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 8 AS COLUMN_SEQ, '索赔申请合计金额' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 9 AS COLUMN_SEQ, '    索赔申请工时金额' AS COLUMN_NM, SUM(NVL(REQ_LBR_AMT, 0)) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD != 'O'
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 9 AS COLUMN_SEQ, '    索赔申请工时金额' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 10 AS COLUMN_SEQ, '    索赔申请配件金额' AS COLUMN_NM, SUM(NVL(REQ_ITEM_AMT, 0)) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD != 'O'
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 10 AS COLUMN_SEQ, '    索赔申请配件金额' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 11 AS COLUMN_SEQ, '    索赔申请其它金额' AS COLUMN_NM, SUM(NVL(REQ_SUB_LBR_AMT, 0) + NVL(REQ_SUB_ITEM_AMT, 0) + NVL(REQ_VAT_AMT, 0)) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD != 'O'
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 11 AS COLUMN_SEQ, '    索赔申请其它金额' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 12 AS COLUMN_SEQ, '索赔审批合计金额' AS COLUMN_NM, SUM(NVL(CONFIRM_LBR_AMT, 0) + NVL(CONFIRM_LBR_VAT_AMT, 0) + NVL(CONFIRM_ITEM_AMT, 0) + NVL(CONFIRM_ITEM_VAT_AMT, 0) + NVL(CONFIRM_SUB_LBR_AMT, 0) + NVL(CONFIRM_SUB_ITEM_AMT, 0)) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD = 'A'
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 12 AS COLUMN_SEQ, '索赔审批合计金额' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 13 AS COLUMN_SEQ, '    索赔审批工时金额' AS COLUMN_NM, SUM(NVL(CONFIRM_LBR_AMT, 0) + NVL(CONFIRM_LBR_VAT_AMT, 0)) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD = 'A'
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 13 AS COLUMN_SEQ, '    索赔审批工时金额' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 14 AS COLUMN_SEQ, '    索赔审批配件金额' AS COLUMN_NM, SUM(NVL(CONFIRM_ITEM_AMT, 0) + NVL(CONFIRM_ITEM_VAT_AMT, 0)) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD = 'A'
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 14 AS COLUMN_SEQ, '    索赔审批配件金额' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+
+            UNION ALL
+
+            SELECT 15 AS COLUMN_SEQ, '    索赔审批其它金额' AS COLUMN_NM, SUM(NVL(CONFIRM_SUB_LBR_AMT, 0) + NVL(CONFIRM_SUB_ITEM_AMT, 0)) AS COLUMN_VAL, PRE_MM
+              FROM T1
+             WHERE CLAIM_STAT_CD = 'A'
+             GROUP BY PRE_MM
+            UNION ALL
+            SELECT 15 AS COLUMN_SEQ, '    索赔审批其它金额' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM FROM DUAL
+      )
+)PIVOT(
+      SUM(NVL(COLUMN_VAL,0))
+      FOR  PRE_MM IN(    '01' AS "M1"
+                        ,'02' AS "M2"
+                        ,'03' AS "M3"
+                        ,'04' AS "M4"
+                        ,'05' AS "M5"
+                        ,'06' AS "M6"
+                        ,'07' AS "M7"
+                        ,'08' AS "M8"
+                        ,'09' AS "M9"
+                        ,'10' AS "M10"
+                        ,'11' AS "M11"
+                        ,'12' AS "M12")
+) ORDER BY COLUMN_SEQ;]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="0" T="0"/>
+<FR/>
+<HC/>
+<FC/>
+<UPFCR COLUMN="false" ROW="true"/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1152000,1152000,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[0,5760000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="0">
+<O>
+<![CDATA[数据名称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0" s="1">
+<O>
+<![CDATA[合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="1">
+<O>
+<![CDATA[平均]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0" s="0">
+<O>
+<![CDATA[1月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="0">
+<O>
+<![CDATA[2月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="0" s="0">
+<O>
+<![CDATA[3月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="0" s="0">
+<O>
+<![CDATA[4月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="0" s="0">
+<O>
+<![CDATA[5月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="0" s="0">
+<O>
+<![CDATA[6月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="0" s="0">
+<O>
+<![CDATA[7月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="0" s="0">
+<O>
+<![CDATA[8月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="0" s="0">
+<O>
+<![CDATA[9月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="0" s="0">
+<O>
+<![CDATA[10月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="0" s="0">
+<O>
+<![CDATA[11月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="0" s="0">
+<O>
+<![CDATA[12月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COLUMN_SEQ"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COLUMN_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Scope val="1"/>
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="2" r="1" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(OR(A2=7), "", SUM(E2:P2))]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="1" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(E2:P2), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="M1"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="M2"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="M3"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="M4"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="M5"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="M6"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="10" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="M7"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="M8"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="12" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="M9"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="13" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="M10"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="M11"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="15" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="M12"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="50400000" height="67680000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="1" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID/>
+</WorkBook>

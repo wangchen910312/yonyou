@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : LocationMasterItemDAO_SqlMap.xml
+    Description : 부번별 로케이션 마스터 정보.
+    author In Bo Shim
+    since 2016. 6. 15.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 06. 15.     In Bo Shim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterItemDAO">
+
+    <!-- 부번별 로케이션 마스터 정보 추가한다.(콤보용) -->
+    <insert id="insertBinLocationMasterItem" parameterType="BinLocationMasterItemVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterItemDAO.insertBinLocationMasterItem] */
+        INSERT INTO PT_0222T(
+            DLR_CD
+            ,LOC_ID
+            ,PLT_CD
+            ,STRGE_CD
+            ,LVL_ID
+            ,LOC_CD
+            ,LOC_NM
+            ,UPPER_LOC_ID
+            ,ITEM_CD
+            ,MAIN_LOC_YN
+            ,UPPER_LVL_ID
+            ,BASE_LVL_ID
+            ,LOC_CD_MIG
+            ,REG_USR_ID
+            ,REG_DT
+        ) VALUES (
+            #{dlrCd}
+            ,#{locId}
+            ,#{pltCd}
+            ,#{strgeCd}
+            ,#{lvlId}
+            ,#{locCd}
+            ,#{locNm}
+            ,#{upperLocId}
+            ,#{itemCd}
+            ,'N'
+            ,#{lvlId}-1
+            ,( select count(0)+1 from PT_0222T A WHERE A.DLR_CD = #{dlrCd} AND A.ITEM_CD IS NULL AND A.MAIN_LOC_YN = 'N' )
+            ,#{locCdMig}
+            ,#{regUsrId}
+            ,SYSDATE
+        )
+    </insert>
+
+    <!-- 부번별 로케이션 마스터 정보 추가한다.(실사용로케이션) -->
+    <insert id="insertRealBinLocationMasterItem" parameterType="BinLocationMasterItemVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterItemDAO.insertRealBinLocationMasterItem] */
+        INSERT INTO PT_0224T(
+             DLR_CD
+            ,STRGE_CD
+            ,LOC_CD
+            ,ITEM_CD
+            ,PLT_CD
+            ,LOC_NM
+            ,REMARK
+            ,LOC_CD_MIG
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+        ) VALUES (
+             #{dlrCd}
+            ,#{strgeCd}
+            ,#{locCd}
+            ,#{itemCd}
+            ,#{pltCd}
+            ,#{locNm}
+            ,#{remark}
+            ,#{locCdMig}
+            ,#{regUsrId}
+            ,SYSDATE
+            ,#{regUsrId}
+            ,SYSDATE
+        )
+    </insert>
+
+    <!-- 부번별 로케이션 마스터 정보 수정한다.(콤보용) -->
+    <update id="updateBinLocationMasterItem" parameterType="BinLocationMasterItemVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterItemDAO.updateBinLocationMasterItem] */
+        UPDATE PT_0222T SET
+            UPDT_DT = SYSDATE
+            ,UPDT_USR_ID = #{updtUsrId}
+            ,STRGE_CD = #{strgeCd}
+            ,LOC_CD = #{locCd}
+            ,LOC_NM = #{locNm}
+            ,MAIN_LOC_YN = 'Y'
+            ,LOC_CD_MIG = #{locCdMig}
+            ,UPPER_LOC_ID = #{upperLocId}
+        WHERE DLR_CD = #{dlrCd}
+        AND LOC_ID = #{dbLocId}
+
+    </update>
+
+    <!-- 부번별 로케이션 마스터 정보 수정한다.(실사용) -->
+    <update id="updateRealBinLocationMasterItem" parameterType="BinLocationMasterItemVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterItemDAO.updateRealBinLocationMasterItem] */
+        UPDATE PT_0224T
+           SET UPDT_DT = SYSDATE
+              ,UPDT_USR_ID = #{updtUsrId}
+              ,LOC_CD = #{locCd}
+              ,LOC_NM = #{locNm}
+              ,LOC_CD_MIG = #{locCdMig}
+              ,REMARK = #{remark}
+         WHERE DLR_CD   = #{dlrCd}
+           AND STRGE_CD = #{strgeCd}
+           AND ITEM_CD  = #{itemCd}
+
+    </update>
+
+    <!-- 부번별 로케이션 마스터 정보 삭제한다. -->
+    <update id="deleteBinLocationMasterItem" parameterType="BinLocationMasterItemVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterItemDAO.deleteBinLocationMasterItem] */
+        DELETE FROM PT_0222T
+        WHERE DLR_CD = #{dlrCd}
+        AND LOC_CD = #{locCd}
+    </update>
+
+    <!-- 부번별 로케이션 마스터 정보 삭제한다. -->
+    <update id="deleteRealBinLocationMasterItem" parameterType="BinLocationMasterItemVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterItemDAO.deleteRealBinLocationMasterItem] */
+        DELETE FROM PT_0224T
+        WHERE DLR_CD  = #{dlrCd}
+         AND STRGE_CD = #{strgeCd}
+         AND ITEM_CD  = #{itemCd}
+    </update>
+
+    <!-- 부번별 로케이션 마스터 정보 목록을 조회한다. -->
+    <select id="selectBinLocationMasterItemsByCondition" parameterType="BinLocationMasterSearchVO" resultType="BinLocationMasterItemVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterDAO.selectBinLocationMasterItemsByCondition] */
+       SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                     B.STRGE_CD AS GR_STRGE_CD
+                    ,A.ITEM_CD
+                    ,A.ITEM_NM
+                    ,C.PLT_CD
+                    ,B.STRGE_CD AS STRGE_CD
+                    ,E.STRGE_TP
+                    ,C.LOC_CD AS DB_LOC_CD
+                    ,C.LOC_CD
+                    ,C.LOC_NM
+                    ,A.CARLINE_CD
+                    ,A.CARLINE_CD2
+                    ,A.ITEM_DSTIN_CD
+                    ,C.LOC_CD_MIG
+                FROM PT_0201T A
+                INNER JOIN
+                (
+                  SELECT AA.DLR_CD, AA.ITEM_CD ,AA.STRGE_CD FROM PT_0301T AA WHERE 1= 1 AND AA.DLR_CD = #{sDlrCd} AND AA.STRGE_CD IS NOT NULL GROUP BY AA.DLR_CD ,AA.ITEM_CD ,AA.STRGE_CD
+                )B ON A.DLR_CD = B.DLR_CD AND A.ITEM_CD = B.ITEM_CD --현재고
+                LEFT JOIN PT_0224T C
+                  ON B.DLR_CD = C.DLR_CD AND B.STRGE_CD = C.STRGE_CD AND B.ITEM_CD = C.ITEM_CD
+                LEFT JOIN CM_0104T E ON B.STRGE_CD = E.STRGE_CD
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND A.DLR_CD = #{sDlrCd}
+                    </if>
+                    <if test='sStrgeCd != null and sStrgeCd != ""'>
+                        AND B.STRGE_CD = #{sStrgeCd}
+                    </if>
+                    <if test='sStrgeCdList != null and !sStrgeCdList.isEmpty'> AND B.STRGE_CD IN
+                       <foreach item="item" index="index" collection="sStrgeCdList" open="(" separator="," close=")">
+                           #{item}
+                       </foreach>
+                    </if>
+                    <if test='sItemCd != null and sItemCd != ""'>
+                        AND B.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                    </if>
+                    <if test='sItemNm != null and sItemNm != ""'>
+                        AND A.ITEM_NM LIKE '%'||#{sItemNm}||'%'
+                    </if>
+                    <if test='sCarlineCd != null and sCarlineCd != ""'>
+                        AND A.CARLINE_CD = #{sCarlineCd}
+                    </if>
+                    <if test='sCarlineCd2 != null and sCarlineCd2 != ""'>
+                        AND A.CARLINE_CD2 = #{sCarlineCd2}
+                    </if>
+                    <if test='sItemDstinCd != null and sItemDstinCd != ""'>
+                        AND A.ITEM_DSTIN_CD = #{sItemDstinCd}
+                    </if>
+                    <if test='sLocCond != null and sLocCond != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sLocCond,"01")'>
+                                 AND C.LOC_CD is null
+                            </when>
+                            <otherwise>
+                                 AND C.LOC_CD is not null
+                            </otherwise>
+                        </choose>
+                    </if>
+                    <if test='sLocCd != null and sLocCd != ""'>
+                        AND C.LOC_CD LIKE '%'||#{sLocCd}||'%'
+                    </if>
+                    <if test='sStrgeTp != null and sStrgeTp != ""'>
+                        AND E.STRGE_TP = #{sStrgeTp}
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "strgeCd"'>B.STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "strgeTp"'>E.STRGE_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemCd"'>B.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemNm"'>A.ITEM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemDstinCd"'>A.ITEM_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineCd"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineCd2"'>A.CARLINE_CD2 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "locCd"'>C.LOC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "locNm"'>C.LOC_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.DLR_CD, B.STRGE_CD ASC, B.ITEM_CD ASC, C.LOC_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.DLR_CD ,B.STRGE_CD ASC, B.ITEM_CD ASC, C.LOC_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 부번별 로케이션 마스터 정보 카운트를 조회한다. -->
+    <select id="selectBinLocationMasterItemsByConditionCnt" parameterType="BinLocationMasterSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterDAO.selectBinLocationMasterItemsByConditionCnt] */
+        SELECT
+          COUNT(0)
+        FROM PT_0201T A
+        INNER JOIN
+        (
+            SELECT AA.DLR_CD, AA.ITEM_CD ,AA.STRGE_CD FROM PT_0301T AA WHERE 1= 1 AND AA.DLR_CD = #{sDlrCd} AND AA.STRGE_CD IS NOT NULL GROUP BY AA.DLR_CD ,AA.ITEM_CD ,AA.STRGE_CD
+        )B ON A.DLR_CD = B.DLR_CD AND A.ITEM_CD = B.ITEM_CD --현재고
+        LEFT JOIN PT_0224T C ON B.DLR_CD = C.DLR_CD AND B.STRGE_CD = C.STRGE_CD AND B.ITEM_CD = C.ITEM_CD
+        LEFT JOIN CM_0104T E ON B.STRGE_CD = E.STRGE_CD
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND A.DLR_CD = #{sDlrCd}
+            </if>
+            <if test='sStrgeCd != null and sStrgeCd != ""'>
+                AND B.STRGE_CD = #{sStrgeCd}
+            </if>
+            <if test='sStrgeCdList != null and !sStrgeCdList.isEmpty'> AND B.STRGE_CD IN
+               <foreach item="item" index="index" collection="sStrgeCdList" open="(" separator="," close=")">
+                   #{item}
+               </foreach>
+            </if>
+            <if test='sItemCd != null and sItemCd != ""'>
+                AND B.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+            </if>
+            <if test='sItemNm != null and sItemNm != ""'>
+                AND A.ITEM_NM LIKE '%'||#{sItemNm}||'%'
+            </if>
+            <if test='sCarlineCd != null and sCarlineCd != ""'>
+                AND A.CARLINE_CD = #{sCarlineCd}
+            </if>
+            <if test='sCarlineCd2 != null and sCarlineCd2 != ""'>
+                AND A.CARLINE_CD2 = #{sCarlineCd2}
+            </if>
+            <if test='sItemDstinCd != null and sItemDstinCd != ""'>
+                AND A.ITEM_DSTIN_CD = #{sItemDstinCd}
+            </if>
+            <if test='sLocCond != null and sLocCond != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sLocCond,"01")'>
+                         AND C.LOC_CD is null
+                    </when>
+                    <otherwise>
+                         AND C.LOC_CD is not null
+                    </otherwise>
+                </choose>
+            </if>
+            <if test='sLocCd != null and sLocCd != ""'>
+                AND C.LOC_CD LIKE '%'||#{sLocCd}||'%'
+            </if>
+            <if test='sStrgeTp != null and sStrgeTp != ""'>
+                AND E.STRGE_TP = #{sStrgeTp}
+            </if>
+        </where>
+    </select>
+
+    <!-- 부번별 로케이션 마스터 정보 Key에 대한 카운트를 조회한다.(딜러, 창고 , 품목코드) -->
+    <select id="selectBinLocationMasterItemsByKeyCnt" parameterType="BinLocationMasterItemVO" resultType="int">
+        /* [chn.bhmc.dms.par.pmm.service.dao.BinLocationMasterDAO.selectBinLocationMasterItemsByKeyCnt] */
+        SELECT
+          COUNT(0)
+        FROM PT_0224T A
+       WHERE A.DLR_CD   = #{dlrCd}
+         AND A.STRGE_CD = #{strgeCd}
+         AND A.ITEM_CD  = #{itemCd}
+    </select>
+
+</mapper>

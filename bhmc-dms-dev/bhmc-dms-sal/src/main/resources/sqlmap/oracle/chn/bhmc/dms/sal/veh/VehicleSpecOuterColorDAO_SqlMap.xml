@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.veh.service.dao.VehicleSpecOuterColorDAO">
+
+	<!-- 모델패키지 목록  -->
+	<select id="selectOuterColorByCondition" parameterType="VehicleColorSearchVO" resultType="VehicleColorVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT EXT_COLOR_CD,EXT_COLOR_NM,EXT_COLOR_EN_NM,'['|| EXT_COLOR_CD ||']' || EXT_COLOR_NM AS EXT_COLOR_CD_NM,COLOR_TP,TWO_TONE_YN,USE_YN
+                      ,REG_DT,REG_USR_ID
+                  FROM SA_0107T
+                 WHERE 1=1
+                  <if test='sExtColorCd != null and sExtColorCd != ""'>
+                   AND EXT_COLOR_CD = #{sExtColorCd}
+                  </if>
+                  <if test='sColorTp != null and sColorTp != ""'>
+                   AND COLOR_TP = #{sColorTp}
+                  </if>
+                  <if test='sUseYn != null and sUseYn != ""'>
+                   AND USE_YN = #{sUseYn}
+                  </if>
+                  <if test='sExtColorNm != null and sExtColorNm != ""'>
+                    AND EXT_COLOR_NM LIKE '%' || #{sExtColorNm} || '%'
+                  </if>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+         ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "extColorCd"'>EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "extColorNm"'>EXT_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "extColorEnNm"'>EXT_COLOR_EN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "colorTp"'>COLOR_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "twoToneYn"'>TWO_TONE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "useYn"'>USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "regUsrId"'>REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "regDt"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            EXT_COLOR_CD ASC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                EXT_COLOR_CD ASC
+            </otherwise>
+        </choose>
+	</select>
+
+	<!-- 모델패키지 목록 갯수  -->
+	<select id="selectOuterColorByConditionCnt" parameterType="VehicleColorSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0107T
+         WHERE 1=1
+          <if test='sExtColorCd != null and sExtColorCd != ""'>
+           AND EXT_COLOR_CD = #{sExtColorCd}
+          </if>
+          <if test='sExtColorNm != null and sExtColorNm != ""'>
+              <if test='sExtColorNm != null and sExtColorNm != ""'>
+                AND EXT_COLOR_NM LIKE '%' || #{sExtColorNm} || '%'
+              </if>
+          </if>
+          <if test='sColorTp != null and sColorTp != ""'>
+           AND COLOR_TP = #{sColorTp}
+          </if>
+          <if test='sUseYn != null and sUseYn != ""'>
+           AND USE_YN = #{sUseYn}
+          </if>
+	</select>
+
+</mapper>

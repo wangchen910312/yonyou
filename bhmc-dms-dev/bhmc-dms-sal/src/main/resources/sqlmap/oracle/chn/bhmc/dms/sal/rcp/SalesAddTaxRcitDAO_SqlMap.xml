@@ -1,0 +1,538 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : SalesAddTaxRcitDAO_SqlMap.xml
+    Description : [DMS] 영수증관리 > 부가세영수증관리
+    author chibeom.song
+    since 2017. 2. 20.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 7. 21.   chibeom.song     최초 생성1
+-->
+<mapper namespace="chn.bhmc.dms.sal.rcp.service.dao.SalesAddTaxRcitDAO">
+
+    <!-- 영수증관리 > 부가세영수증관리 총 갯수를 조회한다. -->
+    <!-- 2021-04-20 宫荣枢 修改：由原来的查询SA_0502T改为查询SA_0502T和SA_0508T两张表 -->
+    <select id="selectSalesAddTaxReceiptSearchCnt" parameterType="SalesAddTaxRcitSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.rcp.service.dao.SalesVhclCbinRcitDAO.selectSalesAddTaxReceiptSearchCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM SA_0502T receipt
+        INNER JOIN SA_0508T receiptCar ON receiptCar.RECEIPT_ID = receipt.RECEIPT_ID
+		INNER JOIN SA_0121T car ON car.CAR_ID = receiptCar.CAR_ID
+		<where>
+            <if test='sUploadStDt != null '>
+              AND receipt.REG_DT <![CDATA[>=]]> #{sUploadStDt}
+            </if>
+            <if test='sUploadEdDt != null '>
+              AND receipt.REG_DT <![CDATA[<]]> #{sUploadEdDt}+1
+            </if>
+            <if test='sReceiptStDt != null '>
+              AND receipt.RECEIPT_ISS_DT <![CDATA[>=]]> #{sReceiptStDt}
+            </if>
+            <if test='sReceiptEdDt != null '>
+              AND receipt.RECEIPT_ISS_DT <![CDATA[<]]> #{sReceiptEdDt}+1
+            </if>
+            <if test='sReceiptNo != null and sReceiptNo != ""'>
+              AND receipt.RECEIPT_NO = #{sReceiptNo}
+            </if>
+            <if test='sVinNo != null and sVinNo != ""'>
+              AND car.VIN_NO LIKE '%'||#{sVinNo}||'%'
+            </if>
+        </where>
+    </select>
+    
+    <!-- TangWei 2021/04/15 绑定车架号Tab页，查询增值税发票数量 -->
+    <select id="selectAddTaxReceiptListCnt" parameterType="SalesAddTaxRcitSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.rcp.service.dao.SalesVhclCbinRcitDAO.selectAddTaxReceiptListCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0502T A
+         WHERE A.BINDING_CAR_YN = 'N' AND A.CLAIM_YN = 'N'
+            <if test='sReceiptStDt != null '>
+              AND A.RECEIPT_ISS_DT <![CDATA[>=]]> #{sReceiptStDt}
+            </if>
+            <if test='sReceiptEdDt != null '>
+              AND A.RECEIPT_ISS_DT <![CDATA[<]]> #{sReceiptEdDt}+1
+            </if>
+            <if test='sReceiptNo != null and sReceiptNo != ""'>
+              AND A.RECEIPT_NO = #{sReceiptNo}
+            </if>
+            <if test='showYn != null and showYn != ""'>
+              AND A.SHOW_YN = #{showYn}
+            </if>
+    </select>
+    
+    <!-- TangWei 2021/04/15 绑定车架号Tab页，查询增值税发票数据 -->
+    <select id="selectAddTaxReceiptListData" parameterType="SalesAddTaxRcitSearchVO" resultType="SalesAddTaxRcitVO">
+    /* [chn.bhmc.dms.sal.rcp.service.dao.SalesVhclCbinRcitDAO.selectAddTaxReceiptListData] */
+        SELECT * FROM (
+        	SELECT ROWNUM AS RNUM, T1.* FROM (
+        		SELECT    A.RECEIPT_ID
+                          ,A.CAR_ID
+                          ,A.SEQ
+                          ,A.VIN_NO
+                          ,A.VIN_NO1
+                          ,A.VIN_NO2
+                          ,A.DLR_CD
+                          ,A.TAXPAYER_ID_CD
+                          ,A.RECEIPT_NO
+                          ,A.RECEIPT_CD
+                          ,A.BUY_NM
+                          ,A.RECEIPT_ISS_DT
+                          ,A.SCAN_SUM_AMT
+                          ,A.CARLINE_CD
+                          ,FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+                          ,A.MODEL_CD
+                          ,A.JEONGPAN_NO
+                          ,A.EXT_COLOR_CD
+                          ,FN_GET_EXT_COLOR_NM(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+                          ,A.WS_PRC
+                          ,A.PLT_GI_DT
+                          ,A.SUM_AMT
+                          ,A.TAX_AMT
+                          ,A.TMR_CD
+                          ,A.EVAL_RSLT_CD
+                          ,A.ERR_UP_CD
+                          ,A.SDLR_CD
+                          ,A.REG_DT AS UPLOAD_DT
+                          ,A.SDLR_TP
+                          ,A.SHOW_YN
+          FROM SA_0502T A
+         WHERE A.BINDING_CAR_YN = 'N' AND A.CLAIM_YN = 'N'
+            <if test='sReceiptStDt != null '>
+              AND A.RECEIPT_ISS_DT <![CDATA[>=]]> #{sReceiptStDt}
+            </if>
+            <if test='sReceiptEdDt != null '>
+              AND A.RECEIPT_ISS_DT <![CDATA[<]]> #{sReceiptEdDt}+1
+            </if>
+            <if test='sReceiptNo != null and sReceiptNo != ""'>
+              AND A.RECEIPT_NO = #{sReceiptNo}
+            </if>
+            <if test='showYn != null and showYn != ""'>
+              AND A.SHOW_YN = #{showYn}
+            </if>
+            ORDER BY
+		        <choose>
+		            <when test='sort != null'>
+		                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+		                    <choose>
+		                        <when test='item.field == "sumAmt"'>SUM_AMT <choose><when test='item.dir == "desc"'>DESC</when><otherwise>ASC</otherwise></choose></when>
+		                        <when test='item.field == "taxAmt"'>TAX_AMT <choose><when test='item.dir == "desc"'>DESC</when><otherwise>ASC</otherwise></choose></when>
+		                        <when test='item.field == "receiptIssDt"'>RECEIPT_ISS_DT <choose><when test='item.dir == "desc"'>DESC</when><otherwise>ASC</otherwise></choose></when>
+		                    </choose>
+		                </foreach>
+		            </when>
+		            <otherwise>
+		                RECEIPT_ISS_DT DESC
+		            </otherwise>
+		         </choose>
+		         ) T1
+		         <where>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        ROWNUM <![CDATA[<=]]> #{lastIndex}
+                    </if>
+                </where>
+                )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+    
+    <!-- TangWei 2021/04/20 插入SA_0508T表 -->
+    <insert id="insertSalesAddReceiptAndCarBinDing" parameterType="SalesAddReceiptAndCarBinDingVO">
+    /* [chn.bhmc.dms.sal.rcp.service.dao.SalesVhclCbinRcitDAO.insertSalesAddReceiptAndCarBinDing] */
+        INSERT INTO SA_0508T(
+            CAR_ID, RECEIPT_CD, RECEIPT_ID, RECEIPT_NO, VIN_NO
+        ) VALUES(
+            #{carId}, #{receiptCd}, #{receiptId}, #{receiptNo}, #{vinNo}
+        )       
+    </insert>
+    
+    <!-- TangWei 2021/04/20 更新SA_0502T表，赠票的是否显示SHOW_YN -->
+    <update id="updateAddTaxReceiptShowYn" parameterType="java.util.Map">
+    /* [chn.bhmc.dms.sal.rcp.service.dao.SalesVhclCbinRcitDAO.updateAddTaxReceiptShowYn] */
+        UPDATE SA_0502T
+        SET SHOW_YN = #{showYn}
+        WHERE RECEIPT_ID = #{receiptId} AND 
+        	  RECEIPT_NO = #{receiptNo}
+    </update>
+    
+    <!-- TangWei 2021/04/20 查询SA_0508T表下，发票对应的车辆信息 -->
+    <select id="selectAddReceiptAndCarList" parameterType="java.util.Map" resultType="SalesAddReceiptAndCarBinDingVO">
+    /* [chn.bhmc.dms.sal.rcp.service.dao.SalesVhclCbinRcitDAO.selectAddReceiptAndCarList] */
+        SELECT RECEIPT_ID, RECEIPT_NO, RECEIPT_CD, CAR_ID, VIN_NO
+        FROM SA_0508T
+        WHERE RECEIPT_ID = #{receiptId}
+    </select>
+    
+    <!-- TangWei 2021/04/20 根据carId和receiptId删除SA_0508T表的数据 -->
+    <delete id="deleteDataByReceiptIdAndCarId" parameterType="SalesAddReceiptAndCarBinDingVO">
+    /* [chn.bhmc.dms.sal.rcp.service.dao.SalesVhclCbinRcitDAO.deleteDataByReceiptIdAndCarId] */
+        DELETE 
+        FROM SA_0508T
+        WHERE CAR_ID = #{carId} AND RECEIPT_ID = #{receiptId}
+    </delete>
+
+    <!-- 영수증관리 > 부가세영수증관리 정보를 조회한다. -->
+    <!-- 2021-04-20 宫荣枢 修改：由原来的查询SA_0502T改为查询SA_0502T和SA_0508T两张表 -->
+    <select id="selectSalesAddTaxReceiptSearchData" parameterType="SalesAddTaxRcitSearchVO" resultType="SalesAddTaxRcitVO">
+    /* [chn.bhmc.dms.sal.rcp.service.dao.SalesVhclCbinRcitDAO.selectSalesAddTaxReceiptSearchData] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT X.* FROM (
+                    SELECT
+	                    receipt.RECEIPT_ID,
+                    	car.CAR_ID,
+	                    car.VIN_NO,
+	                    car.VIN_NO1,
+	                    car.VIN_NO2,
+	                    receipt.DLR_CD,
+	                    receipt.TAXPAYER_ID_CD,
+	                    receipt.RECEIPT_NO,
+	                    receipt.RECEIPT_CD,
+	                    receipt.BUY_NM,
+	                    receipt.RECEIPT_ISS_DT,
+	                    receipt.SCAN_SUM_AMT,
+	                    receipt.CARLINE_CD,
+	                    FN_GET_CARLINE_NM(receipt.CARLINE_CD) AS CARLINE_NM,
+	                    receipt.MODEL_CD,
+	                    FN_GET_MODEL_TP_NM(car.MODEL_CD, car.OCN_CD) AS MODEL_NM,
+	                    receipt.JEONGPAN_NO,
+	                    receipt.EXT_COLOR_CD,
+	                    FN_GET_EXT_COLOR_NM(receipt.EXT_COLOR_CD) AS EXT_COLOR_NM,
+	                    receipt.WS_PRC,
+	                    receipt.PLT_GI_DT,
+	                    receipt.SUM_AMT,
+	                    receipt.TAX_AMT,
+	                    receipt.TMR_CD,
+	                    receipt.EVAL_RSLT_CD,
+	                    receipt.ERR_UP_CD,
+	                    receipt.SDLR_CD,
+	                    receipt.REG_DT AS UPLOAD_DT,
+	                    receipt.SDLR_TP,
+	                    receipt.SDLR_NM,
+	                    car.CUST_SALE_DT
+                    FROM SA_0502T receipt
+                    INNER JOIN SA_0508T receiptCar ON receiptCar.RECEIPT_ID = receipt.RECEIPT_ID
+                    INNER JOIN SA_0121T car ON car.CAR_ID = receiptCar.CAR_ID
+                    ORDER BY receipt.RECEIPT_NO, receipt.TAXPAYER_ID_CD
+                ) X
+                <where>
+                    <if test='sUploadStDt != null '>
+                    	AND X.UPLOAD_DT <![CDATA[>=]]> #{sUploadStDt}
+                    </if>
+                    <if test='sUploadEdDt != null '>
+                    	AND X.UPLOAD_DT <![CDATA[<]]> #{sUploadEdDt}+1
+                    </if>
+                    <if test='sReceiptStDt != null '>
+                        AND X.RECEIPT_ISS_DT <![CDATA[>=]]> #{sReceiptStDt}
+                    </if>
+                    <if test='sReceiptEdDt != null '>
+                        AND X.RECEIPT_ISS_DT <![CDATA[<]]> #{sReceiptEdDt}+1
+                    </if>
+                    <if test='sReceiptNo != null and sReceiptNo != ""'>
+                        AND X.RECEIPT_NO = #{sReceiptNo}
+                    </if>
+                    <if test='sVinNo != null and sVinNo != ""'>
+                        AND X.VIN_NO LIKE '%'||#{sVinNo}||'%'
+                    </if>
+                </where>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "pltGiDt"'>PLT_GI_DT <choose><when test='item.dir == "desc"'>DESC</when><otherwise>ASC</otherwise></choose></when>
+                        <when test='item.field == "receiptNo"'>RECEIPT_NO <choose><when test='item.dir == "desc"'>DESC</when><otherwise>ASC</otherwise></choose></when>
+                        <when test='item.field == "receiptIssDt"'>RECEIPT_ISS_DT <choose><when test='item.dir == "desc"'>DESC</when><otherwise>ASC</otherwise></choose></when>
+                        <when test='item.field == "uploadDt"'>UPLOAD_DT <choose><when test='item.dir == "desc"'>DESC</when><otherwise>ASC</otherwise></choose></when>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                PLT_GI_DT DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 부가세영수증업로드 > 등록된 부가세영수증 갯수 조회 -->
+    <select id="selectAddTaxReceiptCnt" parameterType="SalesAddTaxRcitSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.rcp.service.dao.SalesVhclCbinRcitDAO.selectAddTaxReceiptCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0502T
+         WHERE RECEIPT_NO = #{sReceiptNo}
+    </select>
+
+    <!-- 부가세영수증관리 > 부가세영수증 정보 신규 저장 -->
+    <insert id="insertSalesAddTaxReceiptSave" parameterType="SalesAddTaxRcitVO">
+        /* [chn.bhmc.dms.sal.rcp.service.dao.SalesAddTaxRcitDAO.insertSalesAddTaxReceiptSave] */
+
+        <selectKey resultType="int" keyProperty="seq" order="BEFORE">
+            SELECT NVL(MAX(SEQ), 0) + 1 AS SEQ
+              FROM SA_0502T
+             WHERE CAR_ID = #{carId}
+        </selectKey>
+
+        INSERT INTO SA_0502T(
+                              CAR_ID
+                             ,SEQ
+                             ,VIN_NO
+                             ,VIN_NO1
+                             ,VIN_NO2
+                             ,DLR_CD
+                             ,TAXPAYER_ID_CD
+                             ,RECEIPT_NO
+                             ,RECEIPT_CD
+                             ,BUY_NM
+                             ,RECEIPT_ISS_DT
+                             ,SCAN_SUM_AMT
+                             ,CARLINE_CD
+                             ,MODEL_CD
+                             ,JEONGPAN_NO
+                             ,EXT_COLOR_CD
+                             ,WS_PRC
+                             ,PLT_GI_DT
+                             ,SUM_AMT
+                             ,TAX_AMT
+                             ,FILE_NO
+                             ,FILE_SEQ
+                             ,FILE_SIZE_VAL
+                             ,RECEIPT_IMG
+                             ,TMR_CD
+                             ,EVAL_RSLT_CD
+                             ,ERR_UP_CD
+                             ,SDLR_CD
+                             ,SDLR_TP
+                             ,SDLR_NM
+                             ,REMARK
+                             ,REG_USR_ID
+                             ,REG_DT
+                             ,UPDT_USR_ID
+                             ,UPDT_DT
+            )VALUES(
+                     #{carId}
+                    ,(SELECT NVL(MAX(SEQ)+1, 1) FROM SA_0502T WHERE CAR_ID = #{carId})
+                    ,#{vinNo}
+                    ,SUBSTR(#{vinNo}, 1, 11)
+                    ,SUBSTR(#{vinNo}, 12, 6)
+                    ,#{dlrCd}
+                    ,#{taxpayerIdCd}
+                    ,#{receiptNo}
+                    ,#{receiptCd}
+                    ,#{buyNm}
+                    ,#{receiptIssDt}
+                    ,#{scanSumAmt}
+                    ,#{carlineCd}
+                    ,#{modelCd}
+                    ,#{jeongpanNo}
+                    ,#{extColorCd}
+                    ,#{wsPrc}
+                    ,#{pltGiDt}
+                    ,#{sumAmt}
+                    ,#{taxAmt}
+                    ,'' -- fileNo
+                    ,0 --fileSeq
+                    ,0 --fileSizeVal
+                    ,#{receiptImg}
+                    ,'' --tmrCd
+                    ,'' --evalRsltCd
+                    ,'' --errUpCd
+                    ,#{secDlrCd}
+                    ,#{sdlrTp}
+                    ,#{sdlrNm}
+                    ,'' -- remark
+                    ,#{regUsrId}
+                    ,#{regDt}
+                    ,#{regUsrId}
+                    ,#{updtDt}
+            )
+    </insert>
+
+    <!-- 영수증관리 > 기동차통일영수증 스캔파일을 등록한다. -->
+    <update id="updateSalesAddTaxReceiptImg" parameterType="SalesAddTaxRcitVO">
+    /* [chn.bhmc.dms.sal.rcp.service.dao.SalesAddTaxRcitDAO.updateSalesAddTaxReceiptImg] */
+        UPDATE SA_0502T SET
+            RECEIPT_IMG = #{receiptImg, jdbcType=BLOB}
+        WHERE CAR_ID = #{carId}
+        AND RECEIPT_NO = #{receiptNo}      <!-- 20200520 update by tjx 解决相同车辆开多张发票后图片只保留最后一张的问题 -->
+    </update>
+    
+    <!-- TangWei 2021/04/19 更新增票的绑定车辆标识 -->
+    <update id="updateAddTaxReceiptBinDingInfo" parameterType="java.util.Map">
+    /* [chn.bhmc.dms.sal.rcp.service.dao.SalesAddTaxRcitDAO.updateAddTaxReceiptBinDingInfo] */
+        UPDATE SA_0502T SET
+            BINDING_CAR_YN = #{bindingCarYn}
+        WHERE RECEIPT_ID = #{receiptId}
+    </update>
+
+
+    <!-- 영수증관리 > 부가세영수증관리 이력 정보를 신규 저장한다. -->
+    <insert id="insertSalesAddTaxReceiptHistSave" parameterType="SalesAddTaxRcitVO">
+        /* [chn.bhmc.dms.sal.rcp.service.dao.SalesAddTaxRcitDAO.insertSalesAddTaxReceiptHistSave] */
+        INSERT INTO SA_0503T (
+             DLR_CD
+            ,UP_DT
+            ,RECEIPT_NO
+            ,RECEIPT_TYPE
+            ,VIN_NO
+            ,VIN_NO1
+            ,VIN_NO2
+            ,TAXPAYER_ID_CD
+            ,RECEIPT_CD
+            ,RECEIPT_CUST_NM
+            ,SSN_CRN_NO
+            ,RECEIPT_ISS_DT
+            ,SCAN_VIN_NO
+            ,SUM_AMT
+            ,CERT_NO
+            ,ENGN_NO
+            ,SUM_INC_TAX
+            ,SUM_EXC_TAX
+            ,TAX_RT
+            ,TAX_AMT
+            ,MERCH_NM
+            ,ADDR
+            ,TMR_CD
+            ,REG_USR_ID
+            ,REG_DT
+        ) VALUES (
+               #{dlrCd}
+             , SYSDATE
+             , #{receiptNo}
+             , 'A'
+             , #{vinNo}
+             , SUBSTR(#{vinNo}, 1, 11)
+             , SUBSTR(#{vinNo}, 12, 6)
+             , #{taxpayerIdCd}
+             , #{receiptCd}
+             , ''
+             , ''
+             , #{receiptIssDt}
+             , #{vinNo}
+             , #{scanSumAmt}
+             , ''
+             , ''
+             , #{sumAmt}
+             , 0
+             , ''
+             , #{taxAmt}
+             , ''
+             , ''
+             , ''
+             , #{regUsrId}
+             , #{regDt}
+        );
+    </insert>
+
+    <!-- 영수증관리 > 부가세영수증 이미지를 조회한다. -->
+    <select id="selectAddTaxReceiptImageSearch" parameterType="SalesAddTaxRcitSearchVO" resultType="SalesAddTaxRcitVO">
+    /* [chn.bhmc.dms.sal.rcp.service.dao.SalesVhclCbinRcitDAO.selectAddTaxReceiptImageSearch] */
+        SELECT RECEIPT_IMG
+        FROM SA_0502T
+        WHERE RECEIPT_ID = #{sReceiptId}
+    </select>
+
+        <!-- 부가세영수증관리 > 부가세영수증 정보 IS테이블에 신규 저장 -->
+    <insert id="insertSalesAddTaxReceiptSaveIs" parameterType="SalesAddTaxRcitVO">
+        /* [chn.bhmc.dms.sal.rcp.service.dao.SalesAddTaxRcitDAO.insertSalesAddTaxReceiptSaveIs] */
+
+        <selectKey resultType="int" keyProperty="seq" order="BEFORE">
+            SELECT NVL(MAX(SEQ), 0) + 1 AS SEQ
+              FROM SA_0502IS
+             WHERE CAR_ID = #{carId}
+        </selectKey>
+
+        INSERT INTO SA_0502IS(
+                              CAR_ID
+                             ,SEQ
+                             ,VIN_NO
+                             ,VIN_NO1
+                             ,VIN_NO2
+                             ,DLR_CD
+                             ,TAXPAYER_ID_CD
+                             ,RECEIPT_NO
+                             ,RECEIPT_CD
+                             ,BUY_NM
+                             ,RECEIPT_ISS_DT
+                             ,SCAN_SUM_AMT
+                             ,CARLINE_CD
+                             ,MODEL_CD
+                             ,JEONGPAN_NO
+                             ,EXT_COLOR_CD
+                             ,WS_PRC
+                             ,PLT_GI_DT
+                             ,SUM_AMT
+                             ,TAX_AMT
+                             ,FILE_NO
+                             ,FILE_SEQ
+                             ,FILE_SIZE_VAL
+                             ,RECEIPT_IMG
+                             ,TMR_CD
+                             ,EVAL_RSLT_CD
+                             ,ERR_UP_CD
+                             ,REG_USR_ID
+                             ,REG_DT
+                             ,UPDT_USR_ID
+                             ,UPDT_DT
+                             ,IFRESULT
+            )VALUES(
+                     #{carId}
+                    ,(SELECT NVL(MAX(SEQ)+1, 1) FROM SA_0502T WHERE CAR_ID = #{carId})
+                    ,#{vinNo}
+                    ,SUBSTR(#{vinNo}, 1, 11)
+                    ,SUBSTR(#{vinNo}, 12, 6)
+                    ,#{dlrCd}
+                    ,#{taxpayerIdCd}
+                    ,#{receiptNo}
+                    ,#{receiptCd}
+                    ,#{buyNm}
+                    ,#{receiptIssDt}
+                    ,#{scanSumAmt}
+                    ,#{carlineCd}
+                    ,#{modelCd}
+                    ,#{jeongpanNo}
+                    ,#{extColorCd}
+                    ,#{wsPrc}
+                    ,#{pltGiDt}
+                    ,#{sumAmt}
+                    ,#{taxAmt}
+                    ,'' -- fileNo
+                    ,0 --fileSeq
+                    ,0 --fileSizeVal
+                    ,#{receiptImg}
+                    ,'' --tmrCd
+                    ,'' --evalRsltCd
+                    ,'' --errUpCd
+                    ,#{regUsrId}
+                    ,#{regDt}
+                    ,#{regUsrId}
+                    ,#{updtDt}
+                    ,'N'
+            )
+    </insert>
+
+    <!-- 영수증관리 > 부가세영수증 스캔파일을 IS테이블에 등록한다. -->
+    <update id="updateSalesAddTaxReceiptImgIs" parameterType="SalesAddTaxRcitVO">
+    /* [chn.bhmc.dms.sal.rcp.service.dao.SalesAddTaxRcitDAO.updateSalesAddTaxReceiptImgIs] */
+        UPDATE SA_0502IS SET
+            RECEIPT_IMG = #{receiptImg, jdbcType=BLOB}
+        WHERE CAR_ID = #{carId}
+    </update>
+
+</mapper>

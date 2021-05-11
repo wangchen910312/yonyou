@@ -1,0 +1,2380 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="ds1" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sCarlineCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0129]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT X.CARLINE_CD,
+       X.CARLINE_NM,
+       X.MODEL_NM,
+       X.MODEL_CD,
+       X.OCN_CD,
+       X.EXT_COLOR_CD,
+       X.INT_COLOR_CD,
+       (X.VIN_SET_NOTRN + X.FCT_GATE_OUT + DLR_GET_IN) - X.THIS_MNTH_QTY +
+       SALE_QTY AS STOCK_STAT_CNT,
+       X.THIS_MNTH_QTY,
+       X.SALE_QTY,
+       X.VIN_SET_NOTRN,
+       X.FCT_GATE_OUT,
+       X.DLR_GET_IN,
+       X.TCTS_SALE,
+       X.THR_MNTH_AVG,
+       X.SUM_THR_MNTH_AVG/3 SUM_THR_MNTH_AVG,
+       X.THR_MNTH_STOCK,
+       X.SIX_MNTH_STOCK,
+       X.FST_MONTH_STOCK
+  FROM (SELECT A.CARLINE_CD,
+               FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM,
+               A.MODEL_CD,
+               NVL(TRIM(FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD)),
+                   A.MODEL_CD) AS MODEL_NM,
+               A.OCN_CD,
+               A.EXT_COLOR_CD,
+               A.INT_COLOR_CD,
+               NVL(C.STOCK_STAT_CNT, 0) + NVL(C.TRSF_STAT_CNT, 0) AS STOCK_STAT_CNT,
+               NVL(B.THIS_MNTH_QTY, 0) AS THIS_MNTH_QTY,
+               A.SALE_QTY,
+               A.FCT_GATE_OUT,
+               A.DLR_GET_IN,
+               NVL(G.TCTS_SALE, 0) AS TCTS_SALE,
+               ROUND(NVL(D.THR_MNTH_AVG, 0) / 3) AS THR_MNTH_AVG,
+               NVL(D.THR_MNTH_AVG, 0) SUM_THR_MNTH_AVG,
+               NVL(F.THR_MNTH_STOCK, 0) AS THR_MNTH_STOCK,
+               NVL(F.SIX_MNTH_STOCK, 0) AS SIX_MNTH_STOCK,
+               A.VIN_SET_NOTRN,
+               NVL(H.FST_MONTH_STOCK, 0) AS FST_MONTH_STOCK
+          FROM (SELECT T.CARLINE_CD,
+                       T.MODEL_CD,
+                       T.OCN_CD,
+                       T.EXT_COLOR_CD,
+                       T.INT_COLOR_CD,
+                       SUM(T.VIN_SET_NOTRN) AS VIN_SET_NOTRN,
+                       SUM(T.FCT_GATE_OUT) AS FCT_GATE_OUT,
+                       SUM(T.DLR_GET_IN) AS DLR_GET_IN,
+                       SUM(T.SALE_QTY) AS SALE_QTY
+                  FROM (SELECT A.CARLINE_CD,
+                               A.MODEL_CD,
+                               A.OCN_CD,
+                               A.EXT_COLOR_CD,
+                               A.INT_COLOR_CD,
+                               SUM(DECODE(A.CAR_STAT_CD, '50', 1, 0)) AS FCT_GATE_OUT,
+                               SUM(DECODE(A.CAR_STAT_CD, '60', 1, 0)) AS DLR_GET_IN,
+                               0 AS SALE_QTY,
+                               0 AS VIN_SET_NOTRN
+                          FROM SA_0121T A
+                         WHERE A.NCAR_DSTIN_CD = 'N'
+                           AND A.CAR_STAT_CD != '70'
+                           AND A.ORD_DLR_CD = '${sDlrCd}'
+                         GROUP BY A.CARLINE_CD,
+                                  A.MODEL_CD,
+                                  A.OCN_CD,
+                                  A.EXT_COLOR_CD,
+                                  A.INT_COLOR_CD
+                        UNION ALL
+                        SELECT A.CARLINE_CD,
+                               A.MODEL_CD,
+                               A.OCN_CD,
+                               A.EXT_COLOR_CD,
+                               A.INT_COLOR_CD,
+                               0 AS FCT_GATE_OUT,
+                               0 AS DLR_GET_IN,
+                               SUM(CASE WHEN NVL(E.KMOPT,'000') = 'J1' THEN 1 WHEN NVL(E.KMOPT,'000') = 'J2' THEN -1 WHEN NVL(E.KMOPT,'000') !='J1' AND NVL(E.KMOPT,'000') !='J2' THEN 0 END) SALE_QTY,
+                               0 AS VIN_SET_NOTRN
+                          FROM SA_0121T A LEFT JOIN (SELECT C.KMVIN,C.KMOPT,D.TRDYTM FROM SA_0301T C,(SELECT B.KMVIN,MAX(KMTRDY||KMTRTM) TRDYTM FROM SA_0301T B GROUP BY B.KMVIN) D
+WHERE C.KMVIN = D.KMVIN AND C.KMTRDY||C.KMTRTM = D.TRDYTM) E ON (A.VIN_NO = E.KMVIN)
+                         WHERE A.NCAR_DSTIN_CD = 'N'
+                           AND A.ORD_DLR_CD = '${sDlrCd}'
+                           AND SUBSTR(NVL(E.TRDYTM,'000000'),0,6) = TO_CHAR(SYSDATE, 'YYYYMM')
+                         GROUP BY A.CARLINE_CD,
+                                  A.MODEL_CD,
+                                  A.OCN_CD,
+                                  A.EXT_COLOR_CD,
+                                  A.INT_COLOR_CD
+                        UNION ALL
+                        SELECT X.CARLINE_CD,
+                               X.MODEL_CD,
+                               X.OCN_CD,
+                               X.EXT_COLOR_CD,
+                               X.INT_COLOR_CD,
+                               0 AS FCT_GATE_OUT,
+                               0 AS DLR_GET_IN,
+                               0 AS SALE_QTY,
+                               COUNT(X.CARLINE_CD) AS VIN_SET_NOTRN
+                          FROM SA_0416T X LEFT JOIN SA_0121T Y ON (X.SALES_NO = Y.ERP_ORD_NO(+) AND X.DLR_CD = Y.ORD_DLR_CD(+))
+                         WHERE X.DLR_CD = '${sDlrCd}'
+						   AND ((X.PRTY IN ('P', 'M', 'N') AND Y.CAR_STAT_CD IS NULL) OR (X.PRTY = 'C' AND Y.CAR_STAT_CD = '13'))
+                         GROUP BY X.CARLINE_CD,
+                                  X.MODEL_CD,
+                                  X.OCN_CD,
+                                  X.EXT_COLOR_CD,
+                                  X.INT_COLOR_CD
+                         UNION ALL
+                         SELECT A.CARLINE_CD,
+                                A.MODEL_CD,
+                                A.OCN_CD,
+                                A.EXT_COLOR_CD,
+                                A.INT_COLOR_CD,
+                                0 AS FCT_GATE_OUT,
+                                0 AS DLR_GET_IN,
+                                0 AS SALE_QTY,
+                                0 AS VIN_SET_NOTRN
+                           FROM SA_0121T A
+                          WHERE A.NCAR_DSTIN_CD = 'N'
+                            AND A.ORD_DLR_CD = '${sDlrCd}'
+                          GROUP BY A.CARLINE_CD,
+                                   A.MODEL_CD,
+                                   A.OCN_CD,
+                                   A.EXT_COLOR_CD,
+                                   A.INT_COLOR_CD) T
+                 GROUP BY T.CARLINE_CD,
+                          T.MODEL_CD,
+                          T.OCN_CD,
+                          T.EXT_COLOR_CD,
+                          T.INT_COLOR_CD) A
+          LEFT OUTER JOIN (SELECT A.CARLINE_CD,
+                                 A.MODEL_CD,
+                                 A.OCN_CD,
+                                 A.EXT_COLOR_CD,
+                                 A.INT_COLOR_CD,
+                                 COUNT(1) AS THIS_MNTH_QTY
+                            FROM SA_0416T A
+                           WHERE 1 = 1
+                             AND A.DLR_CD = '${sDlrCd}'
+                             AND A.PRTY IN
+                                 ('S', 'P', 'M', 'N', 'C', 'F', 'D', 'E')
+                             AND SUBSTR(A.ALDY, 1, 6) =
+                                 TO_CHAR(SYSDATE, 'YYYYMM')
+                           GROUP BY A.CARLINE_CD,
+                                    A.MODEL_CD,
+                                    A.OCN_CD,
+                                    A.EXT_COLOR_CD,
+                                    A.INT_COLOR_CD) B
+            ON A.CARLINE_CD = B.CARLINE_CD
+           AND A.MODEL_CD = B.MODEL_CD
+           AND A.OCN_CD = B.OCN_CD
+           AND A.EXT_COLOR_CD = B.EXT_COLOR_CD
+           AND A.INT_COLOR_CD = B.INT_COLOR_CD
+          LEFT OUTER JOIN (SELECT BAT_DT,
+                                 CARLINE_CD,
+                                 MODEL_CD,
+                                 OCN_CD,
+                                 EXT_COLOR_CD,
+                                 INT_COLOR_CD,
+                                 STOCK_STAT_CNT,
+                                 TRSF_STAT_CNT
+                            FROM SA_0350T X
+                           WHERE X.BAT_DT =
+                                 TO_CHAR((LAST_DAY(ADD_MONTHS(SYSDATE, -1))) + 1,
+                                         'YYYYMMDD')) C
+            ON A.CARLINE_CD = C.CARLINE_CD
+           AND A.MODEL_CD = C.MODEL_CD
+           AND A.OCN_CD = C.OCN_CD
+           AND A.EXT_COLOR_CD = C.EXT_COLOR_CD
+           AND A.INT_COLOR_CD = C.INT_COLOR_CD
+          LEFT OUTER JOIN (SELECT CARLINE_CD,
+                                 MODEL_CD,
+                                 OCN_CD,
+                                 EXT_COLOR_CD,
+                                 INT_COLOR_CD,
+                                 AVG(THR_MNTH_AVG) AS THR_MNTH_AVG
+                            FROM (SELECT CARLINE_CD,
+                                         MODEL_CD,
+                                         OCN_CD,
+                                         EXT_COLOR_CD,
+                                         INT_COLOR_CD,
+                                         COUNT(1) AS THR_MNTH_AVG
+                                    FROM SA_0121T A
+				--update by fengdequan 车辆进销存统计：3个月平均销量计算 start
+                                    left  join 
+                                     ( select KMVIN,KMDELR,KMTRDY from (
+                                     
+                                     select KMVIN,KMDELR ,KMTRDY,
+                                      ROW_NUMBER() OVER (PARTITION BY KMVIN ORDER BY TO_DATE(KMTRDY||KMTRTM, 'YYYYMMDD HH24MISS') DESC) AS RN
+                                     from SA_0301T where KMOPT IN ('J1','j5')
+                                     
+                                     ) C where RN=1
+                                    ) B on B.KMVIN = A.VIN_NO  AND B.KMDELR = A.ORD_DLR_CD
+                                   WHERE 
+                                   
+                                   to_char( to_date(B.KMTRDY,'YYYYMMDD'),'YYYYMM')>=
+                                         TO_CHAR(ADD_MONTHS(SYSDATE, -3), 'YYYYMM')
+                                   AND to_char( to_date(B.KMTRDY,'YYYYMMDD'),'YYYYMM') <=
+                                         TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+                                 ----update by fengdequan 车辆进销存统计：3个月平均销量计算 end
+                                         
+                                     AND CAR_STAT_CD = '70'
+                                     AND ORD_DLR_CD = '${sDlrCd}'
+                                     AND NCAR_DSTIN_CD = 'N'
+                                   GROUP BY CARLINE_CD,
+                                            MODEL_CD,
+                                            OCN_CD,
+                                            EXT_COLOR_CD,
+                                            INT_COLOR_CD)
+                           GROUP BY CARLINE_CD,
+                                    MODEL_CD,
+                                    OCN_CD,
+                                    EXT_COLOR_CD,
+                                    INT_COLOR_CD) D
+            ON A.CARLINE_CD = D.CARLINE_CD
+           AND A.MODEL_CD = D.MODEL_CD
+           AND A.OCN_CD = D.OCN_CD
+           AND A.EXT_COLOR_CD = D.EXT_COLOR_CD
+           AND A.INT_COLOR_CD = D.INT_COLOR_CD
+          LEFT OUTER JOIN (SELECT CARLINE_CD,
+                                 MODEL_CD,
+                                 OCN_CD,
+                                 EXT_COLOR_CD,
+                                 INT_COLOR_CD,
+                                 SUM(CASE
+                                       WHEN TO_NUMBER(TO_CHAR(SYSDATE, 'YYYYMMDD')) >= TO_NUMBER(THR_MNTH) AND
+                                            TO_NUMBER(TO_CHAR(SYSDATE, 'YYYYMMDD')) < TO_NUMBER(SIX_MNTH) THEN
+                                        1
+                                       ELSE
+                                        0
+                                     END) THR_MNTH_STOCK,
+                                 SUM(CASE
+                                       WHEN TO_NUMBER(TO_CHAR(SYSDATE, 'YYYYMMDD')) >= TO_NUMBER(SIX_MNTH) THEN
+                                        1
+                                       ELSE
+                                        0
+                                     END) SIX_MNTH_STOCK
+                            FROM (SELECT CARLINE_CD,
+                                         MODEL_CD,
+                                         OCN_CD,
+                                         EXT_COLOR_CD,
+                                         INT_COLOR_CD,
+                                         TO_CHAR(ADD_MONTHS((PLT_GI_DT-1), +3), 'YYYYMMDD') AS THR_MNTH,
+                                         TO_CHAR(ADD_MONTHS((PLT_GI_DT-1), +6), 'YYYYMMDD') AS SIX_MNTH
+                                    FROM SA_0121T A
+                                   WHERE CAR_STAT_CD IN ('50', '60')
+                                     AND ORD_DLR_CD = '${sDlrCd}'
+                                     AND NCAR_DSTIN_CD = 'N')
+                           GROUP BY CARLINE_CD,
+                                    MODEL_CD,
+                                    OCN_CD,
+                                    EXT_COLOR_CD,
+                                    INT_COLOR_CD) F
+            ON A.CARLINE_CD = F.CARLINE_CD
+           AND A.MODEL_CD = F.MODEL_CD
+           AND A.OCN_CD = F.OCN_CD
+           AND A.EXT_COLOR_CD = F.EXT_COLOR_CD
+           AND A.INT_COLOR_CD = F.INT_COLOR_CD
+          LEFT OUTER JOIN (SELECT CARLINE_CD,
+                                 MODEL_CD,
+                                 OCN_CD,
+                                 EXT_COLOR_CD,
+                                 INT_COLOR_CD,
+                                 COUNT(CARLINE_CD) AS TCTS_SALE
+                            FROM (SELECT Y.CARLINE_CD,
+                                         Y.MODEL_CD,
+                                         Y.OCN_CD,
+                                         Y.EXT_COLOR_CD,
+                                         Y.INT_COLOR_CD,
+                                         ROW_NUMBER() OVER(PARTITION BY X.KMVIN ORDER BY TO_DATE(X.KMTRDY || X.KMTRTM, 'YYYYMMDD HH24MISS') DESC) AS RN
+                                    FROM SA_0301T X, SA_0121T Y
+                                   WHERE X.KMVIN = Y.VIN_NO
+                                     AND X.KMOPT = 'J3'
+                                     AND Y.ORD_DLR_CD = '${sDlrCd}'
+                                     AND Y.NCAR_DSTIN_CD = 'N')
+                           WHERE RN = 1
+                           GROUP BY CARLINE_CD,
+                                    MODEL_CD,
+                                    OCN_CD,
+                                    EXT_COLOR_CD,
+                                    INT_COLOR_CD) G
+            ON A.CARLINE_CD = G.CARLINE_CD
+           AND A.MODEL_CD = G.MODEL_CD
+           AND A.OCN_CD = G.OCN_CD
+           AND A.EXT_COLOR_CD = G.EXT_COLOR_CD
+           AND A.INT_COLOR_CD = G.INT_COLOR_CD
+          LEFT OUTER JOIN (SELECT CARLINE_CD
+                                , MODEL_CD
+                                , OCN_CD
+                                , EXT_COLOR_CD
+                                , INT_COLOR_CD
+                                , NVL(ALO_NTRF_CNT, 0) + NVL(TRSF_STAT_CNT, 0) + NVL(STOCK_STAT_CNT, 0) AS FST_MONTH_STOCK
+                             FROM SA_0350T
+                            WHERE BAT_DT = TO_CHAR(SYSDATE, 'YYYYMM')||'01'
+                              AND DLR_CD = '${sDlrCd}'
+                          ) H
+            ON A.CARLINE_CD = H.CARLINE_CD
+           AND A.MODEL_CD = H.MODEL_CD
+           AND A.OCN_CD = H.OCN_CD
+           AND A.EXT_COLOR_CD = H.EXT_COLOR_CD
+           AND A.INT_COLOR_CD = H.INT_COLOR_CD
+         WHERE A.CARLINE_CD IS NOT NULL
+        ${IF(LEN(sCarlineCd) == 0, ""," AND A.CARLINE_CD = '"+sCarlineCd+"'")}
+        ) X
+]]></Query>
+</TableData>
+</TableDataMap>
+<ReportWebAttr>
+<ServerPrinter/>
+<WebPageContent>
+<ToolBars>
+<ToolBarManager>
+<Location>
+<Embed position="1"/>
+</Location>
+<ToolBar>
+<Widget class="com.fr.report.web.button.page.First">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-First')}]]></Text>
+<IconName>
+<![CDATA[first]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Previous">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Previous')}]]></Text>
+<IconName>
+<![CDATA[previous]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.PageNavi">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Next">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Next')}]]></Text>
+<IconName>
+<![CDATA[next]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Last">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Last')}]]></Text>
+<IconName>
+<![CDATA[last]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.FlashPrint">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Print[Client]A')}]]></Text>
+<IconName>
+<![CDATA[flashprint]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.Print">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Print')}]]></Text>
+<IconName>
+<![CDATA[print]]></IconName>
+<PrintButtons/>
+</Widget>
+<Widget class="com.fr.report.web.button.Export">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Export')}]]></Text>
+<IconName>
+<![CDATA[export]]></IconName>
+<Buttons pdf="true" excelP="true" excelO="true" excelS="true" word="true" image="true" html="true"/>
+</Widget>
+<Widget class="com.fr.report.web.button.Email">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Email')}]]></Text>
+<IconName>
+<![CDATA[email]]></IconName>
+</Widget>
+<IsDefault>
+<![CDATA[false]]></IsDefault>
+<Background name="ColorBackground" color="-1"/>
+</ToolBar>
+</ToolBarManager>
+</ToolBars>
+<WebPage isPage="false" isShowAsImage="false" isAutoScale="false" isTDHeavy="false"/>
+</WebPageContent>
+<WebViewContent>
+<ToolBars>
+<ToolBarManager>
+<Location>
+<Embed position="1"/>
+</Location>
+<ToolBar>
+<Widget class="com.fr.report.web.button.PrintPreview">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('PrintP-Print_Preview')}]]></Text>
+<IconName>
+<![CDATA[preview]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.FlashPrint">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('FR-Engine_Utils_Flash_Print[Client]A')}]]></Text>
+<IconName>
+<![CDATA[flashprint]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.Print">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Print')}]]></Text>
+<IconName>
+<![CDATA[print]]></IconName>
+<PrintButtons/>
+</Widget>
+<Widget class="com.fr.report.web.button.Export">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Export')}]]></Text>
+<IconName>
+<![CDATA[export]]></IconName>
+<Buttons pdf="true" excelP="true" excelO="true" excelS="true" word="true" image="true" html="true"/>
+</Widget>
+<Widget class="com.fr.report.web.button.Email">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Email')}]]></Text>
+<IconName>
+<![CDATA[email]]></IconName>
+</Widget>
+</ToolBar>
+</ToolBarManager>
+</ToolBars>
+<SortFuncCheck check="true"/>
+<ConditionFuncCheck check="true"/>
+<ListFuncCheck check="true"/>
+</WebViewContent>
+</ReportWebAttr>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="18" T="19"/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1181100,1152000,1524000,1152000,1152000,1152000,1152000,1152000,1152000,723900,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[5181600,2880000,2880000,2880000,2880000,2880000,2880000,0,2880000,2880000,2880000,2880000,3924000,3924300,2880000,2016000,2016000,2016000,2016000,2016000,2016000,2016000,2016000,2016000,2016000,2016000,2016000,2016000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" cs="7" rs="17" s="0">
+<O t="CC">
+<LayoutAttr selectedIndex="0"/>
+<Chart name="默认" chartClass="com.fr.plugin.chart.vanchart.VanChart">
+<Chart class="com.fr.plugin.chart.vanchart.VanChart">
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1118482"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<ChartAttr isJSDraw="true" isStyleGlobal="false"/>
+<Title4VanChart>
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-6908266"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[="当前库存 : "+I21]]></Attributes>
+</O>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei" style="1" size="80" foreground="-13421773"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<Attr4VanChart useHtml="false" floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0"/>
+</Title4VanChart>
+<Plot class="com.fr.plugin.chart.PiePlot4VanChart">
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1118482"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isNullValueBreak="true" autoRefreshPerSecond="0" seriesDragEnable="false" plotStyle="4" combinedSize="50.0"/>
+<newHotTooltipStyle>
+<AttrContents>
+<Attr showLine="false" position="1" isWhiteBackground="true" isShowMutiSeries="false" seriesLabel="${VALUE}"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+<PercentFormat>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.##%]]></Format>
+</PercentFormat>
+</AttrContents>
+</newHotTooltipStyle>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
+<ConditionAttr name="">
+<AttrList>
+<Attr class="com.fr.chart.base.AttrBorder">
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1"/>
+</AttrBorder>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.AttrTooltip">
+<AttrTooltip>
+<Attr enable="true" followMouse="true" showMutiSeries="false" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="SimSun" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="true"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="true"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="false"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="false"/>
+</AttrTooltipSeriesFormat>
+</series>
+<HtmlLabel customText="" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+<GI>
+<AttrBackground>
+<Background name="ColorBackground" color="-16777216"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="0.5"/>
+</AttrAlpha>
+</GI>
+</AttrTooltip>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.AttrLabel">
+<AttrLabel>
+<labelAttr enable="true"/>
+<labelDetail class="com.fr.plugin.chart.base.AttrLabelDetail">
+<Attr showLine="true" position="6" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="1" size="72"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="false"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="true"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[(#0%)]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="false"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="false"/>
+</AttrTooltipSeriesFormat>
+</series>
+<HtmlLabel customText="function(){ return this.value+&apos;(&apos;+(this.percentage*100).toFixed(2)+&apos;%&apos;+&apos;)&apos;;}" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+</labelDetail>
+</AttrLabel>
+</Attr>
+</AttrList>
+</ConditionAttr>
+</DefaultAttr>
+</ConditionCollection>
+<Legend4VanChart>
+<Legend>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-3355444"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr position="4" visible="true"/>
+<FRFont name="Microsoft YaHei" style="0" size="64" foreground="-10066330"/>
+</Legend>
+<Attr4VanChart floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0"/>
+</Legend4VanChart>
+<DataSheet>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isVisible="false"/>
+</DataSheet>
+<newPlotFillStyle>
+<AttrFillStyle>
+<AFStyle colorStyle="1"/>
+<FillStyleName fillStyleName="新特性"/>
+<isCustomFillStyle isCustomFillStyle="false"/>
+<ColorList>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+<OColor colvalue="-472193"/>
+<OColor colvalue="-486008"/>
+<OColor colvalue="-8595761"/>
+<OColor colvalue="-7236949"/>
+<OColor colvalue="-8873759"/>
+<OColor colvalue="-1071514"/>
+<OColor colvalue="-1188474"/>
+<OColor colvalue="-6715442"/>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+<OColor colvalue="-472193"/>
+<OColor colvalue="-486008"/>
+<OColor colvalue="-8595761"/>
+<OColor colvalue="-7236949"/>
+<OColor colvalue="-8873759"/>
+<OColor colvalue="-1071514"/>
+<OColor colvalue="-1188474"/>
+<OColor colvalue="-6715442"/>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+<OColor colvalue="-472193"/>
+<OColor colvalue="-486008"/>
+<OColor colvalue="-8595761"/>
+<OColor colvalue="-7236949"/>
+<OColor colvalue="-8873759"/>
+<OColor colvalue="-1071514"/>
+<OColor colvalue="-1188474"/>
+<OColor colvalue="-6715442"/>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+</ColorList>
+</AttrFillStyle>
+</newPlotFillStyle>
+<VanChartPlotAttr isAxisRotation="false"/>
+<PieAttr4VanChart roseType="normal" startAngle="0.0" endAngle="360.0" innerRadius="60.0" supportRotation="false"/>
+</Plot>
+<DataProcessor class="com.fr.base.chart.chartdata.model.NormalDataModel"/>
+<ChartDefinition>
+<NormalReportDataDefinition>
+<Series>
+<SeriesDefinition>
+<SeriesName>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=A22]]></Attributes>
+</O>
+</SeriesName>
+<SeriesValue>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=I22]]></Attributes>
+</O>
+</SeriesValue>
+</SeriesDefinition>
+</Series>
+<Category>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=I22]]></Attributes>
+</O>
+</Category>
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="true" isDiscardNullSeries="true"/>
+</NormalReportDataDefinition>
+</ChartDefinition>
+</Chart>
+<tools hidden="true" sort="false" export="false" fullScreen="false"/>
+<VanChartZoom>
+<zoomAttr zoomVisible="false" zoomResize="true" zoomType="xy"/>
+<from>
+<![CDATA[]]></from>
+<to>
+<![CDATA[]]></to>
+</VanChartZoom>
+<refreshMoreLabel>
+<TextAttr>
+<Attr alignText="0"/>
+</TextAttr>
+ moreLabel="true" plusColor="-11349576" minusColor="-741051"</refreshMoreLabel>
+</Chart>
+</O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="7" r="0" cs="8" rs="17" s="1">
+<O t="CC">
+<LayoutAttr selectedIndex="0"/>
+<Chart name="기본" chartClass="com.fr.plugin.chart.vanchart.VanChart">
+<Chart class="com.fr.plugin.chart.vanchart.VanChart">
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1118482"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<ChartAttr isJSDraw="true" isStyleGlobal="false"/>
+<Title4VanChart>
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="1"/>
+<newColor borderColor="-6908266"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[库存深度]]></O>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="微软雅黑" style="1" size="80" foreground="-13421773"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<Attr4VanChart useHtml="false" floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0"/>
+</Title4VanChart>
+<Plot class="com.fr.plugin.chart.line.VanChartLinePlot">
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isNullValueBreak="true" autoRefreshPerSecond="0" seriesDragEnable="false" plotStyle="4" combinedSize="50.0"/>
+<newHotTooltipStyle>
+<AttrContents>
+<Attr showLine="false" position="1" isWhiteBackground="true" isShowMutiSeries="false" seriesLabel="${VALUE}"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+<PercentFormat>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.##%]]></Format>
+</PercentFormat>
+</AttrContents>
+</newHotTooltipStyle>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
+<ConditionAttr name="">
+<AttrList>
+<Attr class="com.fr.plugin.chart.base.VanChartAttrMarker">
+<VanAttrMarker>
+<Attr isCommon="true" markerType="NullMarker" radius="4.5" width="30.0" height="30.0"/>
+<Background name="NullBackground"/>
+</VanAttrMarker>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.VanChartAttrLine">
+<VanAttrLine>
+<Attr lineWidth="2" lineStyle="0" nullValueBreak="true"/>
+</VanAttrLine>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.AttrTooltip">
+<AttrTooltip>
+<Attr enable="true" followMouse="false" showMutiSeries="false" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="宋体" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="true"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="true"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="false"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="false"/>
+</AttrTooltipSeriesFormat>
+</series>
+<HtmlLabel customText="" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+<GI>
+<AttrBackground>
+<Background name="ColorBackground" color="-16777216"/>
+<Attr shadow="true"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="2"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="0.5"/>
+</AttrAlpha>
+</GI>
+</AttrTooltip>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.AttrLabel">
+<AttrLabel>
+<labelAttr enable="true"/>
+<labelDetail class="com.fr.plugin.chart.base.AttrLabelDetail">
+<Attr showLine="false" position="6" isCustom="true"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="1" size="72" foreground="-65536"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="false"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="true"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="false"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="false"/>
+</AttrTooltipSeriesFormat>
+</series>
+<HtmlLabel customText="function(){ return this.value.toFixed(1);}" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+</labelDetail>
+</AttrLabel>
+</Attr>
+</AttrList>
+</ConditionAttr>
+</DefaultAttr>
+</ConditionCollection>
+<Legend4VanChart>
+<Legend>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-3355444"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr position="4" visible="false"/>
+<FRFont name="Microsoft YaHei" style="0" size="88" foreground="-10066330"/>
+</Legend>
+<Attr4VanChart floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0"/>
+</Legend4VanChart>
+<DataSheet>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isVisible="false"/>
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+</DataSheet>
+<newPlotFillStyle>
+<AttrFillStyle>
+<AFStyle colorStyle="0"/>
+<FillStyleName fillStyleName=""/>
+<isCustomFillStyle isCustomFillStyle="false"/>
+</AttrFillStyle>
+</newPlotFillStyle>
+<VanChartPlotAttr isAxisRotation="false"/>
+<VanChartRectanglePlotAttr vanChartPlotType="normal" isDefaultIntervalBackground="true"/>
+<XAxisList>
+<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartAxis">
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei" style="0" size="80" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="1" MainGridStyle="1"/>
+<newLineColor lineColor="-5197648"/>
+<AxisPosition value="3"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+<VanChartAxisAttr mainTickLine="2" secTickLine="0" axisName="X轴" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
+<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<alertList/>
+<customBackgroundList/>
+</VanChartAxis>
+</XAxisList>
+<YAxisList>
+<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartValueAxis">
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr rotation="-90" alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="0" MainGridStyle="1"/>
+<newLineColor mainGridColor="-3881788" lineColor="-5197648"/>
+<AxisPosition value="2"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei UI" style="0" size="72" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0]]></Format>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+<VanChartAxisAttr mainTickLine="0" secTickLine="0" axisName="Y轴" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
+<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<alertList/>
+<customBackgroundList/>
+<VanChartValueAxisAttr isLog="false" baseLog="=2"/>
+</VanChartAxis>
+</YAxisList>
+<stackAndAxisCondition>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
+<ConditionAttr name=""/>
+</DefaultAttr>
+</ConditionCollection>
+</stackAndAxisCondition>
+</Plot>
+<DataProcessor class="com.fr.base.chart.chartdata.model.NormalDataModel"/>
+<ChartDefinition>
+<NormalReportDataDefinition>
+<Series>
+<SeriesDefinition>
+<SeriesName>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=L22]]></Attributes>
+</O>
+</SeriesName>
+<SeriesValue>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=L22]]></Attributes>
+</O>
+</SeriesValue>
+</SeriesDefinition>
+</Series>
+<Category>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=A22]]></Attributes>
+</O>
+</Category>
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+</NormalReportDataDefinition>
+</ChartDefinition>
+</Chart>
+<tools hidden="true" sort="false" export="false" fullScreen="false"/>
+<VanChartZoom>
+<zoomAttr zoomVisible="false" zoomResize="true" zoomType="xy"/>
+<from>
+<![CDATA[]]></from>
+<to>
+<![CDATA[]]></to>
+</VanChartZoom>
+<refreshMoreLabel>
+<TextAttr>
+<Attr alignText="0"/>
+</TextAttr>
+ moreLabel="true" plusColor="-11349576" minusColor="-741051"</refreshMoreLabel>
+</Chart>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="18" rs="2" s="2">
+<O>
+<![CDATA[车种]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="18" rs="2" s="2">
+<O>
+<![CDATA[月初库存]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="18" rs="2" s="2">
+<O>
+<![CDATA[本月采购]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="18" rs="2" s="2">
+<O>
+<![CDATA[本月累计出库]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="18" cs="5" s="2">
+<O>
+<![CDATA[当前库存]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="18" cs="3" s="2">
+<O>
+<![CDATA[库存分析]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="18" cs="3" s="2">
+<O>
+<![CDATA[当前库存结构]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="19" s="2">
+<O>
+<![CDATA[分配未发]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="19" s="2">
+<O>
+<![CDATA[在途]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="19" s="2">
+<O>
+<![CDATA[在店]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="19" s="2">
+<O>
+<![CDATA[战略终端]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="19" s="2">
+<O>
+<![CDATA[小计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="19" s="2">
+<O>
+<![CDATA[库存变化 (%)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="19" s="2">
+<O>
+<![CDATA[近三月平均出库]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="19" s="2">
+<O>
+<![CDATA[库存深度]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="19" s="2">
+<O>
+<![CDATA[六个月以上]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="19" s="2">
+<O>
+<![CDATA[三个月以上]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="19" s="2">
+<O>
+<![CDATA[小计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="20" s="3">
+<O>
+<![CDATA[合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(B22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(C22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(D22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(E22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(F22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(G22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(H26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(I22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="20" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(B21 > 0, IF(ROUND((I21 - B21) / B21, 2) = -0, 0, ROUND((I21 - B21) / B21, 2)), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="20" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SUM_THR_MNTH_AVG"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.SummaryGrouper">
+<FN>
+<![CDATA[com.fr.data.util.function.SumFunction]]></FN>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="20" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(K21 > 0, (I21 / K21), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(M26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(N26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="20" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(O26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="21" s="7">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CARLINE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Widget class="com.fr.report.web.button.form.TreeNodeToggleButton">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+</Widget>
+<Expand dir="0"/>
+</C>
+<C c="1" r="21" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(B23)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="21" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(C23)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="21" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(D23)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="21" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(E23)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="21" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(F23)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="21" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(G23)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="21" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(H23)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="21" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(E22, F22, G22)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="21" s="9">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(B22 > 0, IF(ROUND((I22 - B22) / B22, 2) = -0, 0, ROUND((I22 - B22) / B22, 2)), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="21" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(K23)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="21" s="10">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(K22 > 0, ROUND((I22 / K22),1), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="21" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(M23)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="21" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(N23)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="21" s="8">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(O23)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="22" s="11">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="MODEL_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Widget class="com.fr.report.web.button.form.TreeNodeToggleButton">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+</Widget>
+<Expand dir="0" leftParentDefault="false" left="A22"/>
+</C>
+<C c="1" r="22" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(B24)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="22" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(C24)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="22" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(D24)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="22" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(E24)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="22" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(F24)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="22" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(G24)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="22" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(H24)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="22" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(E23, F23, G23)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="22" s="13">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(B23 > 0, IF(ROUND((I23 - B23) / B23, 2) = -0, 0, ROUND((I23 - B23) / B23, 2)), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="22" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(K24)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="22" s="14">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(K25 > 0, (I23 / K23), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="22" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(M24)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="22" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(N24)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="22" s="12">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(O24)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="23" s="15">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="OCN_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Widget class="com.fr.report.web.button.form.TreeNodeToggleButton">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+</Widget>
+<Expand dir="0" leftParentDefault="false" left="A23"/>
+</C>
+<C c="1" r="23" s="16">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(B25)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="23" s="16">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(C25)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="23" s="16">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(D25)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="23" s="16">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(E25)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="23" s="16">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(F25)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="23" s="16">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(G25)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="23" s="16">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(H25)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="23" s="16">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(E24, F24, G24)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="23" s="17">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(B24 > 0, IF(ROUND((I24 - B24) / B24, 2) = -0, 0, ROUND((I24 - B24) / B24, 2)), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="23" s="16">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(K25)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="23" s="18">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(K24 > 0, (I24 / K24), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="23" s="16">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(M25)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="23" s="16">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(N25)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="23" s="16">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(O25)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="24" s="19">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="EXT_COLOR_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Widget class="com.fr.report.web.button.form.TreeNodeToggleButton">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+</Widget>
+<Expand dir="0" leftParentDefault="false" left="A24"/>
+</C>
+<C c="1" r="24" s="20">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(B26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="24" s="20">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(C26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="24" s="20">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(D26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="24" s="20">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(E26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="24" s="20">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(F26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="24" s="20">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(G26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="24" s="20">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(H26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="24" s="20">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(E25, F25, G25)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="24" s="21">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(B25 > 0, IF(ROUND((I25 - B25) / B25, 2) = -0, 0, ROUND((I25 - B25) / B25, 2)), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="24" s="20">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(K26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="24" s="22">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(K25 > 0, (I25 / K25), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="24" s="20">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(M26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="24" s="20">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(N26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="24" s="20">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(O26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="25" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="INT_COLOR_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0" leftParentDefault="false" left="A25"/>
+</C>
+<C c="1" r="25" s="0">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="FST_MONTH_STOCK"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="25" s="0">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="THIS_MNTH_QTY"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="25" s="0">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_QTY"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="25" s="0">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="VIN_SET_NOTRN"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="25" s="0">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="FCT_GATE_OUT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="25" s="0">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="DLR_GET_IN"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="25" s="0">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TCTS_SALE"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="25" s="0">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(E26, F26, G26)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="25" s="24">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(B26 > 0, IF(ROUND((I26 - B26) / B26, 2) = -0, 0, ROUND((I26 - B26) / B26, 2)), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="10" r="25" s="0">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="THR_MNTH_AVG"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="25" s="25">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(K26 > 0, (I26 / K26), 0)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="12" r="25" s="0">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SIX_MNTH_STOCK"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="13" r="25" s="0">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="THR_MNTH_STOCK"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="25" s="0">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=M26 + N26]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings isHorizontalCenterOnPage="true" headerHeight="1440000" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="33912000" height="46411200"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="false" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[Parameter]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Microsoft YaHei" style="1" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Microsoft YaHei" style="1" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0%]]></Format>
+<FRFont name="Microsoft YaHei" style="1" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.0]]></Format>
+<FRFont name="Microsoft YaHei" style="1" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Microsoft YaHei" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-6041099"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-6041099"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0%]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-6041099"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.0]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-6041099"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="6" paddingRight="1">
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-3085062"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="10" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-3085062"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="10" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0%]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-3085062"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="10" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.0]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-3085062"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="10" paddingRight="1">
+<FRFont name="Microsoft YaHei" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-1838342"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-1838342"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0%]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-1838342"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.0]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-1838342"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="15" paddingRight="1">
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-1445387"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="15" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-1445387"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="15" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0%]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-1445387"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="15" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.0]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-1445387"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="30" paddingRight="1">
+<FRFont name="Microsoft YaHei" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-1"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0%]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.0]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

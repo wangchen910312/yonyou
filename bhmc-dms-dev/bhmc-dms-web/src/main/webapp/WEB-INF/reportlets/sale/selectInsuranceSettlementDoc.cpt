@@ -1,0 +1,1046 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="ds1" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sIncNo"/>
+<O>
+<![CDATA[INC0000000226]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[
+SELECT 
+	SA_0216T.DLR_CD                                 --经销商代码
+	,'No.'||SA_0216T.INC_NO                                --保险号码公司    
+	,FN_GET_CMMCD_NM('SAL127',SA_0216T.INC_CMP_CD, 'zh') AS INC_CMP_CD--保险公司
+	,CR_0101T.CUST_NM                               --客户姓名(CR0101)
+	,SA_0216T.CUST_TEL_NO                           --客户电话
+	,SA_0216T.INC_PCON_CUST_NM                      --联系人
+	,FN_GET_CARLINE_NM_NC(SA_0216T.CARLINE_CD) AS CARLINE_NM
+	,FN_GET_MODEL_NM_NC(SA_0216T.MODEL_CD) AS MODEL_NM
+	,SA_0216T.INC_PCON_CUST_TEL_NO                 --联系人电话
+	,SA_0121T.CAR_REG_NO                            --车牌号（SA0121）
+	,SA_0216T.VIN_NO                                --VIN
+	,SA_0216T.ENGIN_SERIAL_NO                      -- 发动机号
+	,SA_0216T.INC_PRSN_ID                           --保险负责人
+	,SA_0216T.INC_JOIN_DT                           -- 投保日期
+	,SA_0216T.FRC_INC_AMT                           --交强险金额
+	,SA_0216T.BUS_INC_AMT                           --商业险金额
+	,SA_0216T.TRANS_TAX_AMT                         -- 车船税
+	,DECODE(SA_0216T.REAL_INC_TOT_AMT,0,SA_0216T.INC_EXPC_TOT_AMT,SA_0216T.REAL_INC_TOT_AMT)              INC_AMT --总金额,있으면 실제금액,없으면 예측금액
+	,SA_0216T.INC_CS                                -- 险种
+	,FN_GET_CMMCD_NM('SAL019',SA_0253T.INC_TP, 'zh') AS INC_TP
+	,NVL(SA_0253T.INC_AMT,0)                        -- 保额(SA_0253T)
+	,SA_0253T.REMARK                                --备注(SA_0253T)
+	,NVL(SA_0253T.REAL_INC_AMT,0)				   --保费(SA_0253T)
+	,SA_0253T.INC_START_DT                          --保险开始日期
+	,SA_0253T.INC_END_DT                            --保险结束日期
+	, ( SELECT Z2.CMM_CD_NM
+                          FROM (SELECT A.CMM_CD
+                                     , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                 FROM CM_0303T A
+                                 LEFT OUTER JOIN CM_0304T B
+                                       ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                      AND A.CMM_CD = B.CMM_CD
+                                      AND B.LANG_CD = 'zh'
+                                WHERE A.CMM_GRP_CD = 'SAL176'   /*보험종류*/
+                                  AND A.USE_YN = 'Y'
+                                ) Z2
+                        WHERE SA_0216T.INC_CS = Z2.CMM_CD
+                      ) AS INC_CS_NM             -- 보험종류명
+
+FROM SA_0216T SA_0216T
+LEFT OUTER JOIN CR_0101T CR_0101T ON CR_0101T.CUST_NO = SA_0216T.CUST_NO
+LEFT OUTER JOIN SA_0253T SA_0253T ON SA_0253T.INC_NO = SA_0216T.INC_NO
+LEFT OUTER JOIN SA_0121T SA_0121T ON SA_0121T.VIN_NO = SA_0216T.VIN_NO
+WHERE SA_0216T.INC_NO = '${sIncNo}'
+AND SA_0216T.DLR_CD = '${sDlrCd}'
+
+]]></Query>
+</TableData>
+<TableData name="dlrInfo" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT 
+	 DLR_NM		--딜러명
+	,DLR_SHT_NM	--딜러축소명
+	,TEL_NO		--전화번호
+	,DIST_CD		--지역코드
+	,ZIP_NO		--우편번호
+	,ADDR1_NM		--주소1
+	,ADDR2_NM		--주소2
+	,DETL_ADDR_NM	--싱세주소
+	,ADDR1_NM || ' ' || ADDR2_NM || ' ' || DETL_ADDR_NM AS ADDR_FULL
+FROM CM_0101T
+WHERE DLR_CD = '${sDlrCd}'
+;]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[723900,723900,723900,1645920,723900,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,1152000,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[2133600,3992880,4175760,4206240,4541520,3931920,4632960,1524000,2743200,2743200,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="3" cs="6" s="0">
+<O>
+<![CDATA[保险结算单]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="4" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="4" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="4" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="4" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="4" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="4" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="&apos;NO.&apos;||SA_0216T.INC_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="5" s="4">
+<O>
+<![CDATA[保险公司]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="5" cs="3" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="INC_CMP_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="5" s="4">
+<O>
+<![CDATA[保险类型]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="5" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="INC_CS_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="5">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="6" s="4">
+<O>
+<![CDATA[客户姓名]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="6" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CUST_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="6" s="4">
+<O>
+<![CDATA[客户电话]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="6" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CUST_TEL_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="6" s="4">
+<O>
+<![CDATA[联系人]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="6" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="INC_PCON_CUST_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="7" s="4">
+<O>
+<![CDATA[车种]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="7" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CARLINE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="7" s="4">
+<O>
+<![CDATA[车款]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="7" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="MODEL_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="7" s="4">
+<O>
+<![CDATA[联系人电话]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="7" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="INC_PCON_CUST_TEL_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="8" s="4">
+<O>
+<![CDATA[车牌号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="8" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CAR_REG_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="8" s="4">
+<O>
+<![CDATA[VIN码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="8" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="VIN_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="8" s="4">
+<O>
+<![CDATA[发动机号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="8" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="ENGIN_SERIAL_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="9" s="4">
+<O>
+<![CDATA[保险负责人]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="9" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="INC_PRSN_ID"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="9" s="4">
+<O>
+<![CDATA[投保日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="9" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="INC_JOIN_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="9" s="5">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="9" s="5">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="10" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="10" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="10" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="10" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="10" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="10" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="11" s="4">
+<O>
+<![CDATA[交强险金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="11" s="8">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="FRC_INC_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="11" s="4">
+<O>
+<![CDATA[商业险金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="11" s="9">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="BUS_INC_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="11" s="4">
+<O>
+<![CDATA[车船税]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="11" s="8">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TRANS_TAX_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="12" s="4">
+<O>
+<![CDATA[应收金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="12" s="8">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="INC_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="12" cs="4" s="5">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="13" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="13" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="13" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="13" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="13" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="13" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="14" s="4">
+<O>
+<![CDATA[险种]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="14" s="4">
+<O>
+<![CDATA[预计保险金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="14" s="4">
+<O>
+<![CDATA[实际保险金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="14" s="4">
+<O>
+<![CDATA[保额(单位:万)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="14" s="4">
+<O>
+<![CDATA[起始时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="14" s="4">
+<O>
+<![CDATA[截止时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="15" s="6">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="INC_TP"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="15" s="8">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="NVL(SA_0253T.REAL_INC_AMT,0)"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="15" s="10">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="NVL(SA_0253T.REAL_INC_AMT,0)"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="15" s="8">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="NVL(SA_0253T.INC_AMT,0)"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="15" s="10">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="INC_START_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="15" s="10">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="INC_END_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="16" s="10">
+<O>
+<![CDATA[合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="16" s="11">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(C16)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="16" s="11">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=sum(D16)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="16" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="16" s="10">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="16" s="10">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="17" s="7">
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="17" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="17" s="7">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="17" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="17" s="7">
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="17" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="18" s="4">
+<O>
+<![CDATA[备注]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="18" cs="5" s="5">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="REMARK"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="19" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="19" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="19" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="19" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="19" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="19" s="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="20" s="4">
+<O>
+<![CDATA[店名]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="20" cs="5" s="5">
+<O t="DSColumn">
+<Attributes dsName="dlrInfo" columnName="DLR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="21" s="4">
+<O>
+<![CDATA[地址]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="21" cs="5" s="5">
+<O t="DSColumn">
+<Attributes dsName="dlrInfo" columnName="ADDR_FULL"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="22" s="4">
+<O>
+<![CDATA[电话]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="22" cs="5" s="6">
+<O t="DSColumn">
+<Attributes dsName="dlrInfo" columnName="TEL_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="24" s="12">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="24" s="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="24" s="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="24" s="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="24" s="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="24" s="14">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="25" s="15">
+<O>
+<![CDATA[销售顾问签字]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="25" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="25" s="1">
+<O>
+<![CDATA[财务签字]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="25" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="25" s="1">
+<O>
+<![CDATA[客户签名]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="25" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="26" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="26" s="18">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="26" s="18">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="26" s="18">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="26" s="18">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="26" s="19">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="27" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="27" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="27" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="27" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="27" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="27" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[参数]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="1" size="104"/>
+<Background name="ColorBackground" color="-2171170"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style imageLayout="1">
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="ColorBackground" color="-4144960"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[0.00]]></Format>
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="SimSun" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.00]]></Format>
+<FRFont name="SimSun" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="SimSun" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Left style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="SimSun" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="SimSun" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Left style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+<Left style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="新宋体" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

@@ -1,0 +1,658 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : RetailItemReportDAO_SqlMap.xml
+    Description : 소매 명세 레포트
+    author chibeom.song
+    since 2016.10.25.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016.10.25.    chibeom.song     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.sal.dlv.service.dao.RetailItemReportDAO">
+
+    <!-- 소매 명세 레포트결과 목록  -->
+    <select id="selectRetailItemReportByCondition" parameterType="RetailItemReportSearchVO" resultType="RetailItemReportVO">
+         SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT Q.* FROM (
+                    SELECT TO_DATE(A.KMTRDY||A.KMTRTM, 'YYYYMMDD HH24MISS') AS WORK_DATE
+                          ,A.KMOPT
+                          ,B.VIN_NO
+                          ,B.CARLINE_CD
+                          ,FN_GET_CARLINE_NM_NC(B.CARLINE_CD) AS CARLINE_NM
+                          ,B.MODEL_CD
+                          ,FN_GET_MODEL_TP_NM(B.MODEL_CD, B.OCN_CD) AS MODEL_NM
+                          ,B.OCN_CD
+                          ,FN_GET_OCN_NM_NC(B.MODEL_CD, B.OCN_CD) AS OCN_NM
+                          ,B.EXT_COLOR_CD
+                          ,FN_GET_EXT_COLOR_NM_NC(B.EXT_COLOR_CD) AS EXT_COLOR_NM
+                          ,B.INT_COLOR_CD
+                          ,B.ORD_TP
+                          ,B.MANUFACT_YY_MM_DT
+                          ,B.CUST_SALE_DT
+                          ,B.PLT_GI_DT
+                          ,B.CAR_STAT_CD
+                          ,DECODE(A.KMOPT, 'J1', 1, 'J5', 0,'J2', -1) AS PRNC_QTY
+                          --,(SELECT X.CUST_NM FROM SA_0202T X WHERE X.CONTRACT_NO = C.CONTRACT_NO AND X.PARTNER_TP = 'C') AS CUST_NM
+                          ,A.CUSTNM AS CUST_NM
+                          ,C.CONTRACT_NO
+                          ,'R' AS CONTROL_TP
+                          ,CASE WHEN B.CUST_SALE_DT IS NOT NULL AND D.RETAIL_DT IS NULL THEN TO_CHAR(B.CUST_SALE_DT, 'YYYY-MM')
+                          --20200825 首次终端月格式调整为yyyy-mm update by sunzq3 start
+                                --ELSE TO_CHAR(TO_DATE(D.RETAIL_DT, 'YYYYMMDD'), 'YYYY-MM-DD') END AS RETAIL_DT
+                                ELSE TO_CHAR(TO_DATE(D.RETAIL_DT, 'YYYYMMDD'), 'YYYY-MM') END AS RETAIL_DT
+                          --20200825 首次终端月格式调整为yyyy-mm update by sunzq3 end
+                          ,(SELECT '['||X.USR_ID||']'|| X.USR_NM FROM CM_0801T X WHERE X.USR_ID = C.SALE_EMP_NO) AS SALE_EMP_NM
+                          ,C.SALE_EMP_NO
+                          ,B.VINM_BKTX AS BANK_NM      -- 银行名称
+                          ,B.VINM_BKWB                 -- 汇票号
+                          ,B.VINM_BKCM                 -- 质押金额
+                          ---liuxueying update start-----
+                          ,CASE WHEN B.CERT_SECU_CD = 'L'  THEN NVL(B.REL_STATUS,'N') 
+                                     ELSE '' END AS VINM_REPAY_YN 
+                          ---liuxueying update end
+                      FROM SA_0301T A, SA_0121T B, SA_0201T C, SA_0180T D
+                     WHERE A.KMVIN = B.VIN_NO
+                       AND A.KMDELR = B.ORD_DLR_CD
+                       AND B.CONTRACT_NO = C.CONTRACT_NO(+)
+                       AND B.VIN_NO = C.VIN_NO(+)
+                       AND B.ORD_DLR_CD = C.DLR_CD(+)
+                       AND B.VIN_NO = D.VIN_NO(+)
+                       AND A.KMDELR = #{sDlrCd}
+                    <if test='sCondition == "S"'>
+                       AND A.KMOPT IN ('J1', 'J5')
+                    </if>
+                    <if test='sCondition == "G"'>
+                       AND A.KMOPT IN ('J2')
+                    </if>
+                    <if test='sCondition == null or sCondition == ""'>
+                       AND A.KMOPT IN ('J1', 'J2', 'J5')
+                    </if>
+                    UNION ALL
+                    SELECT TO_DATE(A.KMTRDY||A.KMTRTM, 'YYYYMMDD HH24MISS') AS WORK_DATE
+                          ,A.KMOPT
+                          ,B.VIN_NO
+                          ,B.CARLINE_CD
+                          ,FN_GET_CARLINE_NM_NC(B.CARLINE_CD) AS CARLINE_NM
+                          ,B.MODEL_CD
+                          ,FN_GET_MODEL_TP_NM(B.MODEL_CD, B.OCN_CD) AS MODEL_NM
+                          ,B.OCN_CD
+                          ,FN_GET_OCN_NM_NC(B.MODEL_CD, B.OCN_CD) AS OCN_NM
+                          ,B.EXT_COLOR_CD
+                          ,FN_GET_EXT_COLOR_NM_NC(B.EXT_COLOR_CD) AS EXT_COLOR_NM
+                          ,B.INT_COLOR_CD
+                          ,B.ORD_TP
+                          ,B.MANUFACT_YY_MM_DT
+                          ,B.CUST_SALE_DT
+                          ,B.PLT_GI_DT
+                          ,B.CAR_STAT_CD
+                          ,DECODE(A.KMOPT, 'J3', 1, 'J4', -1) AS PRNC_QTY
+                          ,'' AS CUST_NM
+                          ,'' AS CONTRACT_NO
+                          ,'L' AS CONTROL_TP
+                          ,CASE WHEN B.CUST_SALE_DT IS NOT NULL AND D.RETAIL_DT IS NULL THEN TO_CHAR(B.CUST_SALE_DT, 'YYYY-MM')
+                                WHEN B.CUST_SALE_DT IS NULL AND D.RETAIL_DT IS NULL AND A.KMOPT = 'J3' THEN TO_CHAR(TO_DATE(KMTRDY, 'YYYYMMDD'), 'YYYY-MM')
+                                --20200825 首次终端月格式调整为yyyy-mm update by sunzq3 start
+                                --ELSE TO_CHAR(TO_DATE(D.RETAIL_DT, 'YYYYMMDD'), 'YYYY-MM-DD') END AS RETAIL_DT
+                                ELSE TO_CHAR(TO_DATE(D.RETAIL_DT, 'YYYYMMDD'), 'YYYY-MM') END AS RETAIL_DT
+                                --20200825 首次终端月格式调整为yyyy-mm update by sunzq3 end
+                          ,(SELECT '['||X.USR_ID||']'|| X.USR_NM FROM CM_0801T X WHERE X.USR_ID = C.SALE_EMP_NO) AS SALE_EMP_NM
+                          ,C.SALE_EMP_NO
+                          ,B.VINM_BKTX AS BANK_NM      -- 银行名称
+                          ,B.VINM_BKWB                 -- 汇票号
+                          ,B.VINM_BKCM                 -- 质押金额
+                          ---liuxueying update start-----
+                          ,CASE WHEN B.CERT_SECU_CD = 'L'  THEN NVL(B.REL_STATUS,'N') 
+                                     ELSE '' END AS VINM_REPAY_YN 
+                          ---liuxueying update end
+                      FROM SA_0301T A, SA_0121T B, SA_0201T C, SA_0180T D
+                     WHERE A.KMVIN = B.VIN_NO
+                       AND A.KMDELR = B.ORD_DLR_CD
+                       AND B.CONTRACT_NO = C.CONTRACT_NO(+)
+                       AND B.VIN_NO = C.VIN_NO(+)
+                       AND B.ORD_DLR_CD = C.DLR_CD(+)
+                       AND B.VIN_NO = D.VIN_NO(+)
+                       AND A.KMDELR = #{sDlrCd}
+                    <if test='sCondition == "S"'>
+                       AND A.KMOPT = 'J3'
+                    </if>
+                    <if test='sCondition == "G"'>
+                       AND A.KMOPT = 'J4'
+                    </if>
+                    <if test='sCondition == null or sCondition == ""'>
+                       AND A.KMOPT IN ('J3', 'J4')
+                    </if>
+                ) Q WHERE 1 = 1
+                    <if test='sVinNo != null and sVinNo != ""'>
+                        AND Q.VIN_NO LIKE '%'||#{sVinNo}||'%'
+                    </if>
+                    <if test='sCarlineCd != null and sCarlineCd != ""'>
+                        AND Q.CARLINE_CD = #{sCarlineCd}
+                    </if>
+                    <if test='sModelCd != null and sModelCd != ""'>
+                        AND Q.MODEL_CD = #{sModelCd}
+                    </if>
+                    <if test='sEnginNo != null and sEnginNo != ""'>
+                        AND Q.ENGIN_NO = #{sEnginNo}
+                    </if>
+                    <if test='sCertNo != null and sCertNo != ""'>
+                        AND Q.CERT_NO = #{sCertNo}
+                    </if>
+                    <if test='sOrdTp != null and sOrdTp != ""'>
+                        AND Q.ORD_TP = #{sOrdTp}
+                    </if>
+                    <if test='sContractCustNm != null and sContractCustNm != ""'>
+                        AND Q.CUST_NM LIKE '%'||#{sContractCustNm}||'%'
+                    </if>
+                    <if test='sControlTp != null and sControlTp != ""'>
+                        AND Q.CONTROL_TP = #{sControlTp}
+                    </if>
+                    <if test='sStartDt != null and sEndDt != null'>
+                       AND Q.WORK_DATE <![CDATA[>=]]> TRUNC(#{sStartDt},'DD')
+                       AND Q.WORK_DATE <![CDATA[<]]> TRUNC(#{sEndDt},'DD')+1
+                    </if>
+                    <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                       AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = Q.MODEL_CD AND X.OCN_CD = Q.OCN_CD)  = #{sFscCd}
+                    </if>
+                    <if test='sFscCd == "None"'>
+                       AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = Q.MODEL_CD AND X.OCN_CD = Q.OCN_CD) IS NULL
+                    </if>
+                    <if test='sSaleEmpNo != null and sSaleEmpNo != ""'>
+                       AND Q.SALE_EMP_NO =#{sSaleEmpNo}
+                    </if>
+                ORDER BY Q.WORK_DATE DESC,  Q.VIN_NO ASC
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 소매 명세 레포트결과 목록 갯수  -->
+    <select id="selectRetailItemReportByConditionCnt" parameterType="RetailItemReportSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE FROM (
+            SELECT TO_DATE(A.KMTRDY||A.KMTRTM, 'YYYYMMDD HH24MISS') AS WORK_DATE
+                  ,A.KMOPT
+                  ,B.VIN_NO
+                  ,B.CARLINE_CD
+                  ,FN_GET_CARLINE_NM_NC(B.CARLINE_CD) AS CARLINE_NM
+                  ,B.MODEL_CD
+                  ,FN_GET_MODEL_TP_NM(B.MODEL_CD, B.OCN_CD) AS MODEL_NM
+                  ,B.OCN_CD
+                  ,FN_GET_OCN_NM_NC(B.MODEL_CD, B.OCN_CD) AS OCN_NM
+                  ,B.EXT_COLOR_CD
+                  ,FN_GET_EXT_COLOR_NM_NC(B.EXT_COLOR_CD) AS EXT_COLOR_NM
+                  ,B.INT_COLOR_CD
+                  ,B.ORD_TP
+                  ,B.MANUFACT_YY_MM_DT
+                  ,B.CUST_SALE_DT
+                  ,B.PLT_GI_DT
+                  ,B.CAR_STAT_CD
+                  ,DECODE(A.KMOPT, 'J1', 1, 'J5', 0,'J2', -1) AS PRNC_QTY
+                  --,(SELECT X.CUST_NM FROM SA_0202T X WHERE X.CONTRACT_NO = C.CONTRACT_NO AND X.PARTNER_TP = 'C') AS CUST_NM
+                  ,A.CUSTNM AS CUST_NM
+                  ,C.CONTRACT_NO
+                  ,'R' AS CONTROL_TP
+                  ,TO_DATE(D.RETAIL_DT, 'YYYYMMDD') AS RETAIL_DT
+                  ,(SELECT '['||X.USR_ID||']'|| X.USR_NM FROM CM_0801T X WHERE X.USR_ID = C.SALE_EMP_NO) AS SALE_EMP_NM
+                  ,C.SALE_EMP_NO
+              FROM SA_0301T A, SA_0121T B, SA_0201T C, SA_0180T D
+             WHERE A.KMVIN = B.VIN_NO
+               AND A.KMDELR = B.ORD_DLR_CD
+               AND B.CONTRACT_NO = C.CONTRACT_NO(+)
+               AND B.VIN_NO = C.VIN_NO(+)
+               AND B.ORD_DLR_CD = C.DLR_CD(+)
+               AND B.VIN_NO = D.VIN_NO(+)
+               AND A.KMDELR = #{sDlrCd}
+            <if test='sCondition == "S"'>
+               AND A.KMOPT IN ('J1', 'J5')
+            </if>
+            <if test='sCondition == "G"'>
+               AND A.KMOPT IN ('J2')
+            </if>
+            <if test='sCondition == null or sCondition == ""'>
+               AND A.KMOPT IN ('J1', 'J2', 'J5')
+            </if>
+            UNION ALL
+            SELECT TO_DATE(A.KMTRDY||A.KMTRTM, 'YYYYMMDD HH24MISS') AS WORK_DATE
+                  ,A.KMOPT
+                  ,B.VIN_NO
+                  ,B.CARLINE_CD
+                  ,FN_GET_CARLINE_NM_NC(B.CARLINE_CD) AS CARLINE_NM
+                  ,B.MODEL_CD
+                  ,FN_GET_MODEL_TP_NM(B.MODEL_CD, B.OCN_CD) AS MODEL_NM
+                  ,B.OCN_CD
+                  ,FN_GET_OCN_NM_NC(B.MODEL_CD, B.OCN_CD) AS OCN_NM
+                  ,B.EXT_COLOR_CD
+                  ,FN_GET_EXT_COLOR_NM_NC(B.EXT_COLOR_CD) AS EXT_COLOR_NM
+                  ,B.INT_COLOR_CD
+                  ,B.ORD_TP
+                  ,B.MANUFACT_YY_MM_DT
+                  ,B.CUST_SALE_DT
+                  ,B.PLT_GI_DT
+                  ,B.CAR_STAT_CD
+                  ,DECODE(A.KMOPT, 'J3', 1, 'J4', -1) AS PRNC_QTY
+                  ,'' AS CUST_NM
+                  ,'' AS CONTRACT_NO
+                  ,'L' AS CONTROL_TP
+                  ,TO_DATE(D.RETAIL_DT, 'YYYYMMDD') AS RETAIL_DT
+                  ,(SELECT '['||X.USR_ID||']'|| X.USR_NM FROM CM_0801T X WHERE X.USR_ID = C.SALE_EMP_NO) AS SALE_EMP_NM
+                  ,C.SALE_EMP_NO
+              FROM SA_0301T A, SA_0121T B, SA_0201T C, SA_0180T D
+             WHERE A.KMVIN = B.VIN_NO
+               AND A.KMDELR = B.ORD_DLR_CD
+               AND B.CONTRACT_NO = C.CONTRACT_NO(+)
+               AND B.VIN_NO = C.VIN_NO(+)
+               AND B.ORD_DLR_CD = C.DLR_CD(+)
+               AND B.VIN_NO = D.VIN_NO(+)
+               AND A.KMDELR = #{sDlrCd}
+            <if test='sCondition == "S"'>
+               AND A.KMOPT = 'J3'
+            </if>
+            <if test='sCondition == "G"'>
+               AND A.KMOPT = 'J4'
+            </if>
+            <if test='sCondition == null or sCondition == ""'>
+               AND A.KMOPT IN ('J3', 'J4')
+            </if>
+        ) Q WHERE 1 = 1
+            <if test='sVinNo != null and sVinNo != ""'>
+                AND Q.VIN_NO LIKE '%'||#{sVinNo}||'%'
+            </if>
+            <if test='sCarlineCd != null and sCarlineCd != ""'>
+                AND Q.CARLINE_CD = #{sCarlineCd}
+            </if>
+            <if test='sModelCd != null and sModelCd != ""'>
+                AND Q.MODEL_CD = #{sModelCd}
+            </if>
+            <if test='sEnginNo != null and sEnginNo != ""'>
+                AND Q.ENGIN_NO = #{sEnginNo}
+            </if>
+            <if test='sCertNo != null and sCertNo != ""'>
+                AND Q.CERT_NO = #{sCertNo}
+            </if>
+            <if test='sOrdTp != null and sOrdTp != ""'>
+                AND Q.ORD_TP = #{sOrdTp}
+            </if>
+            <if test='sContractCustNm != null and sContractCustNm != ""'>
+                AND Q.CUST_NM LIKE '%'||#{sContractCustNm}||'%'
+            </if>
+            <if test='sControlTp != null and sControlTp != ""'>
+                AND Q.CONTROL_TP = #{sControlTp}
+            </if>
+            <if test='sStartDt != null and sEndDt != null'>
+                AND Q.WORK_DATE <![CDATA[>=]]> TRUNC(#{sStartDt},'DD')
+                AND Q.WORK_DATE <![CDATA[<]]> TRUNC(#{sEndDt},'DD')+1
+            </if>
+            <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+               AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = Q.MODEL_CD AND X.OCN_CD = Q.OCN_CD)  = #{sFscCd}
+            </if>
+            <if test='sFscCd == "None"'>
+               AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = Q.MODEL_CD AND X.OCN_CD = Q.OCN_CD) IS NULL
+            </if>
+            <if test='sSaleEmpNo != null and sSaleEmpNo != ""'>
+               AND Q.SALE_EMP_NO =#{sSaleEmpNo}
+            </if>
+    </select>
+
+    <select id="selectRetailItemLastReportByCondition" parameterType="RetailItemReportSearchVO" resultType="RetailItemReportVO">
+         SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT Q.* FROM (
+                    SELECT ROW_NUMBER() OVER (PARTITION BY B.VIN_NO ORDER BY TO_DATE(A.KMTRDY||A.KMTRTM, 'YYYYMMDD HH24MISS') DESC) AS RN
+                          ,TO_DATE(A.KMTRDY||A.KMTRTM, 'YYYYMMDD HH24MISS') AS WORK_DATE
+                          ,A.KMOPT
+                          ,B.VIN_NO
+                          ,B.CARLINE_CD
+                          ,FN_GET_CARLINE_NM_NC(B.CARLINE_CD) AS CARLINE_NM
+                          ,B.MODEL_CD
+                          ,FN_GET_MODEL_TP_NM(B.MODEL_CD, B.OCN_CD) AS MODEL_NM
+                          ,B.OCN_CD
+                          ,FN_GET_OCN_NM_NC(B.MODEL_CD, B.OCN_CD) AS OCN_NM
+                          ,B.EXT_COLOR_CD
+                          ,FN_GET_EXT_COLOR_NM_NC(B.EXT_COLOR_CD) AS EXT_COLOR_NM
+                          ,B.INT_COLOR_CD
+                          ,B.ORD_TP
+                          ,B.MANUFACT_YY_MM_DT
+                          ,B.CUST_SALE_DT
+                          ,B.PLT_GI_DT
+                          ,B.CAR_STAT_CD
+                          ,DECODE(A.KMOPT, 'J1', 1, 'J3', 1,'J5', 0) AS PRNC_QTY
+                          --,(SELECT X.CUST_NM FROM SA_0202T X WHERE X.CONTRACT_NO = C.CONTRACT_NO AND X.PARTNER_TP = 'C') AS CUST_NM
+                          ,A.CUSTNM AS CUST_NM
+                          ,C.CONTRACT_NO
+                          ,DECODE(A.KMOPT, 'J1', 'R', 'J2', 'R', 'J3', 'L', 'J4', 'L','J5', 'R', NULL) AS CONTROL_TP
+                          ,CASE WHEN B.CUST_SALE_DT IS NOT NULL AND D.RETAIL_DT IS NULL THEN TO_CHAR(B.CUST_SALE_DT, 'YYYY-MM')
+                                WHEN B.CUST_SALE_DT IS NULL AND D.RETAIL_DT IS NULL AND A.KMOPT = 'J3' THEN TO_CHAR(TO_DATE(KMTRDY, 'YYYYMMDD'), 'YYYY-MM')
+                          --20200825 首次终端月格式调整为yyyy-mm update by sunzq3 start
+                                --ELSE TO_CHAR(TO_DATE(D.RETAIL_DT, 'YYYYMMDD'), 'YYYY-MM-DD') END AS RETAIL_DT
+                                ELSE TO_CHAR(TO_DATE(D.RETAIL_DT, 'YYYYMMDD'), 'YYYY-MM') END AS RETAIL_DT
+                          --20200825 首次终端月格式调整为yyyy-mm update by sunzq3 end
+                          ,(SELECT '['||X.USR_ID||']'|| X.USR_NM FROM CM_0801T X WHERE X.USR_ID = C.SALE_EMP_NO) AS SALE_EMP_NM
+                          ,C.SALE_EMP_NO
+                          ,B.VINM_BKTX AS BANK_NM      -- 银行名称
+                          ,B.VINM_BKWB                 -- 汇票号
+                          ,B.VINM_BKCM                 -- 质押金额
+                          ---liuxueying update start-----
+                          ,CASE WHEN B.CERT_SECU_CD = 'L'  THEN NVL(B.REL_STATUS,'N') 
+                                     ELSE '' END AS VINM_REPAY_YN 
+                          ---liuxueying update end
+                      FROM SA_0301T A, SA_0121T B, SA_0201T C, SA_0180T D
+                     WHERE A.KMVIN = B.VIN_NO
+                       AND A.KMDELR = B.ORD_DLR_CD
+                       AND B.CONTRACT_NO = C.CONTRACT_NO(+)
+                       AND B.VIN_NO = C.VIN_NO(+)
+                       AND B.ORD_DLR_CD = C.DLR_CD(+)
+                       AND B.VIN_NO = D.VIN_NO(+)
+                       AND A.KMDELR = #{sDlrCd}
+                ) Q WHERE RN = 1
+                    AND Q.KMOPT IN ('J1','J3','J5')
+                <if test='sVinNo != null and sVinNo != ""'>
+                    AND Q.VIN_NO LIKE '%'||#{sVinNo}||'%'
+                </if>
+                <if test='sCarlineCd != null and sCarlineCd != ""'>
+                    AND Q.CARLINE_CD = #{sCarlineCd}
+                </if>
+                <if test='sModelCd != null and sModelCd != ""'>
+                    AND Q.MODEL_CD = #{sModelCd}
+                </if>
+                <if test='sEnginNo != null and sEnginNo != ""'>
+                    AND Q.ENGIN_NO = #{sEnginNo}
+                </if>
+                <if test='sCertNo != null and sCertNo != ""'>
+                    AND Q.CERT_NO = #{sCertNo}
+                </if>
+                <if test='sOrdTp != null and sOrdTp != ""'>
+                    AND Q.ORD_TP = #{sOrdTp}
+                </if>
+                <if test='sContractCustNm != null and sContractCustNm != ""'>
+                    AND Q.CUST_NM LIKE '%'||#{sContractCustNm}||'%'
+                </if>
+                <if test='sControlTp != null and sControlTp != "" and sControlTp == "R"'>
+                   AND Q.KMOPT IN ('J1','J5')
+                </if>
+                <if test='sControlTp != null and sControlTp != "" and sControlTp == "L"'>
+                   AND Q.KMOPT = 'J3'
+                </if>
+                <if test='sStartDt != null and sEndDt != null'>
+                   AND Q.WORK_DATE <![CDATA[>=]]> TRUNC(#{sStartDt},'DD')
+                   AND Q.WORK_DATE <![CDATA[<]]> TRUNC(#{sEndDt},'DD')+1
+                </if>
+
+                <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                   AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = Q.MODEL_CD AND X.OCN_CD = Q.OCN_CD)  = #{sFscCd}
+                </if>
+                <if test='sFscCd == "None"'>
+                   AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = Q.MODEL_CD AND X.OCN_CD = Q.OCN_CD) IS NULL
+                </if>
+                <if test='sSaleEmpNo != null and sSaleEmpNo != ""'>
+                   AND Q.SALE_EMP_NO =#{sSaleEmpNo}
+                </if>
+                ORDER BY Q.WORK_DATE DESC,  Q.VIN_NO ASC
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectRetailItemLastReportByConditionCnt" parameterType="RetailItemReportSearchVO" resultType="int">
+        SELECT COUNT(*) FROM (
+            SELECT ROW_NUMBER() OVER (PARTITION BY B.VIN_NO ORDER BY TO_DATE(A.KMTRDY||A.KMTRTM, 'YYYYMMDD HH24MISS') DESC) AS RN
+                  ,TO_DATE(A.KMTRDY||A.KMTRTM, 'YYYYMMDD HH24MISS') AS WORK_DATE
+                  ,A.KMOPT
+                  ,B.VIN_NO
+                  ,B.CARLINE_CD
+                  ,FN_GET_CARLINE_NM_NC(B.CARLINE_CD) AS CARLINE_NM
+                  ,B.MODEL_CD
+                  ,FN_GET_MODEL_TP_NM(B.MODEL_CD, B.OCN_CD) AS MODEL_NM
+                  ,B.OCN_CD
+                  ,FN_GET_OCN_NM_NC(B.MODEL_CD, B.OCN_CD) AS OCN_NM
+                  ,B.EXT_COLOR_CD
+                  ,FN_GET_EXT_COLOR_NM_NC(B.EXT_COLOR_CD) AS EXT_COLOR_NM
+                  ,B.INT_COLOR_CD
+                  ,B.ORD_TP
+                  ,B.MANUFACT_YY_MM_DT
+                  ,B.CUST_SALE_DT
+                  ,B.PLT_GI_DT
+                  ,B.CAR_STAT_CD
+                  ,DECODE(A.KMOPT, 'J1', 1, 'J3', 1,'J5', 0) AS PRNC_QTY
+                  --,(SELECT X.CUST_NM FROM SA_0202T X WHERE X.CONTRACT_NO = C.CONTRACT_NO AND X.PARTNER_TP = 'C') AS CUST_NM
+                  ,A.CUSTNM AS CUST_NM
+                  ,C.CONTRACT_NO
+                  ,TO_DATE(D.RETAIL_DT, 'YYYYMMDD') AS RETAIL_DT
+                  ,(SELECT '['||X.USR_ID||']'|| X.USR_NM FROM CM_0801T X WHERE X.USR_ID = C.SALE_EMP_NO) AS SALE_EMP_NM
+                  ,C.SALE_EMP_NO
+              FROM SA_0301T A, SA_0121T B, SA_0201T C, SA_0180T D
+             WHERE A.KMVIN = B.VIN_NO
+               AND A.KMDELR = B.ORD_DLR_CD
+               AND B.CONTRACT_NO = C.CONTRACT_NO(+)
+               AND B.VIN_NO = C.VIN_NO(+)
+               AND B.ORD_DLR_CD = C.DLR_CD(+)
+               AND B.VIN_NO = D.VIN_NO(+)
+               AND A.KMDELR = #{sDlrCd}
+        ) Q WHERE RN = 1
+            AND Q.KMOPT IN ('J1','J3','J5')
+        <if test='sVinNo != null and sVinNo != ""'>
+            AND Q.VIN_NO LIKE '%'||#{sVinNo}||'%'
+        </if>
+        <if test='sCarlineCd != null and sCarlineCd != ""'>
+            AND Q.CARLINE_CD = #{sCarlineCd}
+        </if>
+        <if test='sModelCd != null and sModelCd != ""'>
+            AND Q.MODEL_CD = #{sModelCd}
+        </if>
+        <if test='sEnginNo != null and sEnginNo != ""'>
+            AND Q.ENGIN_NO = #{sEnginNo}
+        </if>
+        <if test='sCertNo != null and sCertNo != ""'>
+            AND Q.CERT_NO = #{sCertNo}
+        </if>
+        <if test='sOrdTp != null and sOrdTp != ""'>
+            AND Q.ORD_TP = #{sOrdTp}
+        </if>
+        <if test='sContractCustNm != null and sContractCustNm != ""'>
+            AND Q.CUST_NM LIKE '%'||#{sContractCustNm}||'%'
+        </if>
+        <if test='sControlTp != null and sControlTp != "" and sControlTp == "R"'>
+           AND Q.KMOPT IN ('J1','J5')
+        </if>
+        <if test='sControlTp != null and sControlTp != "" and sControlTp == "L"'>
+           AND Q.KMOPT = 'J3'
+        </if>
+        <if test='sStartDt != null and sEndDt != null'>
+           AND Q.WORK_DATE <![CDATA[>=]]> TRUNC(#{sStartDt},'DD')
+           AND Q.WORK_DATE <![CDATA[<]]> TRUNC(#{sEndDt},'DD')+1
+        </if>
+        <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = Q.MODEL_CD AND X.OCN_CD = Q.OCN_CD)  = #{sFscCd}
+        </if>
+        <if test='sFscCd == "None"'>
+           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = Q.MODEL_CD AND X.OCN_CD = Q.OCN_CD) IS NULL
+        </if>
+        <if test='sSaleEmpNo != null and sSaleEmpNo != ""'>
+           AND Q.SALE_EMP_NO =#{sSaleEmpNo}
+        </if>
+        ORDER BY Q.WORK_DATE DESC,  Q.VIN_NO ASC
+    </select>
+
+    <select id="selectRetailItemReportDetailCondition" parameterType="RetailItemReportSearchVO" resultType="RetailItemReportVO">
+        SELECT * FROM (
+            SELECT TO_DATE(A.KMTRDY||A.KMTRTM, 'YYYYMMDD HH24MISS') AS WORK_DATE
+                  ,A.KMOPT
+                  ,B.VIN_NO
+                  ,B.CARLINE_CD
+                  ,FN_GET_CARLINE_NM_NC(B.CARLINE_CD) AS CARLINE_NM
+                  ,B.MODEL_CD
+                  ,FN_GET_MODEL_TP_NM(B.MODEL_CD, B.OCN_CD) AS MODEL_NM
+                  ,B.OCN_CD
+                  ,FN_GET_OCN_NM_NC(B.MODEL_CD, B.OCN_CD) AS OCN_NM
+                  ,B.EXT_COLOR_CD
+                  ,FN_GET_EXT_COLOR_NM_NC(B.EXT_COLOR_CD) AS EXT_COLOR_NM
+                  ,B.INT_COLOR_CD
+                  ,B.ORD_TP
+                  ,B.MANUFACT_YY_MM_DT
+                  ,B.CUST_SALE_DT
+                  ,B.PLT_GI_DT
+                  ,B.CAR_STAT_CD
+                  ,DECODE(A.KMOPT, 'J1', 1, 'J2', -1) AS PRNC_QTY
+                  --,(SELECT X.CUST_NM FROM SA_0202T X WHERE X.CONTRACT_NO = C.CONTRACT_NO AND X.PARTNER_TP = 'C') AS CUST_NM
+                  ,A.CUSTNM AS CUST_NM
+                  ,C.CONTRACT_NO
+                  ,'R' AS CONTROL_TP
+                  ,(SELECT '['||X.USR_ID||']'|| X.USR_NM FROM CM_0801T X WHERE X.USR_ID = B.SALE_EMP_NO) AS SALE_EMP_NM
+                  ,B.SALE_EMP_NO
+                  ,B.VINM_BKTX AS BANK_NM      -- 银行名称
+                  ,B.VINM_BKWB                 -- 汇票号
+                  ,B.VINM_BKCM                 -- 质押金额
+                  ---liuxueying update start-----
+                  ,CASE WHEN B.CERT_SECU_CD = 'L'  THEN NVL(B.REL_STATUS,'N') 
+                             ELSE '' END AS VINM_REPAY_YN 
+                  ---liuxueying update end
+              FROM SA_0301T A, SA_0121T B, SA_0201T C
+             WHERE A.KMVIN = B.VIN_NO
+               AND A.KMDELR = B.ORD_DLR_CD
+               AND B.CONTRACT_NO = C.CONTRACT_NO(+)
+               AND B.VIN_NO = C.VIN_NO(+)
+               AND B.ORD_DLR_CD = C.DLR_CD(+)
+               AND A.KMOPT IN ('J1', 'J2', 'J5')
+               AND A.KMDELR = #{sDlrCd}
+            UNION ALL
+            SELECT TO_DATE(A.KMTRDY||A.KMTRTM, 'YYYYMMDD HH24MISS') AS WORK_DATE
+                  ,A.KMOPT
+                  ,B.VIN_NO
+                  ,B.CARLINE_CD
+                  ,FN_GET_CARLINE_NM_NC(B.CARLINE_CD) AS CARLINE_NM
+                  ,B.MODEL_CD
+                  ,FN_GET_MODEL_TP_NM(B.MODEL_CD, B.OCN_CD) AS MODEL_NM
+                  ,B.OCN_CD
+                  ,FN_GET_OCN_NM_NC(B.MODEL_CD, B.OCN_CD) AS OCN_NM
+                  ,B.EXT_COLOR_CD
+                  ,FN_GET_EXT_COLOR_NM_NC(B.EXT_COLOR_CD) AS EXT_COLOR_NM
+                  ,B.INT_COLOR_CD
+                  ,B.ORD_TP
+                  ,B.MANUFACT_YY_MM_DT
+                  ,B.CUST_SALE_DT
+                  ,B.PLT_GI_DT
+                  ,B.CAR_STAT_CD
+                  ,DECODE(A.KMOPT, 'J3', 1, 'J4', -1) AS PRNC_QTY
+                  ,'' AS CUST_NM
+                  ,'' AS CONTRACT_NO
+                  ,'L' AS CONTROL_TP
+                  ,(SELECT '['||X.USR_ID||']'|| X.USR_NM FROM CM_0801T X WHERE X.USR_ID = B.SALE_EMP_NO) AS SALE_EMP_NM
+                  ,B.SALE_EMP_NO
+                  ,B.VINM_BKTX AS BANK_NM      -- 银行名称
+                  ,B.VINM_BKWB                 -- 汇票号
+                  ,B.VINM_BKCM                 -- 质押金额
+                  
+                  ---liuxueying update 现金时不显示是否还款，为汇票方式时显示是否还款 start
+                  ,CASE WHEN B.CERT_SECU_CD = 'L'  THEN NVL(B.REL_STATUS,'N') 
+                                     ELSE '' END AS VINM_REPAY_YN 
+                  ---liuxueying update end
+                  
+              FROM SA_0301T A, SA_0121T B, SA_0201T C
+             WHERE A.KMVIN = B.VIN_NO
+               AND A.KMDELR = B.ORD_DLR_CD
+               AND B.CONTRACT_NO = C.CONTRACT_NO(+)
+               AND B.VIN_NO = C.VIN_NO(+)
+               AND B.ORD_DLR_CD = C.DLR_CD(+)
+               AND A.KMOPT IN ('J3', 'J4')
+               AND A.KMDELR = #{sDlrCd}
+        ) WHERE 1 = 1
+            <if test='sVinNo != null and sVinNo != ""'>
+                AND VIN_NO = #{sVinNo}
+            </if>
+        ORDER BY WORK_DATE DESC,  VIN_NO ASC
+    </select>
+
+    <select id="selectRetailItemReportDetailConditionCnt" parameterType="RetailItemReportSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE FROM (
+            SELECT TO_DATE(A.KMTRDY||A.KMTRTM, 'YYYYMMDD HH24MISS') AS WORK_DATE
+                  ,A.KMOPT
+                  ,B.VIN_NO
+                  ,B.CARLINE_CD
+                  ,FN_GET_CARLINE_NM_NC(B.CARLINE_CD) AS CARLINE_NM
+                  ,B.MODEL_CD
+                  ,FN_GET_MODEL_TP_NM(B.MODEL_CD, B.OCN_CD) AS MODEL_NM
+                  ,B.OCN_CD
+                  ,FN_GET_OCN_NM_NC(B.MODEL_CD, B.OCN_CD) AS OCN_NM
+                  ,B.EXT_COLOR_CD
+                  ,FN_GET_EXT_COLOR_NM_NC(B.EXT_COLOR_CD) AS EXT_COLOR_NM
+                  ,B.INT_COLOR_CD
+                  ,B.ORD_TP
+                  ,B.MANUFACT_YY_MM_DT
+                  ,B.CUST_SALE_DT
+                  ,B.PLT_GI_DT
+                  ,B.CAR_STAT_CD
+                  ,DECODE(A.KMOPT, 'J1', 1, 'J2', -1) AS PRNC_QTY
+                  --,(SELECT X.CUST_NM FROM SA_0202T X WHERE X.CONTRACT_NO = C.CONTRACT_NO AND X.PARTNER_TP = 'C') AS CUST_NM
+                  ,A.CUSTNM AS CUST_NM
+                  ,C.CONTRACT_NO
+                  ,'R' AS CONTROL_TP
+                  ,(SELECT '['||X.USR_ID||']'|| X.USR_NM FROM CM_0801T X WHERE X.USR_ID = B.SALE_EMP_NO) AS SALE_EMP_NM
+                  ,B.SALE_EMP_NO
+              FROM SA_0301T A, SA_0121T B, SA_0201T C
+             WHERE A.KMVIN = B.VIN_NO
+               AND A.KMDELR = B.ORD_DLR_CD
+               AND B.CONTRACT_NO = C.CONTRACT_NO(+)
+               AND B.VIN_NO = C.VIN_NO(+)
+               AND B.ORD_DLR_CD = C.DLR_CD(+)
+               AND A.KMOPT IN ('J1', 'J2', 'J5')
+               AND A.KMDELR = #{sDlrCd}
+            UNION ALL
+            SELECT TO_DATE(A.KMTRDY||A.KMTRTM, 'YYYYMMDD HH24MISS') AS WORK_DATE
+                  ,A.KMOPT
+                  ,B.VIN_NO
+                  ,B.CARLINE_CD
+                  ,FN_GET_CARLINE_NM_NC(B.CARLINE_CD) AS CARLINE_NM
+                  ,B.MODEL_CD
+                  ,FN_GET_MODEL_TP_NM(B.MODEL_CD, B.OCN_CD) AS MODEL_NM
+                  ,B.OCN_CD
+                  ,FN_GET_OCN_NM_NC(B.MODEL_CD, B.OCN_CD) AS OCN_NM
+                  ,B.EXT_COLOR_CD
+                  ,FN_GET_EXT_COLOR_NM_NC(B.EXT_COLOR_CD) AS EXT_COLOR_NM
+                  ,B.INT_COLOR_CD
+                  ,B.ORD_TP
+                  ,B.MANUFACT_YY_MM_DT
+                  ,B.CUST_SALE_DT
+                  ,B.PLT_GI_DT
+                  ,B.CAR_STAT_CD
+                  ,DECODE(A.KMOPT, 'J3', 1, 'J4', -1) AS PRNC_QTY
+                  ,'' AS CUST_NM
+                  ,'' AS CONTRACT_NO
+                  ,'L' AS CONTROL_TP
+                  ,(SELECT '['||X.USR_ID||']'|| X.USR_NM FROM CM_0801T X WHERE X.USR_ID = B.SALE_EMP_NO) AS SALE_EMP_NM
+                  ,B.SALE_EMP_NO
+              FROM SA_0301T A, SA_0121T B, SA_0201T C
+             WHERE A.KMVIN = B.VIN_NO
+               AND A.KMDELR = B.ORD_DLR_CD
+               AND B.CONTRACT_NO = C.CONTRACT_NO(+)
+               AND B.VIN_NO = C.VIN_NO(+)
+               AND B.ORD_DLR_CD = C.DLR_CD(+)
+               AND A.KMOPT IN ('J3', 'J4')
+               AND A.KMDELR = #{sDlrCd}
+        ) WHERE 1 = 1
+            <if test='sVinNo != null and sVinNo != ""'>
+                AND VIN_NO = #{sVinNo}
+            </if>
+    </select>
+
+</mapper>

@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.prm.service.dao.PromotionDAO">
+
+	<!-- 프로모션 목록  -->
+	<select id="selectPromotionByCondition" parameterType="PromotionSearchVO" resultType="PromotionVO">
+        SELECT SA0113.DLR_CD,SA0113.PROMOTION_CD,SA0113.PROMOTION_NM,SA0113.PROMOTION_TP
+              ,SA0113.START_DT,SA0113.END_DT,SA0113.APPROVE_CD,SA0113.APPLY_TP,SA0113.PROMOTION_AMT
+              ,SA0113.IMS_BUDN_RATE,SA0113.DLR_BUDN_RATE,SA0113.REMARK,SA0113.PROMOTION_OWN_CD
+              ,SA0113.REG_USR_ID,SA0113.REG_DT,SA0113.UPDT_USR_ID,SA0113.UPDT_DT
+              ,SA0116.CONTRACT_TP
+          FROM SA_0113T SA0113
+              ,(SELECT DLR_CD,PROMOTION_CD,WM_CONCAT(CONTRACT_TP) AS CONTRACT_TP FROM SA_0116T
+                 GROUP BY DLR_CD,PROMOTION_CD
+               ) SA0116
+         WHERE 1=1
+           AND SA0113.DLR_CD = SA0116.DLR_CD(+)
+           AND SA0113.PROMOTION_CD = SA0116.PROMOTION_CD(+)
+           AND SA0113.USE_YN = 'Y'
+         <choose>
+            <when test='sGb != null and sGb != ""'>
+                AND SA0113.PROMOTION_CD IN (SELECT PROMOTION_CD FROM SA_0115T WHERE MODEL_CD = #{sModelCd})
+                AND #{sContractDt} BETWEEN SA0113.START_DT AND SA0113.END_DT
+                AND SA0113.APPROVE_CD = 'C'
+                AND SA0113.DLR_CD = #{sDlrCd}
+            </when>
+            <otherwise>
+            <if test='sPromotionTp != null and sPromotionTp != ""'>
+               AND PROMOTION_TP = #{sPromotionTp}
+            </if>
+            <if test='sApproveCd != null and sApproveCd != ""'>
+               AND APPROVE_CD = #{sApproveCd}
+            </if>
+            <if test='sStartDt != null and sEndDt != null'>
+               <![CDATA[
+               AND END_DT >= #{sStartDt}
+               AND START_DT <= #{sEndDt}
+               ]]>
+            </if>
+             ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "promotionTp"'>PROMOTION_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "promotionNm"'>PROMOTION_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "approveYn"'>APPROVE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "startDt"'>START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "endDt"'>END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "apprTp"'>APPR_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "promotionAmt"'>PROMOTION_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "promotionOwnCd"'>PROMOTION_OWN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    REG_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        REG_DT DESC
+                    </otherwise>
+                </choose>
+            </otherwise>
+        </choose>
+	</select>
+
+
+
+	<!-- 프로모션 목록 갯수  -->
+	<select id="selectPromotionByConditionCnt" parameterType="PromotionSearchVO" resultType="int">
+        SELECT COUNT(*) VALUE
+          FROM SA_0113T SA0113
+              ,(SELECT DLR_CD,PROMOTION_CD,WM_CONCAT(CONTRACT_TP) AS CONTRACT_TP FROM SA_0116T
+                 GROUP BY DLR_CD,PROMOTION_CD
+               ) SA0116
+         WHERE 1=1
+           AND SA0113.DLR_CD = SA0116.DLR_CD(+)
+           AND SA0113.PROMOTION_CD = SA0116.PROMOTION_CD(+)
+           AND SA0113.USE_YN = 'Y'
+         <choose>
+            <when test='sGb != null and sGb != ""'>
+                AND SA0113.PROMOTION_CD IN (SELECT PROMOTION_CD FROM SA_0115T WHERE MODEL_CD = #{sModelCd})
+                AND #{sContractDt} BETWEEN SA0113.START_DT AND SA0113.END_DT
+                AND SA0113.APPROVE_CD = 'C'
+                AND SA0113.DLR_CD = #{sDlrCd}
+            </when>
+            <otherwise>
+            <if test='sPromotionTp != null and sPromotionTp != ""'>
+               AND PROMOTION_TP = #{sPromotionTp}
+            </if>
+            <if test='sApproveCd != null and sApproveCd != ""'>
+               AND APPROVE_CD = #{sApproveCd}
+            </if>
+            <if test='sStartDt != null and sEndDt != null'>
+               <![CDATA[
+               AND END_DT >= #{sStartDt}
+               AND START_DT <= #{sEndDt}
+               ]]>
+            </if>
+            </otherwise>
+        </choose>
+	</select>
+
+
+    <!-- 프로모션 정보 등록  -->
+    <insert id="insertPromotion" parameterType="PromotionVO" >
+        INSERT INTO SA_0113T
+        ( DLR_CD
+         ,PROMOTION_CD
+         ,PROMOTION_NM
+         ,PROMOTION_TP
+         ,START_DT
+         ,END_DT
+         ,APPROVE_CD
+         ,APPLY_TP
+         ,PROMOTION_AMT
+         ,IMS_BUDN_RATE
+         ,DLR_BUDN_RATE
+         ,REMARK
+         ,USE_YN
+         ,REG_USR_ID
+         ,REG_DT
+         ,UPDT_USR_ID
+         ,UPDT_DT
+         ,PROMOTION_OWN_CD
+         ) VALUES
+        ( #{dlrCd}
+         ,'PRM'||(SELECT LPAD(NVL(MAX(SUBSTR(PROMOTION_CD,-10)),0) + 1,'10','0') FROM SA_0113T)
+         ,#{promotionNm}
+         ,#{promotionTp}
+         ,#{startDt}
+         ,#{endDt}
+         ,'A'
+         ,#{applyTp}
+         ,#{promotionAmt}
+         ,#{imsBudnRate}
+         ,#{dlrBudnRate}
+         ,#{remark}
+         ,'Y'
+         ,#{regUsrId}
+         ,SYSDATE
+         ,#{regUsrId}
+         ,SYSDATE
+         ,#{promotionOwnCd}
+         )
+    </insert>
+
+    <select id="selectPromotionCd" parameterType="String" resultType="String" >
+        SELECT PROMOTION_CD
+          FROM (
+                SELECT PROMOTION_CD AS PROMOTION_CD
+                  FROM SA_0113T
+                 WHERE 1=1
+                   AND DLR_CD = #{dlrCd}
+                 ORDER BY REG_DT DESC
+                )
+         WHERE ROWNUM = 1
+    </select>
+
+
+
+
+    <!-- 프로모션 대상고객 목록  -->
+    <select id="selectPromotionCustByCondition" parameterType="PromotionSearchVO" resultType="PromotionVO">
+        SELECT SA0114.DLR_CD,SA0114.PROMOTION_CD,SA0114.CUST_CD
+              ,SA0114.REG_USR_ID,SA0114.REG_DT,SA0114.UPDT_USR_ID,SA0114.UPDT_DT
+              ,(SELECT CUST_NM FROM CR_0101T WHERE DLR_CD = SA0114.DLR_CD AND CUST_NO = SA0114.CUST_CD) AS CUST_NM
+          FROM SA_0114T SA0114
+         WHERE 1=1
+           AND SA0114.DLR_CD = #{sDlrCd}
+           AND SA0114.PROMOTION_CD = #{sPromotionCd}
+    </select>
+
+
+    <!-- 프로모션 대상차종 목록  -->
+    <select id="selectPromotionTargetModelByCondition" parameterType="PromotionSearchVO" resultType="PromotionVO">
+        SELECT SA0115.DLR_CD,SA0115.PROMOTION_CD,SA0115.MODEL_CD
+             , FN_GET_MODEL_NM(SA0115.MODEL_CD) AS MODEL_NM
+             , FN_GET_MODEL_NM_NC(SA0115.MODEL_CD) AS MODEL_NM_NC
+             , SA0115.REG_USR_ID,SA0115.REG_DT,SA0115.UPDT_USR_ID,SA0115.UPDT_DT
+          FROM SA_0115T SA0115
+         WHERE 1=1
+           AND SA0115.DLR_CD = #{sDlrCd}
+           AND SA0115.PROMOTION_CD = #{sPromotionCd}
+    </select>
+
+    <!-- 프로모션 대상차종 목록 갯수 -->
+    <select id="selectPromotionTargetModelByConditionCnt" parameterType="PromotionSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0115T
+         WHERE DLR_CD = #{sDlrCd}
+           AND PROMOTION_CD = #{sPromotionCd}
+         <if test='sModelCd != null and sModelCd != null'>
+           AND MODEL_CD = #{sModelCd}
+         </if>
+    </select>
+
+    <!-- 프로모션 승인요청  -->
+    <update id="approvalReqPromotion" parameterType="PromotionVO" >
+        UPDATE SA_0113T
+           SET APPROVE_CD = 'B'
+         WHERE 1=1
+           AND DLR_CD = #{dlrCd}
+           AND PROMOTION_CD = #{promotionCd}
+    </update>
+
+
+    <!-- 프로모션 승인  -->
+    <update id="promotionApproval" parameterType="PromotionVO" >
+        UPDATE SA_0113T
+           SET APPROVE_CD = 'C'
+         WHERE 1=1
+           AND DLR_CD = #{dlrCd}
+           AND PROMOTION_CD = #{promotionCd}
+    </update>
+
+
+
+    <!-- 프로모션 삭제  -->
+    <update id="deletePromotion" parameterType="PromotionVO" >
+        UPDATE SA_0113T
+           SET USE_YN = 'N'
+         WHERE 1=1
+           AND DLR_CD = #{dlrCd}
+           AND PROMOTION_CD = #{promotionCd}
+    </update>
+
+
+    <!-- 프로모션 수정  -->
+    <update id="updatePromotion" parameterType="PromotionVO" >
+        UPDATE SA_0113T
+           SET PROMOTION_NM = #{promotionNm}
+              ,PROMOTION_TP = #{promotionTp}
+              ,START_DT = #{startDt}
+              ,END_DT = #{endDt}
+              ,APPLY_TP = #{applyTp}
+              ,PROMOTION_AMT = #{promotionAmt}
+              ,IMS_BUDN_RATE = #{imsBudnRate}
+              ,DLR_BUDN_RATE = #{dlrBudnRate}
+              ,REMARK = #{remark}
+              ,PROMOTION_OWN_CD = #{promotionOwnCd}
+              ,UPDT_USR_ID = #{updtUsrId}
+              ,UPDT_DT = SYSDATE
+         WHERE 1=1
+           AND DLR_CD = #{dlrCd}
+           AND PROMOTION_CD = #{promotionCd}
+    </update>
+
+
+    <!-- 프로모션 삭제(등록,수정 ==> 삭제후 insert)  -->
+    <delete id="deleteContractTp" parameterType="PromotionSaveVO" >
+        DELETE SA_0116T WHERE DLR_CD = #{dlrCd} AND PROMOTION_CD = #{promotionCd}
+    </delete>
+
+
+    <!-- 프로모션 INSERT (등록,수정 ==> 삭제후 insert)  -->
+    <insert id="createContractTp" parameterType="PromotionSaveVO" >
+        INSERT INTO SA_0116T (DLR_CD,PROMOTION_CD,CONTRACT_TP,REG_USR_ID,REG_DT)
+        VALUES (#{dlrCd},#{promotionCd},#{contractTp},#{regUsrId},SYSDATE)
+    </insert>
+
+
+    <!-- 프로모션 대상고객 등록 -->
+    <insert id="insertCust" parameterType="PromotionVO" >
+        INSERT INTO SA_0114T (DLR_CD,PROMOTION_CD,CUST_CD,REG_USR_ID,REG_DT)
+        VALUES (#{dlrCd},#{promotionCd},#{custCd},#{regUsrId},SYSDATE)
+    </insert>
+
+
+    <!-- 프로모션 대상고객 삭제  -->
+    <delete id="deleteCust" parameterType="PromotionSaveVO" >
+        DELETE SA_0114T WHERE DLR_CD = #{dlrCd} AND PROMOTION_CD = #{promotionCd} AND CUST_CD = #{custCd}
+    </delete>
+
+
+
+    <!-- 프로모션 대상모델 등록 -->
+    <insert id="insertModel" parameterType="PromotionVO" >
+        INSERT INTO SA_0115T (DLR_CD,PROMOTION_CD,MODEL_CD,REG_USR_ID,REG_DT)
+        VALUES (#{dlrCd},#{promotionCd},#{modelCd},#{regUsrId},SYSDATE)
+    </insert>
+
+
+    <!-- 프로모션 대상모델 삭제  -->
+    <delete id="deleteModel" parameterType="PromotionSaveVO" >
+        DELETE SA_0115T WHERE DLR_CD = #{dlrCd} AND PROMOTION_CD = #{promotionCd} AND MODEL_CD = #{modelCd}
+    </delete>
+
+
+    <!-- 프로모션 대상고객 등록 -->
+    <insert id="insertPromotionCust" parameterType="PromotionVO" >
+        INSERT INTO SA_0114T (DLR_CD,PROMOTION_CD,CUST_CD,REG_USR_ID,REG_DT)
+        VALUES (#{dlrCd},#{promotionCd},#{custCd},#{regUsrId},SYSDATE)
+    </insert>
+
+
+    <!-- 프로모션 대상고객  -->
+    <select id="selectPromotionCustByKey" parameterType="map" resultType="PromotionVO">
+        SELECT DLR_CD,PROMOTION_CD,CUST_CD,REG_USR_ID,REG_DT,UPDT_USR_ID,UPDT_DT
+          FROM SA_0114T
+         WHERE 1=1
+           AND DLR_CD = #{dlrCd}
+           AND PROMOTION_CD = #{promotionCd}
+           AND CUST_CD = #{custCd}
+    </select>
+
+
+</mapper>

@@ -1,0 +1,367 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : ViewInfoDao_SqlMap.xml
+    Description : 화면정보에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 1. 18.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 18.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO">
+
+    <!-- 화면정보를 등록한다. -->
+    <insert id="insertViewInfo" parameterType="ViewInfoVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.insertViewInfo] */
+        INSERT INTO CM_0809T(
+            SYS_CD
+            ,VIEW_ID
+            ,VIEW_NM
+            ,VIEW_INFO_CONT
+            ,VIEW_URL
+            ,VIEW_TP
+            ,MESG_KEY
+            ,SORT_ORDER
+            ,WEB_MOBILE_DSTIN_CD
+            ,DISPLAY_YN
+            ,T_CD
+            ,ICON_NM
+            ,REG_DT
+            ,REG_USR_ID
+        )VALUES(
+            #{sysCd}
+            ,#{viewId}
+            ,#{viewNm}
+            ,#{viewInfoCont}
+            ,#{viewUrl}
+            ,#{viewTp}
+            ,#{mesgKey}
+            ,#{sortOrder}
+            ,#{webMobileDstinCd}
+            ,#{displayYn}
+            ,#{tCd}
+            ,#{iconNm}
+            ,SYSDATE
+            ,#{regUsrId}
+        )
+    </insert>
+
+    <!-- 화면정보 정보를 수정한다. -->
+    <update id="updateViewInfo" parameterType="ViewInfoVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.updateViewInfo] */
+        UPDATE CM_0809T SET
+            VIEW_NM = #{viewNm}
+            ,VIEW_INFO_CONT = #{viewInfoCont}
+            ,VIEW_URL = #{viewUrl}
+            ,VIEW_TP = #{viewTp}
+            ,MESG_KEY = #{mesgKey}
+            ,SORT_ORDER = #{sortOrder}
+            ,DISPLAY_YN = #{displayYn}
+            ,T_CD = #{tCd}
+            ,ICON_NM = #{iconNm}
+            ,UPDT_USR_ID = #{updtUsrId}
+            ,UPDT_DT = SYSDATE
+        WHERE VIEW_ID = #{viewId}
+    </update>
+
+    <!-- 화면정보 정보를 삭제한다. -->
+    <update id="deleteViewInfo" parameterType="ViewInfoVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.deleteViewInfo] */
+        UPDATE CM_0809T SET
+            USE_YN = 'N'
+            ,UPDT_USR_ID = #{updtUsrId}
+            ,UPDT_DT = SYSDATE
+        WHERE VIEW_ID = #{viewId}
+    </update>
+
+    <!-- 화면정보를 조회한다. -->
+    <select id="selectViewInfoByKey" parameterType="map" resultType="ViewInfoVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.selectViewInfoByKey] */
+        SELECT * FROM CM_0809T
+        WHERE VIEW_ID = #{viewId}
+    </select>
+
+    <!-- 최근등록한 화면ID를 조회한다. -->
+    <select id="selectLastViewId" parameterType="string" resultType="string">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.selectLastViewId] */
+        SELECT MAX(VIEW_ID) FROM CM_0809T
+        WHERE
+            VIEW_ID != 'VIEW_ROOT'
+            AND SYS_CD = #{value}
+    </select>
+
+    <!-- 화면정보 목록을 조회한다. -->
+    <select id="selectViewInfosBySysCd" parameterType="string" resultType="ViewInfoVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.selectViewInfosBySysCd] */
+        SELECT
+            VIEW_ID
+            ,VIEW_URL
+        FROM CM_0809T
+        WHERE
+            SYS_CD = #{value}
+            AND VIEW_TP = '01'
+            AND DISPLAY_YN = 'Y'
+            AND USE_YN = 'Y'
+    </select>
+
+    <!-- 화면정보 목록을 조회한다. -->
+    <select id="selectViewInfosByCondition" parameterType="ViewInfoSearchVO" resultType="ViewInfoVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.selectViewInfosByCondition] */
+        SELECT V1.*, V2.PARENT_VIEW_ID
+        FROM CM_0809T V1
+        INNER JOIN CM_0808T V2 ON V1.VIEW_ID = V2.CHILD_VIEW_ID
+        WHERE
+            V1.USE_YN = 'Y'
+            AND V2.USE_YN = 'Y'
+            AND V1.SYS_CD = #{sSysCd}
+            AND V1.WEB_MOBILE_DSTIN_CD = #{sWebMobileDstinCd}
+            AND V2.PARENT_VIEW_ID = #{sParentViewId}
+            <if test='sViewId != null and sViewId != ""'>
+               <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sViewId,"*")'>
+                        <bind name='sViewId' value='@org.apache.commons.lang3.StringUtils@replace(sViewId, "*", "%")' />
+                          AND V1.VIEW_ID LIKE #{sViewId}
+                    </when>
+                    <otherwise>
+                          AND V1.VIEW_ID = #{sViewId}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sViewNm != null and sViewNm != ""'>
+               <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sViewNm,"*")'>
+                        <bind name='sViewNm' value='@org.apache.commons.lang3.StringUtils@replace(sViewNm, "*", "%")' />
+                          AND V1.VIEW_NM LIKE #{sViewNm}
+                    </when>
+                    <otherwise>
+                          AND V1.VIEW_NM = #{sViewNm}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sViewTp != null and sViewTp != ""'>
+                AND V1.VIEW_TP = #{sViewTp}
+            </if>
+
+            <if test='sDisplayYn != null and sDisplayYn != ""'>
+                AND V1.DISPLAY_YN = #{sDisplayYn}
+            </if>
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "viewId"'>V1.VIEW_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "viewNm"'>V1.VIEW_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "viewInfoCont"'>V1.VIEW_INFO_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "viewUrl"'>V1.VIEW_URL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "viewTp"'>V1.VIEW_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "mesgKey"'>V1.MESG_KEY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "sortOrder"'>V1.SORT_ORDER <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "displayYn"'>V1.DISPLAY_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "tCd"'>V1.T_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "iconNm"'>V1.ICON_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "regUsrId"'>V1.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "regDt"'>V1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "updtUsrId"'>V1.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "updtDt"'>V1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            V1.SORT_ORDER ASC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                V1.SORT_ORDER  ASC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 즐겨찾기 정보를 등록한다. -->
+    <insert id="insertFavorite" parameterType="map">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.insertFavorite] */
+        INSERT INTO CM_0811T(
+            USR_ID
+            ,VIEW_ID
+        )VALUES(
+            #{usrId}
+            ,#{viewId}
+        )
+    </insert>
+
+    <!-- 즐겨찾기 정보를 삭제한다. -->
+    <delete id="deleteFavorite" parameterType="map">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.deleteFavorite] */
+        DELETE FROM CM_0811T
+        WHERE USR_ID = #{usrId}
+           AND VIEW_ID = #{viewId}
+    </delete>
+
+    <!-- 즐겨찾기 정보를 삭제한다. -->
+    <delete id="deleteFavoriteByViewId" parameterType="string">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.deleteFavoriteByViewId] */
+        DELETE FROM CM_0811T
+        WHERE VIEW_ID = #{value}
+    </delete>
+
+    <!-- 즐겨찾기 화면 정보를 조회한다. -->
+    <select id="selectFavoriteByKey" parameterType="map" resultType="FavoritesVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.selectFavoriteByKey] */
+        SELECT *
+        FROM CM_0811T
+        WHERE USR_ID = #{usrId}
+            AND VIEW_ID = #{viewId}
+    </select>
+
+    <!-- 즐겨찾기 정보 목록을 조회한다. -->
+    <select id="selectFavorites" parameterType="map" resultType="FavoritesVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.selectFavorites] */
+        SELECT
+            T1.USR_ID
+            ,T1.VIEW_ID
+            ,T2.VIEW_URL
+            ,T2.MESG_KEY
+            ,T2.VIEW_NM
+        FROM CM_0811T T1
+        INNER JOIN CM_0809T T2 ON T1.VIEW_ID = T2.VIEW_ID
+        INNER JOIN CM_0810T T3 ON T1.VIEW_ID = T3.VIEW_ID AND T1.USR_ID = T3.REF_ID AND T3.REF_TP = 'U'
+        WHERE
+            T1.USR_ID = #{usrId}
+            AND T2.WEB_MOBILE_DSTIN_CD = #{webMobileDstinCd}
+            AND T2.DISPLAY_YN = 'Y'
+            AND T2.USE_YN = 'Y'
+            AND T3.USE_YN = 'Y'
+    </select>
+
+    <!-- 사용자 메뉴 목록 구성을 위한 메뉴 리스트를 조회한다 -->
+    <select id="selectMenuListByUser" parameterType="map" resultType="MenuVO">
+        SELECT
+            P1.PARENT_VIEW_ID
+            ,P1.CHILD_VIEW_ID
+            ,P3.VIEW_NM
+            ,P3.VIEW_TP
+            ,P4.PERM_YN
+            ,P3.VIEW_URL
+            ,P3.SORT_ORDER
+            ,P3.T_CD
+            ,P3.MESG_KEY
+            ,P3.ICON_NM
+            ,P4.MASK
+            ,P4.PERMISSIONS
+        FROM CM_0808T P1
+        INNER JOIN CM_0809T P2 ON P1.PARENT_VIEW_ID = P2.VIEW_ID
+        INNER JOIN CM_0809T P3 ON P1.CHILD_VIEW_ID = P3.VIEW_ID
+        INNER JOIN (
+            SELECT
+                V1.VIEW_ID
+                ,CASE WHEN V2.VIEW_ID IS NULL OR V2.USE_YN='N' THEN 'N' ELSE 'Y' END AS PERM_YN
+                ,V2.MASK
+                ,V2.PERMISSIONS
+                ,V1.VIEW_TP
+            FROM CM_0809T V1
+            LEFT JOIN (
+                SELECT VIEW_ID, MASK, PERMISSIONS, USE_YN
+                FROM CM_0810T
+                WHERE REF_ID = #{usrId} AND REF_TP = 'U'
+            ) V2 ON V1.VIEW_ID = V2.VIEW_ID
+            WHERE V1.DISPLAY_YN = 'Y'
+              AND V1.VIEW_TP = '01'
+        ) P4 ON P1.CHILD_VIEW_ID = P4.VIEW_ID
+        WHERE
+            P1.SYS_CD = #{sysCd}
+            AND P1.USE_YN = 'Y'
+            AND P2.USE_YN = 'Y'
+            AND P3.USE_YN = 'Y'
+            AND P3.WEB_MOBILE_DSTIN_CD = #{webMobileDstinCd}
+            AND P2.VIEW_TP = '01'
+            AND P3.VIEW_TP = '01'
+            AND P4.VIEW_TP = '01'
+    </select>
+
+    <!-- tCd를 이용해서 화면을 조회한다. -->
+    <select id="selectViewInfoByTcd"  parameterType="map" resultType="ViewInfoVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.selectViewInfoByTcd] */
+        SELECT * FROM CM_0809T WHERE T_CD = #{tCd} AND DISPLAY_YN = 'Y' AND USE_YN = 'Y'
+    </select>
+
+    <!-- 화면계층 정보를 등록한다. -->
+    <insert id="insertViewHierarchy" parameterType="ViewInfoVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.insertViewHierarchy] */
+        INSERT INTO CM_0808T(
+            SYS_CD
+            ,PARENT_VIEW_ID
+            ,CHILD_VIEW_ID
+            ,REG_DT
+            ,REG_USR_ID
+        )VALUES(
+            #{sysCd}
+            ,#{parentViewId}
+            ,#{viewId}
+            ,SYSDATE
+            ,#{regUsrId}
+        )
+    </insert>
+
+    <!-- 화면계층 정보를  업데이트 한다. -->
+    <delete id="updateViewHierarchy" parameterType="ViewInfoVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.updateViewHierarchy] */
+        UPDATE CM_0808T SET
+            USE_YN=#{useYn}
+            ,UPDT_USR_ID = #{updtUsrId}
+            ,UPDT_DT = SYSDATE
+        WHERE
+            CHILD_VIEW_ID = #{viewId}
+            AND PARENT_VIEW_ID = #{parentViewId}
+    </delete>
+
+    <!-- 화면계층 정보를 삭제한다. -->
+    <delete id="deleteViewHierarchy" parameterType="ViewInfoVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.deleteViewHierarchy] */
+        UPDATE CM_0808T SET
+            USE_YN='N'
+            ,UPDT_USR_ID = #{updtUsrId}
+            ,UPDT_DT = SYSDATE
+        WHERE
+            CHILD_VIEW_ID = #{viewId}
+            AND PARENT_VIEW_ID = #{parentViewId}
+    </delete>
+
+    <!-- 화면정보를 조회한다. -->
+    <select id="selectViewHierarchyByKey" parameterType="map" resultType="ViewInfoVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.selectViewHierarchyByKey] */
+        SELECT * FROM CM_0808T
+        WHERE CHILD_VIEW_ID = #{viewId}
+          AND PARENT_VIEW_ID = #{parentViewId}
+    </select>
+
+    <!-- 화면정보 목록을 조회한다. -->
+    <select id="selectViewInfoTreeAll" parameterType="map" resultType="ViewHierarchyVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.ViewInfoDAO.selectViewInfoTreeAll] */
+        SELECT
+            T1.SYS_CD
+            ,T2.PARENT_VIEW_ID
+            ,NVL((SELECT VIEW_NM FROM CM_0809T WHERE VIEW_ID = T2.PARENT_VIEW_ID AND SYS_CD = T2.SYS_CD), 'VIEW_ROOT') AS PARENT_VIEW_NM
+            ,T2.CHILD_VIEW_ID
+            ,T1.VIEW_NM AS CHILD_VIEW_NM
+            ,T1.SORT_ORDER AS CHILD_SORT_ORDER
+            ,T1.VIEW_TP AS CHILD_VIEW_TP
+        FROM CM_0809T T1
+        INNER JOIN CM_0808T T2 ON T1.VIEW_ID = T2.CHILD_VIEW_ID AND T1.SYS_CD = T2.SYS_CD
+        WHERE
+            T1.SYS_CD = #{sysCd}
+            AND T1.USE_YN = 'Y'
+            AND T2.USE_YN = 'Y'
+            AND T1.WEB_MOBILE_DSTIN_CD = #{webMobileDstinCd}
+            <if test='displayYn != null and displayYn != ""'>
+                AND T1.DISPLAY_YN = #{displayYn}
+            </if>
+            <if test='viewTp != null and viewTp != ""'>
+                AND T1.VIEW_TP = #{viewTp}
+            </if>
+    </select>
+</mapper>

@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.cmm.service.dao.SalesCommonDAO">
+
+    <!-- 로그인된 딜러로 사업부,사업소,성,시를 조회.  -->
+    <select id="selectDealerInfo" parameterType="DealerSearchVO" resultType="DealerVO">
+        SELECT CM0101.DLR_CD,CM0101.DLR_NM
+             , CM0101.SDPT_CD,(SELECT DIVI_NM FROM CM_2501T WHERE DIVI_CD = CM0101.SDPT_CD) AS SDPT_NM
+             , CM0101.DIST_OFFICE_CD,(SELECT OFF_NM FROM CM_2601T WHERE OFF_CD = CM0101.DIST_OFFICE_CD AND DIVI_CD = CM0101.SDPT_CD) AS DIST_OFFICE_NM
+             , CM0101.SALE_DLR_SUNG_CD,(SELECT CSTL_NM FROM CM_2701T WHERE CSTL_CD = CM0101.SALE_DLR_SUNG_CD) AS SALE_DLR_SUNG_NM
+             , CM0101.SALE_DLR_CITY_CD,(SELECT CITY_NM FROM CM_3201T WHERE CSTL_CD = CM0101.SALE_DLR_SUNG_CD AND CITY_CD = CM0101.SALE_DLR_CITY_CD ) AS SALE_DLR_CITY_NM
+          FROM CM_0101T CM0101
+         WHERE 1=1
+           AND CM0101.DLR_CD = #{sDlrCd}
+    </select>
+
+    <!-- 딜러마스터에서 사업부를 그룹핑하여 조회. (COUNT) -->
+    <select id="selectDealerSdptCnt" parameterType="DealerSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM (SELECT DISTINCT (CM0101.SDPT_CD) AS SDPT_CD,
+                                (SELECT DIVI_NM
+                                   FROM CM_2501T
+                                  WHERE DIVI_CD = CM0101.SDPT_CD) AS SDPT_NM
+                  FROM CM_0101T CM0101
+                 WHERE 1 = 1
+                   AND CM0101.SDPT_CD IS NOT NULL
+                   AND SDPT_CD <![CDATA[<>]]> 'S99'
+                 ORDER BY SDPT_CD ASC)
+    </select>
+
+    <!-- 딜러마스터에서 사업부를 그룹핑하여 조회.  -->
+    <select id="selectDealerSdpt" parameterType="DealerSearchVO" resultType="DealerVO">
+        SELECT DISTINCT (CM0101.SDPT_CD) AS SDPT_CD,
+                        (SELECT DIVI_NM FROM CM_2501T WHERE DIVI_CD = CM0101.SDPT_CD) AS SDPT_NM
+          FROM CM_0101T CM0101
+         WHERE 1 = 1
+           AND CM0101.SDPT_CD IS NOT NULL
+           AND SDPT_CD <![CDATA[<>]]> 'S99'
+         ORDER BY SDPT_CD ASC
+    </select>
+
+    <!-- 딜러마스터에서 사무소를 그룹핑하여 조회. (COUNT) -->
+    <select id="selectDealerOfficeCnt" parameterType="DealerSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM (SELECT DIST_OFFICE_CD, DIST_OFFICE_NM
+                  FROM (SELECT DISTINCT (CM0101.DIST_OFFICE_CD) AS DIST_OFFICE_CD,
+                                        (SELECT OFF_NM
+                                           FROM CM_2601T
+                                          WHERE OFF_CD = CM0101.DIST_OFFICE_CD
+                                            AND DIVI_CD = CM0101.SDPT_CD) AS DIST_OFFICE_NM,
+                                        CM0101.SDPT_CD
+                          FROM CM_0101T CM0101
+                         WHERE 1 = 1
+                           AND CM0101.DIST_OFFICE_CD IS NOT NULL
+                           AND CM0101.SDPT_CD = #{sSdptCd})
+                 WHERE DIST_OFFICE_NM IS NOT NULL)
+    </select>
+
+    <!-- 딜러마스터에서 사무소를 그룹핑하여 조회.  -->
+    <select id="selectDealerOffice" parameterType="DealerSearchVO" resultType="DealerVO">
+            SELECT DIST_OFFICE_CD
+                  ,DIST_OFFICE_NM
+              FROM (
+                    SELECT DISTINCT(CM0101.DIST_OFFICE_CD) AS DIST_OFFICE_CD
+                         ,(SELECT OFF_NM FROM CM_2601T WHERE OFF_CD = CM0101.DIST_OFFICE_CD AND DIVI_CD = CM0101.SDPT_CD) AS DIST_OFFICE_NM
+                         ,CM0101.SDPT_CD
+                      FROM CM_0101T CM0101
+                     WHERE 1=1
+                       AND CM0101.DIST_OFFICE_CD IS NOT NULL
+                       AND CM0101.SDPT_CD = #{sSdptCd}
+                    )
+             WHERE DIST_OFFICE_NM IS NOT NULL
+            ORDER BY DIST_OFFICE_CD ASC
+    </select>
+
+    <!-- 딜러마스터에서 전체 사무소 조회.  -->
+    <select id="selectAllDealerOffice" parameterType="string" resultType="DealerVO">
+        SELECT DIST_OFFICE_CD, DIST_OFFICE_NM
+          FROM (SELECT A.DIST_OFFICE_CD,
+                       '[ ' || (SELECT DIVI_NM
+                                  FROM CM_2501T
+                                 WHERE DIVI_CD = A.SDPT_CD) || ' ] ' ||
+                       (SELECT OFF_NM
+                          FROM CM_2601T
+                         WHERE OFF_CD = A.DIST_OFFICE_CD
+                           AND DIVI_CD = A.SDPT_CD) AS DIST_OFFICE_NM
+                  FROM CM_0101T A, SA_0439T B
+                 WHERE 1 = 1
+                   AND A.DLR_CD = B.MNG_DLR_CD
+                   AND A.DLR_CD != 'A07AA'
+                   AND B.USR_ID = #{sUsrId}
+                   AND A.DIST_OFFICE_CD != 'ZQ'
+                 GROUP BY A.DIST_OFFICE_CD, A.SDPT_CD)
+         WHERE DIST_OFFICE_NM IS NOT NULL
+    </select>
+
+    <select id="selectAllDealerOffice_back" parameterType="DealerSearchVO" resultType="DealerVO">
+         SELECT DISTINCT(A.DIST_OFFICE_CD) AS DIST_OFFICE_CD
+               ,'[ '||(SELECT DIVI_NM FROM CM_2501T WHERE DIVI_CD = A.SDPT_CD)||' ] '||
+                 (SELECT OFF_NM FROM CM_2601T WHERE OFF_CD = A.DIST_OFFICE_CD AND DIVI_CD = A.SDPT_CD) AS DIST_OFFICE_NM
+                 ,A.SDPT_CD
+          FROM CM_0101T A
+         WHERE 1=1
+           AND A.DIST_OFFICE_CD IS NOT NULL
+          ORDER BY A.SDPT_CD , A.DIST_OFFICE_CD
+    </select>
+
+    <!-- 딜러마스터에서 성을 그룹핑하여 조회. (COUNT) -->
+    <select id="selectDealerSungCnt" parameterType="DealerSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM (SELECT SALE_DLR_SUNG_CD, SALE_DLR_SUNG_NM
+                  FROM (SELECT DISTINCT (CM0101.SALE_DLR_SUNG_CD) AS SALE_DLR_SUNG_CD,
+                                        (SELECT CSTL_NM
+                                           FROM CM_2701T
+                                          WHERE CSTL_CD = CM0101.SALE_DLR_SUNG_CD) AS SALE_DLR_SUNG_NM,
+                                        CM0101.SDPT_CD
+                          FROM CM_0101T CM0101
+                         WHERE CM0101.SALE_DLR_SUNG_CD <![CDATA[<>]]> 'ZQ'
+                           AND CM0101.SALE_DLR_SUNG_CD IS NOT NULL
+                         <if test='sSdptCd != null and sSdptCd != ""'>
+                           AND CM0101.SDPT_CD = #{sSdptCd}
+                         </if>
+                         <if test='sDistOfficeCd != null and sDistOfficeCd != ""'>
+                           AND CM0101.DIST_OFFICE_CD = #{sDistOfficeCd}
+                         </if>
+                        )
+                 WHERE SALE_DLR_SUNG_NM IS NOT NULL
+                )
+    </select>
+
+    <!-- 딜러마스터에서 성을 그룹핑하여 조회.  -->
+    <select id="selectDealerSung" parameterType="DealerSearchVO" resultType="DealerVO">
+        SELECT SALE_DLR_SUNG_CD, SALE_DLR_SUNG_NM
+          FROM (SELECT DISTINCT (CM0101.SALE_DLR_SUNG_CD) AS SALE_DLR_SUNG_CD,
+                                (SELECT CSTL_NM
+                                   FROM CM_2701T
+                                  WHERE CSTL_CD = CM0101.SALE_DLR_SUNG_CD) AS SALE_DLR_SUNG_NM,
+                                CM0101.SDPT_CD
+                  FROM CM_0101T CM0101
+                 WHERE CM0101.SALE_DLR_SUNG_CD <![CDATA[<>]]> 'ZQ'
+                   AND CM0101.SALE_DLR_SUNG_CD IS NOT NULL
+                 <if test='sSdptCd != null and sSdptCd != ""'>
+                   AND CM0101.SDPT_CD = #{sSdptCd}
+                 </if>
+                 <if test='sDistOfficeCd != null and sDistOfficeCd != ""'>
+                   AND CM0101.DIST_OFFICE_CD = #{sDistOfficeCd}
+                 </if>
+                )
+         WHERE SALE_DLR_SUNG_NM IS NOT NULL
+         ORDER BY SALE_DLR_SUNG_CD ASC
+    </select>
+
+    <!-- 딜러마스터에서 도시를 그룹핑하여 조회. (COUNT) -->
+    <select id="selectDealerCityCnt" parameterType="DealerSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM (SELECT SALE_DLR_CITY_NM
+                  FROM (SELECT DISTINCT (CM0101.SALE_DLR_CITY_CD) AS SALE_DLR_CITY_CD,
+                                        (SELECT CITY_NM
+                                           FROM CM_3201T
+                                          WHERE CSTL_CD = CM0101.SALE_DLR_SUNG_CD
+                                            AND CITY_CD = CM0101.SALE_DLR_CITY_CD) AS SALE_DLR_CITY_NM,
+                                        CM0101.SDPT_CD,
+                                        CM0101.DIST_OFFICE_CD,
+                                        CM0101.SALE_DLR_SUNG_CD
+                          FROM CM_0101T CM0101
+                         WHERE 1 = 1
+                           AND CM0101.SALE_DLR_CITY_CD IS NOT NULL
+                         <if test='sSdptCd != null and sSdptCd != ""'>
+                           AND CM0101.SDPT_CD = #{sSdptCd}
+                         </if>
+                         <if test='sDistOfficeCd != null and sDistOfficeCd != ""'>
+                           AND CM0101.DIST_OFFICE_CD = #{sDistOfficeCd}
+                         </if>
+                         <if test='sSaleDlrSungCd != null and sSaleDlrSungCd != ""'>
+                           AND CM0101.SALE_DLR_SUNG_CD = #{sSaleDlrSungCd}
+                         </if>
+                        )
+                 WHERE SALE_DLR_CITY_NM IS NOT NULL)
+    </select>
+
+    <!-- 딜러마스터에서 도시를 그룹핑하여 조회.  -->
+    <select id="selectDealerCity" parameterType="DealerSearchVO" resultType="DealerVO">
+        SELECT SALE_DLR_CITY_CD,
+               SALE_DLR_CITY_NM
+          FROM (SELECT DISTINCT (CM0101.SALE_DLR_CITY_CD) AS SALE_DLR_CITY_CD,
+                                (SELECT CITY_NM
+                                   FROM CM_3201T
+                                  WHERE CSTL_CD = CM0101.SALE_DLR_SUNG_CD
+                                    AND CITY_CD = CM0101.SALE_DLR_CITY_CD) AS SALE_DLR_CITY_NM,
+                                CM0101.SDPT_CD,
+                                CM0101.DIST_OFFICE_CD,
+                                CM0101.SALE_DLR_SUNG_CD
+                  FROM CM_0101T CM0101
+                 WHERE 1 = 1
+                   AND CM0101.SALE_DLR_CITY_CD IS NOT NULL
+                 <if test='sSdptCd != null and sSdptCd != ""'>
+                   AND CM0101.SDPT_CD = #{sSdptCd}
+                 </if>
+                 <if test='sDistOfficeCd != null and sDistOfficeCd != ""'>
+                   AND CM0101.DIST_OFFICE_CD = #{sDistOfficeCd}
+                 </if>
+                 <if test='sSaleDlrSungCd != null and sSaleDlrSungCd != ""'>
+                   AND CM0101.SALE_DLR_SUNG_CD = #{sSaleDlrSungCd}
+                 </if>
+                )
+         WHERE SALE_DLR_CITY_NM IS NOT NULL
+         ORDER BY SALE_DLR_CITY_CD ASC
+    </select>
+
+    <!-- 딜러마스터에서 딜러를 조회. (COUNT) -->
+    <select id="selectDealerCnt" parameterType="DealerSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM (
+                SELECT DLR_CD,DLR_NM
+                  FROM CM_0101T CM0101
+                 WHERE 1=1
+                   AND CM0101.SDPT_CD = #{sSdptCd}
+                   AND CM0101.DIST_OFFICE_CD = #{sDistOfficeCd}
+                   AND CM0101.SALE_DLR_SUNG_CD = #{sSaleDlrSungCd}
+                   AND CM0101.SALE_DLR_CITY_CD = #{sSaleDlrCityCd}
+               )
+    </select>
+
+    <!-- 딜러마스터에서 딜러를 조회  -->
+    <select id="selectDealer" parameterType="DealerSearchVO" resultType="DealerVO">
+        SELECT DLR_CD,DLR_NM
+          FROM CM_0101T CM0101
+         WHERE 1=1
+           AND CM0101.SDPT_CD = #{sSdptCd}
+           AND CM0101.DIST_OFFICE_CD = #{sDistOfficeCd}
+           AND CM0101.SALE_DLR_SUNG_CD = #{sSaleDlrSungCd}
+           AND CM0101.SALE_DLR_CITY_CD = #{sSaleDlrCityCd}
+    </select>
+
+    <!-- 로그인한 USER의 심사등급을 가져온다.  -->
+    <select id="selectUserEvalGrade" parameterType="map" resultType="String">
+        SELECT NVL(MAX(EVAL_GRADE_CD),0) AS EVAL_GRADE_CD
+          FROM SA_0156T
+         WHERE 1=1
+           AND DLR_CD = #{dlrCd}
+           AND USR_ID = #{usrId}
+           AND WRK_DSTIN_CD = #{wrkDstinCd}
+    </select>
+
+    <!-- 총경리화면용 정보조회  -->
+    <select id="selectMobileMainSum" parameterType="MobileSumSrchVO" resultType="MobileSumVO">
+        SELECT CASE WHEN AS_TMONTH_SOLD <![CDATA[>]]> TMONTH_SOLD_CNT THEN 'DN'
+                    WHEN AS_TMONTH_SOLD <![CDATA[<]]> TMONTH_SOLD_CNT THEN 'UP'
+                    ELSE 'EQ' END AS MONTH_STAT,
+               TMONTH_SOLD_CNT,
+               CASE WHEN AS_TYEAR_SOLD <![CDATA[>]]> TYEAR_SOLD_CNT THEN 'DN'
+                    WHEN AS_TYEAR_SOLD <![CDATA[<]]> TYEAR_SOLD_CNT THEN 'UP'
+                    ELSE 'EQ' END AS YEAR_STAT,
+               TYEAR_SOLD_CNT,
+               STOCK_RATE,
+               STOCK_CNT
+          FROM (SELECT NVL((SELECT COUNT(*) AS TMONTH_SOLD_CNT
+                              FROM SA_0121T A
+                             WHERE TO_CHAR(A.CUST_SALE_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+                               AND A.CAR_STAT_CD = '70'
+                               AND A.ORD_DLR_CD = #{sDlrCd}), 0) AS AS_TMONTH_SOLD,
+                       NVL((SELECT COUNT(*) AS TMONTH_SOLD_CNT
+                              FROM SA_0121T A
+                             WHERE TO_CHAR(A.CUST_SALE_DT, 'YYYYMM') = TO_CHAR(SYSDATE, 'YYYYMM')
+                               AND A.CAR_STAT_CD = '70'
+                               AND A.ORD_DLR_CD = #{sDlrCd}), 0) AS TMONTH_SOLD_CNT,
+                       NVL((SELECT COUNT(*) AS TYEAR_SOLD_CNT
+                              FROM SA_0121T A
+                             WHERE TO_CHAR(A.CUST_SALE_DT, 'YYYY') = TO_CHAR(ADD_MONTHS(SYSDATE, -12), 'YYYY')
+                               AND A.CAR_STAT_CD = '70'
+                               AND A.ORD_DLR_CD = #{sDlrCd}), 0) AS AS_TYEAR_SOLD,
+                       NVL((SELECT COUNT(*) AS TYEAR_SOLD_CNT
+                              FROM SA_0121T A
+                             WHERE TO_CHAR(A.CUST_SALE_DT, 'YYYY') = TO_CHAR(SYSDATE, 'YYYY')
+                               AND A.CAR_STAT_CD = '70'
+                               AND A.ORD_DLR_CD = #{sDlrCd}), 0) AS TYEAR_SOLD_CNT,
+                       NVL((SELECT ROUND((SELECT COUNT(*)
+                                            FROM SA_0121T A
+                                          WHERE A.CAR_STAT_CD = '60'
+                                            AND A.ORD_DLR_CD = #{sDlrCd}) /
+                                        (DECODE((SELECT COUNT(*)
+                                                   FROM SA_0121T A
+                                                  WHERE TO_CHAR(A.CUST_SALE_DT, 'YYYYMM') BETWEEN TO_CHAR(ADD_MONTHS(SYSDATE, -3), 'YYYYMM') AND TO_CHAR(SYSDATE, 'YYYYMM')
+                                                    AND A.CAR_STAT_CD = '70'
+                                                    AND A.ORD_DLR_CD = #{sDlrCd}), 0, 1,
+                                                (SELECT COUNT(*)
+                                                   FROM SA_0121T A
+                                                  WHERE TO_CHAR(A.CUST_SALE_DT, 'YYYYMM') BETWEEN TO_CHAR(ADD_MONTHS(SYSDATE, -3), 'YYYYMM') AND TO_CHAR(SYSDATE, 'YYYYMM')
+                                                    AND A.CAR_STAT_CD = '70'
+                                                    AND A.ORD_DLR_CD = #{sDlrCd})) / 3) ,2) FROM DUAL), 0) AS STOCK_RATE,
+                       NVL((SELECT COUNT(*) AS STOCK_CNT
+                              FROM SA_0121T A
+                             WHERE A.CAR_STAT_CD = '60'
+                               AND A.ORD_DLR_CD = #{sDlrCd}), 0) AS STOCK_CNT
+                  FROM DUAL)
+    </select>
+</mapper>

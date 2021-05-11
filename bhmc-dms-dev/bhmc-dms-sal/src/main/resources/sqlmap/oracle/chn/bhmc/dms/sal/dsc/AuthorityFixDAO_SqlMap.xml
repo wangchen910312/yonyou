@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.dsc.service.dao.AuthorityFixDAO">
+
+    <!-- 메인 목록 갯수  -->
+    <select id="selectAuthorityFixMainsByConditionCnt" parameterType="AuthorityFixSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.dsc.service.dao.AuthorityFixDAO.selectAuthorityFixMainsByConditionCnt] */
+        SELECT COUNT(*)
+          FROM CM_0801T
+         WHERE 1 = 1
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sUsrId != null and sUsrId != ""'>
+             <choose>
+                 <when test='@org.apache.commons.lang3.StringUtils@contains(sUsrId,"*")'>
+                     <bind name='sUsrId' value='@org.apache.commons.lang3.StringUtils@replace(sUsrId, "*", "%")' />
+                     AND USR_ID LIKE #{sUsrId}
+                 </when>
+                 <otherwise>
+                     AND USR_ID = #{sUsrId}
+                 </otherwise>
+             </choose>
+         </if>
+         <if test='sUsrNm != null and sUsrNm != ""'>
+             <choose>
+                 <when test='@org.apache.commons.lang3.StringUtils@contains(sUsrNm,"*")'>
+                     <bind name='sUsrNm' value='@org.apache.commons.lang3.StringUtils@replace(sUsrNm, "*", "%")' />
+                     AND USR_NM LIKE #{sUsrNm}
+                 </when>
+                 <otherwise>
+                     AND USR_NM = #{sUsrNm}
+                 </otherwise>
+             </choose>
+         </if>
+         <if test='sPstnCd != null and sPstnCd != ""'>
+           AND PSTN_CD = #{sPstnCd}
+         </if>
+    </select>
+
+	<!-- 조회 목록  -->
+	<select id="selectAuthorityFixMainsByCondition" parameterType="AuthorityFixSearchVO" resultType="AuthorityFixVO">
+    /* [chn.bhmc.dms.sal.dsc.service.dao.AuthorityFixDAO.selectAuthorityFixMainsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A.DLR_CD
+                     , A.USR_ID
+                     , A.USR_NM
+                     ,(SELECT X.TSK_NM FROM CM_2801T X WHERE X.CMP_TP = '20' AND X.TSK_CD = A.TSK_CD) AS DEPT_CD
+                     , A.PSTN_CD
+                  FROM CM_0801T A
+                 WHERE 1 = 1
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND A.DLR_CD = #{sDlrCd}
+                 </if>
+                 <if test='sUsrId != null and sUsrId != ""'>
+                     <choose>
+                         <when test='@org.apache.commons.lang3.StringUtils@contains(sUsrId,"*")'>
+                             <bind name='sUsrId' value='@org.apache.commons.lang3.StringUtils@replace(sUsrId, "*", "%")' />
+                             AND A.USR_ID LIKE #{sUsrId}
+                         </when>
+                         <otherwise>
+                             AND A.USR_ID = #{sUsrId}
+                         </otherwise>
+                     </choose>
+                 </if>
+                 <if test='sUsrNm != null and sUsrNm != ""'>
+                     <choose>
+                         <when test='@org.apache.commons.lang3.StringUtils@contains(sUsrNm,"*")'>
+                             <bind name='sUsrNm' value='@org.apache.commons.lang3.StringUtils@replace(sUsrNm, "*", "%")' />
+                             AND A.USR_NM LIKE #{sUsrNm}
+                         </when>
+                         <otherwise>
+                             AND A.USR_NM = #{sUsrNm}
+                         </otherwise>
+                     </choose>
+                 </if>
+                 <if test='sPstnCd != null and sPstnCd != ""'>
+                   AND A.PSTN_CD = #{sPstnCd}
+                 </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "usrId"'>A.USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "usrNm"'>A.USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "deptCd"'>A.DEPT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "pstnCd"'>A.PSTN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.USR_ID ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.USR_ID ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+    <!-- 서브 목록 갯수  -->
+    <select id="selectAuthorityFixSubsByConditionCnt" parameterType="AuthorityFixSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.dsc.service.dao.AuthorityFixDAO.selectAuthorityFixSubsByConditionCnt] */
+        SELECT COUNT(*)
+          FROM (
+                SELECT A.CMM_CD
+                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                      , A.SORT_ORDER    -- 정렬순서
+                  FROM CM_0303T A
+                  LEFT OUTER JOIN CM_0304T B
+                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                       AND A.CMM_CD = B.CMM_CD
+                       AND B.LANG_CD = #{sLangCd}
+                 WHERE A.CMM_GRP_CD = 'SAL155'   /*권한설정업무*/
+                   and A.USE_YN = 'Y'
+                ) A
+          LEFT OUTER JOIN SA_0156T B
+            ON A.CMM_CD = B.WRK_DSTIN_CD
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND B.DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sUsrId != null and sUsrId != ""'>
+           AND B.USR_ID = #{sUsrId}
+         </if>
+
+    </select>
+
+    <!-- 서브 목록 조회 -->
+    <select id="selectAuthorityFixSubsByCondition" parameterType="AuthorityFixSearchVO" resultType="AuthorityFixVO">
+    /* [chn.bhmc.dms.sal.dsc.service.dao.AuthorityFixDAO.selectAuthorityFixSubsByCondition] */
+    SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT #{sDlrCd} AS DLR_CD
+                     , #{sUsrId} AS USR_ID
+                     , A.CMM_CD     AS WRK_DSTIN_CD
+                     , A.CMM_CD_NM  AS WRK_DSTIN_NM
+                     , B.EVAL_GRADE_CD
+                  FROM (
+                        SELECT A.CMM_CD
+                              , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                              , A.SORT_ORDER    -- 정렬순서
+                          FROM CM_0303T A
+                          LEFT OUTER JOIN CM_0304T B
+                                ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                               AND A.CMM_CD = B.CMM_CD
+                               AND B.LANG_CD = #{sLangCd}
+                         WHERE A.CMM_GRP_CD = 'SAL155'   /*권한설정업무*/
+                           and A.USE_YN = 'Y'
+                        ) A
+                  LEFT OUTER JOIN SA_0156T B
+                    ON A.CMM_CD = B.WRK_DSTIN_CD
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND B.DLR_CD = #{sDlrCd}
+                 </if>
+                 <if test='sUsrId != null and sUsrId != ""'>
+                   AND B.USR_ID = #{sUsrId}
+                 </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "wrkDstinNm"'>WRK_DSTIN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "evalGradeCd"'>B.EVAL_GRADE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.SORT_ORDER ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.SORT_ORDER ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+    <!-- 사용자 리스트 -->
+    <select id="selectAuthorityFixUsrIdList" parameterType="AuthorityFixSearchVO" resultType="AuthorityFixVO">
+    /* [chn.bhmc.dms.sal.dsc.service.dao.AuthorityFixDAO.selectAuthorityFixUsrIdList] */
+        SELECT USR_ID
+             , '[' || USR_ID || '] ' || USR_NM  AS USR_NM
+          FROM CM_0801T
+         WHERE 1 = 1
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND DLR_CD = #{sDlrCd}
+         </if>
+    </select>
+
+
+    <!-- 권한설정이 유무 확인 -->
+    <select id="selectAuthorityFixCnt" parameterType="AuthorityFixVO" resultType="int">
+    /* [chn.bhmc.dms.sal.dsc.service.dao.AuthorityFixDAO.selectAuthorityFixCnt] */
+        SELECT COUNT(*)
+          FROM SA_0156T
+         WHERE DLR_CD = #{dlrCd}
+           AND USR_ID = #{usrId}
+          AND WRK_DSTIN_CD = #{wrkDstinCd}
+    </select>
+
+    <!-- 권한설정 저장 -->
+    <insert id="insertAuthorityFix" parameterType="AuthorityFixVO">
+    /* [chn.bhmc.dms.sal.dsc.service.dao.AuthorityFixDAO.insertAuthorityFix] */
+        INSERT INTO SA_0156T(
+              DLR_CD                   --딜러코드
+             ,USR_ID                   --사용자ID
+             ,WRK_DSTIN_CD             --업무구분코드
+             ,EVAL_GRADE_CD            --심사등급코드
+             ,REG_USR_ID               --등록자ID
+             ,REG_DT                   --등록일자
+             ,UPDT_USR_ID              --수정자ID
+             ,UPDT_DT                  --수정일자
+        )
+        VALUES
+        (
+              #{dlrCd}                   --딜러코드
+             ,#{usrId}                   --사용자ID
+             ,#{wrkDstinCd}              --업무구분코드
+             ,#{evalGradeCd}             --심사등급코드
+             ,#{regUsrId}                --등록자ID
+             ,SYSDATE                   --등록일자
+             ,#{updtUsrId}               --수정자ID
+             ,SYSDATE                  --수정일자
+        )
+
+    </insert>
+
+    <!-- 권한설정 수정 -->
+    <update id="updateAuthorityFix" parameterType="AuthorityFixVO">
+    /* [chn.bhmc.dms.sal.dsc.service.dao.AuthorityFixDAO.updateAuthorityFix] */
+        UPDATE SA_0156T    --딜러권한설정정보
+           SET EVAL_GRADE_CD     = #{evalGradeCd}             --심사등급코드
+              ,UPDT_USR_ID       = #{updtUsrId}               --수정자ID
+              ,UPDT_DT           = SYSDATE                    --수정일자
+         WHERE 1 = 1
+           AND DLR_CD            = #{dlrCd}                   --딜러코드
+           AND USR_ID            = #{usrId}                   --사용자ID
+           AND WRK_DSTIN_CD      = #{wrkDstinCd}              --업무구분코드
+    </update>
+
+</mapper>

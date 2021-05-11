@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : MembershipGradeHisDAO_SqlMap.xml
+    Description : 멤버십 카드관리
+    author Hyun Ho Kim
+    since 2016. 04. 06.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 04. 06.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.dmm.service.dao.MembershipGradeHisDAO">
+
+    <insert id="insertMembershipGradeHis"  parameterType="MembershipGradeHisVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipGradeHisDAO.insertMembershipGradeHis] */
+        INSERT INTO CR_0804T    --멤버쉽등급이력
+        (
+            DLR_CD                   --딜러코드
+            ,MEMBERSHIP_NO            --멤버쉽번호
+            ,GRADE_CHG_HIS_SEQ        --등급변경이력일련번호
+            ,BEF_GRADE_CD             --이전등급코드
+            ,AFT_GRADE_CD             --이후등급코드
+            ,GRADE_CHG_DT             --등급변경일자
+            ,USE_YN                   --사용여부
+            ,REG_USR_ID               --등록자ID
+            ,REG_DT                   --등록일자
+        )
+        VALUES
+        (
+            #{dlrCd}                   --딜러코드
+            ,#{membershipNo}            --멤버쉽번호
+            ,SEQ_CR_0804T.NEXTVAL          --등급변경이력일련번호
+            ,#{befGradeCd}              --이전등급코드
+            ,#{aftGradeCd}              --이후등급코드
+            ,SYSDATE              --등급변경일자
+            ,#{useYn}                   --사용여부
+            ,#{regUsrId}                --등록자ID
+            ,SYSDATE                   --등록일자
+        )
+    </insert>
+
+        <!-- 멤버십 포인트 이력 목록수를 조회한다. -->
+    <select id="selectMembershipGradeHissByConditionCnt" parameterType="MembershipGradeHisSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipGradeHisDAO.selectMembershipGradeHissByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0804T
+        WHERE   DLR_CD = #{sDlrCd}
+        AND     MEMBERSHIP_NO = #{sMembershipNo}
+    </select>
+
+    <!-- 멤버십 포인트 이력  정보 목록을 조회한다. -->
+    <select id="selectMembershipGradeHissByCondition" parameterType="MembershipGradeHisSearchVO" resultType="MembershipGradeHisVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipGradeHisDAO.selectMembershipGradeHissByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT  DLR_CD
+                            ,MEMBERSHIP_NO
+                            ,GRADE_CHG_HIS_SEQ
+                            ,BEF_GRADE_CD
+                            ,AFT_GRADE_CD
+                            ,GRADE_CHG_DT
+                            ,USE_YN
+                            ,REG_USR_ID
+                            ,REG_DT
+                            ,UPDT_USR_ID
+                            ,UPDT_DT
+                    FROM    CR_0804T
+                    WHERE   DLR_CD = #{sDlrCd}
+                    AND     MEMBERSHIP_NO = #{sMembershipNo}
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "befGradeCd"'>BEF_GRADE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "aftGradeCd"'>AFT_GRADE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "gradeChgDt"'>GRADE_CHG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        GRADE_CHG_DT DESC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            GRADE_CHG_DT DESC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+</mapper>

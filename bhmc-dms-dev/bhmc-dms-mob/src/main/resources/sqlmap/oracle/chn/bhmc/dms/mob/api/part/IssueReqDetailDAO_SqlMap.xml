@@ -1,0 +1,1791 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : IssueReqDetailDAO_SqlMap.xml
+    Description : 구매요청상세 관리.
+    author In Bo Shim
+    since 2016. 1. 11.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 11.     In Bo Shim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.part.dao.PartIssueReqDetailDAO">
+
+   
+    <!-- 정비수령 부품요청상세 정보 목록을 조회한다. -->
+    <select id="selectIssueReqDetailsByCondition" parameterType="IssueReqSearchVO" resultType="chn.bhmc.dms.mob.api.part.vo.IssueReqDetailVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssueReqDetailDAO.selectIssueReqDetailsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    A.DLR_CD
+                    ,A.PAR_REQ_DOC_NO
+                    ,A.PAR_REQ_DOC_LINE_NO
+                    ,A.PAR_REQ_DOC_STOCK_LINE_NO
+                    ,A.PAR_REQ_STAT_CD
+                    ,G.PURC_REQ_NO
+                    ,A.CANC_YN
+                    ,A.PAR_GI_TP
+                    ,A.RO_DOC_NO
+                    ,A.RO_LINE_NO
+                    ,A.RESV_DOC_NO
+                    ,A.RESV_DOC_LINE_NO
+                    ,B.GI_STRGE_CD AS GR_STRGE_CD
+                    ,NVL(A.GI_STRGE_CD,B.GI_STRGE_CD) AS GI_STRGE_CD
+                    ,(
+                        SELECT
+                            T1.LOC_CD_MIG
+                        FROM PT_0224T T1
+                        WHERE T1.DLR_CD = A.DLR_CD
+                        AND T1.STRGE_CD = A.REQ_STRGE_CD
+                        AND T1.ITEM_CD = A.ITEM_CD
+                    ) AS GI_LOC_CD
+                    ,NVL(A.GI_LOC_CD,K.LOC_CD) AS GI_LOC_CD
+                    ,A.ITEM_CD AS DB_ITEM_CD
+                    ,A.ITEM_CD
+                    ,B.BRAND_CD
+                    ,B.STOCK_UNIT_CD AS UNIT_CD
+                    ,CASE WHEN A.ITEM_PRC <![CDATA[<]]> 0 THEN ROUND(A.ITEM_PRC) * -1
+                    ELSE A.ITEM_PRC
+                    END AS ITEM_PRC
+                    ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN ROUND(A.ITEM_PRC * A.END_QTY, 2)
+                          WHEN A.PAR_REQ_STAT_CD = '01' AND A.END_QTY = 0 THEN ROUND(A.ITEM_PRC * A.REQ_QTY, 2)
+                    ELSE A.ITEM_AMT
+                    END AS ITEM_AMT
+                    ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (ROUND(A.ITEM_PRC / 1.12, 2) * A.END_QTY )
+                          WHEN A.PAR_REQ_STAT_CD = '01' AND A.END_QTY = 0 THEN (ROUND(A.ITEM_PRC / 1.12, 2) * A.REQ_QTY )
+                    ELSE ROUND(A.ITEM_PRC / 1.12, 2) * A.END_QTY
+                    END AS TAX_DDCT_AMT
+                    ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (ROUND(A.ITEM_PRC * A.END_QTY, 4) - (ROUND(A.ITEM_PRC / 1.12, 4) * A.END_QTY ))
+                          WHEN A.PAR_REQ_STAT_CD = '01' AND A.END_QTY = 0 THEN (ROUND(A.ITEM_PRC * A.REQ_QTY, 4) - (ROUND(A.ITEM_PRC / 1.12, 4) * A.REQ_QTY ))
+                    ELSE A.TAX_AMT
+                    END TAX_AMT
+                    ,A.REQ_QTY
+                    ,CASE WHEN A.PAR_REQ_STAT_CD = '01' THEN A.REQ_QTY
+                          WHEN A.PAR_REQ_STAT_CD = '03' THEN A.END_QTY
+                    ELSE A.END_QTY
+                    END AS RESV_QTY
+                    ,CASE WHEN A.PAR_REQ_STAT_CD = '01' THEN A.REQ_QTY
+                          WHEN A.PAR_REQ_STAT_CD = '03' THEN A.END_QTY
+                    ELSE A.END_QTY
+                    END AS END_QTY
+                    ,A.REQ_STRGE_CD
+                    ,A.REG_DT
+                    ,A.REG_USR_ID
+                    ,K3.USR_NM AS REG_USR_NM
+                    ,(SELECT BK.USR_NM FROM CM_0801T BK WHERE BK.USR_ID = A.UPDT_USR_ID) AS UPDT_USR_NM
+                    ,K4.DEPT_CD
+                    ,K4.DEPT_NM
+                    ,CASE WHEN A.PAR_GI_TP = 'OT' AND A.READY_STAT_CD <![CDATA[!=]]> '05' THEN null
+                    ELSE A.UPDT_DT
+                    END AS UPDT_DT
+                    ,A.UPDT_USR_ID
+                    ,B.ITEM_NM
+                    ,NVL(C.AVLB_STOCK_QTY,0) + NVL(C.RESV_STOCK_QTY,0) - NVL(C.BORROW_QTY,0) + NVL(C.RENT_QTY,0) AS TOT_STOCK_QTY
+                    ,NVL(C.AVLB_STOCK_QTY,0) AS AVLB_STOCK_QTY
+                    ,NVL(C.RESV_STOCK_QTY,0) AS RESV_STOCK_QTY
+                    ,NVL(C.CLAM_STOCK_QTY,0) AS CLAM_STOCK_QTY
+                    ,NVL(C.BORROW_QTY,0) AS BORROW_STOCK_QTY
+                    ,NVL(C.RENT_QTY,0) AS RENT_QTY
+                    ,NVL(C.GR_SCHE_QTY,0) AS GR_SCHE_QTY
+                    ,NVL(C.GI_SCHE_QTY,0) AS GI_SCHE_QTY
+                    ,A.REG_DT AS PURC_REQ_DT
+                    ,NVL(F.GI_DOC_NO,'-') AS GI_DOC_NO
+                    ,NVL(E.GI_DOC_TP,'01') AS GI_DOC_TP
+                    ,NVL(F.GI_DOC_STAT_CD,'01') AS GI_DOC_STAT_CD
+                    ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (SELECT MIN(AA.MVT_DOC_YY_MM) FROM PT_0512T AA WHERE AA.DLR_CD = #{sDlrCd} AND AA.PAR_REQ_DOC_NO = #{sParReqDocNo} AND AA.GI_DOC_STAT_CD = '02')
+                    ELSE F.MVT_DOC_YY_MM
+                    END AS MVT_DOC_YY_MM
+                    ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (SELECT MIN(AA.MVT_DOC_NO) FROM PT_0512T AA WHERE AA.DLR_CD = #{sDlrCd} AND AA.PAR_REQ_DOC_NO = #{sParReqDocNo} AND AA.GI_DOC_STAT_CD = '02')
+                    ELSE F.MVT_DOC_NO
+                    END AS MVT_DOC_NO
+                    ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (SELECT MIN(AA.MVT_DOC_LINE_NO) FROM PT_0512T AA WHERE AA.DLR_CD = #{sDlrCd} AND AA.PAR_REQ_DOC_NO = #{sParReqDocNo} AND AA.GI_DOC_STAT_CD = '02')
+                    ELSE F.MVT_DOC_LINE_NO
+                    END AS MVT_DOC_LINE_NO
+                    ,H.CUST_CD
+                    ,H.CUST_NM
+                    ,H.SER_PRSN_ID
+                    ,H.VIN_NO
+                    ,H.CAR_NO
+                    ,'Y' AS DB_YN
+                    ,F.GI_STAT_CD
+                    ,F.RECEIVE_ID
+                    ,K2.USR_NM AS RECEIVE_NM
+                    ,F.GI_DT
+                    ,F.RECEIVE_DT
+                    ,F.RECEIVE_DT AS RECEIVE_TIME
+                    ,F.RETURN_ID
+                    ,F.RETURN_DT
+                    ,F.CANC_ID
+                    ,F.CANC_DT
+                    ,F.GI_CAU_NM
+                    ,A.ETC_GI_TP
+                    ,A.PKG_DOC_NO
+                    ,A.PKG_ITEM_CD
+                    ,L.PKG_DETL_DC_RATE
+                    ,NVL((L.ITEM_PRC * L.ITEM_QTY) - (L.ITEM_QTY * (L.ITEM_PRC * (L.PKG_DETL_DC_RATE / 100))),0) AS PKG_DETL_DC_TOT_AMT
+                    ,NVL(L.ITEM_QTY * (L.ITEM_PRC * (L.PKG_DETL_DC_RATE/100)),0) AS PKG_DETL_DC_AMT
+                    ,NVL(F.RETURN_PARTS_QTY, 0) AS RETURN_PARTS_QTY
+                    ,NVL(NVL(A.MOVING_AVG_PRC,NVL(J.MOVING_AVG_PRC, B.MOVING_AVG_PRC)),0) AS MOVING_AVG_PRC
+                    ,A.REQ_QTY * NVL(NVL(A.MOVING_AVG_PRC,NVL(J.MOVING_AVG_PRC, B.MOVING_AVG_PRC)),0) AS MOVING_AVG_AMT
+                    ,NVL(A.READY_STAT_CD ,'01') AS READY_STAT_CD
+                    ,A.READY_DOC_NO
+                    ,A.READY_REMARK
+                    ,A.READY_USR_ID
+                    ,A.READY_REG_DT
+                    ,A.READY_CANC_REMARK
+                    ,A.READY_CANC_USR_ID
+                    ,A.READY_CANC_REG_DT
+                    ,CASE WHEN NVL(A.BORROW_STAT_CD, '01') != '01' THEN A.BORROW_DOC_NO
+                    ELSE ''
+                    END AS BORROW_DOC_NO
+                    ,A.BORROW_LINE_NO
+                    ,A.BORROW_TP
+                    ,A.BORROW_STAT_CD
+                    ,A.BORROW_QTY
+                    ,A.BORROW_USR_ID
+                    ,(SELECT BK.USR_NM FROM CM_0801T BK WHERE BK.USR_ID = A.BORROW_USR_ID) AS BORROW_USR_NM
+                    ,(SELECT AB.DEPT_NM FROM CM_0801T AA
+                        LEFT JOIN CM_3401T AB ON AA.DEPT_CD = AB.DEPT_CD
+                        WHERE AA.USR_ID = A.BORROW_USR_ID
+                    ) AS BORROW_DEPT_NM
+                    ,A.BORROW_REG_DT
+                    ,A.ETC_RV_DOC_NO
+                    ,A.ETC_RV_LINE_NO
+                    ,A.ETC_RV_STAT_CD
+                    ,A.ETC_RV_QTY
+                    ,A.ETC_RV_PRSN_ID
+                    ,A.ETC_RV_REG_DT
+                    ,A.COM_ITEM_CD
+                    ,A.COM_ITEM_NM
+                    ,A.COM_ITEM_PRC
+                    ,NVL(A.RO_TP, '01') AS RO_TP
+                    ,DECODE(A.RO_TP,'02','04' <!--RO유형 보증(02) : 가격보증(04) -->
+                                   ,'03','03' <!--RO유형 보험(03) : 가격보험(03) -->
+                                   ,'01') AS PRC_TP<!--그외 일반가(01) -->
+                    ,I.RETL_PRC
+                    ,I.WHSL_PRC
+                    ,I.INC_PRC
+                    ,I.GRTE_PRC
+                    ,A.REMARK
+                    ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(ITEM_SALE_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                          WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(ITEM_SALE_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                          WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(ITEM_SALE_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                    ELSE 0
+                    END AS ITEM_SALE_PRC
+                    ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(ITEM_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                          WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(ITEM_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                          WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(ITEM_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                    ELSE 0
+                    END AS ITEM_SALE_AMT
+                    ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(DC_RATE, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                          WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(DC_RATE, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                          WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(DC_RATE, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                    ELSE 0
+                    END AS DC_RATE
+                    ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(DC_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                          WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(DC_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                          WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(DC_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                    ELSE 0
+                    END AS DC_AMT
+                    ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(ITEM_TOT_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                          WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(ITEM_TOT_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                          WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(ITEM_TOT_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                    ELSE 0
+                    END AS ITEM_TOT_AMT
+                    ,A.PAYM_CD
+                    ,A.PAYM_TP
+                    ,A.PAYM_USR_NM
+                    ,A.PARTS_PRC_TP
+                FROM PT_0502T A
+                LEFT JOIN PT_0201T B ON A.DLR_CD = B.DLR_CD AND A.ITEM_CD = B.ITEM_CD
+                LEFT JOIN SE_0300T R ON A.DLR_CD = R.DLR_CD AND A.RO_DOC_NO = R.RO_DOC_NO
+                LEFT JOIN PT_0301T C ON A.DLR_CD = C.DLR_CD AND A.ITEM_CD = C.ITEM_CD AND A.REQ_STRGE_CD = C.STRGE_CD
+                LEFT JOIN PT_0302T D ON A.DLR_CD = D.DLR_CD AND A.ITEM_CD = D.ITEM_CD AND A.REQ_STRGE_CD = D.STRGE_CD AND A.RESV_DOC_NO = D.RESV_DOC_NO AND A.RESV_DOC_LINE_NO = D.RESV_DOC_LINE_NO
+                LEFT JOIN PT_0511T E ON A.DLR_CD = E.DLR_CD AND A.RO_DOC_NO = E.RO_DOC_NO
+                LEFT JOIN PT_0512T F ON A.DLR_CD = F.DLR_CD AND A.PAR_REQ_DOC_NO = F.PAR_REQ_DOC_NO AND A.PAR_REQ_DOC_LINE_NO = F.PAR_REQ_DOC_LINE_NO
+                AND A.PAR_REQ_DOC_LINE_NO = F.GI_DOC_LINE_NO
+                AND A.PAR_REQ_STAT_CD = F.GI_DOC_STAT_CD
+                LEFT JOIN PT_0411T G ON A.DLR_CD = G.DLR_CD AND A.RO_DOC_NO = G.REF_DOC_NO AND A.RO_LINE_NO = G.REF_DOC_LINE_NO AND A.ITEM_CD = G.ITEM_CD
+                LEFT JOIN PT_0501T H ON A.DLR_CD = H.DLR_CD AND A.PAR_REQ_DOC_NO = H.PAR_REQ_DOC_NO
+                LEFT JOIN PT_0214T I ON A.DLR_CD = I.DLR_CD AND A.REQ_STRGE_CD = I.STRGE_CD AND A.ITEM_CD = I.ITEM_CD
+                LEFT JOIN PT_0208T J ON A.DLR_CD = J.DLR_CD AND A.REQ_STRGE_CD = J.STRGE_CD AND A.ITEM_CD = J.ITEM_CD
+                LEFT JOIN PT_0224T K ON A.DLR_CD = K.DLR_CD  AND A.REQ_STRGE_CD = K.STRGE_CD AND A.ITEM_CD = K.ITEM_CD AND K.LOC_CD != ''
+                LEFT JOIN PT_0231T L ON A.DLR_CD = L.DLR_CD AND A.PKG_ITEM_CD = L.PKG_ITEM_CD AND A.ITEM_CD = L.ITEM_CD AND A.PKG_DOC_NO = L.PKG_DOC_NO
+                LEFT JOIN CM_0801T K2 ON F.RECEIVE_ID = K2.USR_ID
+                LEFT JOIN CM_0801T K3 ON A.REG_USR_ID = K3.USR_ID
+                LEFT JOIN CM_3401T K4 ON K3.DEPT_CD = K4.DEPT_CD
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND A.DLR_CD = #{sDlrCd}
+                    </if>
+
+                    <if test='sParReqDocNo != null and sParReqDocNo != ""'>
+                        AND A.PAR_REQ_DOC_NO = #{sParReqDocNo}
+                    </if>
+
+                    <if test='sParReqDocLineNo != null and sParReqDocLineNo != 0'>
+                        AND A.PAR_REQ_DOC_LINE_NO = #{sParReqDocLineNo}
+                    </if>
+
+                    <if test='sParReqStatCd != null and sParReqStatCd != ""'>
+                        AND A.PAR_REQ_STAT_CD = #{sParReqStatCd}
+                    </if>
+
+                    <if test='sRoDocNo != null and sRoDocNo != ""'>
+                        AND A.RO_DOC_NO LIKE '%'||#{sRoDocNo}||'%'
+                    </if>
+
+                    <if test='sRoLineNo != null and sRoLineNo != 0'>
+                        AND A.RO_LINE_NO = #{sRoLineNo}
+                    </if>
+
+                    <if test='sResvDocNo != null and sResvDocNo != ""'>
+                        AND A.RESV_DOC_NO = #{sResvDocNo}
+                    </if>
+
+                    <if test='sResvDocLineNo != null and sResvDocLineNo != 0'>
+                        AND A.RESV_DOC_LINE_NO = #{sResvDocLineNo}
+                    </if>
+
+                    <if test='sParGiTp != null and sParGiTp != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG01")'>
+                                AND (A.PAR_GI_TP in ('RO') OR A.BORROW_DOC_NO IS NOT NULL)
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG02")'>
+                                AND A.BORROW_DOC_NO IS NOT NULL
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG03")'>
+                                AND A.PAR_GI_TP in ('RO') AND A.BORROW_DOC_NO IS NULL
+                            </when>
+                            <otherwise>
+                                AND A.PAR_GI_TP = #{sParGiTp}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sItemCd != null and sItemCd != ""'>
+                        AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                    </if>
+
+                    <if test='sItemCdOnly != null and sItemCdOnly != ""'>
+                        AND A.ITEM_CD = #{sItemCdOnly}
+                    </if>
+
+                    <if test='sCancYn != null and sCancYn != ""'>
+                        AND A.CANC_YN = #{sCancYn}
+                    </if>
+
+                    <if test='sEtcGiTp != null and sEtcGiTp != ""'>
+                        AND A.ETC_GI_TP = #{sEtcGiTp}
+                    </if>
+
+                    <if test='sReqStrgeCd != null and sReqStrgeCd != ""'>
+                        AND A.REQ_STRGE_CD = #{sReqStrgeCd}
+                    </if>
+
+                    <if test='sGiStrgeCd != null and sGiStrgeCd != ""'>
+                        AND A.GI_STRGE_CD = #{sGiStrgeCd}
+                    </if>
+
+                    <if test='sGrStrgeCd != null and sGrStrgeCd != ""'>
+                        AND A.GR_STRGE_CD = #{sGrStrgeCd}
+                    </if>
+
+                    <if test='sReadyDocNo != null and sReadyDocNo != ""'>
+                        AND A.READY_DOC_NO LIKE '%'||#{sReadyDocNo}||'%'
+                    </if>
+
+                    <if test='sReadyStatCd != null and sReadyStatCd != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sReadyStatCd,"RE01")'>
+                                 AND A.READY_STAT_CD IN ('01','02','04')
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sReadyStatCd,"RE02")'>
+                                 AND A.READY_STAT_CD IN ('02','03','05')
+                            </when>
+                            <otherwise>
+                                 AND A.READY_STAT_CD = #{sReadyStatCd}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sReqStartDt != null'>
+                        <choose>
+                            <otherwise>
+                                 AND A.REG_DT <![CDATA[>=]]> #{sReqStartDt}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sReqEndDt != null'>
+                        <choose>
+                            <otherwise>
+                                 AND A.REG_DT <![CDATA[<=]]> #{sReqEndDt} + 1
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sVinNo != null and sVinNo != ""'>
+                        AND H.VIN_NO LIKE '%'||#{sVinNo}||'%'
+                    </if>
+
+                    <if test='sCarNo != null and sCarNo != ""'>
+                        AND H.CAR_NO LIKE '%'||#{sCarNo}||'%'
+                    </if>
+
+                    <if test='sCustNm != null and sCustNm != ""'>
+                        AND H.CUST_NM LIKE '%'||#{sCustNm}||'%'
+                    </if>
+
+                    <if test='sBorrowStatCd != null and sBorrowStatCd != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_01")'>
+                                AND (A.BORROW_STAT_CD = '01' OR A.BORROW_DOC_NO IS NULL )
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_02")'>
+                                AND (A.BORROW_STAT_CD IN ('05','04') OR A.BORROW_DOC_NO IS NULL OR A.READY_STAT_CD = '06' )
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_03")'>
+                                AND A.BORROW_STAT_CD in ('02')<!-- 차용 -->
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_04")'>
+                                AND A.BORROW_DOC_NO IS NOT NULL
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_05")'>
+                                AND A.BORROW_STAT_CD in ('04','05')<!-- 정비차용확정, 차용대기 -->
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_06")'>
+                                AND A.BORROW_STAT_CD != '03'<!-- 반환 제외 -->
+                            </when>
+                            <otherwise>
+                                AND A.BORROW_STAT_CD = #{sBorrowStatCd}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sBorrowDocNoUseYn != null and sBorrowDocNoUseYn == "Y"'>
+                        AND A.BORROW_DOC_NO IS NOT NULL
+                    </if>
+
+                    <if test='sGiDocStatCd != null and sGiDocStatCd != ""'>
+                        AND F.GI_DOC_STAT_CD = #{sGiDocStatCd}
+                    </if>
+
+                    <if test='sGiDocNo != null and sGiDocNo != ""'>
+                        AND F.GI_DOC_NO LIKE '%'||#{sGiDocNo}||'%'
+                    </if>
+
+                    <if test='sGiDocReqStartDt != null'>
+                        <choose>
+                            <otherwise>
+                                 AND F.REG_DT <![CDATA[>=]]> #{sGiDocReqStartDt}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sGiDocReqEndDt != null'>
+                        <choose>
+                            <otherwise>
+                                 AND F.REG_DT <![CDATA[<=]]> #{sGiDocReqEndDt} + 1
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sReceiveId != null and sReceiveId != ""'>
+                        AND F.RECEIVE_ID LIKE '%'||#{sReceiveId}||'%'
+                    </if>
+
+                    <if test='sReceiveNm != null and sReceiveNm != ""'>
+                        AND K2.USR_NM LIKE '%'||#{sReceiveNm}||'%'
+                    </if>
+
+                    <if test='sPartsOutUseYn != null and sPartsOutUseYn != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sPartsOutUseYn,"Y")'>
+                                 AND F.GI_DOC_STAT_CD IN ('02','03')
+                            </when>
+                            <otherwise>
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "parReqDocNo"'>A.PAR_REQ_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "parReqDocLineNo"'>A.PAR_REQ_DOC_LINE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "parReqStatCd"'>A.PAR_REQ_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "cancYn"'>A.CANC_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "parGiTp"'>A.PAR_GI_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "resvDocNo"'>A.RESV_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "resvDocLineNo"'>A.RESV_DOC_LINE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "roDocNo"'>A.RO_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "roLineNo"'>A.RO_LINE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemCd"'>A.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemNm"'>B.ITEM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "giStrgeCd"'>A.GI_STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "reqQty"'>A.REQ_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "endQty"'>A.END_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "reqStrgeCd"'>A.REQ_STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "unitCd"'>A.UNIT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "custCd"'>A.CUST_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "custNm"'>A.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "vinNo"'>A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carNo"'>A.CAR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "avlbStockQty"'>AVLB_STOCK_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "resvStockQty"'>RESV_STOCK_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "clamStockQty"'>CLAM_STOCK_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "grScheQty"'>GR_SCHE_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "giScheQty"'>GI_SCHE_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "resvQty"'>RESV_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "purcReqDt"'>PURC_REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "giDocNo"'>GI_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "giDocTp"'>GI_DOC_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "giDocStatCd"'>GI_DOC_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.DLR_CD, A.PAR_REQ_DOC_STOCK_LINE_NO ASC, A.PAR_REQ_DOC_LINE_NO ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.DLR_CD, A.PAR_REQ_DOC_STOCK_LINE_NO ASC, A.PAR_REQ_DOC_LINE_NO ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 정비 수령 부품요청상세 정보 카운트를 조회한다. -->
+    <select id="selectIssueReqDetailsByConditionCnt" parameterType="IssueReqSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssueReqDetailDAO.selectIssueReqDetailsByConditionCnt] */
+        SELECT
+            count(*)
+        FROM PT_0502T A
+        LEFT JOIN PT_0501T B ON A.RO_DOC_NO = B.RO_DOC_NO
+        LEFT JOIN SE_0300T R ON A.DLR_CD = R.DLR_CD AND A.RO_DOC_NO = R.RO_DOC_NO
+        LEFT JOIN PT_0511T E ON A.DLR_CD = E.DLR_CD AND A.RO_DOC_NO = E.RO_DOC_NO
+        LEFT JOIN PT_0512T F ON A.DLR_CD = F.DLR_CD AND A.PAR_REQ_DOC_NO = F.PAR_REQ_DOC_NO AND A.PAR_REQ_DOC_LINE_NO = F.PAR_REQ_DOC_LINE_NO
+        AND A.PAR_REQ_DOC_LINE_NO = F.GI_DOC_LINE_NO
+        AND A.PAR_REQ_STAT_CD = F.GI_DOC_STAT_CD
+        LEFT JOIN CM_0801T K ON F.RECEIVE_ID = K.USR_ID
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND A.DLR_CD = #{sDlrCd}
+            </if>
+
+            <if test='sParReqDocNo != null and sParReqDocNo != ""'>
+                AND A.PAR_REQ_DOC_NO = #{sParReqDocNo}
+            </if>
+
+            <if test='sParReqDocLineNo != null and sParReqDocLineNo != 0'>
+                AND A.PAR_REQ_DOC_LINE_NO = #{sParReqDocLineNo}
+            </if>
+
+            <if test='sParReqStatCd != null and sParReqStatCd != ""'>
+                AND A.PAR_REQ_STAT_CD = #{sParReqStatCd}
+            </if>
+
+            <if test='sRoDocNo != null and sRoDocNo != ""'>
+                AND A.RO_DOC_NO LIKE '%'||#{sRoDocNo}||'%'
+            </if>
+
+            <if test='sRoLineNo != null and sRoLineNo != 0'>
+                AND A.RO_LINE_NO = #{sRoLineNo}
+            </if>
+
+            <if test='sResvDocNo != null and sResvDocNo != ""'>
+                AND A.RESV_DOC_NO = #{sResvDocNo}
+            </if>
+
+            <if test='sResvDocLineNo != null and sResvDocLineNo != 0'>
+                AND A.RESV_DOC_LINE_NO = #{sResvDocLineNo}
+            </if>
+
+            <if test='sParGiTp != null and sParGiTp != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG01")'>
+                         AND (A.PAR_GI_TP in ('RO') OR A.BORROW_DOC_NO IS NOT NULL)
+                    </when>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG02")'>
+                         AND A.BORROW_DOC_NO IS NOT NULL
+                    </when>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG03")'>
+                        AND A.PAR_GI_TP in ('RO') AND A.BORROW_DOC_NO IS NULL
+                    </when>
+                    <otherwise>
+                         AND A.PAR_GI_TP = #{sParGiTp}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sItemCd != null and sItemCd != ""'>
+                AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+            </if>
+
+            <if test='sItemCdOnly != null and sItemCdOnly != ""'>
+                AND A.ITEM_CD = #{sItemCdOnly}
+            </if>
+
+            <if test='sCancYn != null and sCancYn != ""'>
+                AND A.CANC_YN = #{sCancYn}
+            </if>
+
+            <if test='sEtcGiTp != null and sEtcGiTp != ""'>
+                AND A.ETC_GI_TP = #{sEtcGiTp}
+            </if>
+
+            <if test='sReqStrgeCd != null and sReqStrgeCd != ""'>
+                AND A.REQ_STRGE_CD = #{sReqStrgeCd}
+            </if>
+
+            <if test='sGiStrgeCd != null and sGiStrgeCd != ""'>
+                AND A.GI_STRGE_CD = #{sGiStrgeCd}
+            </if>
+
+            <if test='sGrStrgeCd != null and sGrStrgeCd != ""'>
+                AND A.GR_STRGE_CD = #{sGrStrgeCd}
+            </if>
+
+            <if test='sReadyDocNo != null and sReadyDocNo != ""'>
+                AND A.READY_DOC_NO LIKE '%'||#{sReadyDocNo}||'%'
+            </if>
+
+            <if test='sReadyStatCd != null and sReadyStatCd != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sReadyStatCd,"RE01")'>
+                         AND A.READY_STAT_CD IN ('01','02','04')
+                    </when>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sReadyStatCd,"RE02")'>
+                         AND A.READY_STAT_CD IN ('02','03','05')
+                    </when>
+                    <otherwise>
+                         AND A.READY_STAT_CD = #{sReadyStatCd}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sReqStartDt != null'>
+                <choose>
+                    <otherwise>
+                         AND A.REG_DT <![CDATA[>=]]> #{sReqStartDt}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sReqEndDt != null'>
+                <choose>
+                    <otherwise>
+                         AND A.REG_DT <![CDATA[<=]]> #{sReqEndDt} + 1
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sVinNo != null and sVinNo != ""'>
+                AND B.VIN_NO LIKE '%'||#{sVinNo}||'%'
+            </if>
+
+            <if test='sCarNo != null and sCarNo != ""'>
+                AND B.CAR_NO LIKE '%'||#{sCarNo}||'%'
+            </if>
+
+            <if test='sCustNm != null and sCustNm != ""'>
+                AND B.CUST_NM LIKE '%'||#{sCustNm}||'%'
+            </if>
+
+            <if test='sBorrowStatCd != null and sBorrowStatCd != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_01")'>
+                        AND (A.BORROW_STAT_CD = '01' OR A.BORROW_DOC_NO IS NULL )
+                    </when>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_02")'>
+                        AND (A.BORROW_STAT_CD IN ('05','04') OR A.BORROW_DOC_NO IS NULL OR A.READY_STAT_CD = '06' )
+                    </when>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_03")'>
+                        AND A.BORROW_STAT_CD in ('02')
+                    </when>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_04")'>
+                        AND A.BORROW_DOC_NO IS NOT NULL
+                    </when>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_05")'>
+                        AND A.BORROW_STAT_CD in ('04','05')<!-- 정비차용확정, 차용대기 -->
+                    </when>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_06")'>
+                        AND A.BORROW_STAT_CD != '03'<!-- 반환 제외 -->
+                    </when>
+                    <otherwise>
+                        AND A.BORROW_STAT_CD = #{sBorrowStatCd}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sBorrowDocNoUseYn != null and sBorrowDocNoUseYn == "Y"'>
+                AND A.BORROW_DOC_NO IS NOT NULL
+            </if>
+
+            <if test='sGiDocStatCd != null and sGiDocStatCd != ""'>
+                AND F.GI_DOC_STAT_CD = #{sGiDocStatCd}
+            </if>
+
+            <if test='sGiDocNo != null and sGiDocNo != ""'>
+                AND F.GI_DOC_NO LIKE '%'||#{sGiDocNo}||'%'
+            </if>
+
+            <if test='sGiDocReqStartDt != null'>
+                <choose>
+                    <otherwise>
+                         AND F.REG_DT <![CDATA[>=]]> #{sGiDocReqStartDt}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sGiDocReqEndDt != null'>
+                <choose>
+                    <otherwise>
+                        AND F.REG_DT <![CDATA[<=]]> #{sGiDocReqEndDt} + 1
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sReceiveId != null and sReceiveId != ""'>
+                AND F.RECEIVE_ID LIKE '%'||#{sReceiveId}||'%'
+            </if>
+
+            <if test='sReceiveNm != null and sReceiveNm != ""'>
+                AND K.USR_NM LIKE '%'||#{sReceiveNm}||'%'
+            </if>
+
+            <if test='sPartsOutUseYn != null and sPartsOutUseYn != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sPartsOutUseYn,"Y")'>
+                        AND F.GI_DOC_STAT_CD IN ('02','03')
+                    </when>
+                    <otherwise>
+                    </otherwise>
+                </choose>
+            </if>
+
+        </where>
+    </select>
+    
+   
+
+    <!-- 정비수령집계 부품요청상세 정보 목록을 조회한다. -->
+    <select id="selectIssueReqDetailStatusByCondition" parameterType="IssueReqSearchVO" resultType="chn.bhmc.dms.mob.api.part.vo.IssueReqDetailVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssueReqDetailDAO.selectIssueReqDetailStatusByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    TA.*
+                FROM(
+                   SELECT
+                        A.DLR_CD
+                        ,A.PAR_REQ_DOC_NO
+                        ,A.PAR_REQ_DOC_LINE_NO
+                        ,A.PAR_REQ_DOC_STOCK_LINE_NO
+                        ,A.PAR_REQ_STAT_CD
+                        ,G.PURC_REQ_NO
+                        ,A.CANC_YN
+                        ,A.PAR_GI_TP
+                        ,A.RO_DOC_NO
+                        ,A.RO_LINE_NO
+                        ,A.RESV_DOC_NO
+                        ,A.RESV_DOC_LINE_NO
+                        ,B.GI_STRGE_CD AS GR_STRGE_CD
+                        ,NVL(A.GI_STRGE_CD,B.GI_STRGE_CD) AS GI_STRGE_CD
+                        ,(
+                            SELECT
+                                T1.LOC_CD_MIG
+                            FROM PT_0224T T1
+                            WHERE T1.DLR_CD = A.DLR_CD
+                            AND T1.STRGE_CD = A.REQ_STRGE_CD
+                            AND T1.ITEM_CD = A.ITEM_CD
+                        ) AS GI_LOC_CD
+                        ,NVL(A.GI_LOC_CD,K.LOC_CD) AS GI_LOC_CD
+                        ,A.ITEM_CD AS DB_ITEM_CD
+                        ,A.ITEM_CD
+                        ,B.BRAND_CD
+                        ,B.STOCK_UNIT_CD AS UNIT_CD
+                        ,CASE WHEN A.ITEM_PRC <![CDATA[<]]> 0 THEN ROUND(A.ITEM_PRC) * -1
+                        ELSE A.ITEM_PRC
+                        END AS ITEM_PRC
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN ROUND(A.ITEM_PRC * A.END_QTY, 2)
+                              WHEN A.PAR_REQ_STAT_CD = '01' AND A.END_QTY = 0 THEN ROUND(A.ITEM_PRC * A.REQ_QTY, 2)
+                        ELSE A.ITEM_AMT
+                        END AS ITEM_AMT
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (ROUND(A.ITEM_PRC / 1.12, 2) * A.END_QTY )
+                              WHEN A.PAR_REQ_STAT_CD = '01' AND A.END_QTY = 0 THEN (ROUND(A.ITEM_PRC / 1.12, 2) * A.REQ_QTY )
+                        ELSE ROUND(A.ITEM_PRC / 1.12, 2) * A.END_QTY
+                        END AS TAX_DDCT_AMT
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (ROUND(A.ITEM_PRC * A.END_QTY, 2) - (ROUND(A.ITEM_PRC / 1.12, 2) * A.END_QTY ))
+                              WHEN A.PAR_REQ_STAT_CD = '01' AND A.END_QTY = 0 THEN (ROUND(A.ITEM_PRC * A.REQ_QTY, 2) - (ROUND(A.ITEM_PRC / 1.12, 2) * A.REQ_QTY ))
+                        ELSE A.TAX_AMT
+                        END TAX_AMT
+                        ,A.REQ_QTY
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '01' THEN A.REQ_QTY
+                              WHEN A.PAR_REQ_STAT_CD = '03' THEN A.END_QTY
+                        ELSE A.END_QTY
+                        END AS RESV_QTY
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '01' THEN A.REQ_QTY
+                              WHEN A.PAR_REQ_STAT_CD = '03' THEN A.END_QTY
+                        ELSE A.END_QTY
+                        END AS END_QTY
+                        ,A.REQ_STRGE_CD
+                        ,A.REG_DT
+                        ,A.REG_USR_ID
+                        ,K3.USR_NM AS REG_USR_NM
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN K3.USR_NM
+                        ELSE (SELECT BK.USR_NM FROM CM_0801T BK WHERE BK.USR_ID = A.UPDT_USR_ID)
+                        END UPDT_USR_NM
+                        ,K4.DEPT_CD
+                        ,K4.DEPT_NM
+                        ,CASE WHEN A.PAR_GI_TP = 'OT' AND A.READY_STAT_CD <![CDATA[!=]]> '05' THEN null
+                        ELSE A.UPDT_DT
+                        END AS UPDT_DT
+                        ,A.UPDT_USR_ID
+                        ,B.ITEM_NM
+                        ,NVL(C.AVLB_STOCK_QTY,0) + NVL(C.RESV_STOCK_QTY,0) - NVL(C.BORROW_QTY,0) + NVL(C.RENT_QTY,0) AS TOT_STOCK_QTY
+                        ,NVL(C.AVLB_STOCK_QTY,0) AS AVLB_STOCK_QTY
+                        ,NVL(C.RESV_STOCK_QTY,0) AS RESV_STOCK_QTY
+                        ,NVL(C.CLAM_STOCK_QTY,0) AS CLAM_STOCK_QTY
+                        ,NVL(C.BORROW_QTY,0) AS BORROW_STOCK_QTY
+                        ,NVL(C.RENT_QTY,0) AS RENT_QTY
+                        ,NVL(C.GR_SCHE_QTY,0) AS GR_SCHE_QTY
+                        ,NVL(C.GI_SCHE_QTY,0) AS GI_SCHE_QTY
+                        ,A.REG_DT AS PURC_REQ_DT
+                        ,NVL(F.GI_DOC_NO,'-') AS GI_DOC_NO
+                        ,NVL(E.GI_DOC_TP,'01') AS GI_DOC_TP
+                        ,NVL(F.GI_DOC_STAT_CD,'01') AS GI_DOC_STAT_CD
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (SELECT MIN(AA.MVT_DOC_YY_MM) FROM PT_0512T AA WHERE AA.DLR_CD = #{sDlrCd} AND AA.PAR_REQ_DOC_NO = #{sParReqDocNo} AND AA.GI_DOC_STAT_CD = '02')
+                        ELSE F.MVT_DOC_YY_MM
+                        END AS MVT_DOC_YY_MM
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (SELECT MIN(AA.MVT_DOC_NO) FROM PT_0512T AA WHERE AA.DLR_CD = #{sDlrCd} AND AA.PAR_REQ_DOC_NO = #{sParReqDocNo} AND AA.GI_DOC_STAT_CD = '02')
+                        ELSE F.MVT_DOC_NO
+                        END AS MVT_DOC_NO
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (SELECT MIN(AA.MVT_DOC_LINE_NO) FROM PT_0512T AA WHERE AA.DLR_CD = #{sDlrCd} AND AA.PAR_REQ_DOC_NO = #{sParReqDocNo} AND AA.GI_DOC_STAT_CD = '02')
+                        ELSE F.MVT_DOC_LINE_NO
+                        END AS MVT_DOC_LINE_NO
+                        ,H.CUST_CD
+                        ,H.CUST_NM
+                        ,H.SER_PRSN_ID
+                        ,H.VIN_NO
+                        ,H.CAR_NO
+                        ,'Y' AS DB_YN
+                        ,F.GI_STAT_CD
+                        ,F.RECEIVE_ID
+                        ,K2.USR_NM AS RECEIVE_NM
+                        ,F.GI_DT
+                        ,F.RECEIVE_DT
+                        ,F.RECEIVE_DT AS RECEIVE_TIME
+                        ,F.RETURN_ID
+                        ,F.RETURN_DT
+                        ,F.CANC_ID
+                        ,F.CANC_DT
+                        ,F.GI_CAU_NM
+                        ,A.ETC_GI_TP
+                        ,A.PKG_DOC_NO
+                        ,A.PKG_ITEM_CD
+                        ,L.PKG_DETL_DC_RATE
+                        ,NVL((L.ITEM_PRC * L.ITEM_QTY) - (L.ITEM_QTY * (L.ITEM_PRC * (L.PKG_DETL_DC_RATE / 100))),0) AS PKG_DETL_DC_TOT_AMT
+                        ,NVL(L.ITEM_QTY * (L.ITEM_PRC * (L.PKG_DETL_DC_RATE/100)),0) AS PKG_DETL_DC_AMT
+                        ,NVL(F.RETURN_PARTS_QTY, 0) AS RETURN_PARTS_QTY
+                        ,NVL(NVL(A.MOVING_AVG_PRC,NVL(J.MOVING_AVG_PRC, B.MOVING_AVG_PRC)),0) AS MOVING_AVG_PRC
+                        --,A.REQ_QTY * NVL(NVL(A.MOVING_AVG_PRC,NVL(J.MOVING_AVG_PRC, B.MOVING_AVG_PRC)),0) AS MOVING_AVG_AMT
+                        ,NVL(CASE WHEN A.PAR_REQ_STAT_CD = '01' THEN A.REQ_QTY
+                                  WHEN A.PAR_REQ_STAT_CD = '03' THEN A.END_QTY
+                                  ELSE A.END_QTY
+                              END, 0) * NVL(NVL(A.MOVING_AVG_PRC,NVL(J.MOVING_AVG_PRC, B.MOVING_AVG_PRC)),0) AS MOVING_AVG_AMT
+                        ,NVL(A.READY_STAT_CD ,'01') AS READY_STAT_CD
+                        ,A.READY_DOC_NO
+                        ,A.READY_REMARK
+                        ,A.READY_USR_ID
+                        ,A.READY_REG_DT
+                        ,A.READY_CANC_REMARK
+                        ,A.READY_CANC_USR_ID
+                        ,A.READY_CANC_REG_DT
+                        ,CASE WHEN NVL(A.BORROW_STAT_CD, '01') != '01' THEN A.BORROW_DOC_NO
+                        ELSE ''
+                        END AS BORROW_DOC_NO
+                        ,A.BORROW_LINE_NO
+                        ,A.BORROW_TP
+                        ,A.BORROW_STAT_CD
+                        ,A.BORROW_QTY
+                        ,A.BORROW_USR_ID
+                        ,(SELECT BK.USR_NM FROM CM_0801T BK WHERE BK.USR_ID = A.BORROW_USR_ID) AS BORROW_USR_NM
+                        ,(SELECT AB.DEPT_NM FROM CM_0801T AA
+                            LEFT JOIN CM_3401T AB ON AA.DEPT_CD = AB.DEPT_CD
+                            WHERE AA.USR_ID = A.BORROW_USR_ID
+                        ) AS BORROW_DEPT_NM
+                        ,A.BORROW_REG_DT
+                        ,A.ETC_RV_DOC_NO
+                        ,A.ETC_RV_LINE_NO
+                        ,A.ETC_RV_STAT_CD
+                        ,A.ETC_RV_QTY
+                        ,A.ETC_RV_PRSN_ID
+                        ,A.ETC_RV_REG_DT
+                        ,A.COM_ITEM_CD
+                        ,A.COM_ITEM_NM
+                        ,A.COM_ITEM_PRC
+                        ,NVL(A.RO_TP, '01') AS RO_TP
+                        ,NVL(R.RO_STAT_CD,'01') AS RO_STAT_CD
+                        ,DECODE(A.RO_TP,'02','04' <!--RO유형 보증(02) : 가격보증(04) -->
+                                       ,'03','03' <!--RO유형 보험(03) : 가격보험(03) -->
+                                       ,'01') AS PRC_TP<!--그외 일반가(01) -->
+                        ,I.RETL_PRC
+                        ,I.WHSL_PRC
+                        ,I.INC_PRC
+                        ,I.GRTE_PRC
+                        ,A.REMARK
+                        ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(ITEM_SALE_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                              WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(ITEM_SALE_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                              WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(ITEM_SALE_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                        ELSE 0
+                        END AS ITEM_SALE_PRC
+                        ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(ITEM_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                              WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(ITEM_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                              WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(ITEM_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                        ELSE 0
+                        END AS ITEM_SALE_AMT
+                        ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(DC_RATE, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                              WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(DC_RATE, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                              WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(DC_RATE, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                        ELSE 0
+                        END AS DC_RATE
+                        ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(DC_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                              WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(DC_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                              WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(DC_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                        ELSE 0
+                        END AS DC_AMT
+                        ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(ITEM_TOT_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                              WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(ITEM_TOT_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                              WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(ITEM_TOT_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                        ELSE 0
+                        END AS ITEM_TOT_AMT
+                        ,A.PAYM_CD
+                        ,A.PAYM_TP
+                        ,A.PAYM_USR_NM
+                        ,A.PARTS_PRC_TP
+                        ,K2.USR_NM
+                        ,K5.USR_NM AS RO_REG_USR_NM
+                        ,(SELECT FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_CD FROM SA_0121T WHERE VIN_NO = H.VIN_NO AND ROWNUM = 1) AS CARLINE_NM
+                    FROM PT_0502T A
+                    LEFT JOIN PT_0201T B ON A.DLR_CD = B.DLR_CD AND A.ITEM_CD = B.ITEM_CD
+                    LEFT JOIN SE_0300T R ON A.DLR_CD = R.DLR_CD AND A.RO_DOC_NO = R.RO_DOC_NO
+                    LEFT JOIN PT_0301T C ON A.DLR_CD = C.DLR_CD AND A.ITEM_CD = C.ITEM_CD AND A.REQ_STRGE_CD = C.STRGE_CD
+                    LEFT JOIN PT_0302T D ON A.DLR_CD = D.DLR_CD AND A.ITEM_CD = D.ITEM_CD AND A.REQ_STRGE_CD = D.STRGE_CD AND A.RESV_DOC_NO = D.RESV_DOC_NO AND A.RESV_DOC_LINE_NO = D.RESV_DOC_LINE_NO
+                    LEFT JOIN PT_0511T E ON A.DLR_CD = E.DLR_CD AND A.RO_DOC_NO = E.RO_DOC_NO
+                    LEFT JOIN PT_0512T F ON A.DLR_CD = F.DLR_CD AND A.PAR_REQ_DOC_NO = F.PAR_REQ_DOC_NO AND A.PAR_REQ_DOC_LINE_NO = F.PAR_REQ_DOC_LINE_NO
+                    AND A.PAR_REQ_DOC_LINE_NO = F.GI_DOC_LINE_NO
+                    AND A.PAR_REQ_STAT_CD = F.GI_DOC_STAT_CD
+                    LEFT JOIN PT_0411T G ON A.DLR_CD = G.DLR_CD AND A.RO_DOC_NO = G.REF_DOC_NO AND A.RO_LINE_NO = G.REF_DOC_LINE_NO AND A.ITEM_CD = G.ITEM_CD
+                    LEFT JOIN PT_0501T H ON A.DLR_CD = H.DLR_CD AND A.PAR_REQ_DOC_NO = H.PAR_REQ_DOC_NO
+                    LEFT JOIN PT_0214T I ON A.DLR_CD = I.DLR_CD AND A.REQ_STRGE_CD = I.STRGE_CD AND A.ITEM_CD = I.ITEM_CD
+                    LEFT JOIN PT_0208T J ON A.DLR_CD = J.DLR_CD AND A.REQ_STRGE_CD = J.STRGE_CD AND A.ITEM_CD = J.ITEM_CD
+                    LEFT JOIN PT_0224T K ON A.DLR_CD = K.DLR_CD  AND A.REQ_STRGE_CD = K.STRGE_CD AND A.ITEM_CD = K.ITEM_CD AND K.LOC_CD != ''
+                    LEFT JOIN PT_0231T L ON A.DLR_CD = L.DLR_CD AND A.PKG_ITEM_CD = L.PKG_ITEM_CD AND A.ITEM_CD = L.ITEM_CD AND A.PKG_DOC_NO = L.PKG_DOC_NO
+                    LEFT JOIN CM_0801T K2 ON F.RECEIVE_ID = K2.USR_ID
+                    LEFT JOIN CM_0801T K3 ON A.REG_USR_ID = K3.USR_ID
+                    LEFT JOIN CM_3401T K4 ON K3.DEPT_CD = K4.DEPT_CD
+                    LEFT JOIN CM_0801T K5 ON R.REG_USR_ID = K5.USR_ID
+                    <where>
+                        <if test='sDlrCd != null and sDlrCd != ""'>
+                            AND A.DLR_CD = #{sDlrCd}
+                        </if>
+
+                        <if test='sParReqDocNo != null and sParReqDocNo != ""'>
+                            AND A.PAR_REQ_DOC_NO = #{sParReqDocNo}
+                        </if>
+
+                        <if test='sParReqDocLineNo != null and sParReqDocLineNo != 0'>
+                            AND A.PAR_REQ_DOC_LINE_NO = #{sParReqDocLineNo}
+                        </if>
+
+                        <if test='sParReqStatCd != null and sParReqStatCd != ""'>
+                            AND A.PAR_REQ_STAT_CD = #{sParReqStatCd}
+                        </if>
+
+                        <if test='sRoDocNo != null and sRoDocNo != ""'>
+                            AND A.RO_DOC_NO LIKE '%'||#{sRoDocNo}||'%'
+                        </if>
+
+                        <if test='sRoLineNo != null and sRoLineNo != 0'>
+                            AND A.RO_LINE_NO = #{sRoLineNo}
+                        </if>
+
+                        <if test='sResvDocNo != null and sResvDocNo != ""'>
+                            AND A.RESV_DOC_NO = #{sResvDocNo}
+                        </if>
+
+                        <if test='sResvDocLineNo != null and sResvDocLineNo != 0'>
+                            AND A.RESV_DOC_LINE_NO = #{sResvDocLineNo}
+                        </if>
+
+                        <if test='sParGiTp != null and sParGiTp != ""'>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG01")'>
+                                    AND (A.PAR_GI_TP in ('RO','IN') OR A.BORROW_DOC_NO IS NOT NULL)
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG02")'>
+                                    AND A.BORROW_DOC_NO IS NOT NULL
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG03")'>
+                                    AND A.PAR_GI_TP in ('RO') AND A.BORROW_DOC_NO IS NULL
+                                </when>
+                                <otherwise>
+                                    AND A.PAR_GI_TP = #{sParGiTp}
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        AND A.BORROW_STAT_CD != '03'<!-- 정비차용상태 반환 아닌 것 -->
+
+                        <if test='sItemCd != null and sItemCd != ""'>
+                            AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                        </if>
+
+                        <if test='sItemCdOnly != null and sItemCdOnly != ""'>
+                            AND A.ITEM_CD = #{sItemCdOnly}
+                        </if>
+
+                        <if test='sCancYn != null and sCancYn != ""'>
+                            AND A.CANC_YN = #{sCancYn}
+                        </if>
+
+                        <if test='sEtcGiTp != null and sEtcGiTp != ""'>
+                            AND A.ETC_GI_TP = #{sEtcGiTp}
+                        </if>
+
+                        <if test='sReqStrgeCd != null and sReqStrgeCd != ""'>
+                            AND A.REQ_STRGE_CD = #{sReqStrgeCd}
+                        </if>
+
+                        <if test='sGiStrgeCd != null and sGiStrgeCd != ""'>
+                            AND A.GI_STRGE_CD = #{sGiStrgeCd}
+                        </if>
+
+                        <if test='sGrStrgeCd != null and sGrStrgeCd != ""'>
+                            AND A.GR_STRGE_CD = #{sGrStrgeCd}
+                        </if>
+
+                        <if test='sReadyDocNo != null and sReadyDocNo != ""'>
+                            AND A.READY_DOC_NO LIKE '%'||#{sReadyDocNo}||'%'
+                        </if>
+
+                        <if test='sReadyStatCd != null and sReadyStatCd != ""'>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sReadyStatCd,"RE01")'>
+                                     AND A.READY_STAT_CD IN ('01','02','04')
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sReadyStatCd,"RE02")'>
+                                     AND A.READY_STAT_CD IN ('02','03','05')
+                                </when>
+                                <otherwise>
+                                     AND A.READY_STAT_CD = #{sReadyStatCd}
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        <if test='sReqStartDt != null'>
+                            <choose>
+                                <otherwise>
+                                     AND A.REG_DT <![CDATA[>=]]> #{sReqStartDt}
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        <if test='sReqEndDt != null'>
+                            <choose>
+                                <otherwise>
+                                     AND A.REG_DT <![CDATA[<=]]> #{sReqEndDt} + 1
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        <if test='sVinNo != null and sVinNo != ""'>
+                            AND H.VIN_NO LIKE '%'||#{sVinNo}||'%'
+                        </if>
+
+                        <if test='sCarNo != null and sCarNo != ""'>
+                            AND H.CAR_NO LIKE '%'||#{sCarNo}||'%'
+                        </if>
+
+                        <if test='sCustNm != null and sCustNm != ""'>
+                            AND H.CUST_NM LIKE '%'||#{sCustNm}||'%'
+                        </if>
+
+                        <if test='sBorrowStatCd != null and sBorrowStatCd != ""'>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_01")'>
+                                    AND (A.BORROW_STAT_CD = '01' OR A.BORROW_DOC_NO IS NULL )
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_02")'>
+                                    AND (A.BORROW_STAT_CD IN ('05','04') OR A.BORROW_DOC_NO IS NULL OR A.READY_STAT_CD = '06' )
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_03")'>
+                                    AND A.BORROW_STAT_CD in ('02')<!-- 차용 -->
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_04")'>
+                                    AND A.BORROW_DOC_NO IS NOT NULL
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_05")'>
+                                    AND A.BORROW_STAT_CD in ('04','05')<!-- 정비차용확정, 차용대기 -->
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_06")'>
+                                    AND A.BORROW_STAT_CD != '03'<!-- 반환 제외 -->
+                                </when>
+                                <otherwise>
+                                    AND A.BORROW_STAT_CD = #{sBorrowStatCd}
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        <if test='sBorrowDocNoUseYn != null and sBorrowDocNoUseYn == "Y"'>
+                            AND A.BORROW_DOC_NO IS NOT NULL
+                        </if>
+
+                        <if test='sGiDocStatCd != null and sGiDocStatCd != ""'>
+                            AND F.GI_DOC_STAT_CD = #{sGiDocStatCd}
+                        </if>
+
+                        <if test='sGiDocNo != null and sGiDocNo != ""'>
+                            AND F.GI_DOC_NO LIKE '%'||#{sGiDocNo}||'%'
+                        </if>
+
+                        <if test='sGiDocReqStartDt != null'>
+                            <choose>
+                                <otherwise>
+                                     AND F.RECEIVE_DT <![CDATA[>=]]> #{sGiDocReqStartDt}
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        <if test='sGiDocReqEndDt != null'>
+                            <choose>
+                                <otherwise>
+                                     AND F.RECEIVE_DT <![CDATA[<=]]> #{sGiDocReqEndDt} + 1
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        <if test='sReceiveId != null and sReceiveId != ""'>
+                            AND F.RECEIVE_ID LIKE '%'||#{sReceiveId}||'%'
+                        </if>
+
+                        <if test='sReceiveNm != null and sReceiveNm != ""'>
+                            AND K2.USR_NM LIKE '%'||#{sReceiveNm}||'%'
+                        </if>
+
+                        <if test='sRoStatCd != null and sRoStatCd != ""'>
+                            AND NVL(R.RO_STAT_CD,'01') = #{sRoStatCd}
+                        </if>
+
+                        <if test='sPartsOutUseYn != null and sPartsOutUseYn != ""'>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sPartsOutUseYn,"Y")'>
+                                    AND F.GI_DOC_STAT_CD IN ('02','03')
+                                </when>
+                                <otherwise>
+                                </otherwise>
+                            </choose>
+                        </if>
+                        AND NVL(R.RO_STAT_CD, '01') IN ('01','02')
+                    </where>
+                    UNION ALL
+                    SELECT
+                        A.DLR_CD
+                        ,A.PAR_REQ_DOC_NO
+                        ,A.PAR_REQ_DOC_LINE_NO
+                        ,A.PAR_REQ_DOC_STOCK_LINE_NO
+                        ,A.PAR_REQ_STAT_CD
+                        ,G.PURC_REQ_NO
+                        ,A.CANC_YN
+                        ,A.PAR_GI_TP
+                        ,A.RO_DOC_NO
+                        ,A.RO_LINE_NO
+                        ,A.RESV_DOC_NO
+                        ,A.RESV_DOC_LINE_NO
+                        ,B.GI_STRGE_CD AS GR_STRGE_CD
+                        ,NVL(A.GI_STRGE_CD,B.GI_STRGE_CD) AS GI_STRGE_CD
+                        ,(
+                            SELECT
+                                T1.LOC_CD_MIG
+                            FROM PT_0224T T1
+                            WHERE T1.DLR_CD = A.DLR_CD
+                            AND T1.STRGE_CD = A.REQ_STRGE_CD
+                            AND T1.ITEM_CD = A.ITEM_CD
+                        ) AS GI_LOC_CD
+                        ,NVL(A.GI_LOC_CD,K.LOC_CD) AS GI_LOC_CD
+                        ,A.ITEM_CD AS DB_ITEM_CD
+                        ,A.ITEM_CD
+                        ,B.BRAND_CD
+                        ,B.STOCK_UNIT_CD AS UNIT_CD
+                        ,CASE WHEN A.ITEM_PRC <![CDATA[<]]> 0 THEN ROUND(A.ITEM_PRC) * -1
+                        ELSE A.ITEM_PRC
+                        END AS ITEM_PRC
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN ROUND(A.ITEM_PRC * A.END_QTY, 2)
+                              WHEN A.PAR_REQ_STAT_CD = '01' AND A.END_QTY = 0 THEN ROUND(A.ITEM_PRC * A.REQ_QTY, 2)
+                        ELSE A.ITEM_AMT
+                        END AS ITEM_AMT
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (ROUND(A.ITEM_PRC / 1.12, 2) * A.END_QTY )
+                              WHEN A.PAR_REQ_STAT_CD = '01' AND A.END_QTY = 0 THEN (ROUND(A.ITEM_PRC / 1.12, 2) * A.REQ_QTY )
+                        ELSE ROUND(A.ITEM_PRC / 1.12, 2) * A.END_QTY
+                        END AS TAX_DDCT_AMT
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (ROUND(A.ITEM_PRC * A.END_QTY, 2) - (ROUND(A.ITEM_PRC / 1.12, 2) * A.END_QTY ))
+                              WHEN A.PAR_REQ_STAT_CD = '01' AND A.END_QTY = 0 THEN (ROUND(A.ITEM_PRC * A.REQ_QTY, 2) - (ROUND(A.ITEM_PRC / 1.12, 2) * A.REQ_QTY ))
+                        ELSE A.TAX_AMT
+                        END TAX_AMT
+                        ,A.REQ_QTY
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '01' THEN A.REQ_QTY
+                              WHEN A.PAR_REQ_STAT_CD = '03' THEN A.END_QTY
+                        ELSE A.END_QTY
+                        END AS RESV_QTY
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '01' THEN A.REQ_QTY
+                              WHEN A.PAR_REQ_STAT_CD = '03' THEN A.END_QTY
+                        ELSE A.END_QTY
+                        END AS END_QTY
+                        ,A.REQ_STRGE_CD
+                        ,A.REG_DT
+                        ,A.REG_USR_ID
+                        ,K3.USR_NM AS REG_USR_NM
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN K3.USR_NM
+                        ELSE (SELECT BK.USR_NM FROM CM_0801T BK WHERE BK.USR_ID = A.UPDT_USR_ID)
+                        END UPDT_USR_NM
+                        ,K4.DEPT_CD
+                        ,K4.DEPT_NM
+                        ,CASE WHEN A.PAR_GI_TP = 'OT' AND A.READY_STAT_CD <![CDATA[!=]]> '05' THEN null
+                        ELSE A.UPDT_DT
+                        END AS UPDT_DT
+                        ,A.UPDT_USR_ID
+                        ,B.ITEM_NM
+                        ,NVL(C.AVLB_STOCK_QTY,0) + NVL(C.RESV_STOCK_QTY,0) - NVL(C.BORROW_QTY,0) + NVL(C.RENT_QTY,0) AS TOT_STOCK_QTY
+                        ,NVL(C.AVLB_STOCK_QTY,0) AS AVLB_STOCK_QTY
+                        ,NVL(C.RESV_STOCK_QTY,0) AS RESV_STOCK_QTY
+                        ,NVL(C.CLAM_STOCK_QTY,0) AS CLAM_STOCK_QTY
+                        ,NVL(C.BORROW_QTY,0) AS BORROW_STOCK_QTY
+                        ,NVL(C.RENT_QTY,0) AS RENT_QTY
+                        ,NVL(C.GR_SCHE_QTY,0) AS GR_SCHE_QTY
+                        ,NVL(C.GI_SCHE_QTY,0) AS GI_SCHE_QTY
+                        ,A.REG_DT AS PURC_REQ_DT
+                        ,NVL(F.GI_DOC_NO,'-') AS GI_DOC_NO
+                        ,NVL(E.GI_DOC_TP,'01') AS GI_DOC_TP
+                        ,NVL(F.GI_DOC_STAT_CD,'01') AS GI_DOC_STAT_CD
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (SELECT MIN(AA.MVT_DOC_YY_MM) FROM PT_0512T AA WHERE AA.DLR_CD = #{sDlrCd} AND AA.PAR_REQ_DOC_NO = #{sParReqDocNo} AND AA.GI_DOC_STAT_CD = '02')
+                        ELSE F.MVT_DOC_YY_MM
+                        END AS MVT_DOC_YY_MM
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (SELECT MIN(AA.MVT_DOC_NO) FROM PT_0512T AA WHERE AA.DLR_CD = #{sDlrCd} AND AA.PAR_REQ_DOC_NO = #{sParReqDocNo} AND AA.GI_DOC_STAT_CD = '02')
+                        ELSE F.MVT_DOC_NO
+                        END AS MVT_DOC_NO
+                        ,CASE WHEN A.PAR_REQ_STAT_CD = '03' THEN (SELECT MIN(AA.MVT_DOC_LINE_NO) FROM PT_0512T AA WHERE AA.DLR_CD = #{sDlrCd} AND AA.PAR_REQ_DOC_NO = #{sParReqDocNo} AND AA.GI_DOC_STAT_CD = '02')
+                        ELSE F.MVT_DOC_LINE_NO
+                        END AS MVT_DOC_LINE_NO
+                        ,H.CUST_CD
+                        ,H.CUST_NM
+                        ,H.SER_PRSN_ID
+                        ,H.VIN_NO
+                        ,H.CAR_NO
+                        ,'Y' AS DB_YN
+                        ,F.GI_STAT_CD
+                        ,F.RECEIVE_ID
+                        ,K2.USR_NM AS RECEIVE_NM
+                        ,F.GI_DT
+                        ,F.RECEIVE_DT
+                        ,F.RECEIVE_DT AS RECEIVE_TIME
+                        ,F.RETURN_ID
+                        ,F.RETURN_DT
+                        ,F.CANC_ID
+                        ,F.CANC_DT
+                        ,F.GI_CAU_NM
+                        ,A.ETC_GI_TP
+                        ,A.PKG_DOC_NO
+                        ,A.PKG_ITEM_CD
+                        ,L.PKG_DETL_DC_RATE
+                        ,NVL((L.ITEM_PRC * L.ITEM_QTY) - (L.ITEM_QTY * (L.ITEM_PRC * (L.PKG_DETL_DC_RATE / 100))),0) AS PKG_DETL_DC_TOT_AMT
+                        ,NVL(L.ITEM_QTY * (L.ITEM_PRC * (L.PKG_DETL_DC_RATE/100)),0) AS PKG_DETL_DC_AMT
+                        ,NVL(F.RETURN_PARTS_QTY, 0) AS RETURN_PARTS_QTY
+                        ,NVL(NVL(A.MOVING_AVG_PRC,NVL(J.MOVING_AVG_PRC, B.MOVING_AVG_PRC)),0) AS MOVING_AVG_PRC
+                        --,A.REQ_QTY * NVL(NVL(A.MOVING_AVG_PRC,NVL(J.MOVING_AVG_PRC, B.MOVING_AVG_PRC)),0) AS MOVING_AVG_AMT
+                        ,NVL(CASE WHEN A.PAR_REQ_STAT_CD = '01' THEN A.REQ_QTY
+                                  WHEN A.PAR_REQ_STAT_CD = '03' THEN A.END_QTY
+                                  ELSE A.END_QTY
+                              END,0) * NVL(NVL(A.MOVING_AVG_PRC,NVL(J.MOVING_AVG_PRC, B.MOVING_AVG_PRC)),0) AS MOVING_AVG_AMT
+                        ,NVL(A.READY_STAT_CD ,'01') AS READY_STAT_CD
+                        ,A.READY_DOC_NO
+                        ,A.READY_REMARK
+                        ,A.READY_USR_ID
+                        ,A.READY_REG_DT
+                        ,A.READY_CANC_REMARK
+                        ,A.READY_CANC_USR_ID
+                        ,A.READY_CANC_REG_DT
+                        ,CASE WHEN NVL(A.BORROW_STAT_CD, '01') != '01' THEN A.BORROW_DOC_NO
+                        ELSE ''
+                        END AS BORROW_DOC_NO
+                        ,A.BORROW_LINE_NO
+                        ,A.BORROW_TP
+                        ,A.BORROW_STAT_CD
+                        ,A.BORROW_QTY
+                        ,A.BORROW_USR_ID
+                        ,(SELECT BK.USR_NM FROM CM_0801T BK WHERE BK.USR_ID = A.BORROW_USR_ID) AS BORROW_USR_NM
+                        ,(SELECT AB.DEPT_NM FROM CM_0801T AA
+                            LEFT JOIN CM_3401T AB ON AA.DEPT_CD = AB.DEPT_CD
+                            WHERE AA.USR_ID = A.BORROW_USR_ID
+                        ) AS BORROW_DEPT_NM
+                        ,A.BORROW_REG_DT
+                        ,A.ETC_RV_DOC_NO
+                        ,A.ETC_RV_LINE_NO
+                        ,A.ETC_RV_STAT_CD
+                        ,A.ETC_RV_QTY
+                        ,A.ETC_RV_PRSN_ID
+                        ,A.ETC_RV_REG_DT
+                        ,A.COM_ITEM_CD
+                        ,A.COM_ITEM_NM
+                        ,A.COM_ITEM_PRC
+                        ,NVL(A.RO_TP, '01') AS RO_TP
+                        ,NVL(R.RO_STAT_CD,'01') AS RO_STAT_CD
+                        ,DECODE(A.RO_TP,'02','04' <!--RO유형 보증(02) : 가격보증(04) -->
+                                       ,'03','03' <!--RO유형 보험(03) : 가격보험(03) -->
+                                       ,'01') AS PRC_TP<!--그외 일반가(01) -->
+                        ,I.RETL_PRC
+                        ,I.WHSL_PRC
+                        ,I.INC_PRC
+                        ,I.GRTE_PRC
+                        ,A.REMARK
+                        ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(ITEM_SALE_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                              WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(ITEM_SALE_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                              WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(ITEM_SALE_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                        ELSE 0
+                        END AS ITEM_SALE_PRC
+                        ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(ITEM_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                              WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(ITEM_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                              WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(ITEM_PRC, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                        ELSE 0
+                        END AS ITEM_SALE_AMT
+                        ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(DC_RATE, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                              WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(DC_RATE, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                              WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(DC_RATE, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                        ELSE 0
+                        END AS DC_RATE
+                        ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(DC_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                              WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(DC_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                              WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(DC_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                        ELSE 0
+                        END AS DC_AMT
+                        ,CASE WHEN A.PAR_GI_TP = 'SR' THEN (SELECT NVL(ITEM_TOT_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RE' AND LINE_NO = A.RO_LINE_NO)<!-- 예약접수 -->
+                              WHEN A.PAR_GI_TP = 'RO' THEN (SELECT NVL(ITEM_TOT_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RO_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'RO' AND LINE_NO = A.RO_LINE_NO)<!-- RO -->
+                              WHEN A.PAR_GI_TP = 'SP' THEN (SELECT NVL(ITEM_TOT_AMT, 0) ITEM_PRC FROM SE_0160T WHERE DLR_CD = #{sDlrCd} AND DOC_NO = A.RESV_DOC_NO AND ITEM_CD = A.ITEM_CD AND PREFIX_ID = 'PE' AND LINE_NO = A.RO_LINE_NO)<!-- 부품예약 -->
+                        ELSE 0
+                        END AS ITEM_TOT_AMT
+                        ,A.PAYM_CD
+                        ,A.PAYM_TP
+                        ,A.PAYM_USR_NM
+                        ,A.PARTS_PRC_TP
+                        ,K2.USR_NM
+                        ,K5.USR_NM AS RO_REG_USR_NM
+                        ,(SELECT FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_CD FROM SA_0121T WHERE VIN_NO = H.VIN_NO AND ROWNUM = 1) AS CARLINE_NM
+                    FROM PT_0502T A
+                    LEFT JOIN PT_0201T B ON A.DLR_CD = B.DLR_CD AND A.ITEM_CD = B.ITEM_CD
+                    LEFT JOIN SE_0300T R ON A.DLR_CD = R.DLR_CD AND A.RO_DOC_NO = R.RO_DOC_NO
+                    LEFT JOIN PT_0301T C ON A.DLR_CD = C.DLR_CD AND A.ITEM_CD = C.ITEM_CD AND A.REQ_STRGE_CD = C.STRGE_CD
+                    LEFT JOIN PT_0302T D ON A.DLR_CD = D.DLR_CD AND A.ITEM_CD = D.ITEM_CD AND A.REQ_STRGE_CD = D.STRGE_CD AND A.RESV_DOC_NO = D.RESV_DOC_NO AND A.RESV_DOC_LINE_NO = D.RESV_DOC_LINE_NO
+                    LEFT JOIN PT_0511T E ON A.DLR_CD = E.DLR_CD AND A.RO_DOC_NO = E.RO_DOC_NO
+                    LEFT JOIN PT_0512T F ON A.DLR_CD = F.DLR_CD AND A.PAR_REQ_DOC_NO = F.PAR_REQ_DOC_NO AND A.PAR_REQ_DOC_LINE_NO = F.PAR_REQ_DOC_LINE_NO
+                    AND A.PAR_REQ_DOC_LINE_NO = F.GI_DOC_LINE_NO
+                    AND A.PAR_REQ_STAT_CD = F.GI_DOC_STAT_CD
+                    LEFT JOIN PT_0411T G ON A.DLR_CD = G.DLR_CD AND A.RO_DOC_NO = G.REF_DOC_NO AND A.RO_LINE_NO = G.REF_DOC_LINE_NO AND A.ITEM_CD = G.ITEM_CD
+                    LEFT JOIN PT_0501T H ON A.DLR_CD = H.DLR_CD AND A.PAR_REQ_DOC_NO = H.PAR_REQ_DOC_NO
+                    LEFT JOIN PT_0214T I ON A.DLR_CD = I.DLR_CD AND A.REQ_STRGE_CD = I.STRGE_CD AND A.ITEM_CD = I.ITEM_CD
+                    LEFT JOIN PT_0208T J ON A.DLR_CD = J.DLR_CD AND A.REQ_STRGE_CD = J.STRGE_CD AND A.ITEM_CD = J.ITEM_CD
+                    LEFT JOIN PT_0224T K ON A.DLR_CD = K.DLR_CD  AND A.REQ_STRGE_CD = K.STRGE_CD AND A.ITEM_CD = K.ITEM_CD AND K.LOC_CD != ''
+                    LEFT JOIN PT_0231T L ON A.DLR_CD = L.DLR_CD AND A.PKG_ITEM_CD = L.PKG_ITEM_CD AND A.ITEM_CD = L.ITEM_CD AND A.PKG_DOC_NO = L.PKG_DOC_NO
+                    LEFT JOIN CM_0801T K2 ON F.RECEIVE_ID = K2.USR_ID
+                    LEFT JOIN CM_0801T K3 ON A.REG_USR_ID = K3.USR_ID
+                    LEFT JOIN CM_3401T K4 ON K3.DEPT_CD = K4.DEPT_CD
+                    LEFT JOIN CM_0801T K5 ON R.REG_USR_ID = K5.USR_ID
+                    <where>
+                        <if test='sDlrCd != null and sDlrCd != ""'>
+                            AND A.DLR_CD = #{sDlrCd}
+                        </if>
+
+                        <if test='sParReqDocNo != null and sParReqDocNo != ""'>
+                            AND A.PAR_REQ_DOC_NO = #{sParReqDocNo}
+                        </if>
+
+                        <if test='sParReqDocLineNo != null and sParReqDocLineNo != 0'>
+                            AND A.PAR_REQ_DOC_LINE_NO = #{sParReqDocLineNo}
+                        </if>
+
+                        <if test='sParReqStatCd != null and sParReqStatCd != ""'>
+                            AND A.PAR_REQ_STAT_CD = #{sParReqStatCd}
+                        </if>
+
+                        <if test='sRoDocNo != null and sRoDocNo != ""'>
+                            AND A.RO_DOC_NO LIKE '%'||#{sRoDocNo}||'%'
+                        </if>
+
+                        <if test='sRoLineNo != null and sRoLineNo != 0'>
+                            AND A.RO_LINE_NO = #{sRoLineNo}
+                        </if>
+
+                        <if test='sResvDocNo != null and sResvDocNo != ""'>
+                            AND A.RESV_DOC_NO = #{sResvDocNo}
+                        </if>
+
+                        <if test='sResvDocLineNo != null and sResvDocLineNo != 0'>
+                            AND A.RESV_DOC_LINE_NO = #{sResvDocLineNo}
+                        </if>
+
+                        <if test='sParGiTp != null and sParGiTp != ""'>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG01")'>
+                                    AND (A.PAR_GI_TP in ('RO','IN') OR A.BORROW_DOC_NO IS NOT NULL)
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG02")'>
+                                    AND A.BORROW_DOC_NO IS NOT NULL
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG03")'>
+                                    AND A.PAR_GI_TP in ('RO') AND A.BORROW_DOC_NO IS NULL
+                                </when>
+                                <otherwise>
+                                    AND A.PAR_GI_TP = #{sParGiTp}
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        AND A.BORROW_STAT_CD != '03'<!-- 정비차용상태 반환 아닌 것 -->
+
+                        <if test='sItemCd != null and sItemCd != ""'>
+                            AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                        </if>
+
+                        <if test='sItemCdOnly != null and sItemCdOnly != ""'>
+                            AND A.ITEM_CD = #{sItemCdOnly}
+                        </if>
+
+                        <if test='sCancYn != null and sCancYn != ""'>
+                            AND A.CANC_YN = #{sCancYn}
+                        </if>
+
+                        <if test='sEtcGiTp != null and sEtcGiTp != ""'>
+                            AND A.ETC_GI_TP = #{sEtcGiTp}
+                        </if>
+
+                        <if test='sReqStrgeCd != null and sReqStrgeCd != ""'>
+                            AND A.REQ_STRGE_CD = #{sReqStrgeCd}
+                        </if>
+
+                        <if test='sGiStrgeCd != null and sGiStrgeCd != ""'>
+                            AND A.GI_STRGE_CD = #{sGiStrgeCd}
+                        </if>
+
+                        <if test='sGrStrgeCd != null and sGrStrgeCd != ""'>
+                            AND A.GR_STRGE_CD = #{sGrStrgeCd}
+                        </if>
+
+                        <if test='sReadyDocNo != null and sReadyDocNo != ""'>
+                            AND A.READY_DOC_NO LIKE '%'||#{sReadyDocNo}||'%'
+                        </if>
+
+                        <if test='sReadyStatCd != null and sReadyStatCd != ""'>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sReadyStatCd,"RE01")'>
+                                     AND A.READY_STAT_CD IN ('01','02','04')
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sReadyStatCd,"RE02")'>
+                                     AND A.READY_STAT_CD IN ('02','03','05')
+                                </when>
+                                <otherwise>
+                                     AND A.READY_STAT_CD = #{sReadyStatCd}
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        <if test='sReqStartDt != null'>
+                            <choose>
+                                <otherwise>
+                                     AND A.REG_DT <![CDATA[>=]]> #{sReqStartDt}
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        <if test='sReqEndDt != null'>
+                            <choose>
+                                <otherwise>
+                                     AND A.REG_DT <![CDATA[<=]]> #{sReqEndDt} + 1
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        <if test='sVinNo != null and sVinNo != ""'>
+                            AND H.VIN_NO LIKE '%'||#{sVinNo}||'%'
+                        </if>
+
+                        <if test='sCarNo != null and sCarNo != ""'>
+                            AND H.CAR_NO LIKE '%'||#{sCarNo}||'%'
+                        </if>
+
+                        <if test='sCustNm != null and sCustNm != ""'>
+                            AND H.CUST_NM LIKE '%'||#{sCustNm}||'%'
+                        </if>
+
+                        <if test='sBorrowStatCd != null and sBorrowStatCd != ""'>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_01")'>
+                                    AND (A.BORROW_STAT_CD = '01' OR A.BORROW_DOC_NO IS NULL )
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_02")'>
+                                    AND (A.BORROW_STAT_CD IN ('05','04') OR A.BORROW_DOC_NO IS NULL OR A.READY_STAT_CD = '06' )
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_03")'>
+                                    AND A.BORROW_STAT_CD in ('02')<!-- 차용 -->
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_04")'>
+                                    AND A.BORROW_DOC_NO IS NOT NULL
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_05")'>
+                                    AND A.BORROW_STAT_CD in ('04','05')<!-- 정비차용확정, 차용대기 -->
+                                </when>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_06")'>
+                                    AND A.BORROW_STAT_CD != '03'<!-- 반환 제외 -->
+                                </when>
+                                <otherwise>
+                                    AND A.BORROW_STAT_CD = #{sBorrowStatCd}
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        <if test='sBorrowDocNoUseYn != null and sBorrowDocNoUseYn == "Y"'>
+                            AND A.BORROW_DOC_NO IS NOT NULL
+                        </if>
+
+                        <if test='sGiDocStatCd != null and sGiDocStatCd != ""'>
+                            AND F.GI_DOC_STAT_CD = #{sGiDocStatCd}
+                        </if>
+
+                        <if test='sGiDocNo != null and sGiDocNo != ""'>
+                            AND F.GI_DOC_NO LIKE '%'||#{sGiDocNo}||'%'
+                        </if>
+
+                        <if test='sGiDocReqStartDt != null'>
+                            <choose>
+                                <otherwise>
+                                     AND F.RECEIVE_DT <![CDATA[>=]]> #{sGiDocReqStartDt}
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        <if test='sGiDocReqEndDt != null'>
+                            <choose>
+                                <otherwise>
+                                     AND F.RECEIVE_DT <![CDATA[<=]]> #{sGiDocReqEndDt} + 1
+                                </otherwise>
+                            </choose>
+                        </if>
+
+                        <if test='sReceiveId != null and sReceiveId != ""'>
+                            AND F.RECEIVE_ID LIKE '%'||#{sReceiveId}||'%'
+                        </if>
+
+                        <if test='sReceiveNm != null and sReceiveNm != ""'>
+                            AND K2.USR_NM LIKE '%'||#{sReceiveNm}||'%'
+                        </if>
+
+                        <if test='sRoStatCd != null and sRoStatCd != ""'>
+                            AND NVL(R.RO_STAT_CD,'01') = #{sRoStatCd}
+                        </if>
+
+                        <if test='sPartsOutUseYn != null and sPartsOutUseYn != ""'>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sPartsOutUseYn,"Y")'>
+                                     AND F.GI_DOC_STAT_CD IN ('02','03')
+                                </when>
+                                <otherwise>
+                                </otherwise>
+                            </choose>
+                        </if>
+                        AND NVL(R.RO_STAT_CD, '01') NOT IN ('01','02')
+                        AND A.PAR_REQ_STAT_CD IN ('01','02','03')
+                    </where>
+                )TA
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND TA.DLR_CD = #{sDlrCd}
+                    </if>
+
+                    <if test='sParReqDocNo != null and sParReqDocNo != ""'>
+                        AND TA.PAR_REQ_DOC_NO = #{sParReqDocNo}
+                    </if>
+
+                    <if test='sParReqDocLineNo != null and sParReqDocLineNo != 0'>
+                        AND TA.PAR_REQ_DOC_LINE_NO = #{sParReqDocLineNo}
+                    </if>
+
+                    <if test='sParReqStatCd != null and sParReqStatCd != ""'>
+                        AND TA.PAR_REQ_STAT_CD = #{sParReqStatCd}
+                    </if>
+
+                    <if test='sRoDocNo != null and sRoDocNo != ""'>
+                        AND TA.RO_DOC_NO LIKE '%'||#{sRoDocNo}||'%'
+                    </if>
+
+                    <if test='sRoLineNo != null and sRoLineNo != 0'>
+                        AND TA.RO_LINE_NO = #{sRoLineNo}
+                    </if>
+
+                    <if test='sResvDocNo != null and sResvDocNo != ""'>
+                        AND TA.RESV_DOC_NO = #{sResvDocNo}
+                    </if>
+
+                    <if test='sResvDocLineNo != null and sResvDocLineNo != 0'>
+                        AND TA.RESV_DOC_LINE_NO = #{sResvDocLineNo}
+                    </if>
+
+                    <if test='sSerPrsnId != null and sSerPrsnId != ""'>
+                        AND TA.RO_REG_USR_NM LIKE '%'||#{sSerPrsnId}||'%'
+                    </if>
+
+                    <if test='sParGiTp != null and sParGiTp != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG01")'>
+                                AND (TA.PAR_GI_TP in ('RO','IN') OR TA.BORROW_DOC_NO IS NOT NULL)
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG02")'>
+                                AND TA.BORROW_DOC_NO IS NOT NULL
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sParGiTp,"PG03")'>
+                                AND TA.PAR_GI_TP in ('RO') AND TA.BORROW_DOC_NO IS NULL
+                            </when>
+                            <otherwise>
+                                AND TA.PAR_GI_TP = #{sParGiTp}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sItemCd != null and sItemCd != ""'>
+                        AND TA.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                    </if>
+
+                    <if test='sItemCdOnly != null and sItemCdOnly != ""'>
+                        AND TA.ITEM_CD = #{sItemCdOnly}
+                    </if>
+
+                    <if test='sCancYn != null and sCancYn != ""'>
+                        AND TA.CANC_YN = #{sCancYn}
+                    </if>
+
+                    <if test='sEtcGiTp != null and sEtcGiTp != ""'>
+                        AND TA.ETC_GI_TP = #{sEtcGiTp}
+                    </if>
+
+                    <if test='sReqStrgeCd != null and sReqStrgeCd != ""'>
+                        AND TA.REQ_STRGE_CD = #{sReqStrgeCd}
+                    </if>
+
+                    <if test='sGiStrgeCd != null and sGiStrgeCd != ""'>
+                        AND TA.GI_STRGE_CD = #{sGiStrgeCd}
+                    </if>
+
+                    <if test='sGrStrgeCd != null and sGrStrgeCd != ""'>
+                        AND TA.GR_STRGE_CD = #{sGrStrgeCd}
+                    </if>
+
+                    <if test='sReadyDocNo != null and sReadyDocNo != ""'>
+                        AND TA.READY_DOC_NO LIKE '%'||#{sReadyDocNo}||'%'
+                    </if>
+
+                    <if test='sReadyStatCd != null and sReadyStatCd != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sReadyStatCd,"RE01")'>
+                                 AND TA.READY_STAT_CD IN ('01','02','04')
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sReadyStatCd,"RE02")'>
+                                 AND TA.READY_STAT_CD IN ('02','03','05')
+                            </when>
+                            <otherwise>
+                                 AND TA.READY_STAT_CD = #{sReadyStatCd}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sReqStartDt != null'>
+                        <choose>
+                            <otherwise>
+                                 AND TA.REG_DT <![CDATA[>=]]> #{sReqStartDt}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sReqEndDt != null'>
+                        <choose>
+                            <otherwise>
+                                 AND TA.REG_DT <![CDATA[<=]]> #{sReqEndDt} + 1
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sVinNo != null and sVinNo != ""'>
+                        AND TA.VIN_NO LIKE '%'||#{sVinNo}||'%'
+                    </if>
+
+                    <if test='sCarNo != null and sCarNo != ""'>
+                        AND TA.CAR_NO LIKE '%'||#{sCarNo}||'%'
+                    </if>
+
+                    <if test='sCustNm != null and sCustNm != ""'>
+                        AND TA.CUST_NM LIKE '%'||#{sCustNm}||'%'
+                    </if>
+
+                    <if test='sBorrowStatCd != null and sBorrowStatCd != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_01")'>
+                                AND (TA.BORROW_STAT_CD = '01' OR TA.BORROW_DOC_NO IS NULL )
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_02")'>
+                                AND (TA.BORROW_STAT_CD IN ('05','04') OR TA.BORROW_DOC_NO IS NULL OR TA.READY_STAT_CD = '06' )
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_03")'>
+                                AND TA.BORROW_STAT_CD in ('02')<!-- 차용 -->
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_04")'>
+                                AND TA.BORROW_DOC_NO IS NOT NULL
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_05")'>
+                                AND TA.BORROW_STAT_CD in ('04','05')<!-- 정비차용확정, 차용대기 -->
+                            </when>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sBorrowStatCd,"BORROW_STAT_06")'>
+                                AND TA.BORROW_STAT_CD != '03'<!-- 반환 제외 -->
+                            </when>
+                            <otherwise>
+                                AND TA.BORROW_STAT_CD = #{sBorrowStatCd}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sBorrowDocNoUseYn != null and sBorrowDocNoUseYn == "Y"'>
+                        AND TA.BORROW_DOC_NO IS NOT NULL
+                    </if>
+
+                    <if test='sGiDocStatCd != null and sGiDocStatCd != ""'>
+                        AND TA.GI_DOC_STAT_CD = #{sGiDocStatCd}
+                    </if>
+
+                    <if test='sGiDocNo != null and sGiDocNo != ""'>
+                        AND TA.GI_DOC_NO LIKE '%'||#{sGiDocNo}||'%'
+                    </if>
+
+                    <if test='sGiDocReqStartDt != null'>
+                        <choose>
+                            <otherwise>
+                                 AND TA.RECEIVE_DT <![CDATA[>=]]> #{sGiDocReqStartDt}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sGiDocReqEndDt != null'>
+                        <choose>
+                            <otherwise>
+                                 AND TA.RECEIVE_DT <![CDATA[<=]]> #{sGiDocReqEndDt} + 1
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sReceiveId != null and sReceiveId != ""'>
+                        AND TA.RECEIVE_ID LIKE '%'||#{sReceiveId}||'%'
+                    </if>
+
+                    <if test='sReceiveNm != null and sReceiveNm != ""'>
+                        AND TA.USR_NM LIKE '%'||#{sReceiveNm}||'%'
+                    </if>
+
+                    <if test='sRoStatCd != null and sRoStatCd != ""'>
+                        AND TA.RO_STAT_CD = #{sRoStatCd}
+                    </if>
+
+                    <if test='sPartsOutUseYn != null and sPartsOutUseYn != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sPartsOutUseYn,"Y")'>
+                                 AND TA.GI_DOC_STAT_CD IN ('02','03')
+                            </when>
+                            <otherwise>
+                            </otherwise>
+                        </choose>
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "parReqDocNo"'>TA.PAR_REQ_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "parReqDocLineNo"'>TA.PAR_REQ_DOC_LINE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "parReqStatCd"'>TA.PAR_REQ_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "cancYn"'>TA.CANC_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "parGiTp"'>TA.PAR_GI_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "resvDocNo"'>TA.RESV_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "resvDocLineNo"'>TA.RESV_DOC_LINE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "roDocNo"'>TA.RO_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "roLineNo"'>TA.RO_LINE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemCd"'>TA.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemNm"'>TA.ITEM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "giStrgeCd"'>TA.GI_STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "reqQty"'>TA.REQ_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "endQty"'>TA.END_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "reqStrgeCd"'>TA.REQ_STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "unitCd"'>TA.UNIT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "custCd"'>TA.CUST_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "custNm"'>TA.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "vinNo"'>TA.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carNo"'>TA.CAR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "avlbStockQty"'>TA.AVLB_STOCK_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "resvStockQty"'>TA.RESV_STOCK_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "clamStockQty"'>TA.CLAM_STOCK_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "grScheQty"'>TA.GR_SCHE_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "giScheQty"'>TA.GI_SCHE_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "resvQty"'>TA.RESV_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "purcReqDt"'>TA.PURC_REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "giDocNo"'>TA.GI_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "giDocTp"'>TA.GI_DOC_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "giDocStatCd"'>TA.GI_DOC_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "receiveNm"'>TA.RECEIVE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtUsrNm"'>TA.UPDT_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    TA.DLR_CD, TA.RO_DOC_NO DESC, TA.RO_LINE_NO ASC, TA.PAR_REQ_DOC_LINE_NO ASC, TA.PAR_REQ_DOC_STOCK_LINE_NO ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        TA.DLR_CD, TA.RO_DOC_NO DESC, TA.RO_LINE_NO ASC, TA.PAR_REQ_DOC_LINE_NO ASC, TA.PAR_REQ_DOC_STOCK_LINE_NO ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+</mapper>

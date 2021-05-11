@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
+    xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
+    id="WebApp_ID" version="3.0">
+    <!-- profile dms-local -->
+    <display-name>bhmc-dms-web</display-name>
+
+    <security-constraint>
+        <display-name>Forbidden</display-name>
+        <web-resource-collection>
+            <web-resource-name>Http Method Contraint</web-resource-name>
+            <url-pattern>/*</url-pattern>
+<!--             <http-method>GET</http-method> -->
+<!--             <http-method>POST</http-method> -->
+<!--             <http-method>HEAD</http-method> -->
+            <http-method>PUT</http-method>
+            <http-method>DELETE</http-method>
+            <http-method>TRACE</http-method>
+            <http-method>OPTIONS</http-method>
+        </web-resource-collection>
+        <auth-constraint />
+    </security-constraint>
+
+    <!-- Spring Framework에서 지원하는 Request에 대한 파라미터 값들을 인코딩하는 필터 -->
+    <filter>
+        <filter-name>encodingFilter</filter-name>
+        <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+        <init-param>
+            <param-name>encoding</param-name>
+            <param-value>utf-8</param-value>
+        </init-param>
+    </filter>
+    <filter-mapping>
+        <filter-name>encodingFilter</filter-name>
+        <url-pattern>*.do</url-pattern>
+    </filter-mapping>
+
+    <filter>
+        <filter-name>htmlTagFilter</filter-name>
+        <filter-class>able.com.web.filter.HTMLTagFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>htmlTagFilter</filter-name>
+        <url-pattern>*.do</url-pattern>
+    </filter-mapping>
+
+    <filter>
+        <filter-name>httpRedirectFilter</filter-name>
+        <filter-class>chn.bhmc.dms.cmm.core.security.filter.HttpRedirectFilter</filter-class>
+<!--         <init-param> -->
+<!--         	<description>HTTP 포트</description> -->
+<!--             <param-name>httpPort</param-name> -->
+<!--             <param-value>80</param-value> -->
+<!--         </init-param> -->
+<!--         <init-param> -->
+<!--         	<description>HTTPS 포트</description> -->
+<!--             <param-name>httpsPort</param-name> -->
+<!--             <param-value>443</param-value> -->
+<!--         </init-param> -->
+        <init-param>
+        	<description>보안접속 URI 패턴</description>
+            <param-name>httpsUriPatterns</param-name>
+            <param-value>dms.plist</param-value>
+        </init-param>
+        <init-param>
+        	<description>필터적용 제외 URI 패턴</description>
+            <param-name>excludeUriPatterns</param-name>
+            <param-value>/resource</param-value>
+        </init-param>
+    </filter>
+    <filter-mapping>
+        <filter-name>httpRedirectFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
+    <filter>
+        <filter-name>userAuthorityFilter</filter-name>
+        <filter-class>chn.bhmc.dms.cmm.core.security.filter.UserAuthorityFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>userAuthorityFilter</filter-name>
+        <url-pattern>*.do</url-pattern>
+    </filter-mapping>
+
+    <filter>
+        <filter-name>springSecurityLoginFilter</filter-name>
+        <filter-class>chn.bhmc.dms.security.filter.SpringSecurityLoginFilter</filter-class>
+        <init-param>
+            <description>세션시간설정(초)</description>
+            <param-name>sessionTimes</param-name>
+            <param-value>21600</param-value>
+        </init-param>
+        <init-param>
+            <description>로그인 처리 URL설정</description>
+            <param-name>loginProcessUrl</param-name>
+            <param-value>/cmm/ath/login/selectLoginAction.do</param-value>
+        </init-param>
+        <init-param>
+            <description>APP login URL</description>
+            <param-name>appLoginProcessUrl</param-name>
+            <param-value>/user/login</param-value>
+        </init-param>
+<!--         <init-param> -->
+<!--             <description>로그인 처리 URL설정</description> -->
+<!--             <param-name>loginProcessUrl</param-name> -->
+<!--             <param-value>/user/login</param-value> -->
+<!--         </init-param> -->
+    </filter>
+    <filter-mapping>
+        <filter-name>springSecurityLoginFilter</filter-name>
+        <url-pattern>*.do</url-pattern>
+    </filter-mapping>
+    <filter-mapping>
+        <filter-name>springSecurityLoginFilter</filter-name>
+        <url-pattern>/api/*</url-pattern>
+    </filter-mapping>
+    <filter>
+        <filter-name>springSecurityFilterChain</filter-name>
+        <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>springSecurityFilterChain</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+    <context-param>
+        <param-name>contextConfigLocation</param-name>
+        <param-value>classpath*:spring/context-*.xml</param-value>
+    </context-param>
+
+    <!-- 시스템구분 -->
+    <context-param>
+        <param-name>SYS_CD</param-name>
+        <param-value>D</param-value>
+    </context-param>
+    <!-- JXLS 엑셀파일 임시저장 폴더 -->
+    <context-param>
+        <param-name>JXLS_TEMP_FOLDER</param-name>
+        <param-value>D:/data/webapps/BHMC-DMS-WEB/JXLS_TEMP_FOLDER</param-value>
+    </context-param>
+    <!-- 파일저장 경로 -->
+    <context-param>
+        <param-name>FILE_UPLOAD_PATH</param-name>
+        <param-value>D:/data/webapps/BHMC-DMS-WEB/FILE_UPLOAD_PATH</param-value>
+    </context-param>
+    <!-- 파일저장 임시경로 -->
+    <context-param>
+        <param-name>FILE_UPLOAD_TEMP_PATH</param-name>
+        <param-value>D:/data/webapps/BHMC-DMS-WEB/FILE_UPLOAD_TEMP_PATH</param-value>
+    </context-param>
+    <!-- 콜센터 파일저장 경로 -->
+    <context-param>
+        <param-name>FILE_UPLOAD_CALLCENTER_PATH</param-name>
+        <param-value>D:/data/webapps/BHMC-DMS-WEB/FILE_UPLOAD_CALLCENTER_PATH</param-value>
+    </context-param>
+    <!-- DB Backup 경로 -->
+    <context-param>
+        <param-name>DB_BACKUP_PATH</param-name>
+        <param-value>D:/apps/bhmc-dms-backup/dbbackup.bat</param-value>
+    </context-param>
+    <context-param>
+        <param-name>USEDCAR_SYSTEM_URL</param-name>
+        <!-- <param-value>http://zhihuan.topucar.com/Admin/Resources/ajax/carinfojs.ashx</param-value> -->
+	<param-value>http://47.92.97.52/Common/CarInfoJs</param-value>
+    </context-param>
+
+    <listener>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
+    <listener>
+        <listener-class>org.springframework.security.web.session.HttpSessionEventPublisher</listener-class>
+    </listener>
+    <listener>
+        <listener-class>com.github.pukkaone.jsp.EscapeXmlELResolverListener</listener-class>
+    </listener>
+    <listener>
+        <listener-class>chn.bhmc.dms.security.session.SessionDestoryListener</listener-class>
+    </listener>
+
+
+
+    <!-- Tomcat Jsp Limitation -->
+    <servlet>
+        <servlet-name>jsp</servlet-name>
+        <servlet-class>org.apache.jasper.servlet.JspServlet</servlet-class>
+        <init-param>
+            <param-name>mappedfile</param-name>
+            <param-value>false</param-value>
+        </init-param>
+    </servlet>
+
+    <!-- Jeus Jsp Limitation -->
+    <servlet>
+        <servlet-name>jeus.servlet.servlets.JspServlet</servlet-name>
+        <servlet-class>jeus.servlet.servlets.JspServlet</servlet-class>
+        <init-param>
+            <param-name>genStringAsCharArray</param-name>
+            <param-value>true</param-value>
+        </init-param>
+    </servlet>
+
+    <!-- 리포트 설정 -->
+    <servlet>
+        <servlet-name>ReportServer</servlet-name>
+        <servlet-class>com.fr.web.ReportServlet</servlet-class>
+        <load-on-startup>0</load-on-startup>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ReportServer</servlet-name>
+        <url-pattern>/ReportServer</url-pattern>
+    </servlet-mapping>
+
+    <!-- 웹서비스 설정 -->
+    <servlet>
+        <servlet-name>cxf</servlet-name>
+        <servlet-class>org.apache.cxf.transport.servlet.CXFServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+
+    <!-- 스프링 설정 -->
+    <servlet>
+        <servlet-name>dispatcher</servlet-name>
+        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+        <load-on-startup>2</load-on-startup>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>dispatcher</servlet-name>
+        <url-pattern>*.do</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>cxf</servlet-name>
+        <url-pattern>/ws/*</url-pattern>
+    </servlet-mapping>
+
+    <!-- Session Timeout설정. 단위:[분] -->
+    <session-config>
+        <session-timeout>360</session-timeout>
+    </session-config>
+
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+
+    <login-config>
+        <auth-method>BASIC</auth-method>
+    </login-config>
+
+    <jsp-config>
+        <taglib>
+            <taglib-uri>/WEB-INF/tlds/taglibs-dms</taglib-uri>
+            <taglib-location>/WEB-INF/tlds/taglibs-dms.tld</taglib-location>
+        </taglib>
+        <taglib>
+            <taglib-uri>http://www.springframework.org/security/tags</taglib-uri>
+            <taglib-location>/WEB-INF/tlds/security.tld</taglib-location>
+        </taglib>
+    </jsp-config>
+
+    <error-page>
+        <exception-type>java.lang.Throwable</exception-type>
+        <location>/error.html</location>
+    </error-page>
+    <error-page>
+        <error-code>401</error-code>
+        <location>/error.html</location>
+    </error-page>
+    <error-page>
+        <error-code>403</error-code>
+        <location>/error.html</location>
+    </error-page>
+    <error-page>
+        <error-code>404</error-code>
+        <location>/error.html</location>
+    </error-page>
+    <error-page>
+        <error-code>405</error-code>
+        <location>/error.html</location>
+    </error-page>
+    <error-page>
+        <error-code>500</error-code>
+        <location>/error.html</location>
+    </error-page>
+
+    <mime-mapping>
+        <extension>apk</extension>
+        <mime-type>application/vnd.android.package-archive</mime-type>
+    </mime-mapping>
+
+    <resource-ref>
+        <description>DB Connection</description>
+        <res-ref-name>jdbc/dataSource</res-ref-name>
+        <res-type>javax.sql.DataSource</res-type>
+        <res-auth>Container</res-auth>
+    </resource-ref>
+
+    <resource-ref>
+        <description>DB Connection</description>
+        <res-ref-name>jdbc/commonQueryDataSource</res-ref-name>
+        <res-type>javax.sql.DataSource</res-type>
+        <res-auth>Container</res-auth>
+    </resource-ref>
+
+</web-app>

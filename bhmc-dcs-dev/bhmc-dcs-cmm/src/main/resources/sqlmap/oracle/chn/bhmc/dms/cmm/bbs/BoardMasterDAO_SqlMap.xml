@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : BrdMasterDao_SqlMap.xml
+    Description : 게시판 Master 관한 데이터처리
+    author Byoung Chul Jeon
+    since 2015. 4. 12.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 04. 12.     Byoung Chul Jeon     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.bbs.service.dao.BoardMasterDAO">
+
+    <!-- 게시판 Master 목록을 추가한다. -->
+    <insert id="insertBoardMaster" parameterType="BoardMasterVO">
+        /* [chn.bhmc.dms.cmm.board.service.dao.BoardMasterDAO.insertBoardMaster] */
+        INSERT INTO CM_1201T(
+               BBS_ID
+             , BBS_NM
+             , USE_YN
+             , REP_TP
+             , CMNT_USE_YN
+             , FILE_CNT
+             , FILE_MAX_SIZE_VAL
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+        ) VALUES (
+               #{bbsId}
+             , #{bbsNm}
+             , #{useYn}
+             , #{repTp}
+             , #{cmntUseYn}
+             , #{fileCnt}
+             , #{fileMaxSizeVal}
+             , #{regUsrId}
+             , SYSDATE
+             , #{regUsrId}
+             , SYSDATE
+        )
+    </insert>
+
+    <!-- 게시판 Master 목록을 수정한다. -->
+    <update id="updateBoardMaster" parameterType="BoardMasterVO">
+        /* [chn.bhmc.dms.cmm.board.service.dao.BoardMasterDAO.updateBoardMaster] */
+        UPDATE CM_1201T
+           SET BBS_NM               = #{bbsNm}
+             , USE_YN               = #{useYn}
+             , REP_TP               = #{repTp}
+             , CMNT_USE_YN          = #{cmntUseYn}
+             , FILE_CNT             = #{fileCnt}
+             , FILE_MAX_SIZE_VAL    = #{fileMaxSizeVal}
+             , UPDT_USR_ID          = #{updtUsrId}
+             , UPDT_DT              = SYSDATE
+         WHERE BBS_ID = #{bbsId}
+    </update>
+
+    <!-- 게시판 Master 목록을 수정한다. -->
+    <delete id="deleteBoardMaster" parameterType="BoardMasterVO">
+        /* [chn.bhmc.dms.cmm.board.service.dao.BoardMasterDAO.deleteBoardMaster] */
+        DELETE FROM CM_1201T
+         WHERE BBS_ID = #{bbsId}
+    </delete>
+
+    <!-- 게시판 Master 상세 보기 -->
+    <select id="selectBoardMasterByKey" parameterType="BoardMasterSearchVO" resultType="BoardMasterVO">
+        /* [chn.bhmc.dms.cmm.board.service.dao.BoardMasterDAO.selectBoardMasterByKey] */
+        SELECT BBS_ID
+             , BBS_NM
+             , USE_YN
+             , REP_TP
+             , CMNT_USE_YN
+             , FILE_CNT
+             , FILE_MAX_SIZE_VAL
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+          FROM CM_1201T
+         WHERE BBS_ID = #{sBbsId}
+    </select>
+
+    <!-- 게시판 Master 목록을 조회한다. -->
+    <select id="selectBoardMasterByCondition" parameterType="BoardMasterSearchVO" resultType="BoardMasterVO">
+        /* [chn.bhmc.dms.cmm.board.service.dao.BoardMasterDAO.selectBoardMasterByCondition] */
+        SELECT *
+          FROM (SELECT ROWNUM AS RNUM
+                     , T1.*
+                  FROM (SELECT A.BBS_ID
+                             , A.BBS_NM
+                             , A.USE_YN
+                             , A.REP_TP
+                             , A.CMNT_USE_YN
+                             , A.FILE_CNT
+                             , A.FILE_MAX_SIZE_VAL
+                             , B.USR_NM
+                             , A.REG_USR_ID
+                             , A.REG_DT
+                             , A.UPDT_USR_ID
+                             , A.UPDT_DT
+                          FROM CM_1201T A
+                          LEFT JOIN CM_0801T B
+                            ON A.REG_USR_ID = B.USR_ID
+                        <where>
+                            <if test='sBbsNm != null and sBbsNm != ""'>
+                              <choose>
+                                    <when test='@org.apache.commons.lang3.StringUtils@contains(sBbsNm,"*")'>
+                                        <bind name='sBbsNm' value='@org.apache.commons.lang3.StringUtils@replace(sBbsNm, "*", "%")' />
+                                        AND A.BBS_NM LIKE #{sBbsNm}
+                                    </when>
+                                    <otherwise>
+                                         AND A.BBS_NM = #{sBbsNm}
+                                    </otherwise>
+                              </choose>
+                            </if>
+
+                            <if test='sUseYn != null and sUseYn != ""'>
+                                <choose>
+                                    <when test='@org.apache.commons.lang3.StringUtils@contains(sUseYn,"*")'>
+                                        <bind name='sUseYn' value='@org.apache.commons.lang3.StringUtils@replace(sUseYn, "*", "%")' />
+                                         AND A.USE_YN LIKE #{sUseYn}
+                                    </when>
+                                    <otherwise>
+                                         AND A.USE_YN = #{sUseYn}
+                                    </otherwise>
+                                </choose>
+                            </if>
+                        </where>
+                         ORDER BY
+                        <choose>
+                            <when test='sort != null'>
+                                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                    <choose>
+                                        <when test='item.field == "bbsId"'>A.BBS_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <when test='item.field == "bbsNm"'>A.BBS_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <when test='item.field == "useYn"'>A.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <when test='item.field == "repTp"'>A.REP_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <when test='item.field == "cmntUseYn"'>A.CMNT_USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <when test='item.field == "fileCnt"'>A.FILE_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <when test='item.field == "fileMaxSizeVal"'>A.FILE_MAX_SIZE_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <otherwise>
+                                            A.BBS_ID DESC
+                                        </otherwise>
+                                    </choose>
+                                </foreach>
+                            </when>
+                            <otherwise>
+                                A.BBS_ID DESC
+                            </otherwise>
+                        </choose>) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>)
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 게시판 Master 목록 Count를 조회한다. -->
+    <select id="selectBoardMasterByConditionCnt" parameterType="BoardMasterSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.board.service.dao.BoardMasterDAO.selectBoardMasterByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM CM_1201T
+        <where>
+            <if test='sBbsNm != null and sBbsNm != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sBbsNm,"*")'>
+                        <bind name='sBbsNm' value='@org.apache.commons.lang3.StringUtils@replace(sBbsNm, "*", "%")' />
+                        AND BBS_NM LIKE #{sBbsNm}
+                    </when>
+                    <otherwise>
+                         AND BBS_NM = #{sBbsNm}
+                    </otherwise>
+              </choose>
+            </if>
+
+            <if test='sUseYn != null and sUseYn != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sUseYn,"*")'>
+                        <bind name='sUseYn' value='@org.apache.commons.lang3.StringUtils@replace(sUseYn, "*", "%")' />
+                         AND USE_YN LIKE #{sUseYn}
+                    </when>
+                    <otherwise>
+                         AND USE_YN = #{sUseYn}
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+    </select>
+</mapper>

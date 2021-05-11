@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : IssuePartsOutDAO_SqlMap.xml
+    Description : 부품자동출고 헤더 관리.
+    author In Bo Shim
+    since 2017. 8. 15.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2017. 08. 15.     In Bo Shim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.par.ism.service.dao.IssuePartsOutAutoDAO">
+    <!-- 기초재고입고(정비수령) 정보를 수정한다. -->
+    <update id="updateReceiveEtcVerSupportThd" parameterType="ReceiveEtcItemTrdSupportVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssuePartsOutAutoDAO.updateReceiveEtcVerSupportThd] */
+        UPDATE PT_0303OH SET
+            APPLY_GI_YN = 'Y'
+            ,APPLY_GI_DT = SYSDATE
+            ,UPDT_USR_ID = #{regUsrId}
+            ,UPDT_DT = SYSDATE
+         WHERE DLR_CD = #{dlrCd}
+         AND SEQ_NO = #{seqNo}
+         AND STRGE_CD = #{strgeCd}
+         AND PLT_CD = #{pltCd}
+         AND ITEM_CD = #{itemCd}
+         AND PAR_REQ_DOC_NO = #{parReqDocNo}
+         AND RO_DOC_NO = #{roDocNo}
+         AND RO_LINE_NO = #{roLineNo}
+    </update>
+    <!-- 기초재고입고(정비수령) 목록을 조회한다. -->
+    <select id="selectReceiveEtcVerSupportThdesByCondition" parameterType="ReceiveEtcVerThdSupportSearchVO" resultType="ReceiveEtcItemTrdSupportVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssuePartsOutAutoDAO.selectReceiveEtcVerSupportThdesByCondition] */
+        SELECT *
+        FROM(
+            SELECT
+                ROWNUM AS RNUM
+                ,T1.*
+            FROM
+            (
+                SELECT
+                    A.SEQ_NO
+                    ,A.DLR_CD
+                    ,A.ITEM_CD
+                    ,A.STRGE_CD
+                    ,A.PLT_CD
+                    ,A.GR_SCHE_QTY
+                    ,A.GI_SCHE_QTY
+                    ,CASE WHEN A.GI_AMT IS NULL OR A.GI_AMT <![CDATA[<=]]> 0 THEN 0.1<!--재고금액 NULL 또는 0 이하일때 금액 0.1 -->
+                    ELSE A.GI_AMT
+                    END GI_AMT
+                    ,A.GI_DT
+                    ,A.APPLY_YN
+                    ,A.APPLY_DT
+                    ,CASE WHEN A.STOCK_AMT IS NULL OR A.STOCK_AMT <![CDATA[<=]]> 0 THEN 0.1<!--재고금액 NULL 또는 0 이하일때 금액 0.1 -->
+                    ELSE A.STOCK_AMT
+                    END STOCK_AMT
+                    ,A.PAR_REQ_DOC_NO
+                    ,A.RO_DOC_NO
+                    ,A.RO_LINE_NO
+                    ,A.APPLY_GI_YN
+                    ,A.APPLY_GI_DT
+                    ,A.REG_USR_ID
+                    ,A.REG_DT
+                    ,A.UPDT_USR_ID
+                    ,A.UPDT_DT
+                FROM PT_0303OH A
+                INNER JOIN CM_0104T B ON A.DLR_CD = B.DLR_CD AND A.STRGE_CD = B.STRGE_CD
+                <where>
+                <if test='sDlrCd != null and sDlrCd != ""'>
+                    A.DLR_CD = #{sDlrCd}
+                </if>
+
+                <if test='sItemCd != null and sItemCd != ""'>
+                    AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                </if>
+
+                <if test='sApplyYn != null and sApplyYn != ""'>
+                    AND A.APPLY_YN = #{sApplyYn}
+                </if>
+
+                <if test='sApplyGiYn != null and sApplyGiYn != ""'>
+                    AND A.APPLY_GI_YN = #{sApplyGiYn}
+                </if>
+
+            </where>
+            ORDER BY
+            <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "seqNo"'>A.SEQ_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <otherwise>
+                                A.DLR_CD ASC, A.SEQ_NO ASC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                    A.DLR_CD ASC, A.SEQ_NO ASC
+                </otherwise>
+            </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+        <if test='firstIndex != -1 and lastIndex != -1'>
+            RNUM <![CDATA[>]]> #{firstIndex}
+        </if>
+        </where>
+    </select>
+
+    <!-- 기초재고입고(정비수령) 목록을 조회한다. -->
+    <select id="selectReceiveEtcVerSupportThdesRoDocNoByCondition" parameterType="ReceiveEtcVerThdSupportSearchVO" resultType="ReceiveEtcItemTrdSupportVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssuePartsOutAutoDAO.selectReceiveEtcVerSupportThdesRoDocNoByCondition] */
+        SELECT
+            ROW_NUMBER() OVER(ORDER BY A.RO_DOC_NO ASC) AS RNUM
+            ,A.DLR_CD
+            ,A.RO_DOC_NO
+        FROM PT_0303OH A<!-- 기초재고입고 V3 -->
+        INNER JOIN SE_0300T B ON A.DLR_CD = B.DLR_CD AND A.RO_DOC_NO = B.RO_DOC_NO<!-- RO관리 -->
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                A.DLR_CD = #{sDlrCd}
+            </if>
+
+            <if test='sItemCd != null and sItemCd != ""'>
+                AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+            </if>
+
+            <if test='sApplyYn != null and sApplyYn != ""'>
+                AND A.APPLY_YN = #{sApplyYn}
+            </if>
+
+            <if test='sApplyGiYn != null and sApplyGiYn != ""'>
+                AND A.APPLY_GI_YN = #{sApplyGiYn}
+            </if>
+        </where>
+        GROUP BY A.DLR_CD, A.RO_DOC_NO
+    </select>
+
+    <!-- 기초재고입고(정비수령) 목록을 조회한다. -->
+    <select id="selectReceiveEtcVerSupportThdesPartitionByCondition" parameterType="ReceiveEtcVerThdSupportSearchVO" resultType="ReceiveEtcItemTrdSupportVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssuePartsOutAutoDAO.selectReceiveEtcVerSupportThdesPartitionByCondition] */
+        SELECT
+            ROW_NUMBER() OVER(PARTITION BY A.PAR_REQ_DOC_NO, A.RO_DOC_NO, A.ITEM_CD ORDER BY A.RO_LINE_NO) AS RNUM
+            ,A.SEQ_NO
+            ,A.DLR_CD
+            ,A.ITEM_CD
+            ,A.STRGE_CD
+            ,A.PLT_CD
+            ,A.GR_SCHE_QTY
+            ,A.GI_SCHE_QTY
+            ,CASE WHEN A.GI_AMT IS NULL OR A.GI_AMT <![CDATA[<=]]> 0 THEN 0.1<!--재고금액 NULL 또는 0 이하일때 금액 0.1 -->
+            ELSE A.GI_AMT
+            END GI_AMT
+            ,A.GI_DT
+            ,A.APPLY_YN
+            ,A.APPLY_DT
+            ,CASE WHEN A.STOCK_AMT IS NULL OR A.STOCK_AMT <![CDATA[<=]]> 0 THEN 0.1<!--재고금액 NULL 또는 0 이하일때 금액 0.1 -->
+            ELSE A.STOCK_AMT
+            END STOCK_AMT
+            ,A.PAR_REQ_DOC_NO
+            ,A.RO_DOC_NO
+            ,A.RO_LINE_NO
+            ,A.APPLY_GI_YN
+            ,A.APPLY_GI_DT
+            ,A.REG_USR_ID
+            ,A.REG_DT
+            ,A.UPDT_USR_ID
+            ,A.UPDT_DT
+        FROM PT_0303OH A
+        INNER JOIN CM_0104T B ON A.DLR_CD = B.DLR_CD AND A.STRGE_CD = B.STRGE_CD
+        INNER JOIN PT_0502T C ON A.DLR_CD = C.DLR_CD
+        AND A.PAR_REQ_DOC_LINE_NO = C.PAR_REQ_DOC_LINE_NO
+        AND A.RO_DOC_NO = C.RO_DOC_NO AND A.RO_LINE_NO = C.RO_LINE_NO AND A.ITEM_CD = C.ITEM_CD
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                A.DLR_CD = #{sDlrCd}
+            </if>
+
+            <if test='sItemCd != null and sItemCd != ""'>
+                AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+            </if>
+
+            <if test='sApplyYn != null and sApplyYn != ""'>
+                AND A.APPLY_YN = #{sApplyYn}
+            </if>
+
+            <if test='sApplyGiYn != null and sApplyGiYn != ""'>
+                AND A.APPLY_GI_YN = #{sApplyGiYn}
+            </if>
+
+            <if test='sRoDocNo != null and sRoDocNo != ""'>
+                AND A.RO_DOC_NO = #{sRoDocNo}
+            </if>
+
+            AND C.PAR_REQ_STAT_CD = '01'<!-- 부품요청상태코드 요청(01) -->
+
+        </where>
+    </select>
+
+    <!-- 기초재고입고(정비수령) 카운트를 조회한다. -->
+    <select id="selectReceiveEtcVerSupportThdesByConditionCnt" parameterType="ReceiveEtcVerThdSupportSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssuePartsOutAutoDAO.selectReceiveEtcVerSupportThdesByConditionCnt] */
+        SELECT COUNT(*)
+        FROM PT_0303OH A
+        INNER JOIN CM_0104T B ON A.DLR_CD = B.DLR_CD AND A.STRGE_CD = B.STRGE_CD
+        <where>
+        <if test='sDlrCd != null and sDlrCd != ""'>
+            AND A.DLR_CD = #{sDlrCd}
+        </if>
+
+        <if test='sItemCd != null and sItemCd != ""'>
+            AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+        </if>
+
+        <if test='sApplyYn != null and sApplyYn != ""'>
+            AND A.APPLY_YN = #{sApplyYn}
+        </if>
+
+        <if test='sApplyGiYn != null and sApplyGiYn != ""'>
+            AND A.APPLY_GI_YN = #{sApplyGiYn}
+        </if>
+
+        </where>
+    </select>
+
+    <!-- 기초재고입고(정비수령) 구매요청상세 정보를 조회한다. -->
+    <select id="selectReceiveEtcVerSupportThdesIssueReqDetailByKey" parameterType="IssueReqSearchVO" resultType="IssueReqDetailVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssuePartsOutAutoDAO.selectReceiveEtcVerSupportThdesIssueReqDetailByKey] */
+        SELECT *
+        FROM PT_0502T A
+        INNER JOIN PT_0301T B ON A.DLR_CD = B.DLR_CD AND A.REQ_STRGE_CD = B.STRGE_CD AND A.ITEM_CD = B.ITEM_CD
+        WHERE A.DLR_CD = #{sDlrCd}
+        AND A.PAR_REQ_DOC_NO = #{sParReqDocNo}
+        <if test='sParReqDocLineNo != null and sParReqDocLineNo != 0'>
+            AND A.PAR_REQ_DOC_LINE_NO = #{sParReqDocLineNo}
+        </if>
+        <if test='sParReqStatCd != null and sParReqStatCd != ""'>
+            AND A.PAR_REQ_STAT_CD = #{sParReqStatCd}
+        </if>
+        <if test='sRoDocNo != null and sRoDocNo != ""'>
+            AND A.RO_DOC_NO = #{sRoDocNo}
+        </if>
+        <if test='sRoLineNo != null and sRoLineNo != 0'>
+            AND A.RO_LINE_NO = #{sRoLineNo}
+        </if>
+        AND A.ITEM_CD = #{sItemCd}
+        AND A.REQ_STRGE_CD = #{sReqStrgeCd}
+    </select>
+
+    <!-- 기초재고입고(정비수령) 구매요청상세 정보를 조회한다. -->
+    <select id="selectReceiveEtcVerSupportThdesIssueReqDetailByCondition" parameterType="IssueReqSearchVO" resultType="IssueReqDetailVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssuePartsOutAutoDAO.selectReceiveEtcVerSupportThdesIssueReqDetailByCondition] */
+        SELECT *
+        FROM PT_0502T A
+        INNER JOIN PT_0301T B ON A.DLR_CD = B.DLR_CD AND A.REQ_STRGE_CD = B.STRGE_CD AND A.ITEM_CD = B.ITEM_CD
+        WHERE A.DLR_CD = #{sDlrCd}
+        AND A.PAR_REQ_DOC_NO = #{sParReqDocNo}
+        <if test='sParReqDocLineNo != null and sParReqDocLineNo != 0'>
+            AND A.PAR_REQ_DOC_LINE_NO = #{sParReqDocLineNo}
+        </if>
+        <if test='sParReqStatCd != null and sParReqStatCd != ""'>
+            AND A.PAR_REQ_STAT_CD = #{sParReqStatCd}
+        </if>
+        <if test='sRoDocNo != null and sRoDocNo != ""'>
+            AND A.RO_DOC_NO = #{sRoDocNo}
+        </if>
+        <if test='sRoLineNo != null and sRoLineNo != 0'>
+            AND A.RO_LINE_NO = #{sRoLineNo}
+        </if>
+        AND A.ITEM_CD = #{sItemCd}
+        AND A.REQ_STRGE_CD = #{sReqStrgeCd}
+    </select>
+
+</mapper>

@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.fas.service.dao.CoercionApprovalDAO">
+
+    <!-- 강제판매승인 목록 갯수  -->
+    <select id="selectCoercionApprovalsByConditionCnt" parameterType="CoercionApprovalSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0421T A
+          INNER JOIN (
+                      SELECT DLR_CD, VIN_NO1, VIN_NO2
+                           , MAX(SEQ) AS SEQ
+                        FROM SA_0421T
+                       GROUP BY DLR_CD, VIN_NO1, VIN_NO2
+                     ) A1
+             ON A.DLR_CD = A1.DLR_CD
+            AND A.VIN_NO1 = A1.VIN_NO1
+            AND A.VIN_NO2 = A1.VIN_NO2
+            AND A.SEQ = A1.SEQ
+          INNER JOIN SA_0121T B
+             ON A.VIN_NO1 = B.VIN_NO1
+            AND A.VIN_NO2 = B.VIN_NO2
+<!--           INNER JOIN SA_0201T C
+             ON A.DLR_CD = C.DLR_CD
+            AND B.CONTRACT_NO = C.CONTRACT_NO -->
+           LEFT OUTER JOIN CM_0101T D
+            ON A.DLR_CD = D.DLR_CD
+          WHERE B.NCAR_DSTIN_CD = 'N'   -- 신차
+          <if test='sReqStatCd != null and sReqStatCd != ""'>
+            AND A.REQ_STAT_CD = #{sReqStatCd}
+          </if>
+          <if test='sRegStartDt != null' >
+            AND A.REQ_DT <![CDATA[>=]]> TRUNC(#{sRegStartDt},'DD')
+          </if>
+          <if test='sRegEndDt != null' >
+            AND A.REQ_DT <![CDATA[<]]> TRUNC(#{sRegEndDt},'DD')+1
+          </if>
+          <if test='sDlrCd != null and sDlrCd != ""'>
+            <choose>
+              <when test='@org.apache.commons.lang3.StringUtils@contains(sDlrCd,"*")'>
+                 <bind name='sDlrCd' value='@org.apache.commons.lang3.StringUtils@replace(sDlrCd, "*", "%")' />
+                  AND A.DLR_CD LIKE #{sDlrCd}
+              </when>
+              <otherwise>
+                  AND A.DLR_CD = #{sDlrCd}
+              </otherwise>
+            </choose>
+          </if>
+          <if test='sFceSaleReqReasonCd != null and sFceSaleReqReasonCd != ""'>
+            AND A.FCE_SALE_REQ_REASON_CD = #{sFceSaleReqReasonCd}
+          </if>
+          <if test='sVinNo1 != null and sVinNo1 != ""'>
+            <choose>
+              <when test='@org.apache.commons.lang3.StringUtils@contains(sVinNo1,"*")'>
+                 <bind name='sVinNo1' value='@org.apache.commons.lang3.StringUtils@replace(sVinNo1, "*", "%")' />
+                  AND A.VIN_NO1 LIKE #{sVinNo1}
+              </when>
+              <otherwise>
+                  AND A.VIN_NO1 = #{sVinNo1}
+              </otherwise>
+            </choose>
+          </if>
+          <if test='sVinNo2 != null and sVinNo2 != ""'>
+            <choose>
+              <when test='@org.apache.commons.lang3.StringUtils@contains(sVinNo2,"*")'>
+                 <bind name='sVinNo2' value='@org.apache.commons.lang3.StringUtils@replace(sVinNo2, "*", "%")' />
+                  AND A.VIN_NO2 LIKE #{sVinNo2}
+              </when>
+              <otherwise>
+                  AND A.VIN_NO2 = #{sVinNo2}
+              </otherwise>
+            </choose>
+          </if>
+          <if test='sVinNo != null and sVinNo != ""'>
+            AND B.VIN_NO LIKE '%'|| #{sVinNo} ||'%'
+          </if>
+          <if test='sCarlineCd != null and sCarlineCd != ""'>
+            AND B.CARLINE_CD = #{sCarlineCd}
+          </if>
+          <if test='sApproveStratDt != null' >
+            AND A.APPROVE_DT <![CDATA[>=]]> TRUNC(#{sApproveStratDt},'DD')
+          </if>
+          <if test='sApproveEndDt != null' >
+            AND A.APPROVE_DT <![CDATA[<]]> TRUNC(#{sApproveEndDt},'DD')+1
+          </if>
+
+    </select>
+
+    <!-- 강제판매승인 조회 목록  -->
+    <select id="selectCoercionApprovalsByCondition" parameterType="CoercionApprovalSearchVO" resultType="CoercionApprovalVO">
+        SELECT A.SEQ AS SEQ
+             , A.REQ_STAT_CD    -- 요청상태(승인/불승인 상태 여부)
+             , A.DLR_CD
+             , D.DLR_NM        -- 딜러명
+             , A.REQ_DT        -- 신청일
+             , A.FCE_SALE_REQ_REASON_CD  -- 예외사유코드 SA
+             , B.CARLINE_CD
+             , FN_GET_CARLINE_NM_NC(B.CARLINE_CD) AS CARLINE_NM
+             , B.VIN_NO
+             , A.VIN_NO1
+             , A.VIN_NO2
+             , A.RFID_NO
+             , A.APPROVE_YN   -- 심사여부
+             , A.FILE_DOC_NO
+          FROM SA_0421T A
+          INNER JOIN (
+                      SELECT DLR_CD, VIN_NO1, VIN_NO2
+                           , MAX(SEQ) AS SEQ
+                        FROM SA_0421T
+                       GROUP BY DLR_CD, VIN_NO1, VIN_NO2
+                     ) A1
+             ON A.DLR_CD = A1.DLR_CD
+            AND A.VIN_NO1 = A1.VIN_NO1
+            AND A.VIN_NO2 = A1.VIN_NO2
+            AND A.SEQ = A1.SEQ
+          INNER JOIN SA_0121T B
+             ON A.VIN_NO1 = B.VIN_NO1
+            AND A.VIN_NO2 = B.VIN_NO2
+<!--           INNER JOIN SA_0201T C
+             ON A.DLR_CD = C.DLR_CD
+            AND B.CONTRACT_NO = C.CONTRACT_NO -->
+           LEFT OUTER JOIN CM_0101T D
+             ON A.DLR_CD = D.DLR_CD
+          WHERE B.NCAR_DSTIN_CD = 'N'   -- 신차
+          <if test='sReqStatCd != null and sReqStatCd != ""'>
+            AND A.REQ_STAT_CD = #{sReqStatCd}
+          </if>
+          <if test='sRegStartDt != null' >
+            AND A.REQ_DT <![CDATA[>=]]> TRUNC(#{sRegStartDt},'DD')
+          </if>
+          <if test='sRegEndDt != null' >
+            AND A.REQ_DT <![CDATA[<]]> TRUNC(#{sRegEndDt},'DD')+1
+          </if>
+          <if test='sDlrCd != null and sDlrCd != ""'>
+            <choose>
+              <when test='@org.apache.commons.lang3.StringUtils@contains(sDlrCd,"*")'>
+                 <bind name='sDlrCd' value='@org.apache.commons.lang3.StringUtils@replace(sDlrCd, "*", "%")' />
+                  AND A.DLR_CD LIKE #{sDlrCd}
+              </when>
+              <otherwise>
+                  AND A.DLR_CD = #{sDlrCd}
+              </otherwise>
+            </choose>
+          </if>
+          <if test='sFceSaleReqReasonCd != null and sFceSaleReqReasonCd != ""'>
+            AND A.FCE_SALE_REQ_REASON_CD = #{sFceSaleReqReasonCd}
+          </if>
+          <if test='sVinNo1 != null and sVinNo1 != ""'>
+            <choose>
+              <when test='@org.apache.commons.lang3.StringUtils@contains(sVinNo1,"*")'>
+                 <bind name='sVinNo1' value='@org.apache.commons.lang3.StringUtils@replace(sVinNo1, "*", "%")' />
+                  AND A.VIN_NO1 LIKE #{sVinNo1}
+              </when>
+              <otherwise>
+                  AND A.VIN_NO1 = #{sVinNo1}
+              </otherwise>
+            </choose>
+          </if>
+          <if test='sVinNo2 != null and sVinNo2 != ""'>
+            <choose>
+              <when test='@org.apache.commons.lang3.StringUtils@contains(sVinNo2,"*")'>
+                 <bind name='sVinNo2' value='@org.apache.commons.lang3.StringUtils@replace(sVinNo2, "*", "%")' />
+                  AND A.VIN_NO2 LIKE #{sVinNo2}
+              </when>
+              <otherwise>
+                  AND A.VIN_NO2 = #{sVinNo2}
+              </otherwise>
+            </choose>
+          </if>
+          <if test='sCarlineCd != null and sCarlineCd != ""'>
+            AND B.CARLINE_CD = #{sCarlineCd}
+          </if>
+          <if test='sApproveStratDt != null' >
+            AND A.APPROVE_DT <![CDATA[>=]]> TRUNC(#{sApproveStratDt},'DD')
+          </if>
+          <if test='sApproveEndDt != null' >
+            AND A.APPROVE_DT <![CDATA[<]]> TRUNC(#{sApproveEndDt},'DD')+1
+          </if>
+          ORDER BY
+          <choose>
+              <when test='sort != null'>
+                  <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                      <choose>
+                          <when test='item.field == "reqStatCd"'>A.REQ_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                          <when test='item.field == "dlrCd"'>A.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                          <when test='item.field == "dlrNm"'>D.DLR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                          <when test='item.field == "reqDt"'>A.REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                          <when test='item.field == "fceSaleReqReasonCd"'>A.FCE_SALE_REQ_REASON_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                          <when test='item.field == "carlineCd"'>B.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                          <when test='item.field == "vinNo"'>B.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                          <when test='item.field == "rfidNo"'>A.RFID_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                          <when test='item.field == "approveYn"'>A.APPROVE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                          <otherwise>
+                              A.DLR_CD ASC, A.REQ_DT DESC
+                          </otherwise>
+                      </choose>
+                   </foreach>
+              </when>
+              <otherwise>
+                      A.DLR_CD ASC, A.REQ_DT DESC
+              </otherwise>
+          </choose>
+    </select>
+
+    <!-- 신청한 RFID번호가 차량마스터의 RFID 번호와 동일여부 체크  -->
+    <select id="selectIsRfidnoCnt" parameterType="CoercionApprovalSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0121T A       /* 차량 마스터 */
+         INNER JOIN (
+                     SELECT VIN_NO1
+                          , VIN_NO2
+                          , RFID_NO
+                       FROM SA_0421T
+                      WHERE DLR_CD  = #{sDlrCd}
+                        AND VIN_NO1 = #{sVinNo1}
+                        AND VIN_NO2 = #{sVinNo2}
+                        AND SEQ     = #{sSeq}
+                    ) B
+            ON A.VIN_NO1 = B.VIN_NO1
+           AND A.VIN_NO2 = B.VIN_NO2
+         WHERE A.NCAR_DSTIN_CD = 'N'    -- 신차
+           AND A.RFID_NO = B.RFID_NO
+           AND A.RFID_NO IS NOT NULL
+    </select>
+
+    <!-- 강제판매 승인/불승인 처리 -->
+    <update id="updateCoercionAppr" parameterType="CoercionApprovalVO">
+        UPDATE SA_0421T
+           SET REQ_STAT_CD = #{reqStatCd}
+             , APPROVE_DT = SYSDATE
+             , APPROVE_ID = #{updtUsrId}
+             , APPROVE_YN = 'Y'
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE DLR_CD  = #{dlrCd}
+           AND VIN_NO1 = #{vinNo1}
+           AND VIN_NO2 = #{vinNo2}
+           AND SEQ     = #{seq}
+    </update>
+
+    <!-- 강제판매처리결과송신  프로시져  -->
+    <update id="procCoercionAppr" parameterType="CoercionApprovalVO" statementType="CALLABLE">
+        {CALL SP_SAL_DCS_P_0421T_IF(
+              'SAL073'
+            , #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{vinNo1, mode=IN, jdbcType=VARCHAR}
+            , #{vinNo2, mode=IN, jdbcType=VARCHAR}
+            , #{seq, mode=IN, jdbcType=NUMERIC}
+        )}
+    </update>
+
+</mapper>

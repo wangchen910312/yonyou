@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : PackageCouponHisDAO_SqlMap.xml
+    Description : 패키지쿠폰 이력
+    author Hyun Ho Kim
+    since 2016. 06. 09.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 06. 09.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.dmm.service.dao.PackageCouponHisDAO">
+    <sql id="searchPackageCouponHis">
+        <where>
+            AND DLR_CD = #{sDlrCd}
+            <if test='sPkgNm != null and sPkgNm != ""'>
+                AND PKG_NM = #{sPkgNm}
+            </if>
+
+            <if test='sSeq != null and sSeq != ""'>
+                AND SEQ = #{sSeq}
+            </if>
+
+            <if test='sMembershipNo != null and sMembershipNo != ""'>
+                AND MEMBERSHIP_NO = #{sMembershipNo}
+            </if>
+
+            <if test='sCupnNo != null and sCupnNo != ""'>
+                AND CUPN_NO = #{sCupnNo}
+            </if>
+
+        </where>
+    </sql>
+
+    <!-- 패키지쿠폰 이력 목록수를 조회한다. -->
+    <select id="selectPackageCouponHissByConditionCnt" parameterType="PackageCouponHisSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponHisDAO.selectPackageCouponHissByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0816T
+        <include refid="searchPackageCouponHis" />
+
+    </select>
+
+    <!-- 패키지쿠폰 이력 정보 목록을 조회한다. -->
+    <select id="selectPackageCouponHissByCondition" parameterType="PackageCouponHisSearchVO" resultType="PackageCouponHisVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponHisDAO.selectPackageCouponHissByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT  DLR_CD
+                            ,SEQ
+                            ,MEMBERSHIP_NO
+                            ,PKG_SEQ
+                            ,PKG_NM
+                            ,PKG_AMT
+                            ,PKG_CONT
+                            ,CUPN_SEQ
+                            ,CUPN_NM
+                            ,CUPN_CONT
+                            ,CUPN_DEST_DT
+                            ,CUPN_USE_YN
+                            ,CUPN_USE_DT
+                            ,USE_DEPT_NM
+                            ,USE_PRSN_ID
+                            ,REG_USR_ID
+                            ,REG_DT
+                            ,UPDT_USR_ID
+                            ,UPDT_DT
+                            ,CUPN_NO
+                    FROM    CR_0816T
+                    <include refid="searchPackageCouponHis" />
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "pkgNm"'>PKG_NM        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cupnNm"'>CUPN_NM        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cupnNo"'>CUPN_NO        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cupnUseYn"'>CUPN_USE_YN        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cupnUseDt"'>CUPN_USE_DT        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "regDt"'>REG_DT        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        PKG_NM DESC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            PKG_NM DESC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 패키지쿠폰 이력 정보 목록을 조회한다. -->
+    <select id="selectPackageCouponHisByKey" parameterType="PackageCouponHisSearchVO" resultType="PackageCouponHisVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponHisDAO.selectPackageCouponHisByKey] */
+        SELECT  DLR_CD
+                ,SEQ
+                ,MEMBERSHIP_NO
+                ,PKG_SEQ
+                ,PKG_NM
+                ,PKG_AMT
+                ,PKG_CONT
+                ,CUPN_SEQ
+                ,CUPN_NM
+                ,CUPN_CONT
+                ,CUPN_DEST_DT
+                ,CUPN_USE_YN
+                ,CUPN_USE_DT
+                ,USE_DEPT_NM
+                ,USE_PRSN_ID
+                ,REG_USR_ID
+                ,REG_DT
+                ,UPDT_USR_ID
+                ,UPDT_DT
+                ,CUPN_NO
+        FROM    CR_0816T
+        <include refid="searchPackageCouponHis" />
+    </select>
+
+    <insert id="insertPackageCouponHis" parameterType="PackageCouponHisVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponHisDAO.insertPackageCouponHis] */
+        INSERT INTO CR_0816T    --패키지쿠폰사용이력
+        (
+            DLR_CD               --딜러코드
+            ,SEQ                  --일련번호
+            ,MEMBERSHIP_NO        --멤버쉽번호
+            ,PKG_SEQ              --패키지일련번호
+            ,PKG_NM               --패키지명
+            ,PKG_AMT              --패키지금액
+            ,PKG_CONT             --패키지내용
+            ,CUPN_SEQ             --쿠폰일련번호
+            ,CUPN_NM              --쿠폰명
+            ,CUPN_CONT            --쿠폰내용
+            ,CUPN_DEST_DT         --쿠폰소멸일자
+            ,CUPN_USE_YN          --쿠폰사용여부
+            ,CUPN_USE_DT          --쿠폰사용일자
+            ,USE_DEPT_NM          --사용부서명
+            ,USE_PRSN_ID          --사용담당자ID
+            ,REG_USR_ID           --등록자ID
+            ,REG_DT               --등록일자
+            ,CUPN_NO              --쿠폰번호
+        )
+        VALUES
+        (
+            #{dlrCd}               --딜러코드
+            ,SEQ_CR_0816T.NEXTVAL  --일련번호
+            ,#{membershipNo}        --멤버쉽번호
+            ,#{pkgSeq}              --패키지일련번호
+            ,#{pkgNm}               --패키지명
+            ,#{pkgAmt}              --패키지금액
+            ,#{pkgCont}             --패키지내용
+            ,#{cupnSeq}             --쿠폰일련번호
+            ,#{cupnNm}              --쿠폰명
+            ,#{cupnCont}            --쿠폰내용
+            ,#{cupnDestDt}        --쿠폰소멸일자
+            ,#{cupnUseYn}           --쿠폰사용여부
+            ,#{cupnUseDt}           --쿠폰사용일자
+            ,#{useDeptNm}           --사용부서명
+            ,#{usePrsnId}           --사용담당자ID
+            ,#{regUsrId}            --등록자ID
+            ,SYSDATE               --등록일자
+            ,#{cupnNo}              --쿠폰번호
+        )
+    </insert>
+
+    <update id="updatePackageCouponHis" parameterType="PackageCouponHisVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponHisDAO.updatePackageCouponHis] */
+        UPDATE CR_0816T    --패키지쿠폰사용이력
+        SET    CUPN_DEST_DT  = #{cupnDestDt}          --쿠폰소멸일자
+               ,CUPN_USE_YN   = #{cupnUseYn}           --쿠폰사용여부
+               ,CUPN_USE_DT   = #{cupnUseDt}           --쿠폰사용일자
+               ,USE_DEPT_NM   = #{useDeptNm}           --사용부서명
+               ,USE_PRSN_ID   = #{usePrsnId}           --사용담당자ID
+               ,UPDT_USR_ID   = #{updtUsrId}           --수정자ID
+               ,UPDT_DT       = SYSDATE              --수정일자
+        WHERE DLR_CD        = #{dlrCd}               --딜러코드
+        AND SEQ           = #{seq}                 --일련번호
+        AND MEMBERSHIP_NO = #{membershipNo}        --멤버쉽번호
+    </update>
+
+    <delete id="deletePackageCouponHis" parameterType="PackageCouponHisVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponHisDAO.deletePackageCouponHis] */
+        DELETE  CR_0816T    --패키지쿠폰MASTER
+        WHERE   DLR_CD        = #{dlrCd}               --딜러코드
+        AND     SEQ           = #{seq}                 --일련번호
+    </delete>
+
+</mapper>

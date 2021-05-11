@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="Master" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sGradeCdParam"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDateFormat"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRegEndDtParam"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRegStartDtParam"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCdParam"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCarLineCdParam"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT 
+     CR_0801T.DLR_CD
+	,CR_0801T.MEMBERSHIP_NO
+	,CR_0801T.GRADE_CD
+	,CR_0805T.GRADE_NM
+    	,CR_0801T.CUST_NO
+	,CR_0801T.VIN_NO
+	,CR_0801T.FILE_DOC_NO
+	,CR_0801T.POINT_YN
+	,CR_0801T.RECHARGE_YN
+	,CR_0801T.REG_DT
+	,CR_0801T.LAST_POINT_VAL
+    	,NVL2(CR_0214T.VSIT_DT,1,0) AS VSIT_CNT
+    	,NVL(SA_0201T.BUY_CNT,0) AS BUY_CNT
+    	,CR_0804T.GRADE_CHG_MONTH_PRID
+	,CAR_INFO.NCAR_DSTIN_CD
+	,CAR_INFO.CARLINE_CD
+	,CAR_INFO.CARLINE_NM
+	,CAR_INFO.CARLINE_NM_NC
+	,CAR_INFO.MODEL_CD
+	,CAR_INFO.MODEL_NM
+	,CAR_INFO.MODEL_NM_NC
+	,CAR_INFO.CAR_NM
+	,CAR_INFO.CAR_REG_NO
+    /*
+	  ,CR_0101T.CUST_NM
+	  ,CR_0101T.CUST_CD
+	  ,CR_0101T.CUST_TP
+	  ,CR_0101T.SSN_CRN_NO
+	  ,CR_0101T.EMAIL_NM
+	  ,CR_0101T.PREF_COMM_MTH_CD
+	  ,CR_0101T.PREF_COMM_NO
+	  ,CR_0101T.PREF_CONTACT_MTH_CD
+	  ,CR_0101T.PREF_CONTACT_TIME_CD
+	  ,CR_0101T.HP_NO
+	  ,CR_0101T.TEL_NO
+	  ,CR_0101T.MATH_DOC_TP
+	  ,CR_0101T.OFFICE_NO
+	  ,CR_0813T.CARD_TP_CD
+	  ,CR_0813T.CARD_NO
+	  ,ADDR.ZIP_CD
+	  ,ADDR.SUNG_CD
+	  ,ADDR.CITY_CD
+	  ,ADDR.DIST_CD
+	  ,ADDR.ADDR_DETL_CONT
+	  ,ADDR.SUNG_NM
+	  ,ADDR.CITY_NM
+	  ,ADDR.DIST_NM
+	  ,ADDR.SUNG_NM || ' ' || ADDR.CITY_NM || ' ' || ADDR.DIST_NM || ' ' || ADDR.ADDR_DETL_CONT AS ADDR_FULL
+    */
+    
+FROM  CR_0801T CR_0801T   -- 멤버십 정보
+
+    -- 고객정보
+    INNER JOIN CR_0101T CR_0101T ON CR_0801T.DLR_CD = CR_0101T.DLR_CD AND CR_0801T.CUST_NO = CR_0101T.CUST_NO
+
+    -- 멤버십 변경 히스토리 정보
+    INNER JOIN (
+      SELECT
+        DLR_CD
+        , MEMBERSHIP_NO
+        -- , MIN(NVL(TRUNC(SYSDATE) - TRUNC(GRADE_CHG_DT), 0)) AS GRADE_CHG_DT
+         , MIN(CEIL(MONTHS_BETWEEN (TO_DATE(SYSDATE, 'yyyy-MM-dd'),TO_DATE(GRADE_CHG_DT, 'yyyy-MM-dd') ))) GRADE_CHG_MONTH_PRID
+      FROM CR_0804T
+      WHERE BEF_GRADE_CD <> AFT_GRADE_CD 
+       GROUP BY DLR_CD, MEMBERSHIP_NO
+    ) CR_0804t
+    ON CR_0801T.DLR_CD = CR_0804T.DLR_CD and CR_0801T.MEMBERSHIP_NO = CR_0804t.MEMBERSHIP_NO
+
+    -- 내방 정보
+    LEFT OUTER JOIN CR_0214T CR_0214T ON CR_0214T.CUST_NO = CR_0801T.CUST_NO AND CR_0214T.DLR_CD = CR_0801T.DLR_CD 
+
+    -- 구매정보
+    LEFT OUTER JOIN (
+      SELECT 
+        DLR_CD
+        , CONTRACT_CUST_NO
+        , COUNT(CONTRACT_CUST_NO) AS BUY_CNT
+      FROM SA_0201T
+      WHERE CONTRACT_STAT_CD = '50'  -- 고객인도
+      AND DL_REQ_DT IS NOT NULL -- 실제 인도 완료일
+      AND CANC_DT IS NULL -- 판매 취소일
+      GROUP BY 
+        DLR_CD
+        , CONTRACT_CUST_NO
+    ) SA_0201T
+    ON SA_0201T.DLR_CD = CR_0801T.DLR_CD AND SA_0201T.CONTRACT_CUST_NO = CR_0801T.CUST_NO
+    
+    -- 회원 등급 정보
+    LEFT OUTER JOIN CR_0805T CR_0805T ON CR_0805T.GRADE_SEQ = CR_0801T.GRADE_CD AND CR_0801T.DLR_CD = CR_0805T.DLR_CD 
+
+    -- 차량 정보
+	  LEFT OUTER JOIN (
+		SELECT SA_0201T.DLR_CD
+			  ,SA_0201T.CONTRACT_CUST_NO
+			  ,SA_0121T.VIN_NO
+			  ,SA_0121T.NCAR_DSTIN_CD --신차량구분코드
+			  ,SA_0201T.CARLINE_CD--차종코드
+			  ,FN_GET_CARLINE_NM(SA_0201T.CARLINE_CD) AS CARLINE_NM --차종코드명
+			  ,FN_GET_CARLINE_NM_NC(SA_0201T.CARLINE_CD) AS CARLINE_NM_NC --차종코드명
+			  ,SA_0201T.MODEL_CD -- 모델코드
+			  ,FN_GET_MODEL_NM(SA_0201T.MODEL_CD) AS MODEL_NM --모델코드명
+			  ,FN_GET_MODEL_NM_NC(SA_0201T.MODEL_CD) AS MODEL_NM_NC --모델코드명
+			  ,SA_0121T.CAR_NM -- 차량명
+			  ,SA_0121T.CAR_REG_NO -- 차량등록번호
+		FROM  SA_0121T SA_0121T INNER JOIN SA_0201T SA_0201T
+			  ON SA_0121T.CONTRACT_NO = SA_0201T.CONTRACT_NO
+			  AND SA_0121T.DEL_YN = 'N'
+	  ) CAR_INFO
+	  ON CR_0801T.DLR_CD = CAR_INFO.DLR_CD AND CR_0801T.CUST_NO = CAR_INFO.CONTRACT_CUST_NO AND CR_0801T.VIN_NO = CAR_INFO.VIN_NO
+
+    /*
+    -- 카드정보
+	  LEFT OUTER JOIN CR_0813T CR_0813T
+	  ON CR_0801T.DLR_CD = CR_0813T.DLR_CD AND CR_0801T.MEMBERSHIP_NO = CR_0813T.MEMBERSHIP_NO AND CR_0813T.USE_YN = 'Y' AND CR_0813T.CARD_TP_CD = '01'
+
+    -- 주소정보
+	  LEFT OUTER JOIN CR_0116T ADDR ON CR_0801T.CUST_NO = ADDR.REF_KEY_NM AND CR_0801T.DLR_CD = ADDR.DLR_CD AND ADDR.REF_TABLE_NM = 'CR_0101T' AND FLAG_YN = 'Y'
+    */
+    
+		WHERE 1=1
+		AND CR_0801T.DLR_CD = '${sDlrCdParam}' 
+
+		-- 회원등급
+		${IF(LEN(sGradeCdParam) = 0 , ""," AND CR_0801T.GRADE_CD = '"+sGradeCdParam+"'") } 
+    
+		-- 차형
+		${IF(LEN(sCarLineCdParam) = 0 , ""," AND CAR_INFO.CARLINE_CD = '"+sCarLineCdParam+"'") } 
+		-- 날짜
+		${IF(LEN(sRegStartDtParam) = 0 || LEN(sRegEndDtParam) = 0 || LEN(sDateFormat) = 0 , ""," and TO_CHAR(CR_0801T.REG_DT,'"+sDateFormat+"') between '"+sRegStartDtParam+"' and '"+sRegEndDtParam+"'") } 
+		
+		ORDER BY CR_0801T.REG_DT DESC]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1152000,1152000,1152000,1152000,1152000,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[5760000,5760000,5760000,5760000,2743200,2743200,2743200,2743200,2743200,2743200,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" s="0">
+<O>
+<![CDATA[车款]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="0">
+<O>
+<![CDATA[会员]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="Master" columnName="CARLINE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="1" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="Master" columnName="CUST_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.SummaryGrouper">
+<FN>
+<![CDATA[com.fr.data.util.function.CountFunction]]></FN>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand/>
+</C>
+<C c="0" r="3" s="0">
+<O>
+<![CDATA[会员等级]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="3" s="0">
+<O>
+<![CDATA[会员]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="3" s="0">
+<O>
+<![CDATA[会员入会后到店次数]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="3" s="0">
+<O>
+<![CDATA[会员日会后销售次数]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="4" s="1">
+<O t="DSColumn">
+<Attributes dsName="Master" columnName="GRADE_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex order="2"/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="1" r="4" s="2">
+<O t="DSColumn">
+<Attributes dsName="Master" columnName="CUST_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.SummaryGrouper">
+<FN>
+<![CDATA[com.fr.data.util.function.CountFunction]]></FN>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand/>
+</C>
+<C c="2" r="4" s="2">
+<O t="DSColumn">
+<Attributes dsName="Master" columnName="VSIT_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.SummaryGrouper">
+<FN>
+<![CDATA[com.fr.data.util.function.SumFunction]]></FN>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand/>
+</C>
+<C c="3" r="4" s="2">
+<O t="DSColumn">
+<Attributes dsName="Master" columnName="BUY_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.SummaryGrouper">
+<FN>
+<![CDATA[com.fr.data.util.function.SumFunction]]></FN>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="33912000" height="46411200"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

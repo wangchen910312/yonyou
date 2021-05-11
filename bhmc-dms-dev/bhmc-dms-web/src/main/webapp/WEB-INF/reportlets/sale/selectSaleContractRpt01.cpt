@@ -1,0 +1,3067 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="ds1" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sContractNo"/>
+<O>
+<![CDATA[B20170400097]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[  SELECT A.DLR_CD                    --딜러코드
+       , A.CONTRACT_NO               --계약번호
+       --차량대금지불자
+       , B1.CUST_CD                   -- 고객코드
+       , B1.CUST_TP                   -- 고객유형
+       , B1.CUST_NM                   -- 고객명
+       , FN_CMM_CD_NM('CRM024', B1.SSN_CRN_TP, 'zh', 'N') AS SSN_CRN_TPNM 
+       , B1.SSN_CRN_NO                -- 신분증번호
+       , B1.TEL_NO1                   -- 전화번호1
+       , B1.TEL_NO2                   -- 전화번호2
+       , B1.SUNG_NM || B1.CITY_NM || B1.DIST_NM || B1.ADDR_NM || B1.ADDR_DETL_CONT AS ADDR -- 주소
+       , B1.ZIP_CD                    -- 우편번호
+        -- 연계인
+        -- 휴대폰번호
+       , D.DLR_NM                    -- 딜러명
+       , A.SALE_EMP_NO               --판매사원번호
+       , D.HP_NO                     -- 휴대폰번호
+       , D.FI_ADDR1                  -- 주소
+       , D.FI_ZIP_NO                 -- 우편번호
+       , D.TEL_NO                    -- 유선전화
+       , D.FAX_NO                    -- 팩스
+	  , FN_GET_CARLINE_NM_NC(A.CARLINE_CD)||' '||CASE WHEN A.MODEL_CD IS NULL THEN FN_GET_FSC_NM(A.CARLINE_CD, A.FSC_CD) ELSE FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD) END AS CARLINE_NM
+       , FN_GET_OCN_NM(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+       , FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD)||' '||FN_GET_INT_COLOR_NM_NC(A.INT_COLOR_CD) AS COLOR_NM   
+       , NVL(A.RETL_AMT, 0) AS CAR_RETL_AMT
+       , NVL(A.REAL_CAR_AMT, 0) AS REAL_CAR_AMT
+       , CASE WHEN A.UATC_CAR_PURC_YN = 'Y' AND NVL(I.SBUS_TP, '0') = '3' THEN A.REAL_CAR_AMT - NVL(I.SUBSIDY_AMT, 0)
+              ELSE A.REAL_CAR_AMT
+          END REAL_AMT
+       , NVL(A.RESERV_CONT_AMT, 0) AS RESERV_CONT_AMT
+       , NVL(A.GOODS_AMT, 0) AS GOODS_AMT
+       , NVL(A.INC_AMT, 0) AS INC_AMT
+       , NVL(A.FINC_FEE_AMT, 0) AS FINC_FEE_AMT
+       , NVL(A.SBST_AMT, 0) AS SBST_AMT
+       , NVL(A.AAP_AMT, 0) AS AAP_AMT
+       , NVL(A.POINT_AMT, 0) AS POINT_AMT
+       , NVL(A.REAL_PAY_AMT, 0) AS REAL_PAY_AMT
+       , FN_CMM_CD_NM('SAL127', F.INC_CMP_CD, 'zh', 'N') AS INC_CMP_NM	--보험회사
+       , A.REAL_CAR_AMT + A.AAP_AMT + A.GOODS_AMT AS TOTAL_AMT
+       , D.SALE_CONTRACT_TEXT
+  FROM SA_0201T A                     /* 계약헤더 */
+  LEFT OUTER JOIN SA_0202T B1         /* 계약고객 */
+    ON A.DLR_CD = B1.DLR_CD
+   AND A.CONTRACT_NO = B1.CONTRACT_NO
+   AND B1.PARTNER_TP = 'C'   -- 계약자   : SAL028
+  LEFT OUTER JOIN CM_0101T D          /* 딜러정보 */
+    ON D.DLR_CD = A.DLR_CD
+  LEFT OUTER JOIN SA_0205T C          /* 중고차 */
+    ON A.DLR_CD = C.DLR_CD
+   AND A.CONTRACT_NO = C.CONTRACT_NO
+  LEFT OUTER JOIN SA_0221T F          /* 보험 헤더 */
+    ON A.DLR_CD = F.DLR_CD
+   AND A.CONTRACT_NO = F.CONTRACT_NO
+  LEFT OUTER JOIN SA_0223T G          /* 금융 */
+    ON A.DLR_CD = G.DLR_CD
+   AND A.CONTRACT_NO = G.CONTRACT_NO
+  LEFT OUTER JOIN SA_0132T H           /* 2급딜러 */
+    ON A.LV2_DLR_ORG_CD = H.LV2_DLR_CD
+  LEFT OUTER JOIN SA_0205T I
+    ON A.DLR_CD = I.DLR_CD
+   AND A.CONTRACT_NO = I.CONTRACT_NO     
+ WHERE A.DLR_CD = '${sDlrCd}'
+   AND A.CONTRACT_NO = '${sContractNo}'
+;]]></Query>
+</TableData>
+<TableData name="ds2" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sContractNo"/>
+<O>
+<![CDATA[B20170301117]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT MAX(DECODE(MOD(CNT,3), 1, AAP_WORK_TP_NM, '')) AS AAP_WORK_TP_NM1
+     , MAX(DECODE(MOD(CNT,3), 1, REAL_AAP_AMT, '')) AS REAL_AAP_AMT2
+     , MAX(DECODE(MOD(CNT,3), 2, AAP_WORK_TP_NM, '')) AS AAP_WORK_TP_NM3
+     , MAX(DECODE(MOD(CNT,3), 2, REAL_AAP_AMT, '')) AS REAL_AAP_AMT4
+     , MAX(DECODE(MOD(CNT,3), 0, AAP_WORK_TP_NM, '')) AS AAP_WORK_TP_NM5
+     , MAX(DECODE(MOD(CNT,3), 0, REAL_AAP_AMT, '')) AS REAL_AAP_AMT6
+  FROM ( SELECT ROWNUM AS CNT, 
+		       ( SELECT Z1.CMM_CD_NM
+		           FROM (SELECT A.CMM_CD
+		                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+		  	               FROM CM_0303T A
+			               LEFT OUTER JOIN CM_0304T B
+			                 ON A.CMM_GRP_CD = B.CMM_GRP_CD
+			                AND A.CMM_CD = B.CMM_CD
+			                AND B.LANG_CD = 'zh'
+		  	              WHERE A.CMM_GRP_CD = 'SAL021'   /*대행업무*/
+			                AND A.USE_YN = 'Y'
+			             ) Z1
+			     WHERE AAP_WORK_TP = Z1.CMM_CD) AS AAP_WORK_TP_NM
+		     , REAL_AAP_AMT
+		  FROM SA_0217T
+		 WHERE DLR_CD = '${sDlrCd}'
+	       AND CONTRACT_NO = '${sContractNo}'
+	       )
+GROUP BY CEIL(CNT/3);]]></Query>
+</TableData>
+<TableData name="ds3" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sContractNo"/>
+<O>
+<![CDATA[B20170301117]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT MAX(DECODE(MOD(SEQ,3), 1, GOODS_NM, '')) AS GOODS_NM1, MAX(DECODE(MOD(SEQ,3), 1, REAL_GOODS_AMT, '')) AS REAL_GOODS_AMT2
+      ,MAX(DECODE(MOD(SEQ,3), 2, GOODS_NM, '')) AS GOODS_NM3, MAX(DECODE(MOD(SEQ,3), 2, REAL_GOODS_AMT, '')) AS REAL_GOODS_AMT4
+      ,MAX(DECODE(MOD(SEQ,3), 0, GOODS_NM, '')) AS GOODS_NM5, MAX(DECODE(MOD(SEQ,3), 0, REAL_GOODS_AMT, '')) AS REAL_GOODS_AMT6
+  FROM ( SELECT A.DLR_CD
+		      , A.SEQ
+		      , A.GOODS_CD
+		      , NVL(A.GOODS_NM, B.ITEM_NM) AS GOODS_NM
+		      , A.REAL_GOODS_AMT
+           FROM SA_0204T A LEFT OUTER JOIN PT_0201T B
+		     ON A.DLR_CD = B.DLR_CD
+		    AND A.GOODS_CD = B.ITEM_CD
+		  WHERE A.DLR_CD = '${sDlrCd}'
+		    AND A.CONTRACT_NO = '${sContractNo}')
+GROUP BY CEIL(SEQ/3)]]></Query>
+</TableData>
+<TableData name="ds4" class="com.fr.data.impl.DBTableData">
+<Parameters/>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT WM_CONCAT(CASE WHEN RN < 6 THEN ' '||INC_TP_NM END) AS INC_NM1
+     , WM_CONCAT(CASE WHEN RN >= 6 THEN ' '||INC_TP_NM END) AS INC_NM2
+ FROM (
+		SELECT ROW_NUMBER() OVER(PARTITION BY A.CONTRACT_NO ORDER BY A.inc_tp ASC) AS RN
+		     , A.INC_TP
+		     , ( SELECT Z1.CMM_CD_NM
+		           FROM (SELECT A.CMM_CD
+		                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+		                  FROM CM_0303T A
+		                  LEFT OUTER JOIN CM_0304T B
+		                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+		                       AND A.CMM_CD = B.CMM_CD
+		                       AND B.LANG_CD = 'zh'
+		                 WHERE A.CMM_GRP_CD = 'SAL019'   /*보험유형*/
+		                   AND A.USE_YN = 'Y'
+		                 ) Z1
+		         WHERE A.INC_TP = Z1.CMM_CD
+		       ) AS INC_TP_NM
+		  FROM SA_0222T A
+		 WHERE A.DLR_CD = '${sDlrCd}'
+		   AND A.CONTRACT_NO = '${sContractNo}'
+   );]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[640080,1005840,701040,864000,864000,864000,864000,864000,864000,576000,576000,864000,864000,792480,792480,1341120,990600,864000,864000,701040,701040,864000,864000,864000,864000,864000,1310640,936000,864000,792480,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,731520,864000,670560,670560,914400,669600,669600,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,676800,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[426720,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,1371600,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="1" cs="32" s="0">
+<O>
+<![CDATA[汽 车 销 售 合 同]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="2" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="2" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="2" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="2" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="2" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="2" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="2" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="2" cs="3" s="1">
+<O>
+<![CDATA[合同编号 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="2" cs="10" s="1">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CONTRACT_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="3" cs="6" s="1">
+<O>
+<![CDATA[买方(个人姓名或单位名称) :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="3" cs="10" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CUST_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="17" r="3" cs="4" s="1">
+<O>
+<![CDATA[(以下简称甲方)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="3" cs="4" s="1">
+<O>
+<![CDATA[车价款支付人 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="3" cs="8" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="4" cs="3" s="1">
+<O>
+<![CDATA[证件类型 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="4" cs="4" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SSN_CRN_TPNM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="4" cs="3" s="3">
+<O>
+<![CDATA[证件号码 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="4" cs="6" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SSN_CRN_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="17" r="4" cs="3" s="3">
+<O>
+<![CDATA[手机号码 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="4" cs="5" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TEL_NO1"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="25" r="4" cs="4" s="1">
+<O>
+<![CDATA[其它联系方式 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="4" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TEL_NO2"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="5" cs="2" s="1">
+<O>
+<![CDATA[地址 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="5" cs="8" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="ADDR"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="5" cs="3" s="3">
+<O>
+<![CDATA[邮政编码 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="5" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="ZIP_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="18" r="5" cs="3" s="3">
+<O>
+<![CDATA[联系人 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="5" cs="4" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="5" cs="3" s="3">
+<O>
+<![CDATA[手机号码 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="5" cs="5" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="6" cs="2" s="1">
+<O>
+<![CDATA[卖方 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="6" cs="11" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="DLR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="6" cs="4" s="3">
+<O>
+<![CDATA[(以下简称乙方)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="6" cs="3" s="3">
+<O>
+<![CDATA[销售顾问 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="6" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_EMP_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="25" r="6" cs="3" s="3">
+<O>
+<![CDATA[手机号码 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="6" cs="5" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="HP_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="7" cs="2" s="1">
+<O>
+<![CDATA[地址 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="7" cs="9" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="FI_ADDR1"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="12" r="7" cs="3" s="3">
+<O>
+<![CDATA[邮政编码 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="7" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="FI_ZIP_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="19" r="7" cs="3" s="3">
+<O>
+<![CDATA[固定电话 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="7" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="TEL_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="26" r="7" cs="3" s="3">
+<O>
+<![CDATA[传真 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="7" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="FAX_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="8" cs="32" s="1">
+<O>
+<![CDATA[甲、乙双方经友好协商，就甲方向乙方购买北京现代汽车有限公司（以下简称厂家）生产的车辆（以下简称[合同车辆]A）等事宜，签订本合同如下：]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="9" cs="6" rs="2" s="5">
+<O>
+<![CDATA[车型]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="9" cs="10" rs="2" s="5">
+<O>
+<![CDATA[配置]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="9" cs="4" rs="2" s="6">
+<O>
+<![CDATA[ 车身/内饰颜色]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="9" cs="4" s="7">
+<O>
+<![CDATA[厂家指导价]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="9" cs="2" rs="2" s="5">
+<O>
+<![CDATA[数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="9" cs="6" s="7">
+<O>
+<![CDATA[单价]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="10" cs="4" s="8">
+<O>
+<![CDATA[(人民币：元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="10" cs="6" s="8">
+<O>
+<![CDATA[(人民币：元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="11" cs="6" s="9">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CARLINE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="11" cs="10" s="9">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="OCN_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="17" r="11" cs="4" s="9">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COLOR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="21" r="11" cs="4" s="10">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CAR_RETL_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="25" r="11" cs="2" s="11">
+<O t="I">
+<![CDATA[1]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="11" cs="6" s="10">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="REAL_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="12" cs="6" s="12">
+<O>
+<![CDATA[车价款小计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="12" s="13">
+<O>
+<![CDATA[  ¥]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="12" cs="9" s="14">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="REAL_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="17" r="12" cs="3" s="15">
+<O>
+<![CDATA[, 人民币大写]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="12" s="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="12" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="12" s="15">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="12" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="12" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="12" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="12" s="15">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="12" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="12" s="15">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="12" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="12" s="15">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="12" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="12" s="18">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="13" cs="3" rs="2" s="12">
+<O>
+<![CDATA[备注]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="13" cs="29" s="19">
+<O>
+<![CDATA[本合同签订后，如甲方要求变更车型、配置、颜色等，并得到乙方书面同意的，甲、乙双方按最终确认车辆及结算金额执行。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="14" cs="29" s="20">
+<O>
+<![CDATA[上述“单价”为整车成交单价（或称裸车价格），不包括购置税等税费、保险费、上牌费等其它费用以及精品加装及装饰费用。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="15" cs="3" rs="3" s="12">
+<O>
+<![CDATA[代办\\n项目]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="15" cs="5" s="5">
+<O>
+<![CDATA[项目]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="15" cs="5" s="5">
+<O>
+<![CDATA[代办费用\\n(人民币：元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="15" cs="5" s="5">
+<O>
+<![CDATA[项目]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="15" cs="5" s="5">
+<O>
+<![CDATA[代办费用\\n(人民币：元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="15" cs="5" s="5">
+<O>
+<![CDATA[项目]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="15" cs="4" s="21">
+<O>
+<![CDATA[代办费用\\n(人民币：元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="16" cs="5" s="22">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="AAP_WORK_TP_NM1"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0" multiNumber="2"/>
+</C>
+<C c="9" r="16" cs="5" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="REAL_AAP_AMT2"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="16" cs="5" s="24">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="AAP_WORK_TP_NM3"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="19" r="16" cs="5" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="REAL_AAP_AMT4"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="24" r="16" cs="5" s="24">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="AAP_WORK_TP_NM5"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="29" r="16" cs="4" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="REAL_AAP_AMT6"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="17" cs="5" s="12">
+<O>
+<![CDATA[代办费用小计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="17" s="2">
+<O>
+<![CDATA[   ¥]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="17" cs="5" s="25">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="AAP_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="15" r="17" cs="5" s="2">
+<O>
+<![CDATA[, 人民币大写]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="17" s="26">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="17" s="26">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="17" s="26">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="17" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="17" s="26">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="17" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="17" s="26">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="17" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="17" s="26">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="17" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="17" s="26">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="17" s="27">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="18" cs="3" rs="4" s="12">
+<O>
+<![CDATA[备注]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="18" cs="5" s="12">
+<O>
+<![CDATA[保险公司]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="18" cs="24" s="9">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="INC_CMP_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="19" cs="5" s="28">
+<O>
+<![CDATA[保险明细]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="19" cs="24" s="29">
+<O t="DSColumn">
+<Attributes dsName="ds4" columnName="INC_NM1"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="20" cs="5" s="30">
+<O>
+<![CDATA[以保险单为准]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="20" cs="24" s="31">
+<O t="DSColumn">
+<Attributes dsName="ds4" columnName="INC_NM2"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="21" cs="29" s="32">
+<O>
+<![CDATA[□甲方委托乙方代交代办项目费用。该代办项目费用为估算金额，最终以收费单位收取金额为准。□甲方自行向收费单位支付代办项目费]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="22" cs="3" rs="3" s="12">
+<O>
+<![CDATA[精品\\n及\\n装饰]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="22" cs="5" s="21">
+<O>
+<![CDATA[项目]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="22" cs="5" s="21">
+<O>
+<![CDATA[价格(人民币：元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="22" cs="4" s="21">
+<O>
+<![CDATA[项目]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="22" cs="5" s="21">
+<O>
+<![CDATA[价格(人民币：元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="22" cs="5" s="21">
+<O>
+<![CDATA[项目]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="22" cs="5" s="21">
+<O>
+<![CDATA[价格(人民币：元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="23" cs="5" s="22">
+<O t="DSColumn">
+<Attributes dsName="ds3" columnName="GOODS_NM1"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0" multiNumber="2"/>
+</C>
+<C c="9" r="23" cs="5" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds3" columnName="REAL_GOODS_AMT2"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="23" cs="4" s="24">
+<O t="DSColumn">
+<Attributes dsName="ds3" columnName="GOODS_NM3"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="18" r="23" cs="5" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds3" columnName="REAL_GOODS_AMT4"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="23" r="23" cs="5" s="24">
+<O t="DSColumn">
+<Attributes dsName="ds3" columnName="GOODS_NM5"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="28" r="23" cs="5" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds3" columnName="REAL_GOODS_AMT6"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="24" cs="5" s="33">
+<O>
+<![CDATA[小计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="24" s="2">
+<O>
+<![CDATA[   ¥]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="24" cs="6" s="25">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="GOODS_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="16" r="24" cs="17" s="27">
+<O>
+<![CDATA[, 人民币大写]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="25" cs="3" s="12">
+<O>
+<![CDATA[备注]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="25" cs="29" s="34">
+<O>
+<![CDATA[本合同签订后，如甲方要求变更精品加装及装饰项目，并得到乙方书面同意的，甲、乙双方按最终确认项目及结算金额执行。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="26" cs="3" rs="2" s="33">
+<O>
+<![CDATA[价格表]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="26" cs="4" s="21">
+<O>
+<![CDATA[开票价]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="26" cs="3" s="21">
+<O>
+<![CDATA[订金]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="26" cs="3" s="21">
+<O>
+<![CDATA[精品]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="26" cs="3" s="21">
+<O>
+<![CDATA[保险]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="26" cs="3" s="21">
+<O>
+<![CDATA[金融]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="26" cs="3" s="21">
+<O>
+<![CDATA[二手车抵扣]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="26" cs="3" s="21">
+<O>
+<![CDATA[代办]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="26" cs="3" s="35">
+<O>
+<![CDATA[BM积分抵扣]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="26" cs="4" s="21">
+<O>
+<![CDATA[总金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="27" cs="4" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="REAL_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="27" cs="3" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="RESERV_CONT_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="27" cs="3" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="GOODS_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="27" cs="3" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="INC_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="17" r="27" cs="3" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="FINC_FEE_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="20" r="27" cs="3" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SBST_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="23" r="27" cs="3" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="AAP_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="26" r="27" cs="3" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="POINT_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="29" r="27" cs="4" s="23">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="REAL_PAY_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="28" cs="3" s="32">
+<O>
+<![CDATA[ 合同总金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="28" s="13">
+<O>
+<![CDATA[   ¥]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="28" cs="6" s="36">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="REAL_PAY_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<CellGUIAttr adjustmode="2"/>
+<CellPageAttr/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="28" cs="3" s="15">
+<O>
+<![CDATA[, 人民币大写]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="28" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="28" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="28" s="15">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="28" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="28" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="28" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="28" s="15">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="28" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="28" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="28" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="28" s="15">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="28" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="28" s="15">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="28" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="28" s="15">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="28" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="28" s="15">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="28" s="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="28" s="18">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="29" cs="3" rs="3" s="12">
+<O>
+<![CDATA[定金]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="29" cs="29" s="37">
+<O>
+<![CDATA[甲方向乙方支付¥                   (人民币大写                       )作为定金（该定金金额不得超过合同总金额的20%）。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="30" cs="29" s="38">
+<O>
+<![CDATA[[合同车辆]A交付后，定金冲抵甲方应付款项。如甲方取消购买[合同车辆]A或因甲方原因导致本合同终止或解除的，]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="31" cs="29" s="39">
+<O>
+<![CDATA[甲方无权要求返还定金；如因乙方原因导致本合同终止或解除的，乙方应双倍返还定金。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="32" s="40">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="32" s="41">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="32" cs="30" s="42">
+<O>
+<![CDATA[甲方选择按照以下第    种方式向乙方支付：]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="33" cs="32" s="38">
+<O>
+<![CDATA[1.一次性支付   ：□本合同签订时或□        年       月      日前，甲方向乙方一次性付清合同总金额。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="34" cs="32" s="38">
+<O>
+<![CDATA[2.分期支付       ：□本合同签订时或□        年       月      日前，甲方向乙方支付¥             (人民币大写         )作为首付款;]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="35" s="43">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="35" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="35" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="35" cs="29" s="44">
+<O>
+<![CDATA[    年       月       日前，甲方将合同总金额的剩余部分（扣除定金）支付给乙方。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="36" cs="32" s="38">
+<O>
+<![CDATA[3.贷款支付       ：□      年       月       日前或□甲方的贷款资格通过金融机构审核后    日内,]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="37" s="43">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="37" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="37">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="37" cs="29" s="44">
+<O>
+<![CDATA[甲方向乙方支付首付款¥                     (人 民币大写                               );]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="38" s="43">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="38" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="38">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="38" cs="29" s="44">
+<O>
+<![CDATA[余款（扣除定金）通过金融机构以贷款方式支付。关于贷款事宜按贷款合同规定执行。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="39" cs="32" s="45">
+<O>
+<![CDATA[※ 甲方支付的所有款项应当直接支付至乙方财务部门或乙方指定账号，不得支付给任何第三人(包括乙方员工)。否则，由此产生的]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="40" cs="32" s="46">
+<O>
+<![CDATA[     一切责任及损失由甲方承担。相关款项支付以乙方财务部门确认收到或乙方账户显示收到为准。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="41" cs="32" s="47">
+<O>
+<![CDATA[※ 关于本合同的其它约定见背面《汽车销售合同通用条款》。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="42" cs="32" s="47">
+<O>
+<![CDATA[□ 甲方确认  ：本人已经认真阅读了本合同全部内容（包括背面《汽车销售合同通用条款》），乙方已经按照甲方要求对本]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="43" s="47">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="43" s="47">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="43" cs="27" s="47">
+<O>
+<![CDATA[合同条款予以充分解释和说明，甲方清楚本合同每一条款的准确含义，并且自愿签署及履行本合同。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="44" cs="2" s="1">
+<O>
+<![CDATA[甲方：]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="44" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="44" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="44" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="44" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="44" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="44" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="44" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="44" cs="2" s="1">
+<O>
+<![CDATA[乙方：]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="44">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="44" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="44" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="44" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="44" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="44" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="44" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="45" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="45" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="45" s="1">
+<O>
+<![CDATA[年]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="45" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="45" s="1">
+<O>
+<![CDATA[月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="45" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="45" s="1">
+<O>
+<![CDATA[日]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="45" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="45" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="45" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="45" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="45" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="45" s="1">
+<O>
+<![CDATA[年]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="45" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="45" s="1">
+<O>
+<![CDATA[月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="45" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="45" s="1">
+<O>
+<![CDATA[日]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="45" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="45" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="48" cs="31" s="0">
+<O>
+<![CDATA[汽车销售合同通用条款]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="49" cs="16" s="48">
+<O>
+<![CDATA[第一条 关于支付的其它约定]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="49" cs="16" s="49">
+<O>
+<![CDATA[息收集、使用有任何疑问、投诉或取消，可与厂家或乙方联系。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="50" cs="16" s="49">
+<O>
+<![CDATA[   1.如甲方逾期支付应付款项，则自本合同约定支付之日起每逾期一日]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="50" cs="16" s="48">
+<O>
+<![CDATA[第五条 不可抗力]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="51" cs="16" s="49">
+<O>
+<![CDATA[按应付款项的万分之三向乙方支付违约金。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="51" cs="16" s="49">
+<O>
+<![CDATA[   如发生了不能预见, 不能避免并不能克服的不可抗力事件, 如自然灾害，]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="52" cs="16" s="49">
+<O>
+<![CDATA[   2.如甲方选择向金融机构申请购车贷款，金融机构审核后决定不向甲]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="52" cs="16" s="49">
+<O>
+<![CDATA[包括但不限于台风、冰雹、火灾、地震、山洪、泥石流、塌方、暴风雪、]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="53" cs="16" s="49">
+<O>
+<![CDATA[方发放贷款的，甲、乙双方同意按以下第   项处理 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="53" cs="16" s="49">
+<O>
+<![CDATA[水灾, 战争, 罢工, 骚乱, 政府干预或国家法律, 法规, 政策发生重大变化等，]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="54" cs="16" s="49">
+<O>
+<![CDATA[     (1) 甲、乙双方协商解除本合同 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="54" cs="16" s="49">
+<O>
+<![CDATA[致使一方不能履行本合同或者无法按本合同约定履行的，发生不可抗力]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="55" cs="16" s="49">
+<O>
+<![CDATA[     (2) 甲方将余款（扣除定金）支付给乙方。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="55" cs="16" s="49">
+<O>
+<![CDATA[的一方应立即将不可抗力事件以书面形式通知对方。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="56" cs="16" s="49">
+<O>
+<![CDATA[   3.甲方选择贷款支付后，应当在本合同签订后    日内按金融机构要]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="56" cs="16" s="49">
+<O>
+<![CDATA[因不可抗力不能按照约定履行本合同的，根据不可抗力的影响程度减免发]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="57" cs="16" s="49">
+<O>
+<![CDATA[求提供材料，如发生以下任何一种情况，则视为甲方违约，甲方应按本条]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="57" cs="16" s="49">
+<O>
+<![CDATA[生不可抗力一方的责任。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="58" cs="16" s="49">
+<O>
+<![CDATA[第1款规定向乙方承担违约责任。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="58" cs="16" s="48">
+<O>
+<![CDATA[第六条　争议解决]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="59" cs="16" s="49">
+<O>
+<![CDATA[     (1) 拒绝或延迟提供所需材料从而导致无法办理贷款的 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="59" cs="16" s="49">
+<O>
+<![CDATA[   因本合同的履行或本合同引起的任何争议，甲、乙双方应通过友好协商]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="60" cs="16" s="49">
+<O>
+<![CDATA[     (2) 由于甲方隐瞒不良记录、不配合金融机构核实等原因造成无法]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="60" cs="16" s="49">
+<O>
+<![CDATA[方式解决。如无法通过友好协商方式解决的, 甲, 乙双方一致同意选择以下]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="61" cs="16" s="49">
+<O>
+<![CDATA[办理贷款的。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="61" s="49">
+<O>
+<![CDATA[第]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="61" s="50">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="61" s="50">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="61" s="50">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="61" s="50">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="61" cs="11" s="49">
+<O>
+<![CDATA[种方式解决 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="62" cs="16" s="49">
+<O>
+<![CDATA[   4.甲、乙双方一致确认，金融政策等变动属于不可抗力。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="62" s="51">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="62" s="49">
+<O>
+<![CDATA[1. 向]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="62" cs="6" s="52">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="62" s="51">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="62" cs="7" s="49">
+<O>
+<![CDATA[人民法院提起诉讼。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="63" cs="16" s="48">
+<O>
+<![CDATA[第二条 质量及售后服务]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="63" s="51">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="63" s="49">
+<O>
+<![CDATA[2. 向]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="63" cs="6" s="52">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="63" s="51">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="63" cs="7" s="49">
+<O>
+<![CDATA[仲裁委员会申请仲裁。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="64" cs="16" s="49">
+<O>
+<![CDATA[   1.[合同车辆]A的质量应符合国家关于汽车产品的强制性标准，应为合]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="64" cs="16" s="48">
+<O>
+<![CDATA[第七条  补充约定]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="65" cs="16" s="49">
+<O>
+<![CDATA[格产品，并应符合车辆销售地政府规定的关于尾气排放的标准。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="65" cs="16" s="49">
+<O>
+<![CDATA[   1.甲、乙双方的权利义务以本合同及其附件为准，任何口头承诺对甲、]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="66" cs="16" s="49">
+<O>
+<![CDATA[   2. [合同车辆]A的质量担保和售后服务按[合同车辆]A的质量保证书、]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="66" cs="16" s="49">
+<O>
+<![CDATA[乙双方不发生法律效力。有关[合同车辆]A的任何广告、宣传、推介资料或]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="67" cs="16" s="49">
+<O>
+<![CDATA[车主手册的规定执行。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="67" cs="16" s="49">
+<O>
+<![CDATA[其他媒体形式的信息仅供甲方参考，对甲、乙双方不具有法律效力。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="68" cs="16" s="49">
+<O>
+<![CDATA[   3.甲方及[合同车辆]A的使用人使用[合同车辆]A前，应仔细阅读质量保]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="68" cs="16" s="49">
+<O>
+<![CDATA[   2.甲方确认，在签署本合同前，甲方已了解车辆注册地对车辆注册、]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="69" cs="16" s="49">
+<O>
+<![CDATA[证书、车主手册、三包凭证（仅适用于家用汽车产品，下同）等随车文件,]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="69" cs="16" s="49">
+<O>
+<![CDATA[上牌的限制性规定，已获得或符合有关政府部门的批准、认可或相关法律]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="70" cs="16" s="49">
+<O>
+<![CDATA[特别是应当认真阅读其中关于警告、注意等内容，并应按随车文件的规定]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="70" cs="16" s="49">
+<O>
+<![CDATA[所要求的资格。否则，因此造成的任何损失、责任、纠纷等均由甲方承担。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="71" cs="16" s="49">
+<O>
+<![CDATA[使用、维修和保养[合同车辆]A。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="71" cs="16" s="49">
+<O>
+<![CDATA[   3.[合同车辆]A交付后，乙方可以根据甲方的委托为甲方提供代办车辆]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="72" cs="16" s="49">
+<O>
+<![CDATA[   4.乙方赠送和甲方在乙方处购买并加装在[合同车辆]A上的精品及装]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="72" cs="16" s="49">
+<O>
+<![CDATA[上牌等服务。代办过程中发生的过路费等费用，由甲方承担。即使甲方委]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="73" cs="16" s="49">
+<O>
+<![CDATA[饰，不属于厂家生产的整车产品范围，厂家对此不承担质量担保和售后服]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="73" cs="16" s="49">
+<O>
+<![CDATA[托乙方代办车辆上牌等，甲方也应一同前往办理有关业务，并且甲方应亲]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="74" cs="16" s="49">
+<O>
+<![CDATA[务，由乙方承担质量担保和售后服务。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="74" cs="16" s="49">
+<O>
+<![CDATA[自或委派司机驾驶车辆。若甲方委托乙方员工驾驶车辆，甲, 乙双方应签]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="75" cs="16" s="48">
+<O>
+<![CDATA[第三条 [合同车辆]A的交付]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="75" cs="16" s="49">
+<O>
+<![CDATA[署书面协议。乙方员工驾驶车辆过程中发生意外事故造成车辆损坏的，甲]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="76" cs="5" s="49">
+<O>
+<![CDATA[   1.计划交车时间：]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="76" s="26">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="76" s="52">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="76" s="50">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="76" s="52">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="76" s="50">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="76" s="52">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="76" s="50">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="76" s="52">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="76" s="50">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="76" s="52">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="76" s="50">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="76" cs="16" s="49">
+<O>
+<![CDATA[方应先向保险公司索赔；保险赔付不足的部分，属于乙方责任的，由乙方]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="77" cs="16" s="49">
+<O>
+<![CDATA[   2.交付地点及方式：甲方到乙方店内（或称乙方所在地）自提。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="77" cs="16" s="49">
+<O>
+<![CDATA[承担，但乙方不负责更换新车或退车；属于第三方责任的，乙方协助甲方]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="78" cs="10" s="49">
+<O>
+<![CDATA[   3.[合同车辆]A验收应于交付当时在交付地点进行。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="78" cs="6" s="51">
+<O>
+<![CDATA[甲方应对[合同车辆]A的型]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="78" cs="16" s="49">
+<O>
+<![CDATA[索赔。甲方亲自或委托乙方选牌的，不管任何情况，牌号经车辆管理部门]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="79" cs="16" s="49">
+<O>
+<![CDATA[号、外观(包括但不限于漆面是否划伤、玻璃是否破损等)、内饰、配置、]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="79" cs="16" s="49">
+<O>
+<![CDATA[编出后，甲方同意无条件接受。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="80" cs="16" s="49">
+<O>
+<![CDATA[功能、随车物品和文件等进行认真检查、确认，如有异议应当场向乙方]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="80" cs="16" rs="6" s="53">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SALE_CONTRACT_TEXT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="81" cs="16" s="49">
+<O>
+<![CDATA[提出。否则，[合同车辆]A交付完毕后发现前述问题，乙方不承担责任。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="82" cs="16" s="49">
+<O>
+<![CDATA[验收完毕后，甲、乙双方签署车辆验收交接单。甲、乙双方签署车辆验收]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="83" cs="16" s="49">
+<O>
+<![CDATA[交接单或乙方将[合同车辆]A交付给甲方后，即视为乙方交付的[合同车辆]A]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="84" cs="16" s="49">
+<O>
+<![CDATA[符合本合同规定，质量合格，交付完毕。车辆验收交接单是本合同的组成]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="85" cs="16" s="49">
+<O>
+<![CDATA[部分，与本合同具有同等法律效力。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="86" cs="16" s="49">
+<O>
+<![CDATA[   4.自乙方将[合同车辆]A交付甲方时起，[合同车辆]A的所有权、风险和]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="86" cs="16" s="48">
+<O>
+<![CDATA[第八条　其他]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="87" cs="16" s="49">
+<O>
+<![CDATA[责任由乙方转移至甲方。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="87" cs="16" s="49">
+<O>
+<![CDATA[   1.本合同中的相关选择内容应当以打“√”或填写数字方式确认，对于实际情况]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="88" cs="16" s="49">
+<O>
+<![CDATA[   5.如乙方逾期交付[合同车辆]A，则自应交付之日起每逾期一日按车价]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="88" cs="16" s="49">
+<O>
+<![CDATA[未发生或双方当事人不作约定时，应当打“∕”，以示删除。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="89" cs="16" s="49">
+<O>
+<![CDATA[款小计(A)的万分之三向甲方支付违约金。但是，如甲方未将合同总金]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="89" cs="16" s="49">
+<O>
+<![CDATA[   2.本合同空白处以手写方式填写，手写与机打具有同等法律效力。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="90" cs="16" s="49">
+<O>
+<![CDATA[额全部支付给乙方，则除乙方书面同意外，乙方可以暂缓交付[合同车辆]A。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="90" cs="16" s="49">
+<O>
+<![CDATA[   3.[合同车辆]A的车辆验收交接单、销售发票、质量保证书、车主手册、产品合]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="91" cs="16" s="49">
+<O>
+<![CDATA[   6.甲方未按本合同约定时间提车的，自约定交付之日起每逾期一日按]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="91" cs="16" s="49">
+<O>
+<![CDATA[格证、三包凭证等是本合同的附件，与本合同具有同等法律效力。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="92" cs="16" s="49">
+<O>
+<![CDATA[车价款小计（A）的万分之三向乙方支付违约金；甲方逾期提车超过10日]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="92" cs="16" s="49">
+<O>
+<![CDATA[   4.本合同自甲方或授权代表签字，乙方法定代表人或授权代表签字或盖章后生]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="93" cs="16" s="49">
+<O>
+<![CDATA[的，乙方有权将[合同车辆]A另行出售。关于乙方再次向甲方交付车辆事宜，]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="93" cs="16" s="49">
+<O>
+<![CDATA[效。本合同一式叁份, 具有同等法律效力, 其中甲方执壹份, 乙方执贰份。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="94" cs="16" s="49">
+<O>
+<![CDATA[甲、乙双方另行协商。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="94" cs="16" s="49">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="95" cs="16" s="48">
+<O>
+<![CDATA[第四条 甲方个人信息的收集与使用]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="95" cs="16" s="49">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="96" cs="16" s="49">
+<O>
+<![CDATA[   1.甲方理解并同意，为了向甲方提供服务、提升乙方的服务质量以及]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="96" cs="16" s="49">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="97" cs="16" s="49">
+<O>
+<![CDATA[优化甲方的服务体验，乙方可能会收集、使用在本合同签订及履行、提供]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="97" cs="16" s="48">
+<O>
+<![CDATA[    甲方签字 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="98" cs="16" s="49">
+<O>
+<![CDATA[服务、会员登记等过程中获得的甲方个人信息。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="98" cs="16" s="49">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="99" cs="16" s="49">
+<O>
+<![CDATA[   2.甲方理解并同意，为了向甲方提供服务[如汽车三包（仅适用家用]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="99" cs="16" s="49">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="100" cs="16" s="49">
+<O>
+<![CDATA[汽车产品）、召回、保养、售后跟踪和回访等服务]A、实施各项调研（如产]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="100" cs="16" s="49">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="101" cs="16" s="49">
+<O>
+<![CDATA[品开发、服务质量、顾客满意度等方面调研）、客户服务和管理、市场营]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="101" cs="16" s="49">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="102" cs="16" s="49">
+<O>
+<![CDATA[销（包括发送商业性信息）等，乙方可能会将甲方的个人信息提供给厂家，]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="102" cs="16" s="49">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="103" cs="16" s="49">
+<O>
+<![CDATA[并允许厂家及其关联方、合作伙伴、授权经销商使用。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="103" cs="16" s="49">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="104" cs="16" s="49">
+<O>
+<![CDATA[   3.如甲方需要查询、修改或更正甲方的个人信息，或对甲方的个人信]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="104" cs="16" s="49">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings shrinkToFitMode="0" headerHeight="0" footerHeight="0">
+<PaperSetting>
+<Margin top="720000" left="720000" bottom="720000" right="720000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Times New Roman" style="1" size="96"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Times New Roman" style="1" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Times New Roman" style="1" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Times New Roman" style="1" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Times New Roman" style="1" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1" color="-16777216"/>
+<Bottom style="1" color="-16777216"/>
+<Left style="1" color="-16777216"/>
+<Right style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1" color="-16777216"/>
+<Bottom style="1" color="-16777216"/>
+<Left style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Dialog" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1" color="-16777216"/>
+<Bottom style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1" color="-16777216"/>
+<Bottom style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1" color="-16777216"/>
+<Bottom style="1" color="-16777216"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="1" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Dialog" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Dialog" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1" color="-16777216"/>
+<Bottom style="1" color="-16777216"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+<Right style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1" color="-16777216"/>
+<Left style="1" color="-16777216"/>
+<Right style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1" color="-16777216"/>
+<Left style="1" color="-16777216"/>
+<Right style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+<Left style="1" color="-16777216"/>
+<Right style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1" color="-16777216"/>
+<Bottom style="1" color="-16777216"/>
+<Left style="1" color="-16777216"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="1" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1" color="-16777216"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Left style="1" color="-16777216"/>
+<Right style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Left style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1" color="-16777216"/>
+<Right style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Left style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Right style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="1" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="1" size="68"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="1" size="68"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="1" size="64"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Dialog" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style vertical_alignment="1" imageLayout="1">
+<FRFont name="Times New Roman" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

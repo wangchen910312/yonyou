@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : MembershipPointHisMngDAO_SqlMap.xml
+    Description : 멤버십 소멸이력
+    author Hyun Ho Kim
+    since 2016. 05. 28.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 05. 28.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.dmm.service.dao.MembershipPointHisMngDAO">
+
+    <insert id="insertMembershipPointHisMng"  parameterType="MembershipPointHisMngVO">
+        INSERT INTO CR_0812T
+        (
+          DLR_CD
+          ,EXTC_SEQ
+          ,POINT_EXTC_DT
+          ,MEMBERSHIP_NO
+          ,EXTC_POINT_VAL
+          ,RMN_POINT_VAL
+          ,REG_USR_ID
+          ,REG_DT
+        )VALUES(
+          #{dlrCd}
+          ,SEQ_CR_0812T.NEXTVAL
+          ,#{pointExtcDt}
+          ,#{membershipNo}
+          ,#{extcPointVal}
+          ,#{rmnPointVal}
+          ,#{regUsrId}
+          ,#{regDt}
+        )
+    </insert>
+
+    <!-- 포인트 소멸 이력 총 갯수를 조회한다. -->
+    <select id="selectMembershipPointHisMngsByConditionCnt" parameterType="MembershipPointHisMngSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipPointHisMngDAO.selectMembershipPointHisMngsByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM (
+                SELECT  DLR_CD
+                        ,POINT_EXTC_DT_STR
+                        ,EXTC_POINT_VAL
+                        ,COUNT(MEMBERSHIP_NO) AS POINT_EXT_USR_CNT
+                FROM   (
+                        SELECT  A.DLR_CD
+                                ,A.MEMBERSHIP_NO
+                                , TO_CHAR(B.POINT_EXTC_DT,'YYYY-MM-DD') AS POINT_EXTC_DT_STR
+                                ,SUM(B.EXTC_POINT_VAL) AS EXTC_POINT_VAL
+                        FROM    CR_0801T A INNER JOIN CR_0812T B
+                                ON A.DLR_CD = B.DLR_CD
+                                AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+                        WHERE   A.DLR_CD = #{sDlrCd}
+                        AND     B.POINT_EXTC_DT <![CDATA[>=]]> #{sStartDt}
+                        AND     B.POINT_EXTC_DT <![CDATA[<=]]> #{sEndDt}
+                        GROUP BY A.DLR_CD, A.MEMBERSHIP_NO, TO_CHAR(B.POINT_EXTC_DT,'YYYY-MM-DD')
+            )
+        GROUP BY DLR_CD, POINT_EXTC_DT_STR, EXTC_POINT_VAL
+        )
+        <!-- SELECT  COUNT(*) AS VALUE
+        FROM    (
+                SELECT  A.DLR_CD
+                        ,TO_CHAR(B.POINT_EXTC_DT,'YYYY-MM-DD') AS POINT_EXTC_DT
+                        ,SUM(EXTC_POINT_VAL) AS USR_TOTAL_EXTC_POINT
+                        ,SUM(RMN_POINT_VAL) AS USR_TOTAL_RMN_POINT
+                        ,COUNT(A.MEMBERSHIP_NO) AS POINT_EXT_USR_CNT
+                FROM    CR_0801T A INNER JOIN CR_0812T B
+                        ON A.DLR_CD = B.DLR_CD
+                        AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+                GROUP BY A.DLR_CD,A.MEMBERSHIP_NO, TO_CHAR(B.POINT_EXTC_DT,'YYYY-MM-DD')
+                )
+        GROUP BY DLR_CD, POINT_EXTC_DT
+        HAVING (POINT_EXTC_DT <![CDATA[>=]]> TO_CHAR(#{sStartDt},'YYYY-MM-DD') AND POINT_EXTC_DT <![CDATA[<=]]> TO_CHAR(#{sEndDt},'YYYY-MM-DD')) -->
+        <!-- HAVING (POINT_EXTC_DT <![CDATA[>=]]> #{sStartDt} AND POINT_EXTC_DT <![CDATA[<=]]> #{sEndDt}) -->
+    </select>
+
+    <!-- 포인트 소멸 이력  정보 목록을 조회한다. -->
+        <select id="selectMembershipPointHisMngsByCondition" parameterType="MembershipPointHisMngSearchVO" resultType="MembershipPointHisMngVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipPointHisMngDAO.selectMembershipPointHisMngsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT  DLR_CD
+                            ,POINT_EXTC_DT_STR
+                            ,EXTC_POINT_VAL
+                            ,COUNT(MEMBERSHIP_NO) AS POINT_EXT_USR_CNT
+                    FROM   (
+                            SELECT  A.DLR_CD
+                                    ,A.MEMBERSHIP_NO
+                                    , TO_CHAR(B.POINT_EXTC_DT,'YYYY-MM-DD') AS POINT_EXTC_DT_STR
+                                    ,SUM(B.EXTC_POINT_VAL) AS EXTC_POINT_VAL
+                            FROM    CR_0801T A INNER JOIN CR_0812T B
+                                    ON A.DLR_CD = B.DLR_CD
+                                    AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+                            WHERE   A.DLR_CD = #{sDlrCd}
+                            AND     B.POINT_EXTC_DT <![CDATA[>=]]> #{sStartDt}
+                            AND     B.POINT_EXTC_DT <![CDATA[<=]]> #{sEndDt}
+                            GROUP BY A.DLR_CD, A.MEMBERSHIP_NO, TO_CHAR(B.POINT_EXTC_DT,'YYYY-MM-DD')
+                    )
+                    GROUP BY DLR_CD, POINT_EXTC_DT_STR, EXTC_POINT_VAL
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "pointExtcDt"'>POINT_EXTC_DT     <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "extcPointVal"'>EXTC_POINT_VAL        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cardUseDt"'>CARD_USE_DT    <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "pointExtUsrCnt"'>POINT_EXT_USR_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        POINT_EXTC_DT_STR DESC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            POINT_EXTC_DT_STR DESC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 포인트 소멸 이력 대상자 총 인원수를 조회한다. -->
+    <select id="selectMembershipPointHisMngUsrsByConditionCnt" parameterType="MembershipPointHisMngSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipPointHisMngDAO.selectMembershipPointHisMngUsrsByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0801T A INNER JOIN CR_0812T B
+                ON A.DLR_CD = B.DLR_CD
+                AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+                LEFT OUTER JOIN CR_0101T C
+                ON A.DLR_CD = C.DLR_CD
+                AND A.CUST_NO = C.CUST_NO
+        WHERE   A.DLR_CD = #{sDlrCd}
+        AND     B.POINT_EXTC_DT <![CDATA[>=]]> #{sStartDt}
+        AND     B.POINT_EXTC_DT <![CDATA[<=]]> #{sEndDt}
+        GROUP BY A.DLR_CD, A.MEMBERSHIP_NO,C.CUST_NO, C.CUST_NM, A.REG_DT, TO_CHAR(B.POINT_EXTC_DT,'YYYY-MM-DD')
+    </select>
+
+    <!-- 포인트 소멸 이력 대상자 정보 목록을 조회한다. -->
+        <select id="selectMembershipPointHisMngUsrsByCondition" parameterType="MembershipPointHisMngSearchVO" resultType="MembershipPointHisMngVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipPointHisMngDAO.selectMembershipPointHisMngUsrsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT  A.DLR_CD
+                            ,C.CUST_NO
+                            ,C.CUST_NM
+                            ,A.MEMBERSHIP_NO
+                            ,A.REG_DT
+                            ,SUM(EXTC_POINT_VAL) AS EXTC_POINT_VAL
+                            ,TO_CHAR(B.POINT_EXTC_DT,'YYYY-MM-DD') AS POINT_EXTC_DT_STR
+                    FROM    CR_0801T A INNER JOIN CR_0812T B
+                            ON A.DLR_CD = B.DLR_CD
+                            AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+                            LEFT OUTER JOIN CR_0101T C
+                            ON A.DLR_CD = C.DLR_CD
+                            AND A.CUST_NO = C.CUST_NO
+                    WHERE   A.DLR_CD = #{sDlrCd}
+                    AND     B.POINT_EXTC_DT <![CDATA[>=]]> #{sStartDt}
+                    AND     B.POINT_EXTC_DT <![CDATA[<=]]> #{sEndDt}
+                    GROUP BY A.DLR_CD, A.MEMBERSHIP_NO,C.CUST_NO, C.CUST_NM, A.REG_DT, TO_CHAR(B.POINT_EXTC_DT,'YYYY-MM-DD')
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "pointExtcDtStr"'>A.POINT_EXTC_DT_STR     <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "extcPointVal"'>EXTC_POINT_VAL        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "regDt"'>A.REG_DT    <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "membershipNo"'>C.MEMBERSHIP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "custNm"'>C.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        POINT_EXTC_DT_STR DESC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            POINT_EXTC_DT_STR DESC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+</mapper>

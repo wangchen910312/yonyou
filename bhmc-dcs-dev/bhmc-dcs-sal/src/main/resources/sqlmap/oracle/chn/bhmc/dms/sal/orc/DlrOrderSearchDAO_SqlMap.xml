@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.orc.service.dao.DlrOrderSearchDAO">
+
+    <!--  목록 갯수  -->
+    <select id="selectDlrOrderSearchsByConditionCnt" parameterType="SumOrderCntSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM (
+                SELECT ORD_YY_MM_DT  --오더년월
+                      ,WEEK          --오더주차
+                      ,YY_MM         --오더년YYMM
+                      ,DLR_CD        --딜러
+                      ,ORD_TP        --오더타입
+                      ,ORD_STAT_CD   --주문상태
+                      ,CARLINE_CD    --차종코드
+                      ,CARLINE_NM    --차종명
+                      ,MODEL_CD      --모델코드
+                      ,MODEL_NM      --모델명
+                      ,OCN_CD        --OCN코드
+                      ,OCN_NM        --OCN명
+                      ,EXT_COLOR_CD  --외장색상코드
+                      ,EXT_COLOR_NM   --외장색상명
+                      ,INT_COLOR_CD  --내장색상코드
+                      ,INT_COLOR_NM  --내장색상명
+                      ,ORD_NO        --오더SEQ
+                      ,ORD_QTY AS ORD_QTY --주문수량
+                      ,FST_CONFIRM_QTY AS FST_CONFIRM_QTY --1차확정수량
+                      ,SCND_CONFIRM_QTY AS SCND_CONFIRM_QTY --2차확정수량
+                      ,COUNT(PDI_QTY) AS PDI_QTY  --PDI배정수량
+                      ,COUNT(VIN_QTY) AS VIN_QTY  --VIN배정
+                      ,COUNT(DLR_SALE_QTY) AS DLR_SALE_QTY --법인출고수량
+                      ,COUNT(N_ORD_QTY) - COUNT(PDI_QTY) AS CNCL_QTY  --취소수량
+                      ,COUNT(SCND_CONFIRM_QTY) AS FINAL_QTY                  -- 최종통과수량
+                      ,COUNT(WT_ORD_QTY)  AS WT_ORD_QTY   -- 승인대기수량
+                      ,COUNT(DLR_CNCL_QTY) AS DLR_CNCL_QTY --승인후취소수량
+                  FROM(SELECT A.ORD_YY_MM_DT  --오더년월
+                            ,A.ORD_PRID AS WEEK --오더주차
+                            ,SUBSTR(A.ORD_YY_MM_DT, 3, 6) AS YY_MM --오더년YYMM
+                            ,A.DLR_CD      --딜러코드
+                            ,A.ORD_STAT_CD --오더상태
+                            ,A.CARLINE_CD
+                            ,FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+                            ,A.MODEL_CD
+                            ,FN_GET_MODEL_NM(A.MODEL_CD) AS MODEL_NM
+                            ,A.OCN_CD
+                            ,FN_GET_OCN_NM(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+                            ,A.EXT_COLOR_CD
+                            ,FN_GET_EXT_COLOR_NM(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+                            ,A.INT_COLOR_CD
+                            ,FN_GET_INT_COLOR_NM(A.INT_COLOR_CD) AS INT_COLOR_NM
+                            ,A.ORD_TP
+                            ,A.FST_CONFIRM_QTY  --1차확정수량합
+                            ,A.SCND_CONFIRM_QTY --2차확정수량합
+                            ,A.ORD_QTY
+                            ,(CASE WHEN B.PRTY <![CDATA[<>]]> 'B' THEN 'A' END) AS N_ORD_QTY --미배정수량
+                            ,(CASE WHEN B.PRTY IN ('P','C','D','E') THEN 'P' END) AS  PDI_QTY --PDI배정
+                            ,(CASE WHEN B.PRTY IN ('C','D','E') THEN 'C' END) AS VIN_QTY  --VIN배정
+                            ,(CASE WHEN B.PRTY IN ('D','E') THEN 'D' END) AS DLR_SALE_QTY  --법인출고
+                            ,(CASE WHEN B.PRTY IS NULL THEN 'E' END) AS WT_ORD_QTY  --승인대기
+                            ,(CASE WHEN B.PRTY = 'G' THEN 'F' END) AS DLR_CNCL_QTY  --승인후취소수량
+                            ,A.ORD_NO
+                        FROM SA_0417T A, SA_0416T B
+                       WHERE A.DLR_CD = B.DLR_CD(+)
+                         AND A.ORD_TP = B.SORD(+)
+                         AND A.ORD_YY_MM_DT = B.ORD_YYMM(+)
+                         AND A.ORD_PRID = B.ORD_WEEK(+)
+                         AND TO_NUMBER(A.ORD_NO) = B.ORD_SEQ(+)
+                         <!-- AND NOT B.PRTY = 'B' -->
+                         AND A.ORD_STAT_CD NOT IN ('1A')
+                         AND A.IFRESULT_RTN != 'E'
+                       <if test='sOrdTp != null and sOrdTp != ""'>
+                         AND A.ORD_TP = #{sOrdTp}   -- 주문유형
+                       </if>
+                       <if test='sOrdStartDt != null' >
+                         AND A.ORD_DT <![CDATA[>=]]> TRUNC(#{sOrdStartDt},'DD')
+                       </if>
+                       <if test='sOrdEndDt != null' >
+                         AND A.ORD_DT <![CDATA[<]]> TRUNC(#{sOrdEndDt},'DD')+1
+                       </if>
+                       <if test='sDlrCd != null and sDlrCd != ""'>
+                         AND A.DLR_CD = #{sDlrCd}
+                       </if>
+                       <if test='sConfirmDt != null'>
+                         AND TO_CHAR(A.FST_CONFIRM_DT,'YYYYMM') = TO_CHAR(#{sConfirmDt},'YYYYMM')
+                       </if>
+                       <if test='sCarlineCd != null and sCarlineCd != ""'>
+                         AND A.CARLINE_CD   = #{sCarlineCd}
+                       </if>
+                       <if test='sModelCd != null and sModelCd != ""'>
+                         AND A.MODEL_CD     = #{sModelCd}
+                       </if>
+                       <if test='sOcnCd != null and sOcnCd != ""'>
+                         AND A.OCN_CD       = #{sOcnCd}
+                       </if>
+                       <if test='sExtColorCd != null and sExtColorCd != ""'>
+                         AND A.EXT_COLOR_CD = #{sExtColorCd}
+                       </if>
+                       <if test='sIntColorCd != null and sIntColorCd != ""'>
+                         AND A.INT_COLOR_CD = #{sIntColorCd}
+                       </if>
+                       <if test='sOrdStatCd != null and sOrdStatCd != ""'>
+                         AND B.PRTY       = #{sOrdStatCd}
+                       </if>
+                       ORDER BY A.DLR_CD, A.ORD_TP, A.ORD_YY_MM_DT, A.ORD_PRID, A.ORD_NO
+                   ) GROUP BY   ORD_YY_MM_DT
+                              , WEEK, YY_MM
+                              , DLR_CD
+                              , ORD_TP
+                              , ORD_STAT_CD
+                              , CARLINE_CD
+                              , CARLINE_NM
+                              , MODEL_CD
+                              , MODEL_NM
+                              , OCN_CD
+                              , OCN_NM
+                              , EXT_COLOR_CD
+                              , EXT_COLOR_NM
+                              , INT_COLOR_CD
+                              , INT_COLOR_NM
+                              , FST_CONFIRM_QTY
+                              , SCND_CONFIRM_QTY
+                              , ORD_NO
+                              , ORD_QTY
+                              , FST_CONFIRM_QTY
+                              , SCND_CONFIRM_QTY
+              )
+    </select>
+
+	<!-- 딜러주문조회 조회 목록  -->
+	<select id="selectDlrOrderSearchsByCondition" parameterType="SumOrderCntSearchVO" resultType="SumOrderCntVO">
+        SELECT * FROM
+        ( SELECT ROWNUM AS RNUM, T1.* FROM
+               (
+                SELECT ORD_YY_MM_DT  --오더년월
+                      ,WEEK          --오더주차
+                      ,YY_MM         --오더년YYMM
+                      ,DLR_CD        --딜러
+                      ,ORD_TP        --오더타입
+                      ,ORD_STAT_CD   --주문상태
+                      ,CARLINE_CD    --차종코드
+                      ,CARLINE_NM    --차종명
+                      ,MODEL_CD      --모델코드
+                      ,MODEL_NM      --모델명
+                      ,OCN_CD        --OCN코드
+                      ,OCN_NM        --OCN명
+                      ,EXT_COLOR_CD  --외장색상코드
+                      ,EXT_COLOR_NM   --외장색상명
+                      ,INT_COLOR_CD  --내장색상코드
+                      ,INT_COLOR_NM  --내장색상명
+                      ,ORD_NO        --오더SEQ
+                      ,ORD_QTY AS ORD_QTY --주문수량
+                      ,FST_CONFIRM_QTY AS FST_CONFIRM_QTY --1차확정수량
+                      ,SCND_CONFIRM_QTY AS SCND_CONFIRM_QTY --2차확정수량
+                      ,COUNT(PDI_QTY) AS PDI_QTY  --PDI배정수량
+                      ,COUNT(VIN_QTY) AS VIN_QTY  --VIN배정
+                      ,COUNT(DLR_SALE_QTY) AS DLR_SALE_QTY --법인출고수량
+                      ,COUNT(N_ORD_QTY) - COUNT(PDI_QTY) AS CNCL_QTY  --취소수량
+                      ,COUNT(SCND_CONFIRM_QTY) AS FINAL_QTY                  -- 최종통과수량
+                      ,COUNT(WT_ORD_QTY)  AS WT_ORD_QTY   -- 승인대기수량
+                      ,COUNT(DLR_CNCL_QTY) AS DLR_CNCL_QTY --승인후취소수량
+                  FROM(SELECT A.ORD_YY_MM_DT  --오더년월
+                            ,A.ORD_PRID AS WEEK --오더주차
+                            ,SUBSTR(A.ORD_YY_MM_DT, 3, 6) AS YY_MM --오더년YYMM
+                            ,A.DLR_CD      --딜러코드
+                            ,A.ORD_STAT_CD --오더상태
+                            ,A.CARLINE_CD
+                            ,FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+                            ,A.MODEL_CD
+                            ,FN_GET_MODEL_NM(A.MODEL_CD) AS MODEL_NM
+                            ,A.OCN_CD
+                            ,FN_GET_OCN_NM(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+                            ,A.EXT_COLOR_CD
+                            ,FN_GET_EXT_COLOR_NM(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+                            ,A.INT_COLOR_CD
+                            ,FN_GET_INT_COLOR_NM(A.INT_COLOR_CD) AS INT_COLOR_NM
+                            ,A.ORD_TP
+                            ,A.FST_CONFIRM_QTY  --1차확정수량합
+                            ,A.SCND_CONFIRM_QTY --2차확정수량합
+                            ,A.ORD_QTY
+                            ,(CASE WHEN B.PRTY <![CDATA[<>]]> 'B' THEN 'A' END) AS N_ORD_QTY --미배정수량
+                            ,(CASE WHEN B.PRTY IN ('P','C','D','E') THEN 'P' END) AS  PDI_QTY --PDI배정
+                            ,(CASE WHEN B.PRTY IN ('C','D','E') THEN 'C' END) AS VIN_QTY  --VIN배정
+                            ,(CASE WHEN B.PRTY IN ('D','E') THEN 'D' END) AS DLR_SALE_QTY  --법인출고
+                            ,(CASE WHEN B.PRTY IS NULL THEN 'E' END) AS WT_ORD_QTY  --승인대기
+                            ,(CASE WHEN B.PRTY = 'G' THEN 'F' END) AS DLR_CNCL_QTY  --승인후취소수량
+                            ,A.ORD_NO
+                        FROM SA_0417T A, SA_0416T B
+                       WHERE A.DLR_CD = B.DLR_CD(+)
+                         AND A.ORD_TP = B.SORD(+)
+                         AND A.ORD_YY_MM_DT = B.ORD_YYMM(+)
+                         AND A.ORD_PRID = B.ORD_WEEK(+)
+                         AND TO_NUMBER(A.ORD_NO) = B.ORD_SEQ(+)
+                         <!-- AND NOT B.PRTY = 'B' -->
+                         AND A.ORD_STAT_CD NOT IN ('1A')
+                         AND A.IFRESULT_RTN != 'E'
+                       <if test='sOrdTp != null and sOrdTp != ""'>
+                         AND A.ORD_TP = #{sOrdTp}   -- 주문유형
+                       </if>
+                       <if test='sOrdStartDt != null' >
+                         AND A.ORD_DT <![CDATA[>=]]> TRUNC(#{sOrdStartDt},'DD')
+                       </if>
+                       <if test='sOrdEndDt != null' >
+                         AND A.ORD_DT <![CDATA[<]]> TRUNC(#{sOrdEndDt},'DD')+1
+                       </if>
+                       <if test='sDlrCd != null and sDlrCd != ""'>
+                         AND A.DLR_CD = #{sDlrCd}
+                       </if>
+                       <if test='sConfirmDt != null'>
+                         AND TO_CHAR(A.FST_CONFIRM_DT,'YYYYMM') = TO_CHAR(#{sConfirmDt},'YYYYMM')
+                       </if>
+                       <if test='sCarlineCd != null and sCarlineCd != ""'>
+                         AND A.CARLINE_CD   = #{sCarlineCd}
+                       </if>
+                       <if test='sModelCd != null and sModelCd != ""'>
+                         AND A.MODEL_CD     = #{sModelCd}
+                       </if>
+                       <if test='sOcnCd != null and sOcnCd != ""'>
+                         AND A.OCN_CD       = #{sOcnCd}
+                       </if>
+                       <if test='sExtColorCd != null and sExtColorCd != ""'>
+                         AND A.EXT_COLOR_CD = #{sExtColorCd}
+                       </if>
+                       <if test='sIntColorCd != null and sIntColorCd != ""'>
+                         AND A.INT_COLOR_CD = #{sIntColorCd}
+                       </if>
+                       <if test='sOrdStatCd != null and sOrdStatCd != ""'>
+                         AND B.PRTY       = #{sOrdStatCd}
+                       </if>
+                       ORDER BY A.DLR_CD, A.ORD_TP, A.ORD_YY_MM_DT, A.ORD_PRID, A.ORD_NO
+                   ) GROUP BY   ORD_YY_MM_DT
+                              , WEEK, YY_MM
+                              , DLR_CD
+                              , ORD_TP
+                              , ORD_STAT_CD
+                              , CARLINE_CD
+                              , CARLINE_NM
+                              , MODEL_CD
+                              , MODEL_NM
+                              , OCN_CD
+                              , OCN_NM
+                              , EXT_COLOR_CD
+                              , EXT_COLOR_NM
+                              , INT_COLOR_CD
+                              , INT_COLOR_NM
+                              , FST_CONFIRM_QTY
+                              , SCND_CONFIRM_QTY
+                              , ORD_NO
+                              , ORD_QTY
+                              , FST_CONFIRM_QTY
+                              , SCND_CONFIRM_QTY
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "carlineCd"'>CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineNm"'>CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelCd"'>MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelNm"'>MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnCd"'>OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnNm"'>OCN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "extColorCd"'>EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "exColorNm"'>EXT_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "intColorCd"'>INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "intColorNm"'>INT_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ordTp"'>ORD_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ordQty"'>ORD_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "fstConfirmQty"'>FST_CONFIRM_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "scndConfirmQty"'>SCND_CONFIRM_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "finalQty"'>FINAL_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "wtOrdQty"'>WT_ORD_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlrCnclQty"'>DLR_CNCL_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "cnclQty"'>CNCL_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "nOrdOty"'>N_ORD_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "pdiQty"'>PDI_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "vinQty"'>VIN_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlrSaleQty"'>DLR_SALE_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    ORD_YY_MM_DT, WEEK, YY_MM, DLR_CD ASC
+                                </otherwise>
+                            </choose>
+                         </foreach>
+                    </when>
+                    <otherwise>
+                            ORD_YY_MM_DT, WEEK, YY_MM, DLR_CD ASC
+                    </otherwise>
+                </choose>
+                ) T1
+                <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+                </where>
+         )
+         <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+   <!-- 딜러주문조회 세부 목록 갯수조회 -->
+   <select id="selectDlrOrderSearchSubsByConditionCnt" parameterType="SumOrderCntSearchVO" resultType="int">
+       SELECT COUNT(*)
+         FROM SA_0416T  /* 판매오더처리마스터 */
+        WHERE 1 = 1
+          AND NOT PRTY = 'B'
+        <if test='sDlrCd != null and sDlrCd != ""'>
+          AND DLR_CD       = #{sDlrCd}
+        </if>
+        <if test='sOrdYyMmDt != null and sOrdYyMmDt != ""'>
+          AND ORD_YYMM = #{sOrdYyMmDt}
+        </if>
+        <if test='sOrdPrid != null and sOrdPrid != ""'>
+          AND ORD_WEEK     = #{sOrdPrid}
+        </if>
+        <if test='sCarlineCd != null and sCarlineCd != ""'>
+          AND CARLINE_CD   = #{sCarlineCd}
+        </if>
+        <if test='sOrdSeq != null and sOrdSeq != ""'>
+          AND ORD_SEQ   = #{sOrdSeq}
+        </if>
+   </select>
+
+   <!-- 딜러주문조회 세부조회 -->
+   <select id="selectDlrOrderSearchSubsByCondition" parameterType="SumOrderCntSearchVO" resultType="SumOrderCntSubVO">
+       SELECT COUNT(1) OVER() AS TOT_CNT
+            , '['||SORD||']'||(SELECT CMM_CD_NM FROM CM_0303T WHERE CMM_GRP_CD = 'SAL137' AND CMM_CD = SORD) AS ORD_TP -- 주문유형(공통코드SAL137)
+            , PRTY AS ORD_STAT_CD           --오더상태명(공통코드SAL150)
+            , TO_CHAR(CNDY, 'YYYYMMDD') AS ORD_DATE              --주문등록일자
+            , CHRG_CD                       --주문자
+            , LPAD(TO_CHAR(ORD_SEQ),4,0) AS ORD_SEQ                       --오더번호
+            , ALOC AS VINM_VLOC             --하치장명(공통코드SAL152)
+            , SUBSTR(TO_CHAR(SYSDATE,'YYYY'),0,2)||INNO AS FNDL_DT    -- 납기예정일
+            , CARLINE_CD
+            , FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_NM
+            , MODEL_CD
+            , FN_GET_MODEL_NM(MODEL_CD) AS MODEL_NM
+            , OCN_CD
+            , FN_GET_OCN_NM(MODEL_CD, OCN_CD) AS OCN_NM
+            , EXT_COLOR_CD
+            , FN_GET_EXT_COLOR_NM(EXT_COLOR_CD) AS EXT_COLOR_NM
+            , INT_COLOR_CD
+            , FN_GET_INT_COLOR_NM(INT_COLOR_CD) AS INT_COLOR_NM
+            , ALDY AS PDI_DT     --PDI배정일
+            , ASDY AS VIN_DT     --VIN배정일
+            , TO_CHAR(RETAIL_DT,'YYYYMMDD') AS RETAIL_DT         --출고일자
+            , VIN_NO1 || VIN_NO2 AS VIN_NO    --VIN NO
+         FROM SA_0416T  /* 판매오더처리마스터 */
+        WHERE 1 = 1
+          AND NOT PRTY = 'B'
+        <if test='sDlrCd != null and sDlrCd != ""'>
+          AND DLR_CD       = #{sDlrCd}
+        </if>
+        <if test='sOrdYyMmDt != null and sOrdYyMmDt != ""'>
+          AND ORD_YYMM = #{sOrdYyMmDt}
+        </if>
+        <if test='sOrdPrid != null and sOrdPrid != ""'>
+          AND ORD_WEEK     = #{sOrdPrid}
+        </if>
+        <if test='sCarlineCd != null and sCarlineCd != ""'>
+          AND CARLINE_CD   = #{sCarlineCd}
+        </if>
+        <if test='sOrdSeq != null and sOrdSeq != ""'>
+          AND ORD_SEQ   = TO_NUMBER(#{sOrdSeq})
+        </if>
+   </select>
+
+
+</mapper>

@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : MigDAO_SqlMap.xml
+    Description : 마이그레이션 관련 처리
+    author Kang Seok Han
+    since 2016. 12. 07.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 12. 07.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.mig.service.dao.MigDAO">
+
+    <!--
+       마이그레이션 대상 Job List 조회
+    -->
+    <select id="selectMigTargetList" parameterType="MigTgtInfoVO" resultType="MigTgtInfoVO">
+        SELECT '1' AS RNUM
+              ,'Y' AS ALL_RUN_YN
+              ,'1' AS PART_RUN_NUM
+              ,'100' AS PART_RUN_NUM2
+              ,'updateMigNdmsComInit' AS PID
+              ,'Master Data Init' AS PNM
+              ,CASE WHEN (SELECT COUNT(1) FROM MIG_NDMS_COM_INIT_LOG_TBL WHERE PID BETWEEN 1 AND 99) = 0 THEN '1'
+                    WHEN (SELECT COUNT(1) FROM MIG_NDMS_COM_INIT_LOG_TBL WHERE PNM = 'MIG_NDMS_COM_INIT FINISH') > 0 THEN '3'
+                    ELSE '2' END AS PSTEP
+              ,'' AS PREPID
+              ,CASE WHEN ((SELECT 1 FROM DUAL@BHDMSOP) + (SELECT 1 FROM DUAL@BHDCSOP)) = 2 THEN 'Y' ELSE 'N' END AS CAN_YN
+        FROM DUAL
+        UNION ALL
+        SELECT '2' AS RNUM
+              ,'Y' AS ALL_RUN_YN
+              ,'101' AS PART_RUN_NUM
+              ,'200' AS PART_RUN_NUM2
+              ,'updateMigNdmsInsert' AS PID
+              ,'Migration Data Init' AS PNM
+              ,CASE WHEN (SELECT COUNT(1) FROM MIG_NDMS_COM_INIT_LOG_TBL WHERE PID BETWEEN 100 AND 199) = 0 THEN '1'
+                    WHEN (SELECT COUNT(1) FROM MIG_NDMS_COM_INIT_LOG_TBL WHERE PNM = 'MIG_NDMS_INSERT FINISH') > 0 THEN '3'
+                    ELSE '2' END AS PSTEP
+              ,'' AS PREPID
+              ,CASE WHEN (SELECT COUNT(1) FROM MIG_NDMS_COM_INIT_LOG_TBL WHERE PID BETWEEN 1 AND 99 AND STAT_CD = 'F') = 0
+                     AND NVL((SELECT CASE WHEN MIG_PRG_STAT = 'Z' THEN 'Y' ELSE 'N' END AS CAN_YN FROM CM_0101T@BHDCSOP WHERE DLR_CD = #{dlrCd}),'N') = 'Y'
+                    THEN 'Y'
+                    ELSE 'N' END AS CAN_YN
+        FROM DUAL
+        UNION ALL
+        SELECT '3' AS RNUM
+              ,'Y' AS ALL_RUN_YN
+              ,'201' AS PART_RUN_NUM
+              ,'300' AS PART_RUN_NUM2
+              ,'updateMigAfeterProcInsert' AS PID
+              ,'Migration After Job' AS PNM
+              ,CASE WHEN (SELECT COUNT(1) FROM MIG_NDMS_COM_INIT_LOG_TBL WHERE PID BETWEEN 200 AND 299) = 0 THEN '1'
+                    WHEN (SELECT COUNT(1) FROM MIG_NDMS_COM_INIT_LOG_TBL WHERE PNM = 'MIG_DMS_DCS_COM FINISH') > 0 THEN '3'
+                    ELSE '2' END AS PSTEP
+              ,'' AS PREPID
+              ,CASE WHEN (SELECT COUNT(1) FROM MIG_NDMS_COM_INIT_LOG_TBL WHERE PID BETWEEN 100 AND 199 AND STAT_CD = 'F') = 0
+                     AND (SELECT CASE WHEN NVL(COUNT(1),0) > 0 THEN 'Y' ELSE 'N' END AS CAN_YN FROM MIG_NDMS_COM_INIT_LOG_TBL WHERE PNM = 'MIG_NDMS_INSERT FINISH') = 'Y'
+                    THEN 'Y'
+                    ELSE 'N' END AS CAN_YN
+        FROM DUAL
+    </select>
+
+    <!--
+                마이그레이션 프로시저 실행 로그 조회
+    -->
+    <select id="selectMigProcLogList" parameterType="map" resultType="MigProcLogVO">
+        SELECT * FROM (
+            SELECT *
+            FROM MIG.MIG_PROC_LOG_TBL@BHDMSOP
+            WHERE TGT_DLR_CD = #{dlrCd, jdbcType=VARCHAR}
+            ORDER BY START_DATE ASC
+        ) T1
+        WHERE ROWNUM > #{skipRows, jdbcType=NUMERIC}
+    </select>
+
+    <!--
+        마이그레이션 데이터를 신규 딜러로 이관 실행 로그 조회
+    -->
+    <select id="selectMigPrgStat" parameterType="string" resultType="string">
+        SELECT MIG_PRG_STAT
+        FROM DMSDB.CM_0101T@BHDCSOP
+        WHERE DLR_CD = #{value}
+    </select>
+
+    <!--
+        마이그레이션 데이터를 신규 딜러로 이관 실행 로그 조회
+    -->
+    <select id="selectMigNdmsLogList" parameterType="int" resultType="MigNdmsComInitLogVO">
+            SELECT
+                 PID
+                ,START_TIME
+                ,NVL(END_TIME,TO_DATE('00010101','YYYYMMDD')) AS END_TIME
+                ,SRC_CNT
+                ,TARGET_CNT
+                ,STAT_CD
+                ,PMSG
+                ,PNM
+                ,SEQ_NO
+                ,NVL(ELAPSED_TIME,ROUND((SYSDATE - START_TIME) * 24 * 60 * 60, 0)) AS ELAPSED_TIME
+                ,NVL(TO_CHAR((SELECT BYTES/1024/1024 FROM USER_SEGMENTS WHERE V1.PNM = SEGMENT_NAME)),'N/A') as BYTES
+                ,(SELECT PREF_NM
+                    FROM CM_0201T Z
+                   WHERE V1.PNM = Z.PREF_KEY
+                     AND Z.PREF_VAL = 'MIG') AS DETAIL_PNM
+                ,ROWNUM AS RNUM
+            FROM MIG_NDMS_COM_INIT_LOG_TBL V1
+            WHERE 1=1
+                <choose>
+                    <when test='value == 1'>
+                        AND V1.SEQ_NO <![CDATA[<]]> 100
+                    </when>
+                    <when test='value == 2'>
+                        AND V1.SEQ_NO BETWEEN 100 AND 199
+                    </when>
+                    <when test='value == 3'>
+                        AND V1.SEQ_NO BETWEEN 200 AND 299
+                    </when>
+                    <when test='value == 4'>
+                        AND V1.SEQ_NO BETWEEN 300 AND 399
+                    </when>
+                </choose>
+            ORDER BY V1.SEQ_NO DESC
+    </select>
+
+    <!--
+                기초정보 데이터를 일괄 적용 프로시저 호출
+        DCS 기초정보를 DB링크를 통하여 DMS 기초정보를 등록/수정한다.
+    -->
+    <insert id="updateMigNdmsComInit" parameterType="MigVO" statementType="CALLABLE">
+        {call DMSDB.MIG_NDMS_COM_INIT(
+            #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            ,#{useCenterDmsYn, mode=IN, jdbcType=VARCHAR}
+            ,#{partRunNum, mode=IN, jdbcType=NUMERIC}
+            ,#{partRunNum2, mode=IN, jdbcType=NUMERIC}
+            ,#{membershipPolicy, mode=IN, jdbcType=VARCHAR}
+         )}
+    </insert>
+
+    <!--
+                마이그레이션 프로시저 호출
+        DCS DB에서 수행된 마이그레이션 데이터를 신규 딜러로 이관한다.
+    -->
+    <insert id="updateMigNdmsInsert" parameterType="MigVO" statementType="CALLABLE">
+        {call DMSDB.MIG_NDMS_INSERT(
+            #{dlrCd, mode=IN, jdbcType=VARCHAR}
+           ,#{partRunNum, mode=IN, jdbcType=NUMERIC}
+           ,#{partRunNum2, mode=IN, jdbcType=NUMERIC}
+           ,#{membershipPolicy, mode=IN, jdbcType=NUMERIC}
+         )}
+    </insert>
+
+    <!--
+                마이그레이션 후행 프로시저 호출
+        DCS DB에서 수행된 마이그레이션 데이터를 보정한다.
+    -->
+    <insert id="updateMigAfeterProcInsert" parameterType="MigVO" statementType="CALLABLE">
+        {call MIG_DMS_DCS_COM(
+            #{dlrCd, mode=IN, jdbcType=VARCHAR}
+           ,#{partRunNum, mode=IN, jdbcType=NUMERIC}
+           ,#{partRunNum2, mode=IN, jdbcType=NUMERIC}
+         )}
+    </insert>
+
+    <!--
+                마이그레이션 후행 프로시저 호출(DCS->DMS)
+        DCS DB에서 수행된 마이그레이션 데이터를 전송한다.
+    -->
+    <insert id="updateMigDcsDmsProcInsert" parameterType="MigVO" statementType="CALLABLE">
+        {call MIG_CRM_UPLOAD(
+            #{dlrCd, mode=IN, jdbcType=VARCHAR}
+           ,#{partRunNum, mode=IN, jdbcType=NUMERIC}
+           ,#{partRunNum2, mode=IN, jdbcType=NUMERIC}
+         )}
+    </insert>
+
+    <!--
+                마이그레이션 검증 실행
+    -->
+    <insert id="multiMigCheckInfo" parameterType="MigVO" statementType="CALLABLE">
+        {call MIG_CHK_LOG(
+            #{dlrCd, mode=IN, jdbcType=VARCHAR}
+         )}
+    </insert>
+
+    <!-- 마이그레이션 체크 목록 조회 -->
+    <select id="selectMigCheckList" parameterType="MigCheckSearchVO" resultType="MigCheckVO">
+        SELECT ROW_NUMBER() OVER(PARTITION BY DLR_CD ORDER BY SEQ) AS RNUM
+              ,SEQ
+              ,DLR_CD
+              ,CHK_NM
+              ,(SELECT CMM_CD_TXT
+                  FROM CM_0304T
+                 WHERE CMM_GRP_CD ='COM067'
+                   AND CHK_TP = CMM_CD
+                   AND LANG_CD = 'zh') AS CHK_TP
+              ,TBL_NM
+              ,COL_NM
+              ,(SELECT CMM_CD_TXT
+                  FROM CM_0304T
+                 WHERE CMM_GRP_CD ='COM068'
+                   AND CHK_RSLT_TP = CMM_CD
+                   AND LANG_CD = 'zh') AS CHK_RSLT_TP
+              ,(SELECT CMM_CD_TXT
+                  FROM CM_0304T
+                 WHERE CMM_GRP_CD ='COM069'
+                   AND ERR_CD = CMM_CD
+                   AND LANG_CD = 'zh') AS ERR_CD
+              ,MSG
+              ,CNT
+              ,REG_USR_ID
+              ,REG_DT
+              ,UPDT_USR_ID
+              ,UPDT_DT
+          FROM CM_3901T
+         WHERE 1 = 1
+        <if test='sDlrCd != null and sDlrCd != ""'>
+           AND DLR_CD = #{sDlrCd}
+        </if>
+        <if test='sChkNm != null and sChkNm != ""'>
+           AND CHK_NM LIKE '%'||#{sChkNm}||'%'
+        </if>
+        <if test='sChkTp != null and sChkTp != ""'>
+           AND CHK_TP = #{sChkTp}
+        </if>
+        <if test='sChkRsltTp != null and sChkRsltTp != ""'>
+           AND CHK_RSLT_TP = #{sChkRsltTp}
+        </if>
+        <if test='sErrCd != null and sErrCd != ""'>
+           AND ERR_CD = #{sErrCd}
+        </if>
+         ORDER BY SEQ
+    </select>
+</mapper>

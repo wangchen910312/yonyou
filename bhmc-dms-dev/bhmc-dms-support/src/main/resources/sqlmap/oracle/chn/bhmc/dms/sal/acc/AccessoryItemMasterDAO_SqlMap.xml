@@ -1,0 +1,451 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : AccessoryItemMasterDAO_SqlMap.xml
+    Description : 용품마스터 관리
+    author Kang Seok Han
+    since 2017. 2. 01.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2017. 2. 01.     Kang Seok Han     최초 생성
+-->
+<mapper namespace="chn.bhmc.dms.sal.acc.service.dao.AccessoryItemMasterDAO">
+
+
+    <sql id="innerSql">
+        <choose>
+            <when test='sStrgeDupYn == "N" '>
+
+              SELECT B.ITEM_CD
+                    ,B.DLR_CD
+                    ,MAX(A.STRGE_CD) AS STRGE_CD
+                    ,NVL(SUM(C.AVLB_STOCK_QTY),0) AS AVLB_STOCK_QTY
+                    ,NVL(SUM(C.RESV_STOCK_QTY),0) AS RESV_STOCK_QTY
+                    ,NVL(SUM(C.BORROW_QTY),0)     AS BORROW_QTY
+                    ,NVL(SUM(C.RENT_QTY)  ,0)     AS RENT_QTY
+                 FROM PT_0201T B LEFT OUTER JOIN PT_0214T A
+                   ON A.DLR_CD   = B.DLR_CD
+                  AND A.ITEM_CD  = B.ITEM_CD
+                 LEFT OUTER JOIN PT_0301T C
+                   ON C.DLR_CD   = A.DLR_CD
+                  AND C.ITEM_CD  = A.ITEM_CD
+                  AND C.STRGE_CD = A.STRGE_CD
+                 WHERE B.DLR_CD   = #{sDlrCd}
+                <choose>
+                    <when test='sEndYn != null and sEndYn != ""' >
+                      AND B.END_YN = #{sEndYn}
+                    </when>
+                </choose>
+                   AND B.DLR_CD = #{sDlrCd}
+                   AND B.ITEM_DSTIN_CD IN ('20','05')
+                GROUP BY B.ITEM_CD ,B.DLR_CD
+
+            </when>
+            <when test='sStrgeDupYn != "N" and sBmpYn == "N" '>
+              SELECT B.ITEM_CD
+                    ,B.DLR_CD
+                    ,MAX(NVL(A.STRGE_CD,B.GR_STRGE_CD)) AS STRGE_CD
+                    ,NVL(SUM(C.AVLB_STOCK_QTY),0) AS AVLB_STOCK_QTY
+                    ,NVL(SUM(C.RESV_STOCK_QTY),0) AS RESV_STOCK_QTY
+                    ,NVL(SUM(C.BORROW_QTY),0)     AS BORROW_QTY
+                    ,NVL(SUM(C.RENT_QTY)  ,0)     AS RENT_QTY
+                 FROM PT_0201T B LEFT OUTER JOIN PT_0214T A
+                   ON A.DLR_CD   = B.DLR_CD
+                  AND A.ITEM_CD  = B.ITEM_CD
+                  LEFT OUTER JOIN PT_0301T C
+                   ON C.DLR_CD   = A.DLR_CD
+                  AND C.ITEM_CD  = A.ITEM_CD
+                  AND C.STRGE_CD = A.STRGE_CD
+                 WHERE B.DLR_CD   = #{sDlrCd}
+                   <choose>
+                    <when test='sEndYn != null and sEndYn != ""' >
+                      AND B.END_YN = #{sEndYn}
+                    </when>
+                    <otherwise>
+                      AND B.END_YN = 'N'
+                    </otherwise>
+                </choose>
+                   AND B.ITEM_DSTIN_CD = '20'
+                GROUP BY B.ITEM_CD ,B.DLR_CD
+            </when>
+            <otherwise>
+              SELECT A.ITEM_CD
+                    ,A.DLR_CD
+                    ,A.STRGE_CD AS STRGE_CD
+                    ,NVL(SUM(C.AVLB_STOCK_QTY),0) AS AVLB_STOCK_QTY
+                    ,NVL(SUM(C.RESV_STOCK_QTY),0) AS RESV_STOCK_QTY
+                    ,NVL(SUM(C.BORROW_QTY),0)     AS BORROW_QTY
+                    ,NVL(SUM(C.RENT_QTY)  ,0)     AS RENT_QTY
+                 FROM PT_0214T A JOIN PT_0201T B
+                   ON A.DLR_CD   = B.DLR_CD
+                  AND A.ITEM_CD  = B.ITEM_CD
+                  JOIN PT_0301T C
+                   ON C.DLR_CD   = A.DLR_CD
+                  AND C.ITEM_CD  = A.ITEM_CD
+                  AND C.STRGE_CD = A.STRGE_CD
+                 WHERE A.DLR_CD   = #{sDlrCd}
+                   AND B.END_YN = 'N'
+                   AND B.ITEM_DSTIN_CD IN ('20','05')
+                GROUP BY A.ITEM_CD ,A.DLR_CD ,A.STRGE_CD
+
+            </otherwise>
+        </choose>
+    </sql>
+
+
+    <select id="selectAccessoryItemMasterByKey" resultType="AccessoryItemMasterVO" parameterType="map">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemMasterDAO.selectAccessoryItemMasterByKey] */
+<!--
+        SELECT T1.DLR_CD
+            ,T1.ITEM_CD
+            ,T1.SPYR_CD
+            ,T1.ITEM_NM
+            ,T1.ITEM_EN_NM
+            ,T1.ITEM_DSTIN_CD
+            ,T1.END_YN
+            ,T1.START_DT
+            ,T1.END_DT
+            ,T1.STOCK_UNIT_CD
+            ,T1.FILE_DOC_NO
+            ,T3.STRGE_CD AS GR_STRGE_CD
+            ,T3.STRGE_CD AS GI_STRGE_CD
+            ,T3.STRGE_CD
+            ,(
+                SELECT STRGE_NM
+                  FROM CM_0104T D
+                  WHERE D.DLR_CD   = T3.DLR_CD
+                    AND D.STRGE_CD = T3.STRGE_CD
+                ) AS STRGE_NM
+            ,T1.BEF_LAST_GR_DT
+            ,T1.LAST_GR_DT
+            ,T1.LAST_GR_AMT
+            ,T1.BEF_LAST_GI_DT
+            ,T1.LAST_GI_DT
+            ,T1.REG_USR_ID
+            ,T1.REG_DT
+            ,T1.UPDT_USR_ID
+            ,T1.UPDT_DT
+            ,T1.BRAND_CD
+            ,T1.PRND_YN
+            ,T1.DGR_ITEM_YN
+            ,T1.BP_CD
+            ,T2.BP_NM
+            ,T2.BP_TP
+            ,T1.ETC_CD1
+            ,T1.ETC_CD2
+            ,T1.ETC1
+            ,T1.ETC2
+            ,T1.ETC3
+            ,T1.ETC4
+            ,T3.RETL_PRC
+            ,TO_CHAR(NVL(T1.UPDT_DT,T1.REG_DT), 'YYYYMMDDHH24MISS') AS UPDT_DT_STR
+       FROM PT_0201T T1
+       LEFT OUTER JOIN PT_0211T T2
+         ON T2.DLR_CD  = T1.DLR_CD
+         AND T2.BP_CD   = T1.BP_CD
+       LEFT OUTER JOIN PT_0214T T3
+         ON T3.DLR_CD  = T1.DLR_CD
+         AND T3.ITEM_CD = T1.ITEM_CD
+         AND T3.PRC_TP  = '01'
+       WHERE T1.DLR_CD  = #{dlrCd}
+         AND T1.ITEM_CD = #{itemCd}
+          -->
+
+
+  SELECT A.*
+    FROM (
+          SELECT T1.DLR_CD
+                ,T1.ITEM_CD
+                ,T1.SPYR_CD
+                ,T1.ITEM_NM
+                ,T1.ITEM_EN_NM
+                ,T1.ITEM_DSTIN_CD
+                ,T1.END_YN
+                ,T1.START_DT
+                ,T1.END_DT
+                ,T1.STOCK_UNIT_CD
+                ,T1.FILE_DOC_NO
+                ,T1.GI_STRGE_CD
+                ,T1.GR_STRGE_CD
+                ,(
+                    SELECT STRGE_NM
+                      FROM CM_0104T D
+                      WHERE D.DLR_CD   = T1.DLR_CD
+                        AND D.STRGE_CD = T1.GR_STRGE_CD
+                        AND ROWNUM = 1
+                ) AS STRGE_NM
+                ,T1.BEF_LAST_GR_DT
+                ,T1.LAST_GR_DT
+                ,T1.LAST_GR_AMT
+                ,T1.BEF_LAST_GI_DT
+                ,T1.LAST_GI_DT
+                ,T1.REG_USR_ID
+                ,T1.REG_DT
+                ,T1.UPDT_USR_ID
+                ,T1.UPDT_DT
+                ,T1.BRAND_CD
+                ,T1.PRND_YN
+                ,T1.DGR_ITEM_YN
+                ,T1.BP_CD
+                ,T2.BP_NM
+                ,T2.BP_TP
+                ,T1.ETC_CD1
+                ,T1.ETC_CD2
+                ,T1.ETC1
+                ,NVL(T1.ETC2,0) AS ETC2
+                ,NVL(T1.ETC3,0) AS ETC3
+                ,NVL(T1.ETC4,0) AS ETC4
+                ,TO_CHAR(NVL(T1.UPDT_DT,T1.REG_DT), 'YYYYMMDDHH24MISS') AS UPDT_DT_STR
+           FROM PT_0201T T1
+           LEFT OUTER JOIN PT_0211T T2
+             ON T2.DLR_CD   = T1.DLR_CD
+             AND T2.BP_CD   = T1.BP_CD
+           WHERE T1.DLR_CD  = #{dlrCd}
+             AND T1.ITEM_CD = #{itemCd}
+      )A
+    </select>
+
+    <!-- 용품마스터 목록을 조회한다. -->
+    <select id="selectAccessoryItemMastersByCondition" resultType="AccessoryItemMasterVO" parameterType="AccessoryItemMasterSearchVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemMasterDAO.selectAccessoryItemMastersByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , DECODE(SAL_RETL_PRC, 0, PAR_RETL_PRC, SAL_RETL_PRC) AS RETL_PRC
+                 , T4.*
+              FROM (
+                    SELECT T1.DLR_CD
+                          ,T1.ITEM_CD
+                          ,T1.SPYR_CD
+                          ,T1.ITEM_NM
+                          ,T1.ITEM_EN_NM
+                          ,DECODE(T1.BRAND_CD,'HD','N',T1.BRAND_CD) AS BRAND_CD
+                          ,T2.STRGE_CD
+                          ,T2.STRGE_CD AS GR_STRGE_CD
+                          ,(
+                            SELECT STRGE_NM
+                              FROM CM_0104T D
+                              WHERE D.DLR_CD   = T2.DLR_CD
+                                AND D.STRGE_CD = T2.STRGE_CD
+                            ) AS STRGE_NM
+                          ,T3.BP_TP
+                          ,T1.BP_CD
+                          ,T3.BP_NM
+                          ,T3.BP_FULL_NM
+                          ,T1.STOCK_UNIT_CD
+                          ,T1.ITEM_DSTIN_CD
+                          ,T1.END_YN
+                          ,T1.PRND_YN
+                          ,T1.DGR_ITEM_YN
+                          ,T1.START_DT
+                          ,T1.END_DT
+                          ,T1.ETC_CD1                                                     <!--용품유형-->
+                          ,T1.ETC_CD2                                                     <!--포인트상품-->
+                          ,T1.ETC1                                                        <!--생산공장-->
+                          ,NVL(T1.ETC2 ,0) AS ETC2                                        <!--설치비-->
+                          ,NVL(T1.ETC3 ,0) AS ETC3                                        <!--설치비-->
+                          ,NVL(T1.ETC4 ,0) AS ETC4                                        <!--딜러포인트-->
+                          ,(SELECT NVL(MAX(RETL_PRC),0)
+                                FROM SA_0281T
+                               WHERE DLR_CD   = T1.DLR_CD
+                                 AND PLT_CD   = '1000'
+                                 AND STRGE_CD = T2.STRGE_CD
+                                 AND ITEM_CD  = T1.ITEM_CD
+                            ) AS SAL_RETL_PRC
+                          , (
+                              SELECT NVL(X.RETL_PRC,0)
+                                FROM (
+                                      SELECT DLR_CD, STRGE_CD, ITEM_CD
+                                           , MAX(RETL_PRC) AS RETL_PRC
+                                        FROM PT_0214T
+                                       WHERE NVL(DEL_YN,'N') != 'Y'
+                                       GROUP BY DLR_CD, STRGE_CD, ITEM_CD
+                                      ) X
+                               WHERE X.DLR_CD = T1.DLR_CD
+                                 AND X.STRGE_CD = T2.STRGE_CD
+                                 AND X.ITEM_CD = T1.ITEM_CD
+                            ) AS PAR_RETL_PRC
+                          ,T2.AVLB_STOCK_QTY
+                          ,NVL(T1.LAST_GR_AMT, 0) AS LAST_GR_AMT
+                          ,NVL(
+                               (
+                                SELECT MOVING_AVG_PRC
+                                  FROM PT_0208T C
+                                 WHERE C.DLR_CD    = T1.DLR_CD
+                                   AND C.STRGE_CD  = T2.STRGE_CD
+                                   AND C.ITEM_CD   = T1.ITEM_CD
+                               ),0
+                           ) AS MOVING_AVG_PRC
+                     FROM PT_0201T T1 , (
+                           <include refid="innerSql" />
+                      ) T2 , PT_0211T T3
+                      WHERE T1.ITEM_CD = T2.ITEM_CD
+                        AND T1.DLR_CD  = T2.DLR_CD
+                        AND T3.DLR_CD(+)  = T1.DLR_CD
+                        AND T3.BP_CD (+)  = T1.BP_CD
+                        <if test='sEndYn != null and sEndYn != ""'>
+                        AND T1.END_YN = #{sEndYn}
+                        </if>
+                        AND T1.DLR_CD = #{sDlrCd}
+                        <if test='sItemCd != null and sItemCd != ""'>
+                        AND T1.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                        </if>
+                        <if test='sSpyrCd != null and sSpyrCd != ""'>
+                        AND T1.SPYR_CD = #{sSpyrCd}
+                        </if>
+                        <if test='sItemNm != null and sItemNm != ""'>
+                            AND T1.ITEM_NM LIKE '%'||#{sItemNm}||'%'
+                        </if>
+                        <choose>
+                            <when test='sBmpYn == "N"  '>
+                             AND T1.ITEM_DSTIN_CD = '20'
+                            </when>
+                            <otherwise>
+                             AND T1.ITEM_DSTIN_CD IN ('20','05')
+                            </otherwise>
+                        </choose>
+                        <if test='sPackage != null and sPackage != ""'>
+                            AND T1.ITEM_DSTIN_CD in ('21')
+                        </if>
+                        <if test='sBrandCd != null and sBrandCd != ""'>
+                            AND T1.BRAND_CD = #{sBrandCd}
+                        </if>
+                        <if test='sBpTp != null and sBpTp != ""'>
+                            AND T3.BP_TP = #{sBpTp}
+                        </if>
+                        <if test='sBpCd != null and sBpCd != ""'>
+                            AND T1.BP_CD LIKE '%'|| #{sBpCd} ||'%'
+                        </if>
+                        <if test='sStrgeCd != null and sStrgeCd.size != 0'>
+                            AND T2.STRGE_CD IN
+                            <foreach item="item" index="index" collection="sStrgeCd" open="(" separator="," close=")">
+                            #{item}
+                            </foreach>
+                        </if>
+                        <if test='sGrStrgeCd != null and sGrStrgeCd != ""'>
+                            AND T2.STRGE_CD  =  #{sGrStrgeCd}
+                        </if>
+                        <if test='sBpNm != null and sBpNm != ""'>
+                            AND T3.BP_NM LIKE '%'|| #{sBpNm} ||'%'
+                        </if>
+                        <if test='sEtcCd1 != null and sEtcCd1 != ""'>
+                            AND T1.ETC_CD1 = #{sEtcCd1}
+                        </if>
+                        <if test='sEtcCd2 != null and sEtcCd2 != ""'>
+                            AND T1.ETC_CD2 = #{sEtcCd2}
+                        </if>
+                     ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "itemCd"'>T1.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "itemNm"'>T1.ITEM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "itemEnNm"'>T1.ITEM_EN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "etcCd1"'>T1.ETC_CD1 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "stockUnitCd"'>T1.STOCK_UNIT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "bpTp"'>T1.SPYR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "bpCd"'>T1.BP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "bpNm"'>T3.BP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "etc1"'>T1.ETC1 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "endYn"'>T1.END_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "startDt"'>T1.START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "endDt"'>T1.END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        T1.DLR_CD ASC, T1.REG_DT DESC, T1.ITEM_CD ASC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            T1.DLR_CD ASC, T1.REG_DT DESC, T1.ITEM_CD ASC
+                        </otherwise>
+                    </choose>
+                )T4
+                <where>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        ROWNUM <![CDATA[<=]]> #{lastIndex}
+                    </if>
+                </where>
+            )
+         <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+    <!-- 용품마스터 목록을 조회한다. -->
+    <select id="selectAccessoryItemMastersByConditionCnt" resultType="int" parameterType="AccessoryItemMasterSearchVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemMasterDAO.selectAccessoryItemMastersByConditionCnt] */
+
+           SELECT COUNT(T1.ITEM_CD) AS VALUE
+             FROM PT_0201T T1 , (
+                    <include refid="innerSql" />
+              ) T2 , PT_0211T T3
+              WHERE T1.ITEM_CD = T2.ITEM_CD
+                AND T1.DLR_CD  = T2.DLR_CD
+                AND T3.DLR_CD(+)  = T1.DLR_CD
+                AND T3.BP_CD(+)   = T1.BP_CD
+                AND T1.DLR_CD = #{sDlrCd}
+                <if test='sItemCd != null and sItemCd != ""'>
+                AND T1.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                </if>
+                <if test='sSpyrCd != null and sSpyrCd != ""'>
+                AND T1.SPYR_CD = #{sSpyrCd}
+                </if>
+                <if test='sItemNm != null and sItemNm != ""'>
+                    AND T1.ITEM_NM LIKE '%'||#{sItemNm}||'%'
+                </if>
+                <choose>
+                    <when test='sBmpYn == "N"  '>
+                     AND T1.ITEM_DSTIN_CD = '20'
+                    </when>
+                    <otherwise>
+                     AND T1.ITEM_DSTIN_CD IN ('20','05')
+                    </otherwise>
+                </choose>
+                <if test='sStrgeCd != null and sStrgeCd.size != 0'>
+                    AND T2.STRGE_CD IN
+                    <foreach item="item" index="index" collection="sStrgeCd" open="(" separator="," close=")">
+                    #{item}
+                    </foreach>
+                </if>
+                <if test='sPackage != null and sPackage != ""'>
+                    AND T1.ITEM_DSTIN_CD in ('21')
+                </if>
+                <if test='sBrandCd != null and sBrandCd != ""'>
+                    AND T1.BRAND_CD = #{sBrandCd}
+                </if>
+                <if test='sBpTp != null and sBpTp != ""'>
+                    AND T3.BP_TP = #{sBpTp}
+                </if>
+                <if test='sBpCd != null and sBpCd != ""'>
+                    AND T1.BP_CD LIKE '%'|| #{sBpCd} ||'%'
+                </if>
+                <if test='sGrStrgeCd != null and sGrStrgeCd != ""'>
+                    AND T2.STRGE_CD =  #{sGrStrgeCd}
+                </if>
+                <if test='sBpNm != null and sBpNm != ""'>
+                    AND T3.BP_NM LIKE '%'|| #{sBpNm} ||'%'
+                </if>
+                <if test='sEndYn != null and sEndYn != ""'>
+                    AND T1.END_YN = #{sEndYn}
+                </if>
+                <if test='sEtcCd1 != null and sEtcCd1 != ""'>
+                    AND T1.ETC_CD1 = #{sEtcCd1}
+                </if>
+                <if test='sEtcCd2 != null and sEtcCd2 != ""'>
+                    AND T1.ETC_CD2 = #{sEtcCd2}
+                </if>
+
+    </select>
+
+    <!-- 부가세율 조회 -->
+    <select id="selectVATSearch" parameterType="map" resultType="String">
+        SELECT FN_GET_VAT(#{sApplyDate}, #{sTypeCd}) AS VAT FROM DUAL
+    </select>
+
+</mapper>

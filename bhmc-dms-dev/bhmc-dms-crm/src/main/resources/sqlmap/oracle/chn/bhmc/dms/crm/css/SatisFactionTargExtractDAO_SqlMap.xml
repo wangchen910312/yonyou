@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : SatisFactionTargExtractDAO_SqlMap.xml
+    Description : 만족도조사 대상자 추출조건 (조사타입이 서비스인경우) 관한 데이터처리
+    author lee in moon
+    since 2017.08.01.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016.03.04     lee in moon    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.css.service.dao.SatisFactionTargExtractDAO">
+
+    <!-- 고객추출 마스터 정보를 삭제한다. -->
+    <update id="deleteCrmTargExtractDetail" parameterType="SatisFactionCrmTargExtractVO" >
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.deleteCrmTargExtractDetail] */
+        DELETE FROM CR_0911T    --고객추출조건상세
+         WHERE 1 = 1
+           AND DLR_CD = #{dlrCd}                  --딜러코드
+           AND SEQ = #{seq}         --고객추출조건번호
+    </update>
+
+    <!-- 고객추출 상세정보를 등록한다. -->
+    <insert id="insertCrmTargExtractDetail" parameterType="SatisFactionCrmTargExtractVO" >
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.insertCrmTargExtractDetail] */
+        INSERT INTO CR_0911T    --고객추출조건상세
+        (
+         DLR_CD                   --딜러코드
+        ,SEQ        --고객추출조건번호
+        ,DETL_EXTR_TERM_CD        --상세추출조건코드
+        ,TERM_VAL1                --조건값1
+        ,TERM_VAL2                --조건값2
+        ,TERM_VAL3                --조건값3
+        ,TERM_VAL4                --조건값4
+        ,TERM_VAL5                --조건값5
+        ,REG_USR_ID               --등록자ID
+        ,REG_DT                   --등록일자
+        ,UPDT_USR_ID              --수정자ID
+        ,UPDT_DT                  --수정일자
+        )
+        VALUES
+        (
+         #{dlrCd}                   --딜러코드
+        ,#{seq}          --고객추출조건번호
+        ,#{detlExtrTermCd}          --상세추출조건코드
+        ,#{termVal1}                --조건값1
+        ,#{termVal2}                --조건값2
+        ,#{termVal3}                --조건값3
+        ,#{termVal4}                --조건값4
+        ,#{termVal5}                --조건값5
+        ,#{regUsrId}                --등록자ID
+        ,SYSDATE                    --등록일자
+        ,#{updtUsrId}               --수정자ID
+        ,SYSDATE                    --수정일자
+        )
+    </insert>
+
+
+
+    <!-- 고객추출 상세 페이지에  정보를 조회한다. -->
+    <select id="selectCrmTargExtractDetails" parameterType="SatisFactionCrmTargExtractSearchVO" resultType="SatisFactionCrmTargExtractVO">
+    <![CDATA[
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDao.selectCrmTargExtractDetails] */
+        SELECT
+               CR_0911T.DLR_CD                   --딜러코드
+              ,CR_0911T.SEQ        --고객추출조건번호
+              ,CR_0911T.DETL_EXTR_TERM_CD        --상세추출조건코드
+              ,CR_0911T.TERM_VAL1                --조건값1
+         FROM (
+                SELECT  DLR_CD
+                       ,SEQ
+                       ,DETL_EXTR_TERM_CD || '-01' AS DETL_EXTR_TERM_CD
+                       ,TERM_VAL1
+                  FROM CR_0911T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND SEQ = #{sSeq}
+                   AND DETL_EXTR_TERM_CD = 'CRM7500104'
+                 UNION ALL
+                SELECT  DLR_CD
+                       ,SEQ
+                       ,DETL_EXTR_TERM_CD || '-02'
+                       ,TERM_VAL2
+                  FROM CR_0911T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND SEQ = #{sSeq}
+                   AND DETL_EXTR_TERM_CD = 'CRM7500104'
+                 UNION ALL
+                SELECT  DLR_CD
+                       ,SEQ
+                       ,DETL_EXTR_TERM_CD || '-03'
+                       ,TERM_VAL3
+                  FROM CR_0911T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND SEQ = #{sSeq}
+                   AND DETL_EXTR_TERM_CD = 'CRM7500104'
+                 UNION ALL
+                SELECT  DLR_CD
+                       ,SEQ
+                       ,DETL_EXTR_TERM_CD || '-04'
+                       ,TERM_VAL4
+                  FROM CR_0911T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND SEQ = #{sSeq}
+                   AND DETL_EXTR_TERM_CD = 'CRM7500104'
+                 UNION ALL
+                SELECT  DLR_CD
+                       ,SEQ
+                       ,DETL_EXTR_TERM_CD || '-01'
+                       ,TERM_VAL1
+                  FROM CR_0911T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND SEQ = #{sSeq}
+                   AND TERM_VAL2 IS NOT NULL
+                   AND DETL_EXTR_TERM_CD <> 'CRM7500104'
+                 UNION ALL
+                SELECT  DLR_CD
+                       ,SEQ
+                       ,DETL_EXTR_TERM_CD || '-02'
+                       ,TERM_VAL2
+                  FROM CR_0911T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND SEQ = #{sSeq}
+                   AND TERM_VAL2 IS NOT NULL
+                   AND DETL_EXTR_TERM_CD <> 'CRM7500104'
+                 UNION ALL
+                SELECT  DLR_CD
+                       ,SEQ
+                       ,DETL_EXTR_TERM_CD || '-03'
+                       ,TERM_VAL3
+                  FROM CR_0911T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND SEQ = #{sSeq}
+                   AND TERM_VAL2 IS NOT NULL
+                   AND DETL_EXTR_TERM_CD <> 'CRM7500104'
+                 UNION ALL
+                SELECT  DLR_CD
+                       ,SEQ
+                       ,DETL_EXTR_TERM_CD || '-01'
+                       ,TERM_VAL1
+                  FROM CR_0911T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND SEQ = #{sSeq}
+                   AND TERM_VAL2 IS NULL
+                   AND DETL_EXTR_TERM_CD <> 'CRM7500104'
+             ) CR_0911T                          --고객추출조건상세
+         ORDER BY CR_0911T.DETL_EXTR_TERM_CD
+    ]]>
+    </select>
+
+
+
+    <!-- 고객추출 마스터 정보 목록수를 조회한다. -->
+    <select id="selectCrmTargExtractDetailsByConditionCnt" parameterType="SatisFactionCrmTargExtractSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.selectCrmTargExtractDetailsByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_0911T CR_0911T
+        WHERE CR_0911T.DLR_CD = #{sDlrCd}
+          AND CR_0911T.SEQ = #{sSeq}
+    </select>
+
+
+
+
+</mapper>

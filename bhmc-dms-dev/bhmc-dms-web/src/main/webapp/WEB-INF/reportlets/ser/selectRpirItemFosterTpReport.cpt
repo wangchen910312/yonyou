@@ -1,0 +1,422 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="selectRpirItemFosterTpDs" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sStartDt"/>
+<O>
+<![CDATA[2017]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[-- 수리유형별 현황 
+-- LBR01 : ???整[검사조정]A , 02 : 定期保?[정기점검]A , 03 :  机??修[기계수리]A , 04 : ?金?漆[판금페인트]A , 05 : 用品??[액세서리]A
+SELECT *
+  FROM (    
+ SELECT  T2.RO_TP
+        ,T2.CMM_CD_TXT AS RO_TP_NM
+        ,T1.LBR_TP
+        --,FN_CMM_CD_NM('SER036',T1.LBR_TP,'ko' , 'N') AS LBR_TP_NM 
+        ,CASE WHEN T1.RO_TP = T2.RO_TP THEN LBR_CNT ELSE 0 END AS LBR_CNT
+   FROM (
+    SELECT A.DLR_CD 
+          ,A.RO_TP
+          ,B.LBR_TP
+          ,COUNT(1) AS LBR_CNT 
+     FROM SE_0300T A , SE_0170T B 
+    WHERE A.DLR_CD     = B.DLR_CD
+      AND A.RO_DOC_NO  = B.DOC_NO
+      AND A.DLR_CD     ='${sDlrCd}'
+      AND B.PREFIX_ID  ='RO'
+      AND A.RO_STAT_CD != '06'
+      AND TO_CHAR(A.RO_DT,'YYYYMMDD') >= '${sStartDt}'||'0101' 
+      AND TO_CHAR(A.RO_DT,'YYYYMMDD') <= '${sStartDt}'||'1231' 
+      GROUP BY A.DLR_CD 
+          ,A.RO_TP
+          ,B.LBR_TP
+  )T1 RIGHT OUTER JOIN (
+        SELECT   CMM_CD AS RO_TP 
+                ,LANG_CD
+                ,CMM_CD_TXT 
+           FROM CM_0304T
+          WHERE CMM_GRP_CD ='SER031' 
+            AND LANG_CD    ='zh'
+   )T2
+   ON 1=1 
+) PIVOT(
+        SUM(NVL(LBR_CNT,0)) 
+           FOR LBR_TP IN(            
+                             '01' AS "LBR01"
+                            ,'02' AS "LBR02"
+                            ,'03' AS "LBR03"
+                            ,'04' AS "LBR04"
+                            ,'05' AS "LBR05" 
+                            )
+)  ORDER BY RO_TP  ;]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="0" T="0"/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1152000,1152000,1152000,1152000,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[5760000,5760000,5760000,5760000,5760000,5760000,5760000,2743200,2743200,2743200,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" s="0">
+<O>
+<![CDATA[数据名称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="1">
+<O>
+<![CDATA[全部]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0" s="0">
+<O>
+<![CDATA[普通]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="0">
+<O>
+<![CDATA[保修]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0" s="0">
+<O>
+<![CDATA[保险]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="0">
+<O>
+<![CDATA[内部]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="0" s="0">
+<O>
+<![CDATA[返工]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1" s="2">
+<O>
+<![CDATA[全部]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="1" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(B4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="1" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(C4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="1" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(D4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="1" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(E4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="1" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(F4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="1" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(G4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="2" s="2">
+<O>
+<![CDATA[平均]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="2" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=AVERAGE(B4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="2" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=AVERAGE(C4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="2" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=AVERAGE(D4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="2" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=AVERAGE(E4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="2" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=AVERAGE(F4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="2" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=AVERAGE(G4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="3" s="5">
+<O t="DSColumn">
+<Attributes dsName="selectRpirItemFosterTpDs" columnName="RO_TP_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Scope val="1"/>
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="1" r="3" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(C4:G4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="3" s="6">
+<O t="DSColumn">
+<Attributes dsName="selectRpirItemFosterTpDs" columnName="LBR01"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="3" s="6">
+<O t="DSColumn">
+<Attributes dsName="selectRpirItemFosterTpDs" columnName="LBR02"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="3" s="6">
+<O t="DSColumn">
+<Attributes dsName="selectRpirItemFosterTpDs" columnName="LBR03"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="3" s="6">
+<O t="DSColumn">
+<Attributes dsName="selectRpirItemFosterTpDs" columnName="LBR04"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="3" s="6">
+<O t="DSColumn">
+<Attributes dsName="selectRpirItemFosterTpDs" columnName="LBR05"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="1" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Verdana" style="1" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Verdana" style="1" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,###.##]]></Format>
+<FRFont name="Verdana" style="1" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : OrderConfirmManageDAO_SqlMap.xml
+    Description : 工单确认条件设置
+    author chen shengan
+    since 2021. 04. 01
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2021. 04. 01    chen shengan      工单确认条件设置
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO">
+
+    <!-- 查询所有区域信息 -->
+    <select id="findRegion" parameterType='String'  resultType="RegionTableVO">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.findRegion] */
+        SELECT A.* FROM CM_2501T A 
+        WHERE 1 = 1
+        <if test='offCd != null and offCd != ""'>
+            AND A.OFF_CD IN (SELECT DIVI_CD FROM CM_2601T WHERE OFF_CD = #{offCd} )
+        </if>
+    </select>
+    
+    <!-- 查询所有办事处信息 -->
+    <select id="findOffice" parameterType='String'  resultType="OfficeTableVO">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.findOffice] */
+        SELECT * FROM CM_2601T WHERE 1 = 1 
+        <if test='diviCd != null and diviCd != ""'>
+            AND DIVI_CD = #{diviCd}
+        </if>
+        
+    </select>
+    
+    <!-- 查询所有经销商信息 -->
+    <select id="findAllDlr" parameterType="FindAllDlrSearchVO" resultType="FindAllDlrVO">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.findAllDlr] */
+    SELECT *
+          FROM (
+              SELECT ROWNUM AS RNUM ,T1.*
+                FROM (
+			        SELECT 
+			            A.SDPT_CD AS DIVI_CD,
+			            B.DIVI_NM,
+			            A.DIST_OFFICE_CD AS OFF_CD,
+			            C.OFF_NM,
+			            A.DLR_CD,
+			            A.DLR_NM
+			        FROM CM_0101T A 
+			        INNER JOIN CM_2501T B ON A.SDPT_CD = B.DIVI_CD 
+			        INNER JOIN CM_2601T C ON A.DIST_OFFICE_CD = C.OFF_CD
+			        WHERE A.DMS_USE_YN = 'Y'
+			        <if test='diviCd != null and diviCd != ""'>
+			            AND A.SDPT_CD = #{diviCd}
+			        </if>
+			        <if test='offCd != null and offCd != ""'>
+			            AND A.DIST_OFFICE_CD = #{offCd}
+			        </if>
+			        <if test='dlrCd != null and dlrCd != ""'>
+			            AND A.DLR_CD LIKE '%' || #{dlrCd} || '%'
+			        </if> 
+			        <if test='dlrNm != null and dlrNm != ""'>
+			            AND A.DLR_NM LIKE '%' || #{dlrNm} || '%'
+			        </if>
+			        ORDER BY
+	                 <choose>
+	                    <when test='sort != null'>
+	                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+	                            <choose>
+	                                <when test='item.field == "diviCd"'>DIVI_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+	                                <when test='item.field == "diviNm"'>B.DIVI_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+	                                <when test='item.field == "offCd"'>OFF_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+	                                <when test='item.field == "offNm"'>C.OFF_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+	                                <when test='item.field == "dlrCd"'>A.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+	                                <when test='item.field == "dlrNm"'>A.DLR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+	                                <otherwise>
+	                                    A.DLR_CD ASC
+	                                </otherwise>
+	                            </choose>
+	                        </foreach>
+	                    </when>
+	                    <otherwise>
+	                        A.DLR_CD ASC
+	                    </otherwise>
+	                </choose>
+			        ) T1
+              <where>
+                  <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                  </if>
+             </where>
+             )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+    
+    <!-- 查询所有经销商信息总数量 -->
+    <select id="findAllDlrCnt" parameterType="FindAllDlrSearchVO" resultType="int">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.findAllDlrCnt] */
+        SELECT 
+            COUNT(*) AS VALUE
+        FROM CM_0101T A 
+        INNER JOIN CM_2501T B ON A.SDPT_CD = B.DIVI_CD 
+        INNER JOIN CM_2601T C ON A.DIST_OFFICE_CD = C.OFF_CD
+        WHERE A.DMS_USE_YN = 'Y'
+        <if test='diviCd != null and diviCd != ""'>
+            AND A.SDPT_CD = #{diviCd}
+        </if>
+        <if test='offCd != null and offCd != ""'>
+            AND A.DIST_OFFICE_CD = #{offCd}
+        </if>
+        <if test='dlrCd != null and dlrCd != ""'>
+            AND A.DLR_CD LIKE '%' || #{dlrCd} || '%'
+        </if>
+        <if test='dlrNm != null and dlrNm != ""'>
+            AND A.DLR_NM LIKE '%' || #{dlrNm} || '%'
+        </if>
+    </select>
+    
+    <!-- 查询所有车种信息 -->
+    <select id="findAllCarline" resultType="FindAllCarlineAndPcDstinVO">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.findAllCarline] */
+        SELECT 
+            T1.CARLINE_CD
+        FROM SA_0101T T1 
+    </select>
+    
+    <!-- 根据经销商代码添加车种确认条件设置 -->
+    <insert id="addDlrCarlineConditionSetting">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.addDlrCarlineConditionSetting] */
+        INSERT INTO SE_1160T (DLR_CD, CARLINE_CD, USE_YN, REG_USR_ID, REG_DT, UPDT_USR_ID, UPDT_DT) 
+        VALUES (#{dlrCd}, #{carlineCd}, #{useYn}, #{userId}, SYSDATE, #{userId}, SYSDATE)
+    </insert>
+    
+    <!-- 根据经销商代码添加车辆用途确认条件设置 -->
+    <insert id="addDlrPcDstinConditionSetting">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.addDlrPcDstinConditionSetting] */
+        INSERT INTO SE_1161T (DLR_CD, PC_DSTIN_CD, USE_YN, REG_USR_ID, REG_DT, UPDT_USR_ID, UPDT_DT)
+        VALUES (#{dlrCd}, #{pcDstinCd}, #{useYn}, #{userId}, SYSDATE, #{userId}, SYSDATE)
+    </insert>
+    
+    <!-- 添加全网车种确认条件设置 -->
+    <insert id="addAllCarlineConditionSetting">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.addAllCarlineConditionSetting] */
+        INSERT INTO SE_1165T ( CARLINE_CD, USE_YN, REG_USR_ID, REG_DT, UPDT_USR_ID, UPDT_DT) 
+        VALUES ( #{carlineCd}, #{useYn}, #{userId}, SYSDATE, #{userId}, SYSDATE)
+    </insert>
+    
+    <!-- 添加车辆用途确认条件设置 -->
+    <insert id="addAllPcDstinConditionSetting">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.addAllPcDstinConditionSetting] */
+        INSERT INTO SE_1166T ( PC_DSTIN_CD, USE_YN, REG_USR_ID, REG_DT, UPDT_USR_ID, UPDT_DT)
+        VALUES ( #{pcDstinCd}, #{useYn}, #{userId}, SYSDATE, #{userId}, SYSDATE)
+    </insert>
+    
+    <!-- 添加所有经销商车种确认条件设置 -->
+    <insert id="addAllDlrCarlineConditionSetting">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.addAllDlrCarlineConditionSetting] */
+        INSERT INTO SE_1160T (DLR_CD, CARLINE_CD, USE_YN, REG_USR_ID, REG_DT, UPDT_USR_ID, UPDT_DT) 
+        <foreach item="item" index="index" collection="list" open="" separator="union all" close="">
+            SELECT 
+                #{item.dlrCd}, #{item.carlineCd}, #{item.useYn}, #{item.userId}, SYSDATE, #{item.userId}, SYSDATE
+            FROM DUAL
+        </foreach>
+    </insert>
+    
+    <!-- 添加所有经销商车辆用途确认条件设置 -->
+    <insert id="addAllDlrPcDstinConditionSetting">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.addAllDlrPcDstinConditionSetting] */
+        INSERT INTO SE_1161T (DLR_CD, PC_DSTIN_CD, USE_YN, REG_USR_ID, REG_DT, UPDT_USR_ID, UPDT_DT)
+        <foreach item="item" index="index" collection="list" open="" separator="union all" close="" >
+            SELECT 
+                #{item.dlrCd}, #{item.pcDstinCd}, #{item.useYn}, #{item.userId}, SYSDATE, #{item.userId}, SYSDATE
+            FROM DUAL
+        </foreach>
+    </insert>
+    
+    <!-- 查询全网车辆用途确认条件设置 -->
+    <select id="findAllPcDstinConditionSetting" parameterType="String" resultType="FindAllCarlineAndPcDstinVO">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.findAllPcDstinConditionSetting] */
+        SELECT 
+            FN_CMM_CD_NM('SAL120',T.PC_DSTIN_CD, #{sLangCd}, 'N') AS PC_DSTIN_NM,
+            T.PC_DSTIN_CD,
+            T.USE_YN
+        FROM SE_1166T T
+    </select>
+    
+    <!-- 查询全网车种确认条件设置 -->
+    <select id="findAllCarlineConditionSetting" parameterType="FindAllDlrSearchVO" resultType="FindAllCarlineAndPcDstinVO">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.findAllCarlineConditionSetting] */
+        SELECT 
+            A.CARLINE_CD,
+            B.CARLINE_NM,
+            B.CARLINE_EN_NM,
+            A.USE_YN
+        FROM SE_1165T A
+        LEFT JOIN SA_0101T B ON A.CARLINE_CD = B.CARLINE_CD
+        ORDER BY
+        <choose>
+           <when test='sort != null'>
+               <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                   <choose>
+                       <when test='item.field == "carlineCd"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                       <when test='item.field == "carlineNm"'>B.CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                       <when test='item.field == "carlineEnNm"'>B.CARLINE_EN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                       <when test='item.field == "useYn"'>A.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                       <otherwise>
+                           A.CARLINE_CD ASC
+                       </otherwise>
+                   </choose>
+               </foreach>
+           </when>
+           <otherwise>
+               A.CARLINE_CD ASC
+           </otherwise>
+       </choose>
+    </select>
+    
+    <!-- 查询全网车种确认条件设置数量 -->
+    <select id="findAllCarlineConditionSettingCnt" parameterType="FindAllDlrSearchVO" resultType="int">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.findAllCarlineConditionSettingCnt] */
+        SELECT 
+            COUNT(*) AS VALUE
+        FROM SE_1165T A
+        LEFT JOIN SA_0101T B ON A.CARLINE_CD = B.CARLINE_CD
+    </select>
+    
+    <!-- 根据经销商代码查询车辆用途确认条件设置 -->
+    <select id="findPcDstinConditionSettingByDlr" parameterType="FindAllDlrSearchVO" resultType="FindAllCarlineAndPcDstinVO">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.findPcDstinConditionSettingByDlr] */
+        SELECT 
+            FN_CMM_CD_NM('SAL120',T.PC_DSTIN_CD, #{sLangCd}, 'N') AS PC_DSTIN_NM,
+            T.PC_DSTIN_CD,
+            T.USE_YN,
+            T.DLR_CD
+        FROM SE_1161T T
+        WHERE 1 = 1 
+        <if test="dlrCd != null and dlrCd != '' ">
+            AND T.DLR_CD = #{dlrCd}
+        </if>
+    </select>
+    
+    <!-- 根据经销商代码查询车种确认条件设置 -->
+    <select id="findCarlineConditionSettingByDlr" parameterType="FindAllDlrSearchVO" resultType="FindAllCarlineAndPcDstinVO">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.findCarlineConditionSettingByDlr] */
+		SELECT 
+		    A.CARLINE_CD,
+		    B.CARLINE_NM,
+		    B.CARLINE_EN_NM,
+		    A.USE_YN,
+		    A.DLR_CD
+		FROM SE_1160T A
+		LEFT JOIN SA_0101T B ON A.CARLINE_CD = B.CARLINE_CD
+		WHERE 1 = 1 
+		<if test="dlrCd != null and dlrCd != '' ">
+		  AND A.DLR_CD = #{dlrCd}
+		</if>
+		ORDER BY
+        <choose>
+           <when test='sort != null'>
+               <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                   <choose>
+                       <when test='item.field == "carlineCd"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                       <when test='item.field == "carlineNm"'>B.CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                       <when test='item.field == "carlineEnNm"'>B.CARLINE_EN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                       <when test='item.field == "useYn"'>A.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                       <otherwise>
+                           A.CARLINE_CD ASC
+                       </otherwise>
+                   </choose>
+               </foreach>
+           </when>
+           <otherwise>
+               A.CARLINE_CD ASC
+           </otherwise>
+       </choose>
+    </select>
+    
+    <!-- 根据经销商代码查询车种确认条件设置数量 -->
+    <select id="findCarlineConditionSettingCntByDlr" parameterType="FindAllDlrSearchVO" resultType="int">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.findCarlineConditionSettingCntByDlr] */
+        SELECT 
+            COUNT(*) AS VALUE
+        FROM SE_1160T A
+        LEFT JOIN SA_0101T B ON A.CARLINE_CD = B.CARLINE_CD
+        WHERE 1 = 1 
+        <if test="dlrCd != null and dlrCd != '' ">
+          AND A.DLR_CD = #{dlrCd}
+        </if>
+    </select>
+    
+    <!-- 根据经销商代码修改车辆用途确认条件设置 -->
+    <update id="updateDlrPcDstinConditionSetting">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.updateDlrPcDstinConditionSetting] */
+        UPDATE SE_1161T 
+        SET USE_YN = #{useYn},
+            UPDT_DT = SYSDATE, 
+            UPDT_USR_ID = #{userId}
+        WHERE DLR_CD = #{dlrCd}
+        AND PC_DSTIN_CD IN 
+        <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+            #{item.pcDstinCd}
+        </foreach>
+    </update>
+    
+    <!-- 根据经销商代码修改车种确认条件设置 -->
+    <update id="updateDlrCarlineConditionSetting">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.updateDlrCarlineConditionSetting] */
+        UPDATE SE_1160T 
+        SET USE_YN = #{useYn},
+            UPDT_DT = SYSDATE, 
+            UPDT_USR_ID = #{userId}
+        WHERE DLR_CD = #{dlrCd}
+        AND CARLINE_CD IN 
+        <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+            #{item.carlineCd}
+        </foreach>
+    </update>
+    
+    <!-- 修改全网车辆用途确认条件设置 -->
+    <update id="updateAllPcDstinConditionSetting">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.updateAllPcDstinConditionSetting] */
+        UPDATE SE_1166T 
+        SET USE_YN = #{useYn},
+            UPDT_DT = SYSDATE, 
+            UPDT_USR_ID = #{userId}
+        WHERE PC_DSTIN_CD IN
+        <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+            #{item.pcDstinCd}
+        </foreach>
+    </update>
+    
+    <!-- 修改全网车种确认条件设置 -->
+    <update id="updateAllCarlineConditionSetting">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.updateAllCarlineConditionSetting] */
+        UPDATE SE_1165T 
+        SET USE_YN = #{useYn},
+            UPDT_DT = SYSDATE, 
+            UPDT_USR_ID = #{userId}
+        WHERE CARLINE_CD IN 
+        <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+            #{item.carlineCd}
+        </foreach>
+    </update>
+    
+    <!-- 根据车辆用途代码删除所有经销商车辆用途确认条件设置信息 -->
+    <delete id="deleteDlrPcDstinConditionSettingByAll">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.deleteDlrPcDstinConditionSettingByAll] */
+        DELETE FROM SE_1161T
+        WHERE 
+        <choose>
+            <when test="list != null and list.size > 0 ">
+                PC_DSTIN_CD IN 
+	            <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+	                #{item.pcDstinCd}
+	            </foreach>
+            </when>
+            <otherwise>
+                1 = 2
+            </otherwise>
+        </choose>
+    </delete>
+    
+    <!-- 根据车种代码删除所有经销商车辆用途确认条件设置信息 -->
+    <delete id="deleteDlrCarlineConditionSettingByAll">
+    /* [chn.bhmc.dms.ser.svi.service.dao.OrderConfirmManageDAO.deleteDlrCarlineConditionSettingByAll] */
+        DELETE FROM SE_1160T
+        WHERE 
+        <choose>
+            <when test="list != null and list.size > 0 ">
+	            CARLINE_CD IN 
+		        <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+		            #{item.carlineCd}
+		        </foreach>
+            </when>
+            <otherwise>
+                1 = 2
+            </otherwise>
+        </choose>
+    </delete>
+
+</mapper>

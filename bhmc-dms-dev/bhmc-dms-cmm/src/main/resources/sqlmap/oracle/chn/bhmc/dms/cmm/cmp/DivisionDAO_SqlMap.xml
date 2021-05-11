@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : DivisionDao_SqlMap.xml
+    Description : 사업부에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 1. 29.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 29.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.cmp.service.dao.DivisionDAO">
+
+	<!-- 사업부 정보를 등록한다. -->
+	<insert id="insertDivision" parameterType="DivisionVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.DivisionDAO.insertDivision] */
+		INSERT INTO CM_2501T(
+			DIVI_CD
+            ,DIVI_NM
+		)VALUES(
+			#{diviCd}
+            ,#{diviNm}
+		)
+	</insert>
+
+	<!-- 사업부 정보 정보를 수정한다. -->
+	<update id="updateDivision" parameterType="DivisionVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.DivisionDAO.updateDivision] */
+		UPDATE CM_2501T SET
+            DIVI_NM = #{diviNm}
+		WHERE DIVI_CD = #{diviCd}
+	</update>
+
+	<!-- 사업부 정보 정보를 삭제한다. -->
+	<delete id="deleteDivision" parameterType="DivisionVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.DivisionDAO.deleteDivision] */
+		DELETE FROM CM_2501T
+		WHERE DIVI_CD = #{diviCd}
+	</delete>
+
+	<!-- 사업부 정보를 조회한다. -->
+	<select id="selectDivisionByKey" parameterType="string" resultType="DivisionVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.DivisionDAO.selectDivisionByKey] */
+		SELECT * FROM CM_2501T
+		WHERE DIVI_CD = #{diviCd}
+	</select>
+
+	<!-- 사업부 정보 목록을 조회한다. -->
+	<select id="selectDivisionsByCondition" parameterType="DivisionSearchVO" resultType="DivisionVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.DivisionDAO.selectDivisionsByCondition] */
+		SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT * FROM CM_2501T
+                <where>
+                    <if test='sDiviCd != null and sDiviCd != ""'>
+                        DIVI_CD = #{sDiviCd}
+                    </if>
+
+                    <if test='sDiviNm != null and sDiviNm != ""'>
+                        AND DIVI_NM LIKE '%'||#{sDiviNm}||'%'
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "diviCd"'>DIVI_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "diviNm"'>DIVI_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DIVI_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DIVI_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+	<!-- 사업부 정보 목록수를 조회한다. -->
+	<select id="selectDivisionsByConditionCnt" parameterType="DivisionSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.DivisionDAO.selectDivisionsByConditionCnt] */
+		SELECT COUNT(*) AS VALUE FROM CM_2501T
+        <where>
+            <if test='sDiviCd != null and sDiviCd != ""'>
+                DIVI_CD = #{sDiviCd}
+            </if>
+
+            <if test='sDiviNm != null and sDiviNm != ""'>
+                AND DIVI_NM LIKE '%'||#{sDiviNm}||'%'
+            </if>
+        </where>
+	</select>
+
+</mapper>

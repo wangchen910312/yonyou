@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CustomerRelInfoDAO
+    Description : 연계인 데이터처리
+    author Lee Kyo Jin
+    since 2016. 2. 24.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 02. 24.     Lee Kyo Jin     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.bat.crm.cif.service.dao.BatCustomerRelInfoDAO">
+
+    <!-- 데이터 검색조건 -->
+    <sql id="searchWhereIfReceive">
+        <where>
+            AND T1.BAT_STAT_CD IS NULL
+        </where>
+    </sql>
+
+    <select id="selectCustomerRelIfByConditionCnt" parameterType="BatCustomerRelInfoVO" resultType="int">
+    /* [chn.bhmc.dms.bat.crm.cif.service.dao.BatCustomerRelInfoDAO.selectCustomerRelIfByConditionCnt] */
+        SELECT COUNT(T1.UPPER_CUST_NO) AS VALUE
+        FROM  CR_0111IR T1
+        <include refid="searchWhereIfReceive" />
+    </select>
+
+    <select id="selectCustomerRelIfByCondition" parameterType="BatCustomerRelInfoVO" resultType="BatCustomerRelInfoVO">
+    /* [chn.bhmc.dms.bat.crm.cif.service.dao.BatCustomerRelInfoDAO.selectCustomerRelIfByCondition] */
+        SELECT T1.SEQ
+            , T1.PCON_CUST_NO
+            , T1.PCON_SIEBEL_ROW_ID
+            , T1.UPPER_CUST_NO
+            , T1.UPPER_SIEBEL_ROW_ID
+            , T1.PCON_TP
+            , T1.REG_USR_ID
+            , T1.REG_DT
+            , T1.UPDT_USR_ID
+            , T1.UPDT_DT
+            , T1.DLR_CD
+            FROM  CR_0111IR T1
+        <include refid="searchWhereIfReceive" />
+    </select>
+
+    <update id="updateCustomerRelInfoIf" parameterType="BatCustomerRelInfoVO" >
+    /* [chn.bhmc.dms.bat.crm.cif.service.dao.BatCustomerRelInfoDAO.updateCustomerRelInfoIf] */
+        UPDATE CR_0111IR
+        SET BAT_STAT_CD = #{batStatCd}
+            , BAT_MESG_CONT =  #{batMesgCont}
+            , BAT_RSLT_DT = SYSDATE
+        WHERE PCON_SIEBEL_ROW_ID = #{pconSiebelRowId}
+        AND UPPER_SIEBEL_ROW_ID = #{upperSiebelRowId}
+    </update>
+
+    <select id="selectCustomerRelByConditionCnt" parameterType="BatCustomerRelInfoVO" resultType="int">
+    /* [chn.bhmc.dms.bat.crm.cif.service.dao.BatCustomerRelInfoDAO.selectCustomerRelIfByConditionCnt] */
+        SELECT COUNT(T1.UPPER_CUST_NO) AS VALUE
+        FROM  CR_0111IR T1
+        <include refid="searchWhereIfReceive" />
+    </select>
+
+    <insert id="insertCustomerRel" parameterType="BatCustomerRelInfoVO" >
+    /* [chn.bhmc.dms.bat.crm.cif.service.dao.BatCustomerRelInfoDAO.insertCustomerRel] */
+        INSERT INTO CR_0111T    --연계인
+        (
+         DLR_CD
+         ,PCON_CUST_NO         --연계인고객번호
+         ,UPPER_CUST_NO        --고객번호
+         ,PCON_TP              --연계인유형
+         ,REG_USR_ID           --등록자ID
+         ,REG_DT               --등록일자
+         ,UPDT_USR_ID          --수정자ID
+         ,UPDT_DT              --수정일자
+         ,BAT_YN
+        )
+        VALUES
+        (
+         #{dlrCd}
+         ,#{pconCustNo}           --연계인고객번호
+         ,#{upperCustNo}         --고객번호
+         ,#{pconTp}              --연계인유형
+         ,#{regUsrId}            --등록자ID
+         ,SYSDATE                --등록일자
+         ,#{updtUsrId}           --수정자ID
+         ,SYSDATE                --수정일자
+         ,'N'
+        )
+    </insert>
+
+</mapper>

@@ -1,0 +1,986 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : SalesOpptProcessMgmtFinishDAO_SqlMap.xml
+    Description : 판매기회진행이력
+    author kyo jin LEE
+    since 2016.03.07.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016.03.07.     kyo jin Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cso.service.dao.SalesOpptProcessMgmtFinishDAO">
+
+    <!-- 판매기회진행이력 검색조건 -->
+    <sql id="searchWhere">
+        INNER JOIN CR_0101T T2 ON T1.DLR_CD = T2.DLR_CD AND T1.CUST_NO = T2.CUST_NO AND T2.DEL_YN='N'
+        LEFT OUTER JOIN CM_0801T SCT ON T1.MNG_SC_ID = SCT.USR_ID
+        <where>
+            AND T1.DEL_YN = 'N'
+            AND T1.DLR_CD = #{sDlrCd}
+            <if test='sCSeq != null and sCSeq != ""'>
+                AND T1.C_SEQ = #{sCSeq}
+            </if>
+            <if test='sSeq != null and sSeq != ""'>
+                AND T1.SEQ = #{sSeq}
+            </if>
+            <if test='sCustNo != null and sCustNo != ""'>
+                AND T2.CUST_NO = #{sCustNo}
+            </if>
+            <if test='sCust != null and sCust != ""'>
+                AND ( T2.CUST_NM LIKE '%'||#{sCust}||'%'
+                    OR T2.HP_NO LIKE '%'||#{sCust}||'%'
+                    OR T2.TEL_NO LIKE '%'||#{sCust}||'%' )
+            </if>
+            <if test='sCustNm != null and sCustNm != ""'>
+                AND T2.CUST_NM LIKE '%'||#{sCustNm}||'%'
+            </if>
+            <if test='sHpNo != null and sHpNo != ""'>
+                AND T2.HP_NO LIKE '%'||#{sHpNo}||'%'
+            </if>
+            <if test='sMngScId != null and sMngScId != ""'>
+                AND T1.MNG_SC_ID = #{sMngScId}
+            </if>
+            <if test='sHoldTp != null and sHoldTp != ""'>
+                AND T1.HOLD_TP = #{sHoldTp}
+            </if>
+            <if test='sLeadStatIng != null '>
+                <choose>
+                    <when test=' sLeadStatIng == "S" '>
+                        AND T1.LEAD_STAT_CD IN ('01','02','03','04','05','06')
+                    </when>
+                    <when test=' sLeadStatIng == "ING" '>
+                        AND T1.LEAD_STAT_CD IN ('01','02','03','04','05')
+                    </when>
+                </choose>
+            </if>
+            <if test='sLeadStatIng != null and sLeadStatIng == "F"'>
+                AND T1.LEAD_STAT_CD IN ('08','09')
+            </if>
+            <if test='sLeadStatCd != null and sLeadStatCd != ""'>
+                AND T1.LEAD_STAT_CD = #{sLeadStatCd}
+            </if>
+            <if test='sBefLeadStatCd != null and sBefLeadStatCd != ""'>
+                AND T1.BEF_LEAD_STAT_CD = #{sBefLeadStatCd}
+            </if>
+            <if test='sBhmcYn != null and sBhmcYn != ""'>
+                AND T1.BHMC_YN = #{sBhmcYn}
+            </if>
+            <if test='sInfoTp != null and sInfoTp != ""'>
+                AND T1.INFO_TP = #{sInfoTp}
+            </if>
+            <if test='sSubmitDtFrom != null'>
+                <![CDATA[
+                    AND T1.SUBMIT_DT >= #{sSubmitDtFrom}   -- 등록일
+                ]]>
+            </if>
+            <if test='sSubmitDtTo != null'>
+                <![CDATA[
+                    AND T1.SUBMIT_DT < #{sSubmitDtTo}      -- 등록일
+                ]]>
+            </if>
+            <if test='sRegDtFrom != null'>
+                <![CDATA[
+                    AND T1.REG_DT >= #{sRegDtFrom}   -- 등록일
+                ]]>
+            </if>
+            <if test='sRegDtTo != null'>
+                <![CDATA[
+                    AND T1.REG_DT < #{sRegDtTo}      -- 등록일
+                ]]>
+            </if>
+            <if test='sLeadStartDtFrom != null'>
+                <![CDATA[
+                    AND T1.LEAD_START_DT >= #{sLeadStartDtFrom}   -- 신규일자
+                ]]>
+            </if>
+            <if test='sLeadStartDtTo != null'>
+                <![CDATA[
+                    AND T1.LEAD_START_DT < #{sLeadStartDtTo}      -- 신규일자
+                ]]>
+            </if>
+            <if test='sIntrCarlineCd != null and sIntrCarlineCd != ""'>
+                AND T1.INTR_CARLINE_CD = #{sIntrCarlineCd}
+            </if>
+            <if test='sIntrModelCd != null and sIntrModelCd != ""'>
+                AND T1.INTR_MODEL_CD = #{sIntrModelCd}
+            </if>
+            <if test='sTraceGradeCd != null and sTraceGradeCd != ""'>
+                AND T1.TRACE_GRADE_CD = #{sTraceGradeCd}
+            </if>
+            <if test='sDupSeq != null and sDupSeq != ""'>
+                AND T1.DUP_SEQ = #{sDupSeq}
+            </if>
+            <if test='sTrsfTp != null and sTrsfTp != ""'>
+                AND T1.TRSF_TP = #{sTrsfTp}
+            </if>
+            <if test='sEvalCd != null and sEvalCd != ""'>
+                AND T1.EVAL_CD = #{sEvalCd}
+            </if>
+        </where>
+    </sql>
+
+
+    <!-- 판매기회진행이력 목록수를 조회한다. -->
+    <select id="selectSalesOpptProcessMgmtFinishByConditionCnt" parameterType="SalesOpptProcessMgmtFinishSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptProcessMgmtFinishDAO.selectSalesOpptProcessMgmtFinishByConditionCnt] */
+        SELECT COUNT(T1.SEQ) AS VALUE
+        FROM CR_0223T T1
+        <include refid="searchWhere" />
+    </select>
+
+    <!-- 판매기회진행이력 목록을 조회한다. -->
+    <select id="selectSalesOpptProcessMgmtFinishByCondition" parameterType="SalesOpptProcessMgmtFinishSearchVO" resultType="SalesOpptProcessMgmtFinishVO">
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptProcessMgmtFinishDAO.selectSalesOpptProcessMgmtFinishByCondition] */
+        SELECT T2.*
+            FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    T1.SEQ                         --일련번호
+                    ,T1.DLR_CD                      --딜러코드
+                    ,T1.CUST_NO                     --고객번호
+                    ,T1.MNG_SC_ID                   --관리SCID
+                    ,T2.MNG_SC_ID AS CUST_MNG_SC_ID
+                    ,SCT.USR_NM AS MNG_SC_NM        --MNG_SC_NM
+                    ,T1.DEL_YN                      --삭제여부
+                    ,T1.BHMC_YN                     --BHMC여부
+                    ,T1.SIEBEL_ROW_ID               --SIEBEL ROW ID
+                    ,T1.DOC_ID                      --문서ID
+                    ,T1.WITH_PRSN_NM                --동행자명
+                    ,T1.RVSIT_YN                    --재방문여부
+                    ,T1.VSIT_RESV_DT                --방문예약일자
+                    ,T1.VSIT_DT                     --방문일자
+                    ,T1.VSIT_PRSN_CNT               --방문자수
+                    ,T1.VSIT_END_DT                 --방문종료일자
+                    ,T1.INFO_TP                     --정보유형
+                    ,T1.PAY_TP                      --지불유형
+                    ,T1.INTR_BRAND_CD               --관심브랜드코드
+                    ,T1.INTR_CARLINE_CD             --관심차종코드
+                    ,T1.INTR_MODEL_CD          --관심모델코드
+                    ,T1.LOCAL_CAR_REG_NO_YN             --현지번호판예정번호
+                    ,T1.ESTIMATE_CONT               --견적내용
+                    ,T1.SALES_CONT                  --영업내용
+                    ,T1.REMARK                      --비고
+                    ,T1.LEAD_LVL_CD                 --리드레벨코드
+                    ,T1.LEAD_STAT_CD                --리드상태코드
+                    ,T1.BEF_LEAD_STAT_CD            --이전리드상태코드
+                    ,T1.INTR_COLOR_CD           --선호색상코드
+                    ,T1.TRACE_GRADE_CD              --추적등급코드
+                    ,T1.VALID_GRADE_CD              --유효등급코드
+                    ,T1.INVALID_CAU_CD              --무효원인코드
+                    ,T1.FAIL_CAU_CD                 --실패원인코드
+                    ,T1.FAIL_CAU_REASON_CONT        --실패원인사유내용
+                    ,T1.PURC_SEL_CARLINE_CD       --구매선택차종코드
+                    ,T1.PURC_SEL_MODEL_CD       --구매선택모델코드
+                    ,T1.EXPC_PURC_HM_CD             --예상구매시간코드
+                    ,T1.EXPC_PURC_DT                --예상구매일자
+                    ,T1.EXPC_DEAL_PRC               --예상거래가격
+                    ,T1.TRACE_DT                    --추적일자
+                    ,T1.TRACE_MTH_CD                --추적방법코드
+                    ,T1.NEXT_TRACE_DT               --다음추적일자
+                    ,T1.NEXT_TRACE_MTH_CD           --다음추적방법코드
+                    ,T1.PREF_CONTACT_HM_CD          --선호접촉시간코드
+                    ,T1.HOLD_TP                --정보수집경로
+                    ,T1.HOLD_DETL_TP_SEQ            --정보수집경로상세
+                    ,(SELECT HOLD_DETL_TP_NM FROM CR_0215T WHERE DLR_CD = T1.DLR_CD AND HOLD_SEQ = T1.HOLD_DETL_TP_SEQ) AS HOLD_DETL_TP_SEQ_NM
+                    ,T1.EXHV_FLAK_SEQ               --전시장유동량 일련번호
+                    ,T2.CUST_NM                     --고객명
+                    ,T2.CUST_CD                     --고객타입 잠재,보유,타사
+                    ,T2.CUST_TP                     --고객유형
+                    ,T2.EMAIL_NM                    --이메일명
+                    ,T2.WECHAT_ID                   --위챗ID
+                    ,T2.PREF_COMM_MTH_CD            --선호연락방법코드
+                    ,T2.PREF_COMM_NO                --선호연락번호
+                    ,T2.PREF_CONTACT_MTH_CD         --선호접촉방법코드
+                    ,T2.TEL_NO                      --전화번호
+                    ,T2.HP_NO                       --휴대폰번호
+                    ,T2.OFFICE_NM                   --직장명
+                    ,T2.DEPT_NM                     --부서명
+                    ,T2.OFFICE_TEL_NO               --직장전화번호
+                    ,T2.OFFICE_FAX_NO               --직장팩스번호
+                    ,T2.OWN_RGST_NM                 --대표자명
+                    , T2.SEX_CD                     --성별코드
+                    , T2.MATH_DOC_TP                --증거번호유형
+                    , FN_GET_CMMCD_NM('CRM380', T1.RVSIT_YN, #{sLangCd}) AS RVSIT_YN_NM  --재방문여부
+                    , FN_CMM_CD_NM('CRM024',T2.MATH_DOC_TP, #{sLangCd}, 'N') AS MATH_DOC_TP_NM    -- 증거유형
+                    , T2.SSN_CRN_NO                 --증거번호
+                    , FN_CMM_CD_NM('CRM001',T2.CUST_TP, #{sLangCd}, 'N') AS CUST_TP_NM
+                    , FN_CMM_CD_NM('CRM022',T2.PREF_COMM_MTH_CD, #{sLangCd}, 'N') AS PREF_COMM_MTH_NM
+                    , FN_CMM_CD_NM('CRM038',T2.PREF_CONTACT_MTH_CD, #{sLangCd}, 'N') AS PREF_CONTACT_MTH_NM
+                    , FN_CMM_CD_NM('CRM027',T1.PREF_CONTACT_HM_CD, #{sLangCd}, 'N') AS PREF_CONTACT_HM_NM
+                    , FN_CMM_CD_NM('COM017',T2.SEX_CD, #{sLangCd}, 'N') AS SEX_NM
+                    , FN_CMM_CD_NM('CRM366',T1.INFO_TP, #{sLangCd}, 'N') AS INFO_TP_NM
+                    , FN_CMM_CD_NM('CRM008',T1.HOLD_TP, #{sLangCd}, 'N') AS HOLD_TP_NM
+                    , FN_CMM_CD_NM('CRM368',T1.PAY_TP, #{sLangCd}, 'N') AS PAY_TP_NM
+                    , FN_CMM_CD_NM('CRM374',T1.LEAD_LVL_CD, #{sLangCd}, 'N') AS LEAD_LVL_NM
+                    , FN_CMM_CD_NM('CRM375',T1.LEAD_STAT_CD, #{sLangCd}, 'N') AS LEAD_STAT_NM
+                    , FN_CMM_CD_NM('CRM375',T1.BEF_LEAD_STAT_CD, #{sLangCd}, 'N') AS BEF_LEAD_STAT_NM
+                    , FN_CMM_CD_NM('CRM363',T1.TRACE_GRADE_CD, #{sLangCd}, 'N') AS TRACE_GRADE_NM
+                    , FN_CMM_CD_NM('CRM364',T1.VALID_GRADE_CD, #{sLangCd}, 'N') AS VALID_GRADE_NM
+                    , FN_CMM_CD_NM('CRM365',T1.INVALID_CAU_CD, #{sLangCd}, 'N') AS INVALID_CAU_NM
+                    , FN_CMM_CD_NM('CRM369',T1.FAIL_CAU_CD, #{sLangCd}, 'N') AS FAIL_CAU_NM
+                    , FN_CMM_CD_NM('CRM372',T1.EXPC_PURC_HM_CD, #{sLangCd}, 'N') AS EXPC_PURC_HM_NM
+                    , FN_CMM_CD_NM('CRM321',T1.TRACE_MTH_CD, #{sLangCd}, 'N') AS TRACE_MTH_NM
+                    , FN_CMM_CD_NM('CRM321',T1.NEXT_TRACE_MTH_CD, #{sLangCd}, 'N') AS NEXT_TRACE_MTH_NM
+                    , NVL2(T1.INTR_CARLINE_CD,FN_GET_CARLINE_NM(T1.INTR_CARLINE_CD), ' ')  AS INTR_CARLINE_NM            --관심차종코드
+                    , NVL2(T1.INTR_MODEL_CD, FN_GET_MODEL_NM(T1.INTR_MODEL_CD), ' ')    AS INTR_MODEL_NM
+                    , NVL2(T1.PURC_SEL_CARLINE_CD, FN_GET_CARLINE_NM(T1.PURC_SEL_CARLINE_CD), ' ')   AS PURC_SEL_CARLINE_NM       --구매선택차종코드
+                    , NVL2(T1.PURC_SEL_MODEL_CD, FN_GET_MODEL_NM(T1.PURC_SEL_MODEL_CD), ' ')     AS PURC_SEL_MODEL_NM       --구매선택모델코드
+                    , NVL2(T1.INTR_COLOR_CD, FN_GET_EXT_COLOR_NM(T1.INTR_COLOR_CD), ' ')    AS INTR_COLOR_NM   --선호색상코드
+                    , T1.DUP_SEQ
+                    , T1.SIEBEL_LEAD_ROW_ID
+                    , (
+                      SELECT '('||ZIP_CD||') '||SUNG_NM || ' ' || CITY_NM || ' ' || DIST_NM || ' ' || ADDR_DETL_CONT
+                      FROM CR_0116T
+                      WHERE SEQ = (SELECT MAX(SEQ) FROM CR_0116T WHERE REF_TABLE_NM='CR_0101T' AND REF_KEY_NM = T2.CUST_NO AND FLAG_YN ='Y')
+                      ) AS ADDR_FULL
+                    , T1.SUBMIT_DT                   --제출일
+                    , T1.TRSF_TP                     --전출타입(수동/자동)
+                    , T1.EVAL_CD                     --심사결과
+                    , T2.BIZCOND_CD                  --업종
+                    ,FN_CMM_CD_NM('CRM031',T2.BIZCOND_CD, #{sLangCd}, 'N') AS BIZCOND_NM    -- 업종
+                    ,FN_CMM_CD_NM('CRM379',NVL(T1.EVAL_CD, '01'), #{sLangCd}, 'N') AS EVAL_NM    -- 심사상태
+                    ,FN_CMM_CD_NM('CRM378',T1.TRSF_TP, #{sLangCd}, 'N') AS TRSF_TP_NM    -- 전출유형
+                    ,(SELECT MAX(SEQ) FROM CR_0111T WHERE DLR_CD = T1.DLR_CD AND UPPER_CUST_NO = T1.CUST_NO AND PCON_TP = '08') AS REL_SEQ
+                    ,(SELECT PCON_CUST_NO FROM CR_0111T WHERE SEQ IN (SELECT MAX(SEQ) FROM CR_0111T WHERE DLR_CD = T1.DLR_CD AND UPPER_CUST_NO = T1.CUST_NO AND PCON_TP = '08')) AS REL_CUST_NO
+                    ,(SELECT CUST_NM FROM CR_0101T T3 WHERE T3.CUST_NO IN (SELECT PCON_CUST_NO FROM CR_0111T WHERE SEQ IN (SELECT MAX(SEQ) FROM CR_0111T WHERE DLR_CD = T1.DLR_CD  AND PCON_TP = '08' AND UPPER_CUST_NO = T1.CUST_NO))) AS REL_CUST_NM
+                    ,(SELECT HP_NO FROM CR_0101T T3 WHERE T3.CUST_NO IN (SELECT PCON_CUST_NO FROM CR_0111T WHERE SEQ IN (SELECT MAX(SEQ) FROM CR_0111T WHERE DLR_CD = T1.DLR_CD  AND PCON_TP = '08' AND UPPER_CUST_NO = T1.CUST_NO))) AS REL_CUST_HP_NO
+                    , T1.OTHER_BRAND_CD AS OTHER_BRAND_NM
+                    , T1.OTHER_BRAND_CD
+                    , T2.PURC_MNG_NM
+                    , T1.NEXT_CONTRACT_TP
+                    , T1.LEAD_START_DT               --신규일자
+                    , T1.INTR_FSCP_MODTP_CD
+                    , T1.PURC_FSCP_MODTP_CD
+                    , T1.DSTB_CHN_CD
+                    , FN_CMM_CD_NM('COM072',T1.DSTB_CHN_CD, #{sLangCd}, 'N') AS DSTB_CHN_NM
+                    , T1.REG_USR_ID                  --등록자ID
+                    , T1.REG_DT                      --등록일자
+                    , T1.UPDT_USR_ID                 --수정자ID
+                    , T1.UPDT_DT                     --수정일자
+                FROM CR_0223T T1
+                <include refid="searchWhere" />
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "custNm"'>            T2.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "hpNo"'>              T2.HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "mngScId"'>           T1.MNG_SC_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "telNo"'>             T2.TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "wechatId"'>          T2.WECHAT_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitDt"'>            T1.VSIT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitPrsnCnt"'>       T1.VSIT_PRSN_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "rvsitYn"'>           T1.RVSIT_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "localCarRegNoYn"'>      T1.LOCAL_CAR_REG_NO_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "estimateCont"'>      T1.ESTIMATE_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "salesCont"'>         T1.SALES_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "remark"'>            T1.REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "failCauReasonCont"'> T1.FAIL_CAU_REASON_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "expcPurcDt"'>        T1.EXPC_PURC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "expcDealPrc"'>       T1.EXPC_DEAL_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "custTpNm"'>          CUST_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "prefCommMthNm"'>     PREF_COMM_MTH_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "prefContactMthNm"'>  PREF_CONTACT_MTH_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "prefContactHmNm"'>   PREF_CONTACT_HM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "sexNm"'>             SEX_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "infoTpNm"'>          INFO_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "holdTpNm"'>      HOLD_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "payTpNm"'>           PAY_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "leadLvlNm"'>         LEAD_LVL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "leadStatNm"'>        LEAD_STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "befLeadStatNm"'>     BEF_LEAD_STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "traceGradeNm"'>      TRACE_GRADE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "validGradeNm"'>      VALID_GRADE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "invalidCauNm"'>      INVALID_CAU_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "failCauNm"'>         FAIL_CAU_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "expcPurcHmNm"'>      EXPC_PURC_HM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "traceMthNm"'>        TRACE_MTH_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "mngScNm"'>           MNG_SC_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitResvDt"'>        T1.VSIT_RESV_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitEndDt"'>         T1.VSIT_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "intrCarlineNm"'>     INTR_CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "intrModelNm"'>       INTR_MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "purcSelCarlineNm"'>  PURC_SEL_CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "purcSelModelNm"'>    PURC_SEL_MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitDtFormat"'>      T1.VSIT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitResvDtFormat"'>  T1.VSIT_RESV_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitEndDtFormat"'>   T1.VSIT_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "traceDtFormat"'>     T1.TRACE_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "nextTraceDtFormat"'>     T1.NEXT_TRACE_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "regDtFormat"'>     T1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "updtDtFormat"'>     T1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "submitDtFormat"'>     T1.SUBMIT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "siebelLeadRowId"'>     T1.SIEBEL_LEAD_ROW_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <otherwise>
+                                    T1.BHMC_YN DESC, T1.SUBMIT_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        T1.BHMC_YN DESC, T1.SUBMIT_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        ) T2
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 판매기회진행이력을 조회한다. 단건-->
+    <select id="selectSalesOpptProcessMgmtFinishByKey" parameterType="SalesOpptProcessMgmtFinishSearchVO" resultType="SalesOpptProcessMgmtFinishVO">
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptProcessMgmtFinishDAO.selectSalesOpptProcessMgmtFinishByKey] */
+        SELECT
+            T1.C_SEQ
+            ,T1.SEQ                         --일련번호
+            ,T1.DLR_CD                      --딜러코드
+            ,T1.CUST_NO                     --고객번호
+            ,T1.MNG_SC_ID                   --관리SCID
+            ,SCT.USR_NM AS MNG_SC_NM        --MNG_SC_NM
+            ,T1.DEL_YN                      --삭제여부
+            ,T1.BHMC_YN                     --BHMC여부
+            ,T1.SIEBEL_ROW_ID               --SIEBEL ROW ID
+            ,T1.DOC_ID                      --문서ID
+            ,T1.WITH_PRSN_NM                --동행자명
+            ,T1.RVSIT_YN                    --재방문여부
+            ,T1.VSIT_RESV_DT                --방문예약일자
+            ,T1.VSIT_DT                     --방문일자
+            ,T1.VSIT_PRSN_CNT               --방문자수
+            ,T1.VSIT_END_DT                 --방문종료일자
+            ,T1.INFO_TP                     --정보유형
+            ,T1.PAY_TP                      --지불유형
+            ,T1.INTR_BRAND_CD               --관심브랜드코드
+            ,T1.INTR_CARLINE_CD             --관심차종코드
+            ,T1.INTR_MODEL_CD          --관심모델코드
+            ,T1.LOCAL_CAR_REG_NO_YN             --현지번호판예정번호
+            ,T1.ESTIMATE_CONT               --견적내용
+            ,T1.SALES_CONT                  --영업내용
+            ,T1.REMARK                      --비고
+            ,T1.LEAD_LVL_CD                 --리드레벨코드
+            ,T1.LEAD_STAT_CD                --리드상태코드
+            ,T1.BEF_LEAD_STAT_CD            --이전리드상태코드
+            ,T1.INTR_COLOR_CD           --선호색상코드
+            ,T1.TRACE_GRADE_CD              --추적등급코드
+            ,T1.VALID_GRADE_CD              --유효등급코드
+            ,T1.INVALID_CAU_CD              --무효원인코드
+            ,T1.FAIL_CAU_CD                 --실패원인코드
+            ,T1.FAIL_CAU_REASON_CONT        --실패원인사유내용
+            ,T1.PURC_SEL_CARLINE_CD       --구매선택차종코드
+            ,T1.PURC_SEL_MODEL_CD       --구매선택모델코드
+            ,T1.EXPC_PURC_HM_CD             --예상구매시간코드
+            ,T1.EXPC_PURC_DT                --예상구매일자
+            ,T1.EXPC_DEAL_PRC               --예상거래가격
+            ,T1.TRACE_DT                    --추적일자
+            ,T1.TRACE_MTH_CD                --추적방법코드
+            ,T1.NEXT_TRACE_DT               --다음추적일자
+            ,T1.NEXT_TRACE_MTH_CD           --다음추적방법코드
+            ,T1.PREF_CONTACT_HM_CD          --선호접촉시간코드
+            ,T1.HOLD_TP                --정보수집경로
+            ,T1.HOLD_DETL_TP_SEQ            --정보수집경로상세
+            ,(SELECT HOLD_DETL_TP_NM FROM CR_0215T WHERE DLR_CD = T1.DLR_CD AND HOLD_SEQ = T1.HOLD_DETL_TP_SEQ) AS HOLD_DETL_TP_SEQ_NM
+            ,T1.EXHV_FLAK_SEQ               --전시장유동량 일련번호
+            ,T2.CUST_NM                     --고객명
+            ,T2.CUST_CD                     --고객타입 잠재,보유,타사
+            ,T2.CUST_TP                     --고객유형
+            ,T2.EMAIL_NM                    --이메일명
+            ,T2.WECHAT_ID                   --위챗ID
+            ,T2.PREF_COMM_MTH_CD            --선호연락방법코드
+            ,T2.PREF_COMM_NO                --선호연락번호
+            ,T2.PREF_CONTACT_MTH_CD         --선호접촉방법코드
+            ,T2.TEL_NO                      --전화번호
+            ,T2.HP_NO                       --휴대폰번호
+            ,T2.OFFICE_NM                   --직장명
+            ,T2.DEPT_NM                     --부서명
+            ,T2.OFFICE_TEL_NO               --직장전화번호
+            ,T2.OFFICE_FAX_NO               --직장팩스번호
+            ,T2.OWN_RGST_NM                 --대표자명
+            , T2.SEX_CD                     --성별코드
+            , T2.MATH_DOC_TP                --증거번호유형
+            ,FN_CMM_CD_NM('CRM024',T2.MATH_DOC_TP, #{sLangCd}, 'N') AS MATH_DOC_TP_NM    -- 증거유형
+            , T2.SSN_CRN_NO                 --증거번호
+            ,FN_CMM_CD_NM('CRM001',T2.CUST_TP, #{sLangCd}, 'N') AS CUST_TP_NM
+            ,FN_CMM_CD_NM('CRM022',T2.PREF_COMM_MTH_CD, #{sLangCd}, 'N') AS PREF_COMM_MTH_NM
+            ,FN_CMM_CD_NM('CRM038',T2.PREF_CONTACT_MTH_CD, #{sLangCd}, 'N') AS PREF_CONTACT_MTH_NM
+            ,FN_CMM_CD_NM('CRM027',T1.PREF_CONTACT_HM_CD, #{sLangCd}, 'N') AS PREF_CONTACT_HM_NM
+            ,FN_CMM_CD_NM('COM017',T2.SEX_CD, #{sLangCd}, 'N') AS SEX_NM
+            ,FN_CMM_CD_NM('CRM366',T1.INFO_TP, #{sLangCd}, 'N') AS INFO_TP_NM
+            ,FN_CMM_CD_NM('CRM008',T1.HOLD_TP, #{sLangCd}, 'N') AS HOLD_TP_NM
+            ,FN_CMM_CD_NM('CRM368',T1.PAY_TP, #{sLangCd}, 'N') AS PAY_TP_NM
+            ,FN_CMM_CD_NM('CRM374',T1.LEAD_LVL_CD, #{sLangCd}, 'N') AS LEAD_LVL_NM
+            ,FN_CMM_CD_NM('CRM375',T1.LEAD_STAT_CD, #{sLangCd}, 'N') AS LEAD_STAT_NM
+            ,FN_CMM_CD_NM('CRM375',T1.BEF_LEAD_STAT_CD, #{sLangCd}, 'N') AS BEF_LEAD_STAT_NM
+            ,FN_CMM_CD_NM('CRM363',T1.TRACE_GRADE_CD, #{sLangCd}, 'N') AS TRACE_GRADE_NM
+            ,FN_CMM_CD_NM('CRM364',T1.VALID_GRADE_CD, #{sLangCd}, 'N') AS VALID_GRADE_NM
+            ,FN_CMM_CD_NM('CRM365',T1.INVALID_CAU_CD, #{sLangCd}, 'N') AS INVALID_CAU_NM
+            ,FN_CMM_CD_NM('CRM369',T1.FAIL_CAU_CD, #{sLangCd}, 'N') AS FAIL_CAU_NM
+            ,FN_CMM_CD_NM('CRM372',T1.EXPC_PURC_HM_CD, #{sLangCd}, 'N') AS EXPC_PURC_HM_NM
+            ,FN_CMM_CD_NM('CRM321',T1.TRACE_MTH_CD, #{sLangCd}, 'N') AS TRACE_MTH_NM
+            ,FN_CMM_CD_NM('CRM321',T1.NEXT_TRACE_MTH_CD, #{sLangCd}, 'N') AS NEXT_TRACE_MTH_NM
+            , NVL2(T1.INTR_CARLINE_CD,FN_GET_CARLINE_NM(T1.INTR_CARLINE_CD), ' ')  AS INTR_CARLINE_NM            --관심차종코드
+            , NVL2(T1.INTR_MODEL_CD, FN_GET_MODEL_NM(T1.INTR_MODEL_CD), ' ')    AS INTR_MODEL_NM
+            , NVL2(T1.PURC_SEL_CARLINE_CD, FN_GET_CARLINE_NM(T1.PURC_SEL_CARLINE_CD), ' ')   AS PURC_SEL_CARLINE_NM       --구매선택차종코드
+            , NVL2(T1.PURC_SEL_MODEL_CD, FN_GET_MODEL_NM(T1.PURC_SEL_MODEL_CD), ' ')     AS PURC_SEL_MODEL_NM       --구매선택모델코드
+            , NVL2(T1.INTR_COLOR_CD, FN_GET_EXT_COLOR_NM(T1.INTR_COLOR_CD), ' ')    AS INTR_COLOR_NM   --선호색상코드
+            , T1.DUP_SEQ
+            , T1.SIEBEL_LEAD_ROW_ID
+            , (
+              SELECT '('||ZIP_CD||') '||SUNG_NM || ' ' || CITY_NM || ' ' || DIST_NM || ' ' || ADDR_DETL_CONT
+              FROM CR_0116T
+              WHERE SEQ = (SELECT MAX(SEQ) FROM CR_0116T WHERE REF_TABLE_NM='CR_0101T' AND REF_KEY_NM = T2.CUST_NO AND FLAG_YN ='Y')
+              ) AS ADDR_FULL
+            , T1.SUBMIT_DT                   --제출일
+            , T1.TRSF_TP                     --전출타입(수동/자동)
+            , T1.EVAL_CD                     --심사결과
+            , T2.BIZCOND_CD                  --업종
+            ,FN_CMM_CD_NM('CRM031',T2.BIZCOND_CD, #{sLangCd}, 'N') AS BIZCOND_NM    -- 업종
+            ,FN_CMM_CD_NM('CRM379',NVL(T1.EVAL_CD, '01'), #{sLangCd}, 'N') AS EVAL_NM    -- 심사상태
+            ,FN_CMM_CD_NM('CRM378',T1.TRSF_TP, #{sLangCd}, 'N') AS TRSF_TP_NM    -- 전출유형
+            ,(SELECT MAX(SEQ) FROM CR_0111T WHERE DLR_CD = T1.DLR_CD AND UPPER_CUST_NO = T1.CUST_NO AND PCON_TP = '08') AS REL_SEQ
+            ,(SELECT PCON_CUST_NO FROM CR_0111T WHERE SEQ IN (SELECT MAX(SEQ) FROM CR_0111T WHERE DLR_CD = T1.DLR_CD AND UPPER_CUST_NO = T1.CUST_NO AND PCON_TP = '08')) AS REL_CUST_NO
+            ,(SELECT CUST_NM FROM CR_0101T T3 WHERE T3.CUST_NO IN (SELECT PCON_CUST_NO FROM CR_0111T WHERE SEQ IN (SELECT MAX(SEQ) FROM CR_0111T WHERE DLR_CD = T1.DLR_CD  AND PCON_TP = '08' AND UPPER_CUST_NO = T1.CUST_NO))) AS REL_CUST_NM
+            ,(SELECT HP_NO FROM CR_0101T T3 WHERE T3.CUST_NO IN (SELECT PCON_CUST_NO FROM CR_0111T WHERE SEQ IN (SELECT MAX(SEQ) FROM CR_0111T WHERE DLR_CD = T1.DLR_CD  AND PCON_TP = '08' AND UPPER_CUST_NO = T1.CUST_NO))) AS REL_CUST_HP_NO
+            , T1.OTHER_BRAND_CD AS OTHER_BRAND_NM
+            , T1.OTHER_BRAND_CD
+            , T2.PURC_MNG_NM
+            , T1.NEXT_CONTRACT_TP
+            , T1.INTR_FSCP_MODTP_CD
+            , T1.PURC_FSCP_MODTP_CD
+            , T1.DSTB_CHN_CD
+            , FN_CMM_CD_NM('COM072',T1.DSTB_CHN_CD, #{sLangCd}, 'N') AS DSTB_CHN_NM
+            , T1.REG_USR_ID                  --등록자ID
+            , T1.REG_DT                      --등록일자
+            , T1.UPDT_USR_ID                 --수정자ID
+            , T1.UPDT_DT                     --수정일자
+        FROM CR_0223T T1
+        <include refid="searchWhere" />
+    </select>
+
+    <!-- 판매기회진행이력를 저장한다. KJLEE-->
+    <insert id="insertSalesOpptProcessMgmtFinish" parameterType="SalesOpptProcessMgmtFinishVO">
+    /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptProcessMgmtFinishDAO.insertSalesOpptProcessMgmtFinish] */
+
+        <selectKey resultType="string" keyProperty="cSeq" order="AFTER">
+            SELECT SEQ_CR_0223T.currval AS SEQ FROM DUAL
+        </selectKey>
+        INSERT INTO CR_0223T (
+            C_SEQ
+            , SEQ
+            , DLR_CD
+            , CUST_NO
+            , CUST_NM
+            , CUST_TP
+            , MNG_SC_ID
+            , EMAIL_NM
+            , WECHAT_ID
+            , PREF_COMM_MTH_CD
+            , PREF_COMM_NO
+            , PREF_CONTACT_MTH_CD
+            , PREF_CONTACT_HM_CD
+            , TEL_NO
+            , HP_NO
+            , OFFICE_NM
+            , DEPT_NM
+            , OFFICE_TEL_NO
+            , OFFICE_FAX_NO
+            , OWN_RGST_NM
+            , SEX_CD
+            , DEL_YN
+            , BHMC_YN
+            , SIEBEL_ROW_ID
+            , DOC_ID
+            , WITH_PRSN_NM
+            , RVSIT_YN
+            , VSIT_RESV_DT
+            , VSIT_DT
+            , VSIT_PRSN_CNT
+            , VSIT_END_DT
+            , INFO_TP
+            , PAY_TP
+            , INTR_BRAND_CD
+            , INTR_CARLINE_CD
+            , INTR_MODEL_CD
+            , NAT_NOF_SCHE_NO
+            , ESTIMATE_CONT
+            , SALES_CONT
+            , REMARK
+            , LEAD_LVL_CD
+            , LEAD_STAT_CD
+            , INTR_COLOR_CD
+            , TRACE_GRADE_CD
+            , VALID_GRADE_CD
+            , INVALID_CAU_CD
+            , FAIL_CAU_CD
+            , FAIL_CAU_REASON_CONT
+            , PURC_SEL_CARLINE_CD
+            , PURC_SEL_MODEL_CD
+            , EXPC_PURC_HM_CD
+            , EXPC_PURC_DT
+            , EXPC_DEAL_PRC
+            , TRACE_DT
+            , TRACE_MTH_CD
+            , NEXT_TRACE_DT
+            , NEXT_TRACE_MTH_CD
+            , HOLD_TP
+            , HOLD_DETL_TP_SEQ
+            , EXHV_FLAK_SEQ
+            , DUP_SEQ
+            , LOCAL_CAR_REG_NO_YN
+            , SIEBEL_LEAD_ROW_ID
+            , SUBMIT_DT
+            , TRSF_TP
+            , EVAL_CD
+            , BEF_LEAD_STAT_CD
+            , OTHER_BRAND_CD
+            , BAT_YN
+            , LEAD_START_DT
+            , NEXT_CONTRACT_TP
+            , INTR_FSCP_MODTP_CD
+            , PURC_FSCP_MODTP_CD
+            , DSTB_CHN_CD
+            , REG_USR_ID
+            , REG_DT
+            , UPDT_USR_ID
+            , UPDT_DT
+            , PURPOSE_TAG
+        )
+            SELECT
+                SEQ_CR_0223T.NEXTVAL AS C_SEQ
+                , T1.SEQ
+                , T1.DLR_CD
+                , T1.CUST_NO
+                , T1.CUST_NM
+                , T1.CUST_TP
+                , T1.MNG_SC_ID
+                , T1.EMAIL_NM
+                , T1.WECHAT_ID
+                , T1.PREF_COMM_MTH_CD
+                , T1.PREF_COMM_NO
+                , T1.PREF_CONTACT_MTH_CD
+                , T1.PREF_CONTACT_HM_CD
+                , T1.TEL_NO
+                , T1.HP_NO
+                , T1.OFFICE_NM
+                , T1.DEPT_NM
+                , T1.OFFICE_TEL_NO
+                , T1.OFFICE_FAX_NO
+                , T1.OWN_RGST_NM
+                , T1.SEX_CD
+                , T1.DEL_YN
+                , T1.BHMC_YN
+                , T1.SIEBEL_ROW_ID
+                , T1.DOC_ID
+                , T1.WITH_PRSN_NM
+                , T1.RVSIT_YN
+                , T1.VSIT_RESV_DT
+                , T1.VSIT_DT
+                , T1.VSIT_PRSN_CNT
+                , T1.VSIT_END_DT
+                , T1.INFO_TP
+                , T1.PAY_TP
+                , T1.INTR_BRAND_CD
+                , T1.INTR_CARLINE_CD
+                , T1.INTR_MODEL_CD
+                , T1.NAT_NOF_SCHE_NO
+                , T1.ESTIMATE_CONT
+                , T1.SALES_CONT
+                , T1.REMARK
+                , T1.LEAD_LVL_CD
+                , T1.LEAD_STAT_CD
+                , T1.INTR_COLOR_CD
+                , T1.TRACE_GRADE_CD
+                , T1.VALID_GRADE_CD
+                , T1.INVALID_CAU_CD
+                , T1.FAIL_CAU_CD
+                , T1.FAIL_CAU_REASON_CONT
+                , T1.PURC_SEL_CARLINE_CD
+                , T1.PURC_SEL_MODEL_CD
+                , T1.EXPC_PURC_HM_CD
+                , T1.EXPC_PURC_DT
+                , T1.EXPC_DEAL_PRC
+                , T1.TRACE_DT
+                , T1.TRACE_MTH_CD
+                , T1.NEXT_TRACE_DT
+                , T1.NEXT_TRACE_MTH_CD
+                , T1.HOLD_TP
+                , T1.HOLD_DETL_TP_SEQ
+                , T1.EXHV_FLAK_SEQ
+                , T1.DUP_SEQ
+                , T1.LOCAL_CAR_REG_NO_YN
+                , T1.SIEBEL_LEAD_ROW_ID
+                , T1.SUBMIT_DT
+                , T1.TRSF_TP
+                , T1.EVAL_CD
+                , T1.BEF_LEAD_STAT_CD
+                , T1.OTHER_BRAND_CD
+                , T1.BAT_YN
+                , T1.LEAD_START_DT
+                , T1.NEXT_CONTRACT_TP
+                , T1.INTR_FSCP_MODTP_CD
+                , T1.PURC_FSCP_MODTP_CD
+                , T1.DSTB_CHN_CD
+                , T1.REG_USR_ID
+                , SYSDATE
+                , T1.UPDT_USR_ID
+                , SYSDATE
+                , T1.PURPOSE_TAG
+            FROM CR_0211T T1
+            WHERE 1=1
+            AND DLR_CD = #{dlrCd}
+            AND SEQ = #{seq}
+    </insert>
+
+    <!-- 판매기회진행이력를 업데이트 한다. -->
+    <update id="updateSalesOpptProcessMgmtFinish" parameterType="SalesOpptProcessMgmtFinishVO">
+    /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptProcessMgmtFinishDAO.updateSalesOpptProcessMgmtFinish] */
+    UPDATE CR_0223T    --판매기회관리
+      SET
+             UPDT_DT              = SYSDATE                     --수정일자
+          <if test='bhmcYn != null '>
+            ,BHMC_YN              = #{bhmcYn}                     --BHMC여부
+          </if>
+          <if test='siebelRowId != null '>
+            ,SIEBEL_ROW_ID        = #{siebelRowId}                --SIEBEL ROW ID
+          </if>
+          <if test='docId != null '>
+            ,DOC_ID               = #{docId}                      --문서ID
+          </if>
+          <if test='withPrsnNm != null '>
+            ,WITH_PRSN_NM         = #{withPrsnNm}                 --동행자명
+          </if>
+          <if test='rvsitYn != null '>
+            ,RVSIT_YN             = #{rvsitYn}                    --재방문여부
+          </if>
+          <if test='vsitResvDt != null '>
+            ,VSIT_RESV_DT         = #{vsitResvDt}                 --방문예약일자
+          </if>
+          <if test='vsitDt != null '>
+              ,VSIT_DT              = #{vsitDt}                     --방문일자
+          </if>
+          <if test='vsitPrsnCnt != null '>
+             ,VSIT_PRSN_CNT        = #{vsitPrsnCnt}                --방문자수
+          </if>
+          <if test='vsitEndDt != null '>
+             ,VSIT_END_DT          = #{vsitEndDt}                  --방문종료일자
+          </if>
+          <if test='infoTp != null '>
+             ,INFO_TP              = #{infoTp}                     --정보유형
+          </if>
+          <if test='holdTp != null '>
+             ,HOLD_TP              = #{holdTp}             --정보경로
+          </if>
+          <if test='holdDetlTpSeq != null '>
+             ,HOLD_DETL_TP_SEQ              = #{holdDetlTpSeq}      --정보경로상세
+          </if>
+          <if test='payTp != null '>
+              ,PAY_TP               = #{payTp}                      --지불유형
+          </if>
+          <if test='intrCarlineCd != null '>
+              ,INTR_CARLINE_CD      = #{intrCarlineCd}              --관심차종코드
+          </if>
+          <if test='intrModelCd != null '>
+              ,INTR_MODEL_CD        = #{intrModelCd}                --관심모델코드
+          </if>
+          <if test='localCarRegNoYn != null '>
+              ,LOCAL_CAR_REG_NO_YN      = #{localCarRegNoYn}               --현지번호판예정번호
+          </if>
+          <if test='estimateCont != null '>
+              ,ESTIMATE_CONT        = #{estimateCont}               --견적내용
+          </if>
+          <if test='salesCont != null '>
+              ,SALES_CONT           = #{salesCont}                  --영업내용
+          </if>
+          <if test='remark != null '>
+             ,REMARK               = #{remark}                     --비고
+          </if>
+          <if test='leadLvlCd != null '>
+              ,LEAD_LVL_CD          = #{leadLvlCd}                  --리드레벨코드
+          </if>
+          <if test='leadStatCd != null '>
+              ,LEAD_STAT_CD         = #{leadStatCd}                 --리드상태코드
+          </if>
+          <if test='befLeadStatCd != null and befLeadStatCd != ""'>
+              ,BEF_LEAD_STAT_CD         = #{befLeadStatCd}          --이전리드상태코드
+          </if>
+          <if test='intrColorCd != null '>
+              ,INTR_COLOR_CD        = #{intrColorCd}                --선호색상코드
+          </if>
+          <if test='traceGradeCd != null '>
+              ,TRACE_GRADE_CD       = #{traceGradeCd}               --추적등급코드
+          </if>
+          <if test='validGradeCd != null '>
+             ,VALID_GRADE_CD       = #{validGradeCd}               --유효등급코드
+          </if>
+          <if test='invalidCauCd != null '>
+             ,INVALID_CAU_CD       = #{invalidCauCd}               --무효원인코드
+          </if>
+          <if test='failCauCd != null '>
+              ,FAIL_CAU_CD          = #{failCauCd}                  --실패원인코드
+          </if>
+          <if test='failCauReasonCont != null '>
+             ,FAIL_CAU_REASON_CONT = #{failCauReasonCont}          --실패원인사유내용
+          </if>
+          <if test='purcSelCarlineCd != null '>
+             ,PURC_SEL_CARLINE_CD  = #{purcSelCarlineCd}           --구매선택차종코드
+          </if>
+          <if test='purcSelModelCd != null '>
+             ,PURC_SEL_MODEL_CD    = #{purcSelModelCd}             --구매선택모델코드
+          </if>
+          <if test='expcPurcHmCd != null '>
+             ,EXPC_PURC_HM_CD      = #{expcPurcHmCd}               --예상구매시간코드
+          </if>
+          <if test='expcPurcDt != null '>
+             ,EXPC_PURC_DT         = #{expcPurcDt}                 --예상구매일자
+          </if>
+          <if test='expcDealPrc != null '>
+             ,EXPC_DEAL_PRC        = #{expcDealPrc}                --예상거래가격
+          </if>
+          <if test='traceDt != null '>
+             ,TRACE_DT             = #{traceDt}                    --추적일자
+          </if>
+          <if test='traceMthCd != null '>
+             ,TRACE_MTH_CD         = #{traceMthCd}                 --추적방법코드
+          </if>
+          <if test='nextTraceDt != null '>
+            <choose>
+                 <when test='nextTraceDtNullUpdYn == "Y" '>
+                    , NEXT_TRACE_DT = ''
+                 </when>
+                 <otherwise>
+                    , NEXT_TRACE_DT = #{nextTraceDt}
+                 </otherwise>
+             </choose>
+          </if>
+          <if test='nextTraceMthCd != null '>
+             ,NEXT_TRACE_MTH_CD    = #{nextTraceMthCd}             --다음추적방법코드
+          </if>
+          <if test='mngScId != null '>
+             ,MNG_SC_ID    = #{mngScId}             --담당자
+          </if>
+          <if test='exhvFlakSeq != null '>
+             ,EXHV_FLAK_SEQ    = #{exhvFlakSeq}                    --전시장 방문번호
+          </if>
+          <if test='dupSeq != null '>
+             ,DUP_SEQ    = #{dupSeq}                    -- 판매기회중복일련번호
+          </if>
+          <if test='siebelLeadRowId != null '>
+             ,SIEBEL_LEAD_ROW_ID    = #{siebelLeadRowId}
+          </if>
+          <if test='submitDt != null '>
+             ,SUBMIT_DT    = #{submitDt}
+          </if>
+          <if test='trsfTp != null '>
+             ,TRSF_TP    = #{trsfTp}
+          </if>
+          <if test='evalCd != null '>
+             ,EVAL_CD    = #{evalCd}
+          </if>
+          <if test='otherBrandCd != null '>
+             ,OTHER_BRAND_CD    = #{otherBrandCd}
+          </if>
+          <if test='nextContractTp != null '>
+             ,NEXT_CONTRACT_TP    = #{nextContractTp}
+          </if>
+          <if test='leadStartDt != null '>
+             ,LEAD_START_DT    = #{leadStartDt}
+          </if>
+          <if test='intrFscpModtpCd != null '>
+             ,INTR_FSCP_MODTP_CD    = #{intrFscpModtpCd}
+          </if>
+          <if test='purcFscpModtpCd != null '>
+             ,PURC_FSCP_MODTP_CD    = #{purcFscpModtpCd}
+          </if>
+          <if test='mngScId != null '>
+             , DSTB_CHN_CD = FN_GET_DSTB_CHN_CD(#{mngScId})
+          </if>
+          <if test='batYn != null '>
+            ,BAT_YN = #{batYn}
+          </if>
+            ,UPDT_USR_ID          = #{updtUsrId}                  --수정자ID
+     WHERE 1 = 1
+       AND DLR_CD               = #{dlrCd}                      --딜러코드
+       AND C_SEQ                  = #{cSeq}                        --일련번호
+    </update>
+
+    <!-- 판매기회진행이력를 업데이트 한다. -->
+    <update id="mergeSalesOpptProcessMgmtFinish" parameterType="SalesOpptProcessMgmtFinishVO">
+    /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptProcessMgmtFinishDAO.mergeSalesOpptProcessMgmtFinish] */
+        MERGE INTO CR_0223T T1
+        USING (
+                SELECT
+                    SEQ
+                    , C_SEQ
+                    , DLR_CD
+                    , CUST_NO
+                    , CUST_NM
+                    , CUST_TP
+                    , MNG_SC_ID
+                    , EMAIL_NM
+                    , WECHAT_ID
+                    , PREF_COMM_MTH_CD
+                    , PREF_COMM_NO
+                    , PREF_CONTACT_MTH_CD
+                    , PREF_CONTACT_HM_CD
+                    , TEL_NO
+                    , HP_NO
+                    , OFFICE_NM
+                    , DEPT_NM
+                    , OFFICE_TEL_NO
+                    , OFFICE_FAX_NO
+                    , OWN_RGST_NM
+                    , SEX_CD
+                    , DEL_YN
+                    , BHMC_YN
+                    , SIEBEL_ROW_ID
+                    , DOC_ID
+                    , WITH_PRSN_NM
+                    , RVSIT_YN
+                    , VSIT_RESV_DT
+                    , VSIT_DT
+                    , VSIT_PRSN_CNT
+                    , VSIT_END_DT
+                    , INFO_TP
+                    , PAY_TP
+                    , INTR_BRAND_CD
+                    , INTR_CARLINE_CD
+                    , INTR_MODEL_CD
+                    , NAT_NOF_SCHE_NO
+                    , ESTIMATE_CONT
+                    , SALES_CONT
+                    , REMARK
+                    , LEAD_LVL_CD
+                    , LEAD_STAT_CD
+                    , INTR_COLOR_CD
+                    , TRACE_GRADE_CD
+                    , VALID_GRADE_CD
+                    , INVALID_CAU_CD
+                    , FAIL_CAU_CD
+                    , FAIL_CAU_REASON_CONT
+                    , PURC_SEL_CARLINE_CD
+                    , PURC_SEL_MODEL_CD
+                    , EXPC_PURC_HM_CD
+                    , EXPC_PURC_DT
+                    , EXPC_DEAL_PRC
+                    , TRACE_DT
+                    , TRACE_MTH_CD
+                    , NEXT_TRACE_DT
+                    , NEXT_TRACE_MTH_CD
+                    , HOLD_TP
+                    , HOLD_DETL_TP_SEQ
+                    , EXHV_FLAK_SEQ
+                    , DUP_SEQ
+                    , LOCAL_CAR_REG_NO_YN
+                    , SIEBEL_LEAD_ROW_ID
+                    , SUBMIT_DT
+                    , TRSF_TP
+                    , EVAL_CD
+                    , BEF_LEAD_STAT_CD
+                    , OTHER_BRAND_CD
+                    , BAT_YN
+                    , LEAD_START_DT
+                    , NEXT_CONTRACT_TP
+                    , INTR_FSCP_MODTP_CD
+                    , PURC_FSCP_MODTP_CD
+                    , DSTB_CHN_CD
+                    , UPDT_USR_ID
+                    , UPDT_DT
+                    , PURPOSE_TAG
+                FROM    CR_0211T
+                WHERE   DLR_CD = #{dlrCd}
+                AND      SEQ = #{seq}
+            ) T2 ON (
+                T1.C_SEQ = T2.C_SEQ
+                AND T1.DLR_CD = T2.DLR_CD
+            )
+            WHEN MATCHED THEN
+                UPDATE SET
+                        T1.SEQ = T2.SEQ
+                        , T1.CUST_NO = T2.CUST_NO
+                        , T1.CUST_NM = T2.CUST_NM
+                        , T1.CUST_TP = T2.CUST_TP
+                        , T1.MNG_SC_ID = T2.MNG_SC_ID
+                        , T1.EMAIL_NM = T2.EMAIL_NM
+                        , T1.WECHAT_ID = T2.WECHAT_ID
+                        , T1.PREF_COMM_MTH_CD = T2.PREF_COMM_MTH_CD
+                        , T1.PREF_COMM_NO = T2.PREF_COMM_NO
+                        , T1.PREF_CONTACT_MTH_CD = T2.PREF_CONTACT_MTH_CD
+                        , T1.PREF_CONTACT_HM_CD = T2.PREF_CONTACT_HM_CD
+                        , T1.TEL_NO = T2.TEL_NO
+                        , T1.HP_NO = T2.HP_NO
+                        , T1.OFFICE_NM = T2.OFFICE_NM
+                        , T1.DEPT_NM = T2.DEPT_NM
+                        , T1.OFFICE_TEL_NO = T2.OFFICE_TEL_NO
+                        , T1.OFFICE_FAX_NO = T2.OFFICE_FAX_NO
+                        , T1.OWN_RGST_NM = T2.OWN_RGST_NM
+                        , T1.SEX_CD = T2.SEX_CD
+                        , T1.DEL_YN = T2.DEL_YN
+                        , T1.BHMC_YN = T2.BHMC_YN
+                        , T1.SIEBEL_ROW_ID = T2.SIEBEL_ROW_ID
+                        , T1.DOC_ID = T2.DOC_ID
+                        , T1.WITH_PRSN_NM = T2.WITH_PRSN_NM
+                        , T1.RVSIT_YN = T2.RVSIT_YN
+                        , T1.VSIT_RESV_DT = T2.VSIT_RESV_DT
+                        , T1.VSIT_DT = T2.VSIT_DT
+                        , T1.VSIT_PRSN_CNT = T2.VSIT_PRSN_CNT
+                        , T1.VSIT_END_DT = T2.VSIT_END_DT
+                        , T1.INFO_TP = T2.INFO_TP
+                        , T1.PAY_TP = T2.PAY_TP
+                        , T1.INTR_BRAND_CD = T2.INTR_BRAND_CD
+                        , T1.INTR_CARLINE_CD = T2.INTR_CARLINE_CD
+                        , T1.INTR_MODEL_CD = T2.INTR_MODEL_CD
+                        , T1.NAT_NOF_SCHE_NO = T2.NAT_NOF_SCHE_NO
+                        , T1.ESTIMATE_CONT = T2.ESTIMATE_CONT
+                        , T1.SALES_CONT = T2.SALES_CONT
+                        , T1.REMARK = T2.REMARK
+                        , T1.LEAD_LVL_CD = T2.LEAD_LVL_CD
+                        , T1.LEAD_STAT_CD = T2.LEAD_STAT_CD
+                        , T1.INTR_COLOR_CD = T2.INTR_COLOR_CD
+                        , T1.TRACE_GRADE_CD = T2.TRACE_GRADE_CD
+                        , T1.VALID_GRADE_CD = T2.VALID_GRADE_CD
+                        , T1.INVALID_CAU_CD = T2.INVALID_CAU_CD
+                        , T1.FAIL_CAU_CD = T2.FAIL_CAU_CD
+                        , T1.FAIL_CAU_REASON_CONT = T2.FAIL_CAU_REASON_CONT
+                        , T1.PURC_SEL_CARLINE_CD = T2.PURC_SEL_CARLINE_CD
+                        , T1.PURC_SEL_MODEL_CD = T2.PURC_SEL_MODEL_CD
+                        , T1.EXPC_PURC_HM_CD = T2.EXPC_PURC_HM_CD
+                        , T1.EXPC_PURC_DT = T2.EXPC_PURC_DT
+                        , T1.EXPC_DEAL_PRC = T2.EXPC_DEAL_PRC
+                        , T1.TRACE_DT = T2.TRACE_DT
+                        , T1.TRACE_MTH_CD = T2.TRACE_MTH_CD
+                        , T1.NEXT_TRACE_DT = T2.NEXT_TRACE_DT
+                        , T1.NEXT_TRACE_MTH_CD = T2.NEXT_TRACE_MTH_CD
+                        , T1.HOLD_TP = T2.HOLD_TP
+                        , T1.HOLD_DETL_TP_SEQ = T2.HOLD_DETL_TP_SEQ
+                        , T1.EXHV_FLAK_SEQ = T2.EXHV_FLAK_SEQ
+                        , T1.DUP_SEQ = T2.DUP_SEQ
+                        , T1.LOCAL_CAR_REG_NO_YN = T2.LOCAL_CAR_REG_NO_YN
+                        , T1.SIEBEL_LEAD_ROW_ID = T2.SIEBEL_LEAD_ROW_ID
+                        , T1.SUBMIT_DT = T2.SUBMIT_DT
+                        , T1.TRSF_TP = T2.TRSF_TP
+                        , T1.EVAL_CD = T2.EVAL_CD
+                        , T1.BEF_LEAD_STAT_CD = T2.BEF_LEAD_STAT_CD
+                        , T1.OTHER_BRAND_CD = T2.OTHER_BRAND_CD
+                        , T1.BAT_YN = T2.BAT_YN
+                        , T1.LEAD_START_DT = T2.LEAD_START_DT
+                        , T1.NEXT_CONTRACT_TP = T2.NEXT_CONTRACT_TP
+                        , T1.INTR_FSCP_MODTP_CD = T2.INTR_FSCP_MODTP_CD
+                        , T1.PURC_FSCP_MODTP_CD = T2.PURC_FSCP_MODTP_CD
+                        , T1.DSTB_CHN_CD = T2.DSTB_CHN_CD
+                        , T1.UPDT_USR_ID = T2.UPDT_USR_ID
+                        , T1.UPDT_DT = T2.UPDT_DT
+                        , T1.PURPOSE_TAG = T2.PURPOSE_TAG
+    </update>
+
+</mapper>

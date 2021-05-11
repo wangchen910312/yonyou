@@ -1,0 +1,590 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.cnt.service.dao.ContractPackageDAO">
+
+    <!-- 목록 갯수  -->
+    <select id="selectContractPackagesByConditionCnt" parameterType="ContractPackageSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractPackageDAO.selectContractPackagesByConditionCnt] */
+         SELECT COUNT(*)
+          FROM SA_0231T A    --집단계약헤더
+          LEFT OUTER JOIN SA_0132T B           /* 2급딜러 */
+            ON A.LV2_DLR_ORG_CD = B.LV2_DLR_CD
+         <where>
+           <if test='sDlrCd           != null and sDlrCd           != ""'>
+             AND A.DLR_CD           = #{sDlrCd}
+           </if>
+           <if test='sContractTp      != null and sContractTp      != ""'>
+             AND A.CONTRACT_TP      = #{sContractTp}
+           </if>
+           <if test='sSaleEmpNo       != null and sSaleEmpNo       != ""'>
+             AND A.SALE_EMP_NO      = #{sSaleEmpNo}
+           </if>
+           <if test='sContractCustNo  != null and sContractCustNo  != ""'>
+             AND A.CONTRACT_CUST_NO = #{sContractCustNo}
+           </if>
+           <if test='sCustTp          != null and sCustTp          != ""'>
+             AND A.CUST_TP          = #{sCustTp}
+           </if>
+           <if test='sGrpContractNo != null and sGrpContractNo != ""'>
+             <choose>
+               <when test='@org.apache.commons.lang3.StringUtils@contains(sGrpContractNo,"*")'>
+                 <bind name='sGrpContractNo' value='@org.apache.commons.lang3.StringUtils@replace(sGrpContractNo, "*", "%")' />
+                   AND A.GRP_CONTRACT_NO LIKE #{sGrpContractNo}
+               </when>
+               <otherwise>
+                 AND A.GRP_CONTRACT_NO = #{sGrpContractNo}
+               </otherwise>
+             </choose>
+           </if>
+           <if test='sContractStatCd  != null and sContractStatCd  != ""'>
+             AND A.CONTRACT_STAT_CD = #{sContractStatCd}
+           </if>
+           <if test='sStartContractDt != null and sEndContractDt != null'>
+             AND A.CONTRACT_DT <![CDATA[>=]]> TRUNC(#{sStartContractDt},'DD')
+             AND A.CONTRACT_DT <![CDATA[<]]> TRUNC(#{sEndContractDt},'DD')+1
+           </if>
+         </where>
+    </select>
+
+	<!-- 조회 목록  -->
+	<select id="selectContractPackagesByCondition" parameterType="ContractPackageSearchVO" resultType="ContractPackageVO">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractPackageDAO.selectContractPackagesByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                 SELECT A.DLR_CD                  --딜러코드
+                      , A.GRP_CONTRACT_NO         --그룹계약번호
+                      , A.CONTRACT_TP             --계약유형
+                      , A.CONTRACT_STAT_CD        --계약상태코드
+                      , A.CONTRACT_DT             --계약일자
+                      , A.SALE_EMP_NO             --판매사원번호
+                      , C.USR_NM     AS SALE_EMP_NM
+                      , A.SALE_MNG_NM             --판매관리번호
+                      , A.CONTRACT_CUST_NO        --계약고객번호
+                      , A.CUST_NM                 --고객명
+                      , A.CUST_TP                 --고객유형
+                      , A.TEL_NO1                 --전화번호1
+                      , A.TEL_NO2                 --전화번호2
+                      , A.MATH_DOC_TP             --주요인증문서유형
+                      , A.SSN_CRN_NO              --주민사업자등록번호
+                      , A.DL_REQ_DT               --인도요청일자
+                      , A.CONFIRM_DT              --확정일자
+                      , A.CANC_DT                 --취소일자
+                      , A.SALE_OPPT_SEQ           --판매기회번호
+                      , A.PAY_TP                  --지불유형
+                      , A.CARLINE_CNT             --차종수량
+                      , A.CAR_CNT                 --차량수량
+                      , A.TOT_SALE_AMT            --총판매금액
+                      --, A.LV2_DLR_YN              --2급딜러여부
+                      --, A.LV2_DLR_ORG_CD          --2급딜러조직코드
+                      --, B.LV2_DLR_NM       AS LV2_DLR_ORG_NM
+                      , A.REMARK                  --비고
+                  FROM SA_0231T A    --집단계약헤더
+                  LEFT OUTER JOIN SA_0132T B           /* 2급딜러 */
+                    ON A.LV2_DLR_ORG_CD = B.LV2_DLR_CD
+                  LEFT OUTER JOIN CM_0801T C           /* 사원 */
+                    ON A.SALE_EMP_NO = C.USR_ID
+                   AND A.DLR_CD = C.DLR_CD
+                 <where>
+                   <if test='sDlrCd           != null and sDlrCd           != ""'>
+                     AND A.DLR_CD           = #{sDlrCd}
+                   </if>
+                   <if test='sContractTp      != null and sContractTp      != ""'>
+                     AND A.CONTRACT_TP      = #{sContractTp}
+                   </if>
+                   <if test='sSaleEmpNo       != null and sSaleEmpNo       != ""'>
+                     AND A.SALE_EMP_NO      = #{sSaleEmpNo}
+                   </if>
+                   <if test='sContractCustNo  != null and sContractCustNo  != ""'>
+                     AND A.CONTRACT_CUST_NO = #{sContractCustNo}
+                   </if>
+                   <if test='sCustTp          != null and sCustTp          != ""'>
+                     AND A.CUST_TP          = #{sCustTp}
+                   </if>
+                   <if test='sGrpContractNo != null and sGrpContractNo != ""'>
+                     <choose>
+                       <when test='@org.apache.commons.lang3.StringUtils@contains(sGrpContractNo,"*")'>
+                         <bind name='sGrpContractNo' value='@org.apache.commons.lang3.StringUtils@replace(sGrpContractNo, "*", "%")' />
+                           AND A.GRP_CONTRACT_NO LIKE #{sGrpContractNo}
+                       </when>
+                       <otherwise>
+                         AND A.GRP_CONTRACT_NO = #{sGrpContractNo}
+                       </otherwise>
+                     </choose>
+                   </if>
+                   <if test='sContractStatCd  != null and sContractStatCd  != ""'>
+                     AND A.CONTRACT_STAT_CD = #{sContractStatCd}
+                   </if>
+                   <if test='sStartContractDt != null and sEndContractDt != null'>
+                     AND A.CONTRACT_DT <![CDATA[>=]]> TRUNC(#{sStartContractDt},'DD')
+                     AND A.CONTRACT_DT <![CDATA[<]]> TRUNC(#{sEndContractDt},'DD')+1
+                   </if>
+                 </where>
+                 ORDER BY
+                 <choose>
+                     <when test='sort != null'>
+                         <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                             <choose>
+                                 <when test='item.field == "grpContractNo"'>   A.GRP_CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "contractDt"'>      A.CONTRACT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                 <when test='item.field == "contractTp"'>      A.CONTRACT_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                 <when test='item.field == "contractStatCd"'>  A.CONTRACT_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "contractCustNo"'>  A.CONTRACT_CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "custNm"'>          A.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                 <when test='item.field == "saleEmpNo"'>       A.SALE_EMP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                 <when test='item.field == "carlineCnt"'>      A.CARLINE_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                 <when test='item.field == "carCnt"'>          A.CAR_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                 <when test='item.field == "totSaleAmt"'>      A.TOT_SALE_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                 <otherwise>
+                                   A.DLR_CD ASC, A.GRP_CONTRACT_NO DESC
+                                 </otherwise>
+                             </choose>
+                         </foreach>
+                     </when>
+                     <otherwise>
+                       A.DLR_CD ASC, A.GRP_CONTRACT_NO DESC
+                     </otherwise>
+                 </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+    <!-- 집단판매 내역을 저장한다.  -->
+    <insert id="insertContractPackage" parameterType="ContractPackageVO">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractPackageDAO.insertContractPackage] */
+        INSERT INTO SA_0231T    --집단계약헤더
+        (
+          DLR_CD                  --딜러코드
+         ,GRP_CONTRACT_NO         --그룹계약번호
+         ,CONTRACT_TP             --계약유형
+         ,CONTRACT_STAT_CD        --계약상태코드
+         ,CONTRACT_DT             --계약일자
+         ,SALE_EMP_NO             --판매사원번호
+         ,SALE_MNG_NM             --판매관리번호
+         ,CONTRACT_CUST_NO        --계약고객번호
+         ,CUST_NM                 --고객명
+         ,CUST_TP                 --고객유형
+         ,TEL_NO1                 --전화번호1
+         ,TEL_NO2                 --전화번호2
+         ,MATH_DOC_TP             --주요인증문서유형
+         ,SSN_CRN_NO              --주민사업자등록번호
+         ,DL_REQ_DT               --인도요청일자
+         ,SALE_OPPT_SEQ           --판매기회번호
+         ,PAY_TP                  --지불유형
+         ,CARLINE_CNT             --차종수량
+         ,CAR_CNT                 --차량수량
+         ,TOT_SALE_AMT            --총판매금액
+
+         ,REMARK                  --비고
+         ,REG_USR_ID              --등록자ID
+         ,REG_DT                  --등록일자
+         ,UPDT_USR_ID             --수정자ID
+         ,UPDT_DT                 --수정일자
+        )
+        VALUES
+        (
+          #{dlrCd}                  --딜러코드
+         ,#{grpContractNo}          --그룹계약번호
+         ,#{contractTp}             --계약유형
+         ,#{contractStatCd}         --계약상태코드
+         ,#{contractDt}             --계약일자
+         ,#{saleEmpNo}              --판매사원번호
+         ,#{saleMngNm}              --판매관리번호
+         ,#{contractCustNo}         --계약고객번호
+         ,#{custNm}                 --고객명
+         ,#{custTp}                 --고객유형
+         ,#{telNo1}                 --전화번호1
+         ,#{telNo2}                 --전화번호2
+         ,#{mathDocTp}              --주요인증문서유형
+         ,#{ssnCrnNo}               --주민사업자등록번호
+         ,#{dlReqDt}                --인도요청일자
+         ,#{saleOpptSeq}            --판매기회번호
+         ,#{payTp}                  --지불유형
+         ,#{carlineCnt}             --차종수량
+         ,#{carCnt}                 --차량수량
+         ,#{totSaleAmt}             --총판매금액
+
+         ,#{remark}                 --비고
+         ,#{regUsrId}               --등록자ID
+         ,SYSDATE
+         ,#{updtUsrId}              --수정자ID
+         ,SYSDATE
+        )
+
+
+    </insert>
+
+    <!-- 집단판매 내역을 수정 -->
+    <update id="updateContractPackage" parameterType="ContractPackageVO">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractPackageDAO.insertContractCustomer] */
+        UPDATE SA_0231T         -- 집단계약헤더
+           SET CONTRACT_TP      = #{contractTp}             --계약유형
+             , CONTRACT_STAT_CD = #{contractStatCd}         --계약상태코드
+             , CONTRACT_DT      = #{contractDt}             --계약일자
+             , SALE_EMP_NO      = #{saleEmpNo}              --판매사원번호
+             , SALE_MNG_NM      = #{saleMngNm}              --판매관리번호
+             , CONTRACT_CUST_NO = #{contractCustNo}         --계약고객번호
+             , CUST_NM          = #{custNm}                 --고객명
+             , CUST_TP          = #{custTp}                 --고객유형
+             , TEL_NO1          = #{telNo1}                 --전화번호1
+             , TEL_NO2          = #{telNo2}                 --전화번호2
+             , MATH_DOC_TP      = #{mathDocTp}              --주요인증문서유형
+             , SSN_CRN_NO       = #{ssnCrnNo}               --주민사업자등록번호
+             , DL_REQ_DT        = #{dlReqDt}                --인도요청일자
+             , SALE_OPPT_SEQ    = #{saleOpptSeq}            --판매기회번호
+             , PAY_TP           = #{payTp}                  --지불유형
+             , CARLINE_CNT      = #{carlineCnt}             --차종수량
+             , CAR_CNT          = #{carCnt}                 --차량수량
+             , TOT_SALE_AMT     = #{totSaleAmt}             --총판매금액
+
+             , REMARK           = #{remark}                 --비고
+             , UPDT_USR_ID      = #{updtUsrId}              --수정자ID
+             , UPDT_DT          = SYSDATE
+         WHERE DLR_CD           = #{dlrCd}                  --딜러코드
+           AND GRP_CONTRACT_NO  = #{grpContractNo}          --그룹계약번호
+    </update>
+
+    <!-- 집단판매 확정 한다. : 프로시져  -->
+    <update id="approvalPackage" parameterType="ContractPackageVO" statementType="CALLABLE">
+        {CALL SP_SAL_P_PACKAGE_APPROVAL(
+              #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{grpContractNo, mode=IN, jdbcType=VARCHAR}
+        )}
+    </update>
+
+    <!-- 집단판매 삭제(승인전) 한다. -->
+    <update id="deleteContractPackage" parameterType="ContractPackageVO">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractPackageDAO.deleteContractPackage] */
+        UPDATE SA_0231T
+           SET CONTRACT_STAT_CD = '90'
+             , UPDT_USR_ID      = #{updtUsrId}              --수정자ID
+             , UPDT_DT          = SYSDATE
+         WHERE DLR_CD = #{dlrCd}
+           AND GRP_CONTRACT_NO = #{grpContractNo}
+    </update>
+
+    <!-- 집단판매 차량 item 내역 갯수  -->
+    <select id="selectPackageItemSearchCnt" parameterType="ContractPackageSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractPackageDAO.selectPackageItemSearchCnt] */
+        SELECT COUNT(*)
+          FROM SA_0232T A    --집단계약차종
+         <where>
+           <if test='sDlrCd          != null and sDlrCd          != ""'>
+             AND A.DLR_CD          = #{sDlrCd}
+           </if>
+           <if test='sGrpContractNo  != null and sGrpContractNo  != ""'>
+             AND A.GRP_CONTRACT_NO = #{sGrpContractNo}
+           </if>
+         </where>
+    </select>
+    <!-- 집단판매 차량 item 내역 조회  -->
+    <select id="selectPackageItemSearch" parameterType="ContractPackageSearchVO" resultType="ContractPackageItemVO">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractPackageDAO.selectPackageItemSearch] */
+        SELECT A.DLR_CD                 --딜러코드
+             , A.GRP_CONTRACT_NO        --그룹계약번호
+             , A.SEQ                    --일련번호
+             , A.CARLINE_CD             --차종코드
+             , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+             , A.MODEL_CD               --모델코드
+             , FN_GET_MODEL_NM(A.MODEL_CD) AS MODEL_NM
+             , A.OCN_CD                 --OCN코드
+             , FN_GET_OCN_NM(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+             , A.EXT_COLOR_CD           --외장색상코드
+             , FN_GET_EXT_COLOR_NM(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+             , A.INT_COLOR_CD           --내장색상코드
+             , FN_GET_INT_COLOR_NM(A.INT_COLOR_CD) AS INT_COLOR_NM
+             , A.RETL_PRC               --소매가격
+             , A.PROMOTION_NO           --프로모션코드
+             , A.PROMOTION_AMT          --프로모션금액
+             , A.CAR_CNT                --차량수량
+             , A.REAL_CAR_AMT           --실제차량금액
+             , A.REAL_PAY_AMT           --실제지불금액
+          FROM SA_0232T A    --집단계약차종
+         <where>
+           <if test='sDlrCd          != null and sDlrCd          != ""'>
+             AND A.DLR_CD          = #{sDlrCd}
+           </if>
+           <if test='sGrpContractNo  != null and sGrpContractNo  != ""'>
+             AND A.GRP_CONTRACT_NO = #{sGrpContractNo}
+           </if>
+         </where>
+         ORDER BY
+         <choose>
+             <when test='sort != null'>
+                 <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                     <choose>
+                         <when test='item.field == "carlineCd"'>      A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                         <when test='item.field == "modelCd"'>        A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                         <when test='item.field == "ocnCd"'>          A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                         <when test='item.field == "extColorCd"'>     A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                         <when test='item.field == "intColorCd"'>     A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                         <when test='item.field == "retlPrc"'>        A.RETL_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                         <when test='item.field == "promotionNo"'>    A.PROMOTION_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                         <when test='item.field == "promotionAmt"'>   A.PROMOTION_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                         <when test='item.field == "carCnt"'>         A.CAR_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                         <when test='item.field == "realCarAmt"'>     A.REAL_CAR_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                         <when test='item.field == "realPayAmt"'>     A.REAL_PAY_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                         <otherwise>
+                           A.DLR_CD ASC
+                         , A.GRP_CONTRACT_NO ASC
+                         , A.SEQ DESC
+                         </otherwise>
+                     </choose>
+                 </foreach>
+             </when>
+             <otherwise>
+                 A.DLR_CD ASC
+               , A.GRP_CONTRACT_NO ASC
+               , A.SEQ DESC
+             </otherwise>
+         </choose>
+    </select>
+
+
+    <!-- 집단판매 차량item 내역을 저장한다.  -->
+    <insert id="insertContractPackageItem" parameterType="ContractPackageItemVO">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractPackageDAO.insertContractPackageItem] */
+        INSERT
+          INTO SA_0232T    --집단계약차종
+        (
+          DLR_CD                 --딜러코드
+         ,GRP_CONTRACT_NO        --그룹계약번호
+         ,SEQ                    --일련번호
+         ,CARLINE_CD             --차종코드
+         ,MODEL_CD               --모델코드
+         ,OCN_CD                 --OCN코드
+         ,EXT_COLOR_CD           --외장색상코드
+         ,INT_COLOR_CD           --내장색상코드
+         ,RETL_PRC               --소매가격
+         ,PROMOTION_NO           --프로모션코드
+         ,PROMOTION_AMT          --프로모션금액
+         ,CAR_CNT                --차량수량
+         ,REAL_CAR_AMT           --실제차량금액
+         ,REAL_PAY_AMT           --실제지불금액
+         ,REG_USR_ID             --등록자ID
+         ,REG_DT
+         ,UPDT_USR_ID            --수정자ID
+         ,UPDT_DT
+        )VALUES(
+          #{dlrCd}                 --딜러코드
+         ,#{grpContractNo}         --그룹계약번호
+         ,(SELECT NVL(MAX(SEQ), 0)+1 FROM SA_0232T WHERE DLR_CD = #{dlrCd} AND GRP_CONTRACT_NO = #{grpContractNo})
+         ,#{carlineCd}             --차종코드
+         ,#{modelCd}               --모델코드
+         ,#{ocnCd}                 --OCN코드
+         ,#{extColorCd}            --외장색상코드
+         ,#{intColorCd}            --내장색상코드
+         ,#{retlPrc}               --소매가격
+         ,#{promotionNo}           --프로모션코드
+         ,#{promotionAmt}          --프로모션금액
+         ,#{carCnt}                --차량수량
+         ,#{realCarAmt}            --실제차량금액
+         ,#{realPayAmt}            --실제지불금액
+         ,#{regUsrId}              --등록자ID
+         ,SYSDATE
+         ,#{updtUsrId}             --수정자ID
+         ,SYSDATE
+        )
+    </insert>
+
+    <!-- 집단판매 차량item 내역을 수정 -->
+    <update id="updateContractPackageItem" parameterType="ContractPackageItemVO">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractPackageDAO.updateContractPackageItem] */
+        UPDATE SA_0232T    --집단계약차종
+           SET CARLINE_CD      = #{carlineCd}             --차종코드
+             , MODEL_CD        = #{modelCd}               --모델코드
+             , OCN_CD          = #{ocnCd}                 --OCN코드
+             , EXT_COLOR_CD    = #{extColorCd}            --외장색상코드
+             , INT_COLOR_CD    = #{intColorCd}            --내장색상코드
+             , RETL_PRC        = #{retlPrc}               --소매가격
+             , PROMOTION_NO    = #{promotionNo}           --프로모션코드
+             , PROMOTION_AMT   = #{promotionAmt}          --프로모션금액
+             , CAR_CNT         = #{carCnt}                --차량수량
+             , REAL_CAR_AMT    = #{realCarAmt}            --실제차량금액
+             , REAL_PAY_AMT    = #{realPayAmt}            --실제지불금액
+             , UPDT_USR_ID     = #{updtUsrId}             --수정자ID
+             , UPDT_DT         = SYSDATE
+         WHERE DLR_CD          = #{dlrCd}                 --딜러코드
+           AND GRP_CONTRACT_NO = #{grpContractNo}         --그룹계약번호
+           AND SEQ             = #{seq}                   --일련번호
+    </update>
+
+    <!-- 집단판매 차량item 내역을 삭제한다. -->
+    <delete id="deleteContractPackageItem" parameterType="ContractPackageItemVO">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractPackageDAO.deleteContractPackageItem] */
+        DELETE
+          FROM SA_0232T
+         WHERE DLR_CD          = #{dlrCd}                 --딜러코드
+           AND GRP_CONTRACT_NO = #{grpContractNo}         --그룹계약번호
+           AND SEQ             = #{seq}                   --일련번호
+    </delete>
+
+    <!-- 집단판매 프로모션팝업 내역을 조회한다.  -->
+    <select id="selectCntPackagePromotionSearchCnt" parameterType="ContractReSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractPackageDAO.selectCntPackagePromotionSearchCnt] */
+        SELECT COUNT(*)
+          FROM (
+                  SELECT SA0113.DLR_CD
+                       , SA0113.PROMOTION_CD
+                       , SA0113.PROMOTION_NM
+                       , SA0113.PROMOTION_TP     /* SAL010 프로모션유형 */
+                       , SA_0102.CARLINE_CD
+                       , SA_0115.MODEL_CD
+                       , SA0113.START_DT
+                       , SA0113.END_DT
+                       , SA0113.APPLY_TP        -- 비율(R) , 금액(F)
+                       , SA0113.PROMOTION_AMT
+                       , SA0113.IMS_BUDN_RATE   -- 제조사부담율
+                       , SA0113.DLR_BUDN_RATE   -- 딜러부담율
+                       , SA0113.REG_USR_ID
+                       , SA0113.REG_DT
+                       , SA0113.UPDT_USR_ID
+                       , SA0113.UPDT_DT
+                       , SA0116.CONTRACT_TP    -- N: 일반판매, P:선출고판매, Q:집단판매
+                    FROM SA_0113T SA0113                         /* 프로모션 헤더 */
+                    INNER JOIN SA_0115T SA_0115                  /* 프로모션 모델 */
+                      ON SA0113.DLR_CD = SA_0115.DLR_CD
+                     AND SA0113.PROMOTION_CD = SA_0115.PROMOTION_CD
+                    INNER JOIN SA_0116T SA0116                  /* 프로모션 계약유형 */
+                      ON SA0113.DLR_CD = SA0116.DLR_CD
+                     AND SA0113.PROMOTION_CD = SA0116.PROMOTION_CD
+                    Left OUTER JOIN SA_0102T SA_0102
+                      ON SA_0115.MODEL_CD = SA_0102.MODEL_CD
+                   WHERE SA0113.USE_YN = 'Y'
+                     AND SA0113.APPROVE_CD = 'C'
+                     AND SA0116.CONTRACT_TP = #{sContractTp}
+                     AND SA_0115.MODEL_CD = #{sModelCd}
+                     AND #{sStartContractDt} BETWEEN SA0113.START_DT AND SA0113.END_DT    -- 계약일
+                     AND SA0113.DLR_CD = #{sDlrCd}
+                     AND SA0113.PROMOTION_OWN_CD = #{sPromotionOwnCd}      -- 프로모션 주관 01:법인, 02:딜러
+
+                  UNION
+
+                  SELECT SA0113.DLR_CD
+                       , SA0113.PROMOTION_CD
+                       , SA0113.PROMOTION_NM
+                       , SA0113.PROMOTION_TP     /* SAL010 프로모션유형 */
+                       , SA_0102.CARLINE_CD
+                       , SA_0115.MODEL_CD
+                       , SA0113.START_DT
+                       , SA0113.END_DT
+                       , SA0113.APPLY_TP        -- 비율(R) , 금액(F)
+                       , SA0113.PROMOTION_AMT
+                       , SA0113.IMS_BUDN_RATE   -- 제조사부담율
+                       , SA0113.DLR_BUDN_RATE   -- 딜러부담율
+                       , SA0113.REG_USR_ID
+                       , SA0113.REG_DT
+                       , SA0113.UPDT_USR_ID
+                       , SA0113.UPDT_DT
+                       , SA0116.CONTRACT_TP    -- N: 일반판매, P:선출고판매, Q:집단판매
+                    FROM SA_0113T SA0113                         /* 프로모션 헤더 */
+                   INNER JOIN SA_0115T SA_0115                  /* 프로모션 모델 */
+                      ON SA0113.DLR_CD = SA_0115.DLR_CD
+                     AND SA0113.PROMOTION_CD = SA_0115.PROMOTION_CD
+                    INNER JOIN SA_0116T SA0116                  /* 프로모션 계약유형 */
+                      ON SA0113.DLR_CD = SA0116.DLR_CD
+                     AND SA0113.PROMOTION_CD = SA0116.PROMOTION_CD
+                   INNER JOIN SA_0114T SA0114
+                      ON SA0113.DLR_CD = SA0114.DLR_CD
+                     AND SA0113.PROMOTION_CD = SA0114.PROMOTION_CD
+                    Left OUTER JOIN SA_0102T SA_0102
+                      ON SA_0115.MODEL_CD = SA_0102.MODEL_CD
+                   WHERE SA0113.USE_YN = 'Y'
+                     AND SA0113.APPROVE_CD = 'C'
+                     AND SA0116.CONTRACT_TP = #{sContractTp}
+                     AND SA_0115.MODEL_CD = #{sModelCd}
+                     AND #{sStartContractDt} BETWEEN SA0113.START_DT AND SA0113.END_DT    -- 계약일
+                     AND SA0113.DLR_CD = #{sDlrCd}
+                     AND SA0114.CUST_CD = #{sContractCustNo}
+                     AND SA0113.PROMOTION_OWN_CD = #{sPromotionOwnCd}      -- 프로모션 주관 01:법인, 02:딜러
+                )
+    </select>
+    <select id="selectCntPackagePromotionSearch" parameterType="ContractReSearchVO" resultType="ContractPromotionVO">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractPackageDAO.selectCntPackagePromotionSearch] */
+          SELECT SA0113.DLR_CD
+               , SA0113.PROMOTION_CD
+               , SA0113.PROMOTION_NM
+               , SA0113.PROMOTION_TP     /* SAL010 프로모션유형 */
+               , SA_0102.CARLINE_CD
+               , SA_0115.MODEL_CD
+               , SA0113.START_DT
+               , SA0113.END_DT
+               , SA0113.APPLY_TP        -- 비율(R) , 금액(F)
+               , SA0113.PROMOTION_AMT
+               , SA0113.IMS_BUDN_RATE   -- 제조사부담율
+               , SA0113.DLR_BUDN_RATE   -- 딜러부담율
+               , SA0113.REG_USR_ID
+               , SA0113.REG_DT
+               , SA0113.UPDT_USR_ID
+               , SA0113.UPDT_DT
+               , SA0116.CONTRACT_TP    -- N: 일반판매, P:선출고판매, Q:집단판매
+            FROM SA_0113T SA0113                         /* 프로모션 헤더 */
+            INNER JOIN SA_0115T SA_0115                  /* 프로모션 모델 */
+              ON SA0113.DLR_CD = SA_0115.DLR_CD
+             AND SA0113.PROMOTION_CD = SA_0115.PROMOTION_CD
+            INNER JOIN SA_0116T SA0116                  /* 프로모션 계약유형 */
+              ON SA0113.DLR_CD = SA0116.DLR_CD
+             AND SA0113.PROMOTION_CD = SA0116.PROMOTION_CD
+            Left OUTER JOIN SA_0102T SA_0102
+              ON SA_0115.MODEL_CD = SA_0102.MODEL_CD
+            WHERE SA0113.USE_YN = 'Y'
+             AND SA0113.APPROVE_CD = 'C'
+             AND SA0116.CONTRACT_TP = #{sContractTp}
+             AND SA_0115.MODEL_CD = #{sModelCd}
+             AND #{sStartContractDt} BETWEEN SA0113.START_DT AND SA0113.END_DT    -- 계약일
+             AND SA0113.DLR_CD = #{sDlrCd}
+             AND SA0113.PROMOTION_OWN_CD = #{sPromotionOwnCd}      -- 프로모션 주관 01:법인, 02:딜러
+
+            UNION
+
+            SELECT SA0113.DLR_CD
+                 , SA0113.PROMOTION_CD
+                 , SA0113.PROMOTION_NM
+                 , SA0113.PROMOTION_TP     /* SAL010 프로모션유형 */
+                 , SA_0102.CARLINE_CD
+                 , SA_0115.MODEL_CD
+                 , SA0113.START_DT
+                 , SA0113.END_DT
+                 , SA0113.APPLY_TP        -- 비율(R) , 금액(F)
+                 , SA0113.PROMOTION_AMT
+                 , SA0113.IMS_BUDN_RATE   -- 제조사부담율
+                 , SA0113.DLR_BUDN_RATE   -- 딜러부담율
+                 , SA0113.REG_USR_ID
+                 , SA0113.REG_DT
+                 , SA0113.UPDT_USR_ID
+                 , SA0113.UPDT_DT
+                 , SA0116.CONTRACT_TP    -- N: 일반판매, P:선출고판매, Q:집단판매
+              FROM SA_0113T SA0113                         /* 프로모션 헤더 */
+              INNER JOIN SA_0115T SA_0115                  /* 프로모션 모델 */
+                ON SA0113.DLR_CD = SA_0115.DLR_CD
+               AND SA0113.PROMOTION_CD = SA_0115.PROMOTION_CD
+              INNER JOIN SA_0116T SA0116                  /* 프로모션 계약유형 */
+                ON SA0113.DLR_CD = SA0116.DLR_CD
+               AND SA0113.PROMOTION_CD = SA0116.PROMOTION_CD
+              INNER JOIN SA_0114T SA0114
+                ON SA0113.DLR_CD = SA0114.DLR_CD
+               AND SA0113.PROMOTION_CD = SA0114.PROMOTION_CD
+              LEFT OUTER JOIN SA_0102T SA_0102
+                ON SA_0115.MODEL_CD = SA_0102.MODEL_CD
+              WHERE SA0113.USE_YN = 'Y'
+               AND SA0113.APPROVE_CD = 'C'
+               AND SA0116.CONTRACT_TP = #{sContractTp}
+               AND SA_0115.MODEL_CD = #{sModelCd}
+               AND #{sStartContractDt} BETWEEN SA0113.START_DT AND SA0113.END_DT    -- 계약일
+               AND SA0113.DLR_CD = #{sDlrCd}
+               AND SA0114.CUST_CD = #{sContractCustNo}
+               AND SA0113.PROMOTION_OWN_CD = #{sPromotionOwnCd}      -- 프로모션 주관 01:법인, 02:딜러
+    </select>
+
+</mapper>

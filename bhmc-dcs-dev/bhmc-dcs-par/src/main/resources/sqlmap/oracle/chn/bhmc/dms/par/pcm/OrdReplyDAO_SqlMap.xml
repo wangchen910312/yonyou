@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="chn.bhmc.dms.par.pcm.service.dao.OrdReplyDAO">
+    <insert id="insertOrdReply" parameterType="OrdReplyVO">
+    <selectKey keyProperty="replyId" order="AFTER" resultType="String">
+  		 SELECT ''||SEQ_PT_0426T.CURRVAL FROM DUAL  
+    </selectKey>
+    INSERT INTO PT_0426T
+    (   REPLY_ID
+        ,DLR_CD
+        ,QUESTION_NO                   
+        ,CONTENT         
+        ,REG_USR_ID               
+        ,REG_DT
+        ,OPT_TP     
+        ,EXPECT_ARRIVAL_DT
+        ,REPLY_LEVEL
+    )
+    VALUES
+    (
+        ''||SEQ_PT_0426T.nextVal
+        ,#{dlrCd}
+        ,#{questionNo}
+        ,#{content}
+        ,#{regUsrId}
+        ,sysdate+ 1/(24*60*60)  <!-- 防止自动回复时间和提交时间相同 -->
+        ,#{optTp}
+        ,#{expectArrivalDt}
+        ,#{replyLevel}
+    )
+    </insert>
+
+    <!-- 批量回复 -->
+	<insert id="insertOrdReplys" parameterType="OrdReplyVO">
+	     INSERT INTO PT_0426T
+		    (   REPLY_ID
+		        ,DLR_CD
+		        ,QUESTION_NO                   
+		        ,CONTENT         
+		        ,REG_USR_ID               
+		        ,REG_DT
+		        ,OPT_TP     
+		        ,EXPECT_ARRIVAL_DT
+		        ,REPLY_LEVEL
+		    )
+		SELECT 
+		     ''||SEQ_PT_0426T.NEXTVAL
+		      ,A.DLR_CD
+		      ,A.QUESTION_NO 
+		      ,#{content}
+		      ,#{regUsrId}
+		      ,sysdate 
+		      ,#{optTp}
+		      ,#{expectArrivalDt}
+		      ,#{replyLevel}
+		    FROM PT_0425T A 
+		WHERE  A.OPT_TYPE = '0' AND A.STATUS != '2' AND A.PART_NO  = #{partNo}
+	</insert> 
+     <!-- 查询存在采购科针对此配件的晚于今天的回复的最新记录 -->
+    <select id="selectAutoReply" parameterType="String" resultType="OrdReplyVO">
+	    SELECT C.*  
+	     FROM (
+			SELECT  ROW_NUMBER() OVER(PARTITION BY  A.PART_NO  ORDER BY B.REG_DT DESC ) AS RN   ---最新的回复
+			  ,B.* 
+			FROM PT_0425T  A  INNER JOIN PT_0426T B ON  A.QUESTION_NO = B.QUESTION_NO
+			 WHERE A.OPT_TYPE = '0'         ---投诉类型
+			    AND B.REPLY_LEVEL = '1'     ---采购科回复
+			    AND  A.PART_NO  = #{partNo}  
+	     ) C WHERE RN = 1 
+	          AND TO_CHAR(C.EXPECT_ARRIVAL_DT,'yyyyMMdd') >= TO_CHAR(SYSDATE,'yyyyMMdd')  -----晚于今天
+     </select>
+</mapper>

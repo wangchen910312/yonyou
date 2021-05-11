@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : SurveyAnswerDAO_SqlMap.xml
+    Description : 설문 보기
+    author Hyun Ho Kim
+    since 2016. 03. 04.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 03. 04.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.css.service.dao.SurveyAnswerDAO">
+    <!-- 설문 보기 검색조건 -->
+    <sql id="searchSurveyAnswer">
+        AND DLR_CD = #{sDlrCd}
+        AND SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+        AND SUBY_TMPL_QEST_SEQ = #{sSubyTmplQestSeq}
+    </sql>
+
+    <!-- 설문 보기 목록수를 조회한다. -->
+    <select id="selectSurveyAnswersByConditionCnt" parameterType="SurveyAnswerSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.css.service.dao.SurveyAnswerDAO.selectSurveySatisFactionsByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0904T --설문 보기
+        WHERE   1=1
+        <include refid="searchSurveyAnswer" />
+    </select>
+
+    <!-- 설문 보기 정보 목록을 조회한다. -->
+    <select id="selectSurveyAnswersByCondition" parameterType="SurveyAnswerSearchVO" resultType="SurveyAnswerVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SurveyAnswerDAO.selectSurveyAnswersByCondition] */
+        SELECT  DLR_CD              --딜러코드
+                ,SUBY_TMPL_SEQ      --설문템플릿일련번호
+                ,SUBY_TMPL_QEST_SEQ  --설문템플릿질문일련번호
+                ,ITEM_SEQ            --일련번호
+                ,ANSW_CONT           --문항내용
+                ,ANSW_SCORE_VAL      --문항점수값
+                ,SORT_ORDER          --정렬순서
+                ,REMARK              --비고
+                ,REG_USR_ID          --등록자ID
+                ,REG_DT              --등록일자
+                ,UPDT_USR_ID         --수정자ID
+                ,UPDT_DT             --수정일자
+        FROM    CR_0904T
+        WHERE   1=1
+        <include refid="searchSurveyAnswer" />
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "answCont"'>ANSW_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "answScoreVal"'>ANSW_SCORE_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "remark"'>REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "sortOrder"'>SORT_ORDER <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            SORT_ORDER ASC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                SORT_ORDER ASC
+            </otherwise>
+        </choose>
+    </select>
+
+    <insert id="insertSurveyAnswer" parameterType="SurveyAnswerVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SurveyAnswerDAO.insertSurveyAnswer] */
+        INSERT INTO CR_0904T    --만족도설문템플릿답변
+        (
+            DLR_CD                      --딜러코드
+            ,SUBY_TMPL_SEQ             --설문템플릿일련번호
+            ,SUBY_TMPL_QEST_SEQ        --설문템플릿질문일련번호
+            ,ITEM_SEQ                  --일련번호
+            ,ANSW_CONT                 --문항내용
+            ,ANSW_SCORE_VAL            --문항점수값
+            ,SORT_ORDER                --정렬순서
+            ,REMARK                    --비고
+            ,REG_USR_ID                --등록자ID
+            ,REG_DT                    --등록일자
+        )
+        VALUES
+        (
+            #{dlrCd}                    --딜러코드
+            ,#{subyTmplSeq}              --설문템플릿일련번호
+            ,#{subyTmplQestSeq}          --설문템플릿질문일련번호
+            ,(
+                SELECT  NVL(MAX(ITEM_SEQ),0)+1
+                FROM    CR_0904T
+                WHERE   DLR_CD = #{dlrCd}
+                AND     SUBY_TMPL_SEQ = #{subyTmplSeq}
+                AND     SUBY_TMPL_QEST_SEQ = #{subyTmplQestSeq}
+            )                              --답변 일련번호
+            ,#{answCont}                 --문항내용
+            ,#{answScoreVal}             --문항점수값
+            ,#{sortOrder}                --정렬순서
+            ,#{remark}                   --비고
+            ,#{regUsrId}                 --등록자ID
+            ,SYSDATE                    --등록일자
+        )
+    </insert>
+
+    <update id="updateSurveyAnswer" parameterType="SurveyAnswerVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SurveyAnswerDAO.updateSurveyAnswer] */
+        UPDATE  CR_0904T    --만족도설문템플릿답변
+        SET     ANSW_CONT = #{answCont}                 --문항내용
+                ,ANSW_SCORE_VAL = #{answScoreVal}             --문항점수값
+                ,SORT_ORDER = #{sortOrder}                --정렬순서
+                ,REMARK = #{remark}                   --비고
+                ,UPDT_USR_ID = #{updtUsrId}                --수정자ID
+                ,UPDT_DT = SYSDATE                     --수정일자
+        WHERE 1 = 1
+        AND SUBY_TMPL_SEQ = #{subyTmplSeq}              --설문템플릿 일련번호
+        AND SUBY_TMPL_QEST_SEQ = #{subyTmplQestSeq}          --설문템플릿 질문일련번호
+        AND ITEM_SEQ = #{itemSeq}                  --설문보기 일련번호
+        AND DLR_CD = #{dlrCd}                    --딜러코드
+    </update>
+
+    <delete id="deleteSurveyAnswer" parameterType="SurveyAnswerVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SurveyAnswerDAO.deleteSurveyAnswer] */
+        DELETE  CR_0904T    --설문보기
+        WHERE   SUBY_TMPL_SEQ      = #{subyTmplSeq}              --설문템플릿일련번호
+        AND     SUBY_TMPL_QEST_SEQ = #{subyTmplQestSeq}          --설문 질문 일련번호
+        AND     ITEM_SEQ = #{itemSeq}          --설문 보기 일련번호
+        AND     DLR_CD = #{dlrCd}                    --딜러코드
+    </delete>
+
+    <delete id="deleteSurveyQestAnswer" parameterType="SurveyAnswerVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SurveyAnswerDAO.deleteSurveyQestAnswer] */
+        DELETE  CR_0904T    --설문보기
+        WHERE   SUBY_TMPL_SEQ      = #{subyTmplSeq}              --설문템플릿일련번호
+        AND     SUBY_TMPL_QEST_SEQ = #{subyTmplQestSeq}          --설문 질문 일련번호
+        AND     DLR_CD = #{dlrCd}                    --딜러코드
+    </delete>
+
+
+    <delete id="deleteSurveyQestAnswerTotal" parameterType="SurveyAnswerVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SurveyAnswerDAO.deleteSurveyQestAnswerTotal] */
+        DELETE  CR_0904T    --설문보기
+        WHERE   SUBY_TMPL_SEQ      = #{subyTmplSeq}              --설문템플릿일련번호
+        AND     DLR_CD = #{dlrCd}                    --딜러코드
+    </delete>
+
+
+    <select id="selectSurveyAnswerViewByCondition" parameterType="SurveySatisFactionSearchVO" resultType="SurveySatisFactionVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SurveyAnswerDAO.selectSurveyAnswerViewByCondition] */
+        SELECT  A.DLR_CD
+                ,A.SUBY_TMPL_SEQ
+                ,B.SUBY_TMPL_QEST_SEQ
+                ,C.ITEM_SEQ
+                ,ROW_NUMBER()OVER (PARTITION BY B.SUBY_TMPL_QEST_SEQ ORDER BY B.SORT_ORDER, C.SORT_ORDER) AS QEST_NUM
+                ,C.ANSW_CONT
+                ,C.ANSW_SCORE_VAL
+        FROM    CR_0902T A LEFT OUTER JOIN CR_0903T B
+                ON A.SUBY_TMPL_SEQ = B.SUBY_TMPL_SEQ
+                AND A.DLR_CD = B.DLR_CD
+                LEFT OUTER JOIN CR_0904T C
+                ON B.SUBY_TMPL_SEQ = C.SUBY_TMPL_SEQ
+                AND B.SUBY_TMPL_QEST_SEQ = C.SUBY_TMPL_QEST_SEQ
+                AND B.DLR_CD = C.DLR_CD
+        WHERE   A.SUBY_TMPL_SEQ  = #{sSubyTmplSeq}
+        AND     A.DLR_CD = #{sDlrCd}                    --딜러코드
+    </select>
+
+</mapper>

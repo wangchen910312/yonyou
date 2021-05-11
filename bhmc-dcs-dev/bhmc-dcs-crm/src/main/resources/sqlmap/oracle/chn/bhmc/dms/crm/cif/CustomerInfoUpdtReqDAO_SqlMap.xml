@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CustomerInfoUpdtReqDAO_SqlMap.xml
+    Description : 고객유일정보 수정 요청.
+    author Kyo Jin Lee
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kyo Jin Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cif.service.dao.CustomerInfoUpdtReqDAO">
+    <!-- 검색조건 -->
+    <sql id="searchWhere">
+        <where>
+           <if test='sDlrCd != null and sDlrCd != ""'>
+                AND T1.DLR_CD = #{sDlrCd}
+           </if>
+           <if test='sCustNm != null and sCustNm != ""'>
+                AND T1.CUST_NM LIKE '%'||#{sCustNm}||'%'
+           </if>
+           <if test='sCustNo != null and sCustNo != ""'>
+                AND T1.CUST_NO = #{sCustNo}
+           </if>
+           <if test='sStatCd != null and sStatCd != ""'>
+                AND T1.STAT_CD = #{sStatCd}
+           </if>
+           <if test='sSeq != null and sSeq != ""'>
+                AND T1.SEQ = #{sSeq}
+           </if>
+           <if test='sReqDtFrom != null'>
+               <![CDATA[
+                   AND T1.REQ_DT >= #{sReqDtFrom}   -- 요청일
+               ]]>
+           </if>
+           <if test='sReqDtTo != null'>
+               <![CDATA[
+                   AND T1.REQ_DT < #{sReqDtTo}      -- 요청일
+               ]]>
+           </if>
+        </where>
+    </sql>
+
+    <!-- 고객정보 수정 요청 건수 -->
+    <select id="selectCustomerInfoReqByConditionCnt" parameterType="CustomerInfoUpdtReqSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerInfoUpdtReqDAO.selectCustomerInfoReqByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM CR_0118T T1
+          <include refid="searchWhere" />
+    </select>
+
+    <!-- 고객정보 수정 요청 목록 -->
+    <select id="selectCustomerInfoReqByCondition" parameterType="CustomerInfoUpdtReqSearchVO" resultType="CustomerInfoUpdtReqVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerInfoUpdtReqDAO.selectCustomerInfoReqByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                      T1.SEQ
+                     ,T1.DLR_CD
+                     ,T1.CUST_NO
+                     ,T1.CUST_NM
+                     ,T1.MATH_DOC_TP
+                     , ( SELECT Z1.CMM_CD_NM FROM (SELECT A.CMM_CD, NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM FROM CM_0303T A LEFT OUTER JOIN CM_0304T B ON A.CMM_GRP_CD = B.CMM_GRP_CD AND A.CMM_CD = B.CMM_CD
+                                                AND B.LANG_CD = #{sLangCd}
+                                                WHERE A.CMM_GRP_CD = 'CRM024'
+                                                AND A.USE_YN = 'Y') Z1
+                        WHERE T1.MATH_DOC_TP = Z1.CMM_CD
+                     ) AS MATH_DOC_TP_NM
+                     ,T1.SSN_CRN_NO
+                     ,T1.HP_NO
+                     ,T1.OFFICE_TEL_NO
+                     ,T1.DOC_ID
+                     ,T1.REQ_DT
+                     ,T1.REQ_USR_ID
+                     ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = T1.REQ_USR_ID) AS REQ_USR_NM
+                     ,T1.EVAL_DT
+                     ,T1.EVAL_USR_ID
+                     ,T1.EVAL_USR_NM
+                     ,T1.EVAL_CONT
+                     ,T1.BEF_MATH_DOC_TP
+                     , ( SELECT Z1.CMM_CD_NM FROM (SELECT A.CMM_CD, NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM FROM CM_0303T A LEFT OUTER JOIN CM_0304T B ON A.CMM_GRP_CD = B.CMM_GRP_CD AND A.CMM_CD = B.CMM_CD
+                                                AND B.LANG_CD = #{sLangCd}
+                                                WHERE A.CMM_GRP_CD = 'CRM024'
+                                                AND A.USE_YN = 'Y') Z1
+                        WHERE T1.BEF_MATH_DOC_TP = Z1.CMM_CD
+                     ) AS BEF_MATH_DOC_TP_NM
+                     ,T1.BEF_SSN_CRN_NO
+                     ,T1.STAT_CD
+                     , ( SELECT Z1.CMM_CD_NM FROM (SELECT A.CMM_CD, NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM FROM CM_0303T A LEFT OUTER JOIN CM_0304T B ON A.CMM_GRP_CD = B.CMM_GRP_CD AND A.CMM_CD = B.CMM_CD
+                                                AND B.LANG_CD = #{sLangCd}
+                                                WHERE A.CMM_GRP_CD = 'CRM409'
+                                                AND A.USE_YN = 'Y') Z1
+                        WHERE T1.STAT_CD = Z1.CMM_CD
+                     ) AS STAT_NM
+                     ,T1.REMARK
+                     ,T1.REG_USR_ID
+                     ,T1.REG_DT
+                FROM CR_0118T T1
+                <include refid="searchWhere" />
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "custNm"'> CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "custNo"'> CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ssnCrnNo"'> SSN_CRN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "befSsnCrnNo"'> BEF_SSN_CRN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "remark"'> REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "reqDtFormat"'> REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "evalUsrNm"'> EVAL_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "evalDtFormat"'> EVAL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlrCd"'> DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    T1.REG_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        T1.REG_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 고객정보 수정 요청  -->
+    <insert id="insertCustomerInfoReq" parameterType="CustomerInfoUpdtReqVO" >
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerInfoUpdtReqDAO.insertCustomerInfoReq] */
+
+        <selectKey resultType="int" keyProperty="seq" order="AFTER">
+            SELECT SEQ_CR_0102T.currval AS SEQ FROM DUAL
+        </selectKey>
+
+        INSERT INTO CR_0102T    --고객수정요청
+            (
+              SEQ                  --일련번호
+             ,DLR_CD               --딜러코드
+             ,CUST_NO              --고객번호
+             ,CUST_NM              --고객명
+             ,MATH_DOC_TP          --주요인증문서유형
+             ,SSN_CRN_NO           --주민사업자등록번호
+             ,HP_NO                --휴대폰번호
+             ,OFFICE_TEL_NO        --직장전화번호
+             ,DOC_ID               --문서ID
+             ,STAT_CD              --상태코드
+             ,REMARK               --비고
+             ,CUST_CD              --고객타입 (잠재/보유)
+             ,CUST_TP               -- 고객유형 (개인법인 CRM001)
+             ,REQ_USR_ID            -- 요청자
+             ,EVAL_USR_ID           -- 심사자
+             ,BEF_MATH_DOC_TP       -- (전)증거유형
+             ,BEF_SSN_CRN_NO        -- (전)증거번호
+             ,REQ_DT                -- 요청일시
+             ,EVAL_DT               -- 심사일시
+             ,EVAL_CONT             -- 심사내용
+             ,REG_USR_ID           --등록자ID
+             ,REG_DT               --등록일자
+             ,UPDT_USR_ID           -- 수정자
+             ,UPDT_DT               -- 수정일자
+            )
+            VALUES
+            (
+              SEQ_CR_0102T.NEXTVAL                 --일련번호
+             ,#{dlrCd}               --딜러코드
+             ,#{custNo}              --고객번호
+             ,#{custNm}              --고객명
+             ,#{mathDocTp}           --주요인증문서유형
+             ,#{ssnCrnNo}            --주민사업자등록번호
+             ,#{hpNo}                --휴대폰번호
+             ,#{officeTelNo}         --직장전화번호
+             ,#{docId}               --문서ID
+             ,#{statCd}                   --상태코드
+             ,#{cont}              --비고
+             ,#{custCd}              --고객타입 (잠재/보유)
+             ,#{custTp}               -- 고객유형 (개인법인 CRM001)
+             ,#{reqUsrId}            -- 요청자
+             ,#{evalUsrId}           -- 심사자
+             ,#{befMathDocTp}       -- (전)증거유형
+             ,#{befSsnCrnNo}        -- (전)증거번호
+             ,SYSDATE                -- 요청일시
+             ,#{evalDt}               -- 심사일시
+             ,#{evalCont}               -- 심사내용
+             ,#{regUsrId}            --등록자ID
+             ,SYSDATE               --등록일자
+             ,#{regUsrId}           -- 수정자
+             ,SYSDATE               -- 수정일자
+            )
+    </insert>
+
+    <insert id="insertCustomerInfoReqToDcs" parameterType="CustomerInfoUpdtReqVO" >
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerInfoUpdtReqDAO.insertCustomerInfoReqToDcs] */
+        INSERT INTO CR_0102IS
+        (
+            SEQ                  --일련번호
+            ,DLR_CD               --딜러코드
+            ,CUST_NO              --고객번호
+            ,CUST_NM              --고객명
+            ,MATH_DOC_TP          --주요인증문서유형
+            ,SSN_CRN_NO           --주민사업자등록번호
+            ,HP_NO                --휴대폰번호
+            ,OFFICE_TEL_NO        --직장전화번호
+            ,DOC_ID               --문서ID
+            ,STAT_CD              --상태코드
+            ,REMARK               --비고
+            ,CUST_CD              --고객타입 (잠재/보유)
+            ,CUST_TP               -- 고객유형 (개인법인 CRM001)
+            ,REQ_USR_ID            -- 요청자
+            ,BEF_MATH_DOC_TP       -- (전)증거유형
+            ,BEF_SSN_CRN_NO        -- (전)증거번호
+            ,REQ_DT                -- 요청일시
+            ,CREATEDATE
+            ,IFRESULT
+        )
+        SELECT
+            SEQ                  --일련번호
+            ,DLR_CD               --딜러코드
+            ,CUST_NO              --고객번호
+            ,CUST_NM              --고객명
+            ,MATH_DOC_TP          --주요인증문서유형
+            ,SSN_CRN_NO           --주민사업자등록번호
+            ,HP_NO                --휴대폰번호
+            ,OFFICE_TEL_NO        --직장전화번호
+            ,DOC_ID               --문서ID
+            ,STAT_CD              --상태코드
+            ,REMARK               --비고
+            ,CUST_CD              --고객타입 (잠재/보유)
+            ,CUST_TP               -- 고객유형 (개인법인 CRM001)
+            ,REQ_USR_ID            -- 요청자
+            ,BEF_MATH_DOC_TP       -- (전)증거유형
+            ,BEF_SSN_CRN_NO        -- (전)증거번호
+            ,REQ_DT                -- 요청일시
+            ,SYSDATE
+            ,'N'
+        FROM CR_0102T
+        WHERE SEQ = #{seq}
+    </insert>
+
+    <insert id="insertCustomerInfoReqToDms" parameterType="CustomerInfoUpdtReqVO" >
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerInfoUpdtReqDAO.insertCustomerInfoReqToDms] */
+        INSERT INTO CR_0102IS
+        (
+            SEQ                  --일련번호
+            ,DLR_CD               --딜러코드
+            ,CUST_NO              --고객번호
+            ,STAT_CD              --상태코드
+            ,EVAL_DT              --심사일자
+            ,EVAL_CONT            --심사내용
+            ,EVAL_USR_ID          --심사자ID
+            ,EVAL_USR_NM          --심사자명
+            ,CREATEDATE
+            ,IFRESULT
+        )
+        SELECT
+            SEQ                  --일련번호
+            ,DLR_CD               --딜러코드
+            ,CUST_NO              --고객번호
+            ,STAT_CD              --상태코드
+            ,EVAL_DT              --심사일자
+            ,EVAL_CONT            --심사내용
+            ,EVAL_USR_ID          --심사자ID
+            ,EVAL_USR_NM          --심사자명
+            ,SYSDATE
+            ,'N'
+        FROM CR_0118T
+        WHERE DLR_CD = #{dlrCd}
+          AND SEQ = #{seq}
+    </insert>
+
+    <update id="updateCustomerInfoReq" parameterType="CustomerInfoUpdtReqVO">
+    /* [chn.bhmc.dms.crm.cif.service.dao.CustomerInfoUpdtReqDAO.updateCustomerInfoReq] */
+    UPDATE CR_0118T
+        SET
+        UPDT_DT               = SYSDATE                 --수정일자
+        , UPDT_USR_ID          = #{updtUsrId}           --수정자ID
+        <if test='statCd != null '>
+        , STAT_CD    = #{statCd}
+            <if test='statCd != "01"'>
+            , EVAL_DT    = SYSDATE
+            </if>
+        </if>
+        <if test='evalUsrId != null '>
+        , EVAL_USR_ID    = #{evalUsrId}
+        </if>
+        <if test='evalUsrNm != null '>
+        , EVAL_USR_NM    = #{evalUsrNm}
+        </if>
+        <if test='evalCont != null '>
+        , EVAL_CONT    = #{evalCont}
+        </if>
+    WHERE   DLR_CD      = #{dlrCd}                      --딜러코드
+      AND   SEQ         = #{seq}                        --일련번호
+    </update>
+
+</mapper>

@@ -1,0 +1,706 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="mainDs" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sReqSeq"/>
+<O>
+<![CDATA[25]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sUsrId"/>
+<O>
+<![CDATA[admin2]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[/*집단판매업무 세부내용*/
+SELECT A.DLR_CD                  --딜러코드
+     , B.DLR_NM
+     , A.USR_ID                  --사용자ID
+     , A.REQ_SEQ                 --신청번호
+     , A.REQ_START_DT            -- 요청시작일
+     , A.REQ_END_DT              -- 요청종료일
+     , A.REQ_DT                  -- 요청일
+     , A.CUST_NM                 -- 고객명
+     , (
+     /*공통코드명칭 가져오기*/
+	SELECT Z1.CMM_CD_NM
+	  FROM (SELECT A.CMM_CD
+         		      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+	          FROM CM_0303T A
+               LEFT OUTER JOIN CM_0304T B
+     	    	       ON A.CMM_GRP_CD = B.CMM_GRP_CD
+		           AND A.CMM_CD = B.CMM_CD
+     	      	 AND B.LANG_CD = 'zh' --중국어로 고정
+	          WHERE A.CMM_GRP_CD = 'SAL151' --변수
+       		  AND A.USE_YN = 'Y'
+		    ) Z1
+	 WHERE CMM_CD =  A.ATC_DSTIN_CD --변수
+     ) AS ATC_DSTIN_CD            --항목
+     , A.ATC_INTRO_CONT          --항목소개
+     , A.FEE_POLICY_CONT         --수수료상관정책
+     , A.DMS_OPEN_YN             --DMS 공시여부
+     , A.POA_OFFER_YN            --위임장 제공여부
+     , A.APPROVE_CD              --상태
+     , A.DEL_YN                  --삭제여부
+     , A.APPLY_START_DT          --임명시작일자
+     , A.APPLY_END_DT            --임명종료일자
+     , A.REQ_SAL_NO
+  FROM SA_0411T A               /* 집단판매업무권한신청정보 */
+  LEFT OUTER JOIN CM_0101T B
+    ON A.DLR_CD = B.DLR_CD
+ WHERE A.DLR_CD = '${sDlrCd}'
+   AND A.USR_ID = '${sUsrId}'
+   AND A.REQ_SEQ = '${sReqSeq}']]></Query>
+</TableData>
+<TableData name="CarInfoDs" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sReqSeq"/>
+<O>
+<![CDATA[32]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sUsrId"/>
+<O>
+<![CDATA[admin2]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[/*집단판매업무 신청차량정보*/
+SELECT A.DLR_CD || A.USR_ID || A.REQ_SEQ || A.CARLINE_CD AS PK
+     , A.DLR_CD              --딜러코드
+     , A.USR_ID              --사용자ID
+     , A.REQ_SEQ             --요청번호
+     , A.CARLINE_CD          --차종코드
+     , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+     , A.MODEL_CD            --모델코드
+     , CASE WHEN LENGTH(A.MODEL_CD) = 5
+                    THEN FN_GET_FSC_NM(A.CARLINE_CD,A.MODEL_CD)
+                    ELSE FN_GET_MODEL_NM(A.MODEL_CD)
+                    END  AS MODEL_NM
+     , A.APP_QTY             --수량
+     , A.REQ_RC              --고객요구D/C
+     , A.REQ_QUAR            --스펙요구
+     , A.REG_USR_ID          --등록자ID
+     , A.REG_DT              --등록일자
+     , A.UPDT_USR_ID         --수정자ID
+     , A.UPDT_DT             --수정일자
+  FROM SA_0443T A    --집단판매업무권한신청-차량내역
+ WHERE A.DLR_CD       = '${sDlrCd}'   --딜러코드
+   AND A.USR_ID       = '${sUsrId}'   --사용자ID
+   AND A.REQ_SEQ      = '${sReqSeq}'  --요청번호]]></Query>
+</TableData>
+<TableData name="evalInfoDs" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sReqSeq"/>
+<O>
+<![CDATA[3]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sUsrId"/>
+<O>
+<![CDATA[D0030847]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[/*집단판매업무 심사정보*/
+SELECT A.DLR_CD              --딜러코드
+     , A.USR_ID              --사용자ID
+     , A.REQ_SEQ             --요청번호
+     , A.REQ_NO              --요청일련번호
+     /*심사자명 가져오기*/
+	,( SELECT B.USR_NM 
+	     FROM CM_0801T B
+	    WHERE --B.DLR_CD = '${sDlrCd}'
+	       B.USR_ID = A.PEVAL_ID) 
+       AS PEVAL_ID         --심사자ID
+     , A.EVAL_DT             --심사일자
+     , FN_CMM_CD_NM('SAL131',EVAL_RSLT_YN, 'zh','N') AS EVAL_RSLT_YN        --심사결과여부
+     , A.REMARK              --비고
+     , A.REG_USR_ID          --등록자ID
+     , A.REG_DT              --등록일자
+     , A.UPDT_USR_ID         --수정자ID
+     , A.UPDT_DT             --수정일자
+  FROM SA_0410T A    --집단판매업무권한심사
+ WHERE A.DLR_CD       = '${sDlrCd}'         --딜러코드
+   AND A.USR_ID       = '${sUsrId}'         --사용자ID
+   AND A.REQ_SEQ      = '${sReqSeq}'        --요청번호
+ ORDER BY REG_DT DESC]]></Query>
+</TableData>
+</TableDataMap>
+<ReportExportAttr>
+<ExcelExportAttr hideColumn="false" hideRow="false"/>
+<PDFExportAttr/>
+<HTMLExportAttr/>
+<WordExportAttr/>
+</ReportExportAttr>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[723900,723900,723900,723900,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,723900,723900,723900,647700,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[190500,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,720000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" cs="40" rs="4" s="0">
+<O>
+<![CDATA[集团销售业务项目申请]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="4" cs="8" s="1">
+<O>
+<![CDATA[申请日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="4" cs="12" s="2">
+<O t="DSColumn">
+<Attributes dsName="mainDs" columnName="REQ_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="4" cs="5" s="3">
+<O>
+<![CDATA[申请号码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="4" cs="15" s="4">
+<O t="DSColumn">
+<Attributes dsName="mainDs" columnName="REQ_SAL_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="5" cs="8" s="1">
+<O>
+<![CDATA[经销商代码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="5" cs="12" s="2">
+<O t="DSColumn">
+<Attributes dsName="mainDs" columnName="DLR_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="5" cs="5" s="3">
+<O>
+<![CDATA[经销商名称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="5" cs="15" s="2">
+<O t="DSColumn">
+<Attributes dsName="mainDs" columnName="DLR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="6" cs="8" s="1">
+<O>
+<![CDATA[客户名]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="6" cs="12" s="2">
+<O t="DSColumn">
+<Attributes dsName="mainDs" columnName="CUST_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="6" cs="5" s="3">
+<O>
+<![CDATA[项目类型]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="6" cs="15" s="2">
+<O t="DSColumn">
+<Attributes dsName="mainDs" columnName="ATC_DSTIN_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="7" cs="8" s="1">
+<O>
+<![CDATA[项目介绍]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="7" cs="32" s="5">
+<O t="DSColumn">
+<Attributes dsName="mainDs" columnName="ATC_INTRO_CONT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="8" cs="8" s="1">
+<O>
+<![CDATA[其他竞争车款及相关政策]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="8" cs="32" s="2">
+<O t="DSColumn">
+<Attributes dsName="mainDs" columnName="FEE_POLICY_CONT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="9" cs="8" s="1">
+<O>
+<![CDATA[是否需要厂家提供授权函]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="9" cs="12" s="2">
+<O t="DSColumn">
+<Attributes dsName="mainDs" columnName="POA_OFFER_YN"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="9" cs="5" s="3">
+<O>
+<![CDATA[授权期限]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="9" cs="6" s="6">
+<O t="DSColumn">
+<Attributes dsName="mainDs" columnName="APPLY_START_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="9" s="7">
+<O>
+<![CDATA[~]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="33" r="9" cs="8" s="8">
+<O t="DSColumn">
+<Attributes dsName="mainDs" columnName="APPLY_END_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="10" cs="40" s="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="11" cs="8" s="10">
+<O>
+<![CDATA[车种]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="11" cs="12" s="11">
+<O>
+<![CDATA[车款]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="11" cs="5" s="11">
+<O>
+<![CDATA[数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="11" cs="7" s="11">
+<O>
+<![CDATA[客户要求折扣]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="33" r="11" cs="8" s="12">
+<O>
+<![CDATA[配置要求]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="12" cs="8" s="5">
+<O t="DSColumn">
+<Attributes dsName="CarInfoDs" columnName="CARLINE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="12" cs="12" s="2">
+<O t="DSColumn">
+<Attributes dsName="CarInfoDs" columnName="MODEL_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="21" r="12" cs="5" s="11">
+<O t="DSColumn">
+<Attributes dsName="CarInfoDs" columnName="APP_QTY"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="26" r="12" cs="7" s="2">
+<O t="DSColumn">
+<Attributes dsName="CarInfoDs" columnName="REQ_RC"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="33" r="12" cs="8" s="13">
+<O t="DSColumn">
+<Attributes dsName="CarInfoDs" columnName="REQ_QUAR"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="13" cs="40" s="14">
+<O>
+<![CDATA[审批记录]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="44" r="13">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="14" cs="7" s="10">
+<O>
+<![CDATA[审批人]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="14" cs="7" s="11">
+<O>
+<![CDATA[审核日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="14" cs="7" s="11">
+<O>
+<![CDATA[审核结果]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="14" cs="19" s="11">
+<O>
+<![CDATA[审批备注]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="15" cs="7" s="10">
+<O t="DSColumn">
+<Attributes dsName="evalInfoDs" columnName="PEVAL_ID"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="15" cs="7" s="11">
+<O t="DSColumn">
+<Attributes dsName="evalInfoDs" columnName="EVAL_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="15" r="15" cs="7" s="11">
+<O t="DSColumn">
+<Attributes dsName="evalInfoDs" columnName="EVAL_RSLT_YN"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="22" r="15" cs="19" s="4">
+<O t="DSColumn">
+<Attributes dsName="evalInfoDs" columnName="REMARK"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting>
+<PaperSize width="36000000" height="42768000"/>
+<Margin top="986400" left="2743200" bottom="986400" right="2743200"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[参数]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Times New Roman" style="1" size="128"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="5" paddingRight="5">
+<FRFont name="Times New Roman" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1" paddingLeft="5" paddingRight="5">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="5" paddingRight="5">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="5" paddingRight="5">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="5" paddingRight="5">
+<FRFont name="Times New Roman" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="5" paddingRight="5">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="5" paddingRight="5">
+<FRFont name="Times New Roman" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top color="-1"/>
+<Bottom color="-1"/>
+<Left color="-1"/>
+<Right color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="5" paddingRight="5">
+<FRFont name="Times New Roman" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="5" paddingRight="5">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1" paddingLeft="5" paddingRight="5">
+<FRFont name="Times New Roman" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top color="-1"/>
+<Bottom color="-1"/>
+<Left style="1" color="-1"/>
+<Right color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID/>
+</WorkBook>

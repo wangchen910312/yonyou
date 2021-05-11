@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CarLineInfoDAO_SqlMap.xml
+    Description : 관심차종 관한 데이터처리
+    author Kyo Jin Lee
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kyo Jin Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cmm.service.dao.CarLineInfoDAO">
+
+    <!-- 검색조건 -->
+    <sql id="searchCarLineInfoWhere">
+        <where>
+                <if test='sRefTableNm != null and sRefTableNm != "" '>
+                    AND REF_TABLE_NM = #{sRefTableNm}
+                </if>
+                <if test='sRefKeyNm != null '>
+                    AND REF_KEY_NM = #{sRefKeyNm}
+                </if>
+        </where>
+    </sql>
+
+    <!-- 관심차종 수를 조회한다. -->
+    <select id="selectCarLineInfoByConditionCnt" parameterType="CarLineInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CarLineInfoDAO.selectCarLineInfoByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM CR_0203T T1
+          <include refid="searchCarLineInfoWhere" />
+    </select>
+
+    <!-- 관심차종를 조회한다. -->
+    <select id="selectCarLineInfoByCondition" parameterType="CarLineInfoSearchVO" resultType="CarLineInfoVO">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CarLineInfoDAO.selectCarLineInfoByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT T1.*
+                    , FN_GET_MODEL_NM(T1.MODEL_CD) AS MODEL_NM
+                    , FN_GET_EXT_COLOR_NM(T1.EXT_COLOR_CD) AS EXT_COLOR_NM
+                    , FN_GET_INT_COLOR_NM(T1.INT_COLOR_CD) AS INT_COLOR_NM
+                FROM CR_0203T T1
+                <include refid="searchCarLineInfoWhere" />
+                ORDER BY T1.FLAG_YN DESC
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 관심차종번호 채번한다. -->
+    <select id="selectNextCarLine" resultType="string">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CarLineInfoDAO.selectNextCarLine] */
+        SELECT FU_GET_CARLINE_NO() AS SEQ
+        FROM   DUAL
+    </select>
+
+    <!-- 관심차종정보를 업데이트 한다. -->
+    <update id="updateCarLine" parameterType="CarLineInfoVO">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CarLineInfoDAO.updateCarLine] */
+        UPDATE CR_0203T    --관심차종
+          SET
+               SEQ          = #{seq}                --SEQ
+              ,CARLINE_CD   = #{carlineCd}          --관심차종코드
+              ,MODEL_CD     = #{modelCd}            --관심모델코드
+              ,EXT_COLOR_CD = #{extColorCd}         --외장색코드
+              ,INT_COLOR_CD = #{intColorCd}         --내장색코드
+              ,FLAG_YN      = #{flagYn}             --관심플래그여부
+              ,UPDT_USR_ID  = #{updtUsrId}          --수정자ID
+              ,UPDT_DT      = SYSDATE               --수정일자
+         WHERE 1 = 1
+           AND SEQ          = #{seq}                --SEQ
+           AND DLR_CD       = #{dlrCd}              --딜러코드
+    </update>
+
+    <!-- 관심차종정보를 업데이트 한다. -->
+    <update id="deleteCarLine" parameterType="CarLineInfoVO">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CarLineInfoDAO.deleteCarLine] */
+        DELETE FROM CR_0203T    --관심차종
+         WHERE 1 = 1
+           AND SEQ          = #{seq}                --SEQ
+           AND DLR_CD       = #{dlrCd}              --딜러코드
+    </update>
+
+    <!--  관심차종정보를 등록한다. -->
+    <insert id="insertCarLine" parameterType="CarLineInfoVO" >
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CarLineInfoDAO.insertCarLine] */
+        INSERT INTO CR_0203T    --관심차종
+        (
+          SEQ                 --SEQ
+         ,DLR_CD              --딜러코드
+         ,REF_TABLE_NM        --참조테이블명
+         ,REF_KEY_NM          --참조키명
+         ,CARLINE_CD          --관심차종코드
+         ,MODEL_CD            --관심모델코드
+         ,EXT_COLOR_CD        --외장색코드
+         ,INT_COLOR_CD        --내장색코드
+         ,FLAG_YN             --관심플래그여부
+         ,REG_USR_ID          --등록자ID
+         ,REG_DT              --등록일자
+        )
+        VALUES
+        (
+          #{seq}                --SEQ
+         ,#{dlrCd}              --딜러코드
+         ,#{refTableNm}         --참조테이블명
+         ,#{refKeyNm}           --참조키명
+         ,#{carlineCd}          --관심차종코드
+         ,#{modelCd}            --관심모델코드
+         ,#{extColorCd}            --외장색코드
+         ,#{intColorCd}            --내장색코드
+         ,#{flagYn}             --관심플래그여부
+         ,#{regUsrId}           --등록자ID
+         ,SYSDATE              --등록일자
+        )
+    </insert>
+
+    <!-- 대표관심차종 1종이 있는지 확인한다. -->
+    <select id="carLineFlagYnChk" parameterType="HMap" resultType="int">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CarLineInfoDAO.carLineFlagYnChk] */
+        SELECT COUNT(*) VALUE
+        FROM CR_0203T
+        WHERE FLAG_YN = 'Y'
+        AND DLR_CD = #{dlrCd}
+        AND REF_TABLE_NM = #{refTableNm}
+        AND REF_KEY_NM = #{refKeyNm}
+    </select>
+
+</mapper>

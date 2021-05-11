@@ -1,0 +1,1064 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : SatisFactionMobileDAO_SqlMap.xml
+    Description : 만족도 조사 모바일설문
+    author Hyun Ho Kim
+    since 2016. 03. 15.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 03. 15.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO">
+
+    <sql id="satisFactionMobileResultSearch">
+        <where>
+            AND A.DLR_CD = #{sDlrCd}
+            AND B.DEL_YN = 'N'
+
+            <if test='sSatisFactionPresentResult == "Y" '>
+                AND B.STSF_IVST_DT IS NOT NULL
+            </if>
+
+            <if test='sVocYn != null and sVocYn != ""'>
+                AND B.VOC_YN = #{sVocYn}
+            </if>
+            <if test='sStsfIvstSeq != null and sStsfIvstSeq != ""'>
+                AND A.STSF_IVST_SEQ = #{sStsfIvstSeq}
+            </if>
+            <if test='sSeq != null and sSeq != ""'>
+                AND A.SEQ = #{sSeq}
+            </if>
+            <if test='sSubyTmplSeq != null and sSubyTmplSeq != ""'>
+                AND A.SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+            </if>
+            <if test='sStsfIvstExpdCd != null and sStsfIvstExpdCd != ""'>
+                AND A.STSF_IVST_EXPD_CD = #{sStsfIvstExpdCd}
+            </if>
+            <if test='sStsfIvstMthCd != null and sStsfIvstMthCd != ""'>
+                AND A.STSF_IVST_MTH_CD = #{sStsfIvstMthCd}
+            </if>
+            <if test='sStsfIvstTpCd != null and sStsfIvstTpCd != ""'>
+                AND A.STSF_IVST_TP_CD = #{sStsfIvstTpCd}
+            </if>
+            <if test='sStsfIvstScoreVal != null and sStsfIvstScoreVal != ""'>
+                AND B.STSF_IVST_SCORE_VAL <![CDATA[<=]]> #{sStsfIvstScoreVal}
+            </if>
+            <if test='sStsfIvstNm != null and sStsfIvstNm != ""'>
+                AND A.STSF_IVST_NM LIKE '%'||#{sStsfIvstNm}||'%'
+                <!-- <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sStsfIvstNm,"*")'>
+                        <bind name='sStsfIvstNm' value='@org.apache.commons.lang3.StringUtils@replace(sStsfIvstNm, "*", "%")' />
+                        AND A.STSF_IVST_NM LIKE #{sStsfIvstNm}
+                    </when>
+                    <otherwise>
+                        AND A.STSF_IVST_NM = #{sStsfIvstNm}
+                    </otherwise>
+                </choose> -->
+            </if>
+            <if test='sCustNm != null and sCustNm != ""'>
+                AND ( C.CUST_NM LIKE '%'||#{sCustNm}||'%'
+                    OR B.HP_NO LIKE '%'||#{sCustNm}||'%'
+                    )
+            </if>
+
+            <if test='sStsfIvstYn != null and sStsfIvstYn != ""'>
+                AND B.STSF_IVST_YN = #{sStsfIvstYn}
+            </if>
+
+            <choose>
+                <when test='(sStartDt != null and sEndDt == null)'>
+                    AND     B.STSF_IVST_DT <![CDATA[>=]]> #{sStartDt}
+                </when>
+                <when test='(sStartDt == null and sEndDt != null)'>
+                    <!-- AND     TO_CHAR(REG_DT,'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(#{sEndDt},'YYYYMMDD') -->
+                    AND     B.STSF_IVST_DT <![CDATA[<=]]> #{sEndDt}+1
+                </when>
+                <otherwise>
+                    <if test='(sStartDt != null) and (sEndDt != null)'>
+                        AND     (B.STSF_IVST_DT <![CDATA[>=]]> #{sStartDt} AND B.STSF_IVST_DT <![CDATA[<=]]> #{sEndDt}+1)
+                    </if>
+                </otherwise>
+            </choose>
+            <choose>
+                <when test='(sStartVocRegDt != null and sEndVocRegDt == null)'>
+                    AND     B.VOC_REG_DT <![CDATA[>=]]> #{sStartVocRegDt}
+                </when>
+                <when test='(sStartVocRegDt == null and sEndVocRegDt != null)'>
+                    AND     B.VOC_REG_DT <![CDATA[<=]]> #{sEndVocRegDt}+1
+                </when>
+                <otherwise>
+                    <if test='(sStartVocRegDt != null) and (sEndVocRegDt != null)'>
+                        AND     (B.VOC_REG_DT <![CDATA[>=]]> #{sStartVocRegDt} AND B.VOC_REG_DT <![CDATA[<=]]> #{sEndVocRegDt}+1)
+                    </if>
+                </otherwise>
+            </choose>
+
+            <if test='sMngUsrNm != null and sMngUsrNm != ""'>
+                AND ( B.MNG_USR_NM LIKE '%'||#{sMngUsrNm}||'%'
+                    OR B.PURC_MNG_NM LIKE '%'||#{sMngUsrNm}||'%'
+                    )
+            </if>
+
+        </where>
+    </sql>
+
+    <insert id="insertSurveyResult" parameterType="SatisFactionMobileResultVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.insertSurveyResult] */
+        INSERT INTO CR_0905T    --만족도설문결과
+        (
+            DLR_CD                     --딜러코드
+            ,STSF_IVST_RSLT_SEQ         --만족도조사결과일련번호
+            ,STSF_IVST_SEQ              --만족도조사일련번호
+            ,SUBY_TMPL_SEQ              --설문템플릿일련번호
+            ,CUST_NO                    --고객번호
+            ,CUST_NM                    --고객명
+            ,HP_NO                      --이동전화
+            ,STSF_IVST_SCORE_VAL        --만족도조사점수값
+            ,STSF_IVST_DT               --만족도조사일자
+            ,STSF_IVST_EMP_ID           --만족도조사사원ID
+            ,DEL_YN                     --삭제여부
+            ,EMP_ID                     --사원설문ID
+            ,STSF_IVST_YN               --만족여부
+            ,CMPL_REASON_CONT           --총결
+            ,REG_USR_ID                 --등록자ID
+            ,REG_DT                     --등록일자
+            ,CUST_EXTR_TERM_NO          --고객추출조건번호
+        )
+        VALUES
+        (
+            #{dlrCd}                      --딜러코드
+            ,#{stsfIvstRsltSeq}           --만족도조사결과일련번호
+            ,#{stsfIvstSeq}               --만족도조사일련번호
+            ,#{subyTmplSeq}               --설문템플릿일련번호
+            ,#{custNo}                    --고객번호
+            ,#{custNm}                    --고객명
+            ,#{hpNo}                    --이동전화
+            ,#{stsfIvstScoreVal}          --만족도조사점수값
+            ,SYSDATE                      --만족도조사일자
+            ,#{stsfIvstEmpId}             --만족도조사사원ID
+            ,'N'                          --삭제여부
+            ,#{empId}                     --사원설문ID
+            ,#{stsfIvstYn}                --만족여부
+            ,#{cmplReasonCont}            --총결
+            ,#{regUsrId}                  --등록자ID
+            ,SYSDATE                      --등록일자
+            ,#{custExtrTermNo}            --고객추출조건번호
+        )
+    </insert>
+
+    <select id="selectStsfIvstRsltSeq" parameterType="SatisFactionMobileResultVO" resultType="int">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectStsfIvstRsltSeq] */
+        SELECT  SEQ_CR_0905T.NEXTVAL  FROM DUAL
+    </select>
+
+    <select id="selectUseSurvey"  parameterType="SatisFactionMobileResultVO" resultType="int">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectUseSurvey] */
+        SELECT  COUNT(*)
+        FROM    CR_0905T
+        WHERE   DLR_CD = #{sDlrCd}
+        AND     SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+    </select>
+
+    <select id="selectUseSurveyDetail"  parameterType="SatisFactionMobileResultVO" resultType="int">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectUseSurveyDetail] */
+        SELECT  COUNT(*)
+        FROM    CR_0905T A INNER JOIN CR_0906T B
+                ON A.DLR_CD = B.DLR_CD
+                AND A.STSF_IVST_RSLT_SEQ = B.STSF_IVST_RSLT_SEQ
+                AND A.STSF_IVST_SEQ = B.STSF_IVST_SEQ
+                AND A.SUBY_TMPL_SEQ = B.SUBY_TMPL_SEQ
+        WHERE   A.DLR_CD = #{sDlrCd}
+        AND     A.STSF_IVST_RSLT_SEQ = #{sStsfIvstRsltSeq}
+        AND     A.STSF_IVST_SEQ = #{sStsfIvstSeq}
+        AND     A.SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+        AND     A.CUST_NO = #{sCustNo}
+        AND     A.DEL_YN = 'N'
+    </select>
+
+    <!-- 만족도 조사결과 현황 목록수를 조회한다. -->
+    <select id="selectSatisFactionPresentsByConditionCnt" parameterType="SatisFactionMobileResultSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectSatisFactionPresentsByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0901T A INNER JOIN CR_0905T B
+                ON A.DLR_CD = B.DLR_CD
+                AND A.SEQ = B.STSF_IVST_SEQ
+                AND A.SUBY_TMPL_SEQ = B.SUBY_TMPL_SEQ
+                LEFT OUTER JOIN CR_0101T C
+                ON B.DLR_CD = C.DLR_CD
+                AND B.CUST_NO = C.CUST_NO
+        <include refid="satisFactionMobileResultSearch"/>
+    </select>
+
+    <!-- 만족도 조사결과 현황 목록을 조회한다. -->
+    <select id="selectSatisFactionPresentsByCondition" parameterType="SatisFactionMobileResultSearchVO" resultType="SatisFactionMobileResultVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectSatisFactionPresentsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT  A.DLR_CD
+                            ,A.SEQ
+                            ,A.STSF_IVST_NM
+                            ,A.STSF_IVST_MTH_CD
+                            ,STSF_IVST_MTH_CD_NM.CMM_CD_TXT AS STSF_IVST_MTH_CD_NM
+                            ,A.STSF_IVST_EXPD_CD
+                            ,STSF_IVST_EXPD_CD_NM.CMM_CD_TXT AS STSF_IVST_EXPD_CD_NM
+                            ,A.SUBY_TMPL_SEQ
+                            ,A.RCPE_EXTR_SEQ
+                            ,A.START_DT
+                            ,A.END_DT
+                            ,A.USE_YN
+                            ,A.CUST_TARG_YN
+                            ,A.STSF_IVST_TP_CD
+                            ,STSF_IVST_TP_CD_NM.CMM_CD_TXT AS STSF_IVST_TP_CD_NM
+                            ,B.STSF_IVST_RSLT_SEQ
+                            ,B.STSF_IVST_SEQ
+                            ,B.CUST_NO
+                            ,B.STSF_IVST_SCORE_VAL
+                            ,B.STSF_IVST_DT
+                            ,B.STSF_IVST_EMP_ID
+                            ,B.VOC_YN
+                            ,B.VOC_REG_DT
+                            ,B.DEL_YN
+                            ,B.EMP_ID
+                            ,B.CMPL_REASON_CONT
+                            ,B.CUST_EXTR_TERM_NO
+                            ,B.TEL_NO
+                            ,B.HP_NO
+                            ,B.WECHAT_ID
+                            ,B.EMAIL_NM
+                            ,B.SUNG_NM
+                            ,B.CITY_NM
+                            ,B.DIST_NM
+                            ,B.ZIP_CD
+                            ,B.EXT_ZIP_CD
+                            ,B.ADDR_NM
+                            ,B.ADDR_DETL_CONT
+                            ,B.CALL_CEN_SEND_DT
+                            ,FN_CMM_CD_NM('CRM608', B.CALL_RSLT_CD, #{sLangCd}, 'N') AS CALL_RSLT_CD_NM   --콜결과
+                            ,B.CALL_CEN_RSLT_DT
+                            ,B.VOC_PROC_ID
+                            ,B.VOC_PROC_DT
+                            ,B.VOC_PROC_CONT
+                            ,B.STSF_IVST_YN
+                            ,STSF_IVST_YN_NM.CMM_CD_TXT AS STSF_IVST_YN_NM
+                            ,B.CUST_NM
+                            ,FN_GET_USER_NM(B.STSF_IVST_EMP_ID) AS USR_NM
+                            ,FN_GET_USER_NM(B.VOC_PROC_ID) AS VOC_PROC_NM
+                            ,B.MNG_USR_NM     --고객 담당자명
+                            ,B.PURC_MNG_NM    --구매담당자명
+                            ,B.USE_HP_NO      --사용처 연계 핸드폰 번호
+                            ,B.USE_CUST_NM    --사용처 연계 고객명
+                    FROM    CR_0901T A INNER JOIN CR_0905T B
+                            ON A.DLR_CD = B.DLR_CD
+                            AND A.SEQ = B.STSF_IVST_SEQ
+                            AND A.SUBY_TMPL_SEQ = B.SUBY_TMPL_SEQ
+                            LEFT OUTER JOIN CR_0101T C
+                            ON B.DLR_CD = C.DLR_CD
+                            AND B.CUST_NO = C.CUST_NO
+                            LEFT OUTER JOIN CM_0304T STSF_IVST_MTH_CD_NM ON STSF_IVST_MTH_CD_NM.CMM_GRP_CD = 'CRM091' AND STSF_IVST_MTH_CD_NM.LANG_CD = #{sLangCd} AND STSF_IVST_MTH_CD_NM.CMM_CD = A.STSF_IVST_MTH_CD
+                            LEFT OUTER JOIN CM_0304T STSF_IVST_EXPD_CD_NM ON STSF_IVST_EXPD_CD_NM.CMM_GRP_CD = 'CRM092' AND STSF_IVST_EXPD_CD_NM.LANG_CD = #{sLangCd} AND STSF_IVST_EXPD_CD_NM.CMM_CD = A.STSF_IVST_EXPD_CD
+                            LEFT OUTER JOIN CM_0304T STSF_IVST_TP_CD_NM ON STSF_IVST_TP_CD_NM.CMM_GRP_CD = 'CRM094' AND STSF_IVST_TP_CD_NM.LANG_CD = #{sLangCd} AND STSF_IVST_TP_CD_NM.CMM_CD = A.STSF_IVST_TP_CD
+                            LEFT OUTER JOIN CM_0304T STSF_IVST_YN_NM ON STSF_IVST_YN_NM.CMM_GRP_CD = 'CRM096' AND STSF_IVST_YN_NM.LANG_CD = #{sLangCd} AND STSF_IVST_YN_NM.CMM_CD = B.STSF_IVST_YN
+                    <include refid="satisFactionMobileResultSearch"/>
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <!-- 만족도 조사결과 현황 / 만족도 조사 낮은점수 처리관리  -->
+                                    <when test='item.field == "stsfIvstNm"'>A.STSF_IVST_NM     <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "custNm"'>C.CUST_NM     <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "hpNo"'> B.HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                    <when test='item.field == "vocProcDtFormat"'> VOC_PROC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                    <when test='item.field == "vocRegDtFormat"'> VOC_REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                    <when test='item.field == "stsfIvstDtFormat"'> B.STSF_IVST_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                    <when test='item.field == "usrNm"'>USR_NM        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "stsfIvstYnNm"'> B.STSF_IVST_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cmplReasonCont"'> B.CMPL_REASON_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "callCenRsltDtFormat"'>B.CALL_CEN_RSLT_DT        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+
+                                    <when test='item.field == "stsfIvstExpdCd"'>A.STSF_IVST_EXPD_CD    <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "stsfIvstMthCd"'>A.STSF_IVST_MTH_CD        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "subyTmplSeq"'>A.SUBY_TMPL_SEQ        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "rcpeExtrSeq"'>A.RCPE_EXTR_SEQ        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "startDt"'>A.START_DT        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "endDt"'>A.END_DT        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "useYn"'>A.USE_YN        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "custTargYn"'>A.CUST_TARG_YN        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "stsfIvstTpCd"'>A.STSF_IVST_TP_CD        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "stsfIvstRsltSeq"'>B.STSF_IVST_RSLT_SEQ        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "callCenSendDt"'> B.CALL_CEN_SEND_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                    <when test='item.field == "stsfIvstScoreVal"'>B.STSF_IVST_SCORE_VAL        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "stsfIvstMthCdNm"'> STSF_IVST_MTH_CD_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                    <when test='item.field == "stsfIvstExpdCdNm"'> STSF_IVST_EXPD_CD_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                    <when test='item.field == "stsfIvstTpCdNm"'> STSF_IVST_TP_CD_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                    <when test='item.field == "stsfIvstYn"'> B.STSF_IVST_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+
+                                    <when test='item.field == "mngUsrNm"'> B.MNG_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                    <when test='item.field == "purcMngNm"'> B.PURC_MNG_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                    <when test='item.field == "useCustNm"'> B.USE_CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                    <when test='item.field == "useHpNo"'> B.USE_HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+
+                                    <otherwise>
+                                        B.STSF_IVST_DT DESC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            B.STSF_IVST_DT DESC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+    <sql id="selectSurveyResultsSearch">
+        INNER JOIN CR_0906T B ON A.DLR_CD = B.DLR_CD AND A.STSF_IVST_RSLT_SEQ = B.STSF_IVST_RSLT_SEQ
+        LEFT OUTER JOIN CR_0902T C ON B.DLR_CD = C.DLR_CD AND B.SUBY_TMPL_SEQ = C.SUBY_TMPL_SEQ
+        LEFT OUTER JOIN CR_0903T D ON C.DLR_CD = D.DLR_CD AND C.SUBY_TMPL_SEQ = D.SUBY_TMPL_SEQ AND B.QEST_SEQ = D.SUBY_TMPL_QEST_SEQ
+        LEFT OUTER JOIN CR_0904T E ON D.DLR_CD = E.DLR_CD AND D.SUBY_TMPL_SEQ = E.SUBY_TMPL_SEQ AND D.SUBY_TMPL_QEST_SEQ = E.SUBY_TMPL_QEST_SEQ AND B.QEST_SEQ = E.SUBY_TMPL_QEST_SEQ AND B.ANSW_SEQ = E.ITEM_SEQ
+        <where>
+            A.DLR_CD = #{sDlrCd}
+            <if test='sStsfIvstRsltSeq != null and sStsfIvstRsltSeq != ""' >
+                AND A.STSF_IVST_RSLT_SEQ = #{sStsfIvstRsltSeq}
+            </if>
+            <if test='sStsfIvstSeq != null and sStsfIvstSeq != ""' >
+                AND A.STSF_IVST_SEQ = #{sStsfIvstSeq}
+            </if>
+            <choose>
+                <when test='sQestTp == "C"'>
+                    AND D.QEST_TP_CD  = '03'
+                </when>
+                <when test='sQestTp == "M"'>
+                    AND D.QEST_TP_CD  != '03'
+                </when>
+            </choose>
+        </where>
+
+    </sql>
+
+    <!-- 만족도 조사결과 설문항목 상세 목록을 조회한다. -->
+    <select id="selectSurveyResultsByCondition" parameterType="SatisFactionMobileResultSearchVO" resultType="SatisFactionMobileResultVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectSurveyResultsByCondition] */
+        SELECT ROWNUM AS RNUM, T2.* FROM (
+            SELECT
+                 C.DLR_CD
+                ,C.SUBY_TMPL_SEQ
+                ,C.SUBY_TMPL_NM
+                ,D.SUBY_TMPL_QEST_SEQ   -- 질문시퀀스
+                ,T1.SEQ
+                ,D.QEST_CONT            --질문내용
+                ,D.QEST_WGT_VAL         --가중치
+                ,D.QEST_TP_CD           --질문타입
+                ,FN_CMM_CD_NM('CRM093', D.QEST_TP_CD, #{sLangCd}, 'N') AS QEST_TP_CD_NM   --질문 타입
+                ,T1.ANSW_CONT           --객관식 답변내용
+                ,T1.SBJV_ANSW_CONT      --주관식 답변내용
+                ,T1.ANSW_SCORE_VAL      --문항점수
+                ,D.SORT_ORDER           --정렬
+            FROM CR_0902T C             -- 만족도 설문 템플릿
+            INNER JOIN CR_0903T D       -- 만족도 설문 템플릿 - 질문
+                 ON C.DLR_CD = D.DLR_CD
+                AND C.SUBY_TMPL_SEQ = D.SUBY_TMPL_SEQ
+            LEFT OUTER JOIN (
+                SELECT
+                       A.DLR_CD
+                      ,A.STSF_IVST_RSLT_SEQ
+                      ,A.STSF_IVST_SEQ
+                      ,A.SUBY_TMPL_SEQ
+                      ,B.SEQ
+                      ,B.QEST_SEQ
+                      ,B.ANSW_SEQ
+                      ,E.ITEM_SEQ
+                      ,E.SUBY_TMPL_QEST_SEQ
+                      ,E.ANSW_CONT
+                      ,B.SBJV_ANSW_CONT
+                      ,B.ANSW_SCORE_VAL
+                      ,A.STSF_IVST_YN
+                      ,A.STSF_IVST_DT
+                      ,A.CMPL_REASON_CONT
+                FROM CR_0905T A
+                left outer JOIN CR_0906T B
+                     ON A.DLR_CD = B.DLR_CD
+                    AND A.STSF_IVST_RSLT_SEQ = B.STSF_IVST_RSLT_SEQ
+                    AND A.STSF_IVST_SEQ = B.STSF_IVST_SEQ
+                    AND A.SUBY_TMPL_SEQ = B.SUBY_TMPL_SEQ
+                LEFT OUTER JOIN CR_0904T E
+                     ON B.DLR_CD = E.DLR_CD
+                    AND B.SUBY_TMPL_SEQ = E.SUBY_TMPL_SEQ
+                    AND B.QEST_SEQ = E.SUBY_TMPL_QEST_SEQ
+                    AND B.ANSW_SEQ = E.ITEM_SEQ
+                WHERE A.DLR_CD = #{sDlrCd}
+                AND A.STSF_IVST_SEQ = #{sStsfIvstSeq}
+                AND A.STSF_IVST_RSLT_SEQ = #{sStsfIvstRsltSeq}
+            ) T1
+             ON T1.DLR_CD = D.DLR_CD
+            AND T1.SUBY_TMPL_SEQ = D.SUBY_TMPL_SEQ
+            AND T1.QEST_SEQ = D.SUBY_TMPL_QEST_SEQ
+            WHERE C.DLR_CD = #{sDlrCd}
+            AND C.SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+            ORDER BY
+            <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "qestCont"'>D.QEST_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "qestWgtVal"'>D.QEST_WGT_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "qestTpCdNm"'>QEST_TP_CD_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "answCont"'>T1.ANSW_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "sbjvAnswCont"'>T1.SBJV_ANSW_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "answScoreVal"'>T1.ANSW_SCORE_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <otherwise>
+                                D.SORT_ORDER ASC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                    D.SORT_ORDER ASC
+                </otherwise>
+            </choose>
+        ) T2
+    </select>
+
+    <update id="updateSatisFactionPresent" parameterType="SatisFactionMobileResultVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.updateSatisFactionPresent] */
+    UPDATE  CR_0905T
+    SET     VOC_YN = 'Y'
+            ,VOC_REG_DT = SYSDATE
+            ,UPDT_DT = SYSDATE
+            ,UPDT_USR_ID = #{updtUsrId}
+    WHERE   DLR_CD = #{dlrCd}
+    AND     STSF_IVST_RSLT_SEQ = #{stsfIvstRsltSeq}
+    </update>
+
+    <!-- 만족도 조사 현황에서 대상자목록  총 갯수를 조회한다. -->
+    <select id="selectSurveyCustResultsByConditionCnt" parameterType="SatisFactionMobileResultSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectSurveyCustResultsByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0901T A INNER JOIN CR_0905T B
+                ON A.DLR_CD = B.DLR_CD
+                AND A.SEQ = B.STSF_IVST_SEQ
+                LEFT OUTER JOIN CR_0101T C
+                ON B.DLR_CD = C.DLR_CD
+                AND B.CUST_NO = C.CUST_NO
+                LEFT OUTER JOIN CM_0304T STSF_IVST_MTH_CD_NM ON STSF_IVST_MTH_CD_NM.CMM_GRP_CD = 'CRM094' AND STSF_IVST_MTH_CD_NM.LANG_CD = #{sLangCd} AND STSF_IVST_MTH_CD_NM.CMM_CD = A.STSF_IVST_MTH_CD
+                LEFT OUTER JOIN CM_0304T STSF_IVST_EXPD_CD_NM ON STSF_IVST_EXPD_CD_NM.CMM_GRP_CD = 'CRM092' AND STSF_IVST_EXPD_CD_NM.LANG_CD = #{sLangCd} AND STSF_IVST_EXPD_CD_NM.CMM_CD = A.STSF_IVST_EXPD_CD
+                LEFT OUTER JOIN CM_0304T STSF_IVST_TP_CD_NM ON STSF_IVST_TP_CD_NM.CMM_GRP_CD = 'CRM091' AND STSF_IVST_TP_CD_NM.LANG_CD = #{sLangCd} AND STSF_IVST_TP_CD_NM.CMM_CD = A.STSF_IVST_TP_CD
+        WHERE   A.DLR_CD = #{sDlrCd}
+        AND     A.SEQ = #{sSeq}
+        AND     B.DEL_YN = 'N'
+    </select>
+
+    <!-- 만족도 조사 현황에서 대상자목록  정보를 조회한다. -->
+    <select id="selectSurveyCustResultsByCondition" parameterType="SatisFactionMobileResultSearchVO" resultType="SatisFactionMobileResultVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectSurveyCustResultsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT  A.DLR_CD
+                            ,A.SEQ
+                            ,A.STSF_IVST_NM
+                            ,A.STSF_IVST_MTH_CD
+                            ,FN_CMM_CD_NM('CRM094', A.STSF_IVST_MTH_CD, #{sLangCd}, 'N') AS STSF_IVST_MTH_CD_NM --만족도조사방법코드
+                            ,FN_CMM_CD_NM('CRM092', A.STSF_IVST_EXPD_CD, #{sLangCd}, 'N') AS STSF_IVST_EXPD_CD_NM   --만족도조사수단코드
+                            ,FN_CMM_CD_NM('CRM091', A.STSF_IVST_TP_CD, #{sLangCd}, 'N') AS STSF_IVST_TP_CD_NM   --만족도조사유형코드
+                            ,A.STSF_IVST_EXPD_CD
+                            ,A.STSF_IVST_TP_CD
+                            ,B.STSF_IVST_RSLT_SEQ
+                            ,B.STSF_IVST_SEQ
+                            ,B.SUBY_TMPL_SEQ
+                            ,B.CUST_NO
+                            ,C.CUST_NM
+                            ,C.MNG_SC_ID
+                            ,C.MNG_TEC_ID
+                            ,C.SALE_SC_ID
+                            ,B.CUST_EXTR_TERM_NO
+                            ,B.STSF_IVST_SCORE_VAL
+                            ,B.STSF_IVST_DT
+                            ,B.STSF_IVST_EMP_ID
+                            ,B.VOC_YN
+                            ,B.VOC_REG_DT
+                            ,B.REG_DT
+                            ,B.EMP_ID
+                            ,B.CALL_CEN_SEND_DT
+                            ,B.CALL_RSLT_CD
+                            ,B.HP_NO
+                            ,B.CMPL_REASON_CONT
+                            ,B.STSF_IVST_YN
+                            ,B.MNG_USR_NM     --고객 담당자명
+                            ,B.PURC_MNG_NM    --구매담당자명
+                            ,B.USE_HP_NO      --사용처 연계 핸드폰 번호
+                            ,B.USE_CUST_NM    --사용처 연계 고객명
+                            ,FN_CMM_CD_NM('CRM096', B.STSF_IVST_YN, #{sLangCd}, 'N') AS STSF_IVST_YN_NM --만족여부
+                            ,FN_GET_USER_NM(B.STSF_IVST_EMP_ID) AS USR_NM              --사용자명
+                    FROM    CR_0901T A INNER JOIN CR_0905T B
+                            ON A.DLR_CD = B.DLR_CD AND A.SEQ = B.STSF_IVST_SEQ
+                            LEFT OUTER JOIN CR_0101T C ON B.DLR_CD = C.DLR_CD AND B.CUST_NO = C.CUST_NO
+                    WHERE   A.DLR_CD = #{sDlrCd}
+                    AND     A.SEQ = #{sSeq}
+                    AND     B.DEL_YN = 'N'
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "custNm"'>C.CUST_NM     <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "hpNo"'>C.HP_NO     <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "stsfIvstEmpId"'>B.STSF_IVST_EMP_ID     <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "stsfIvstDtFormat"'>B.STSF_IVST_DT     <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "stsfIvstScoreVal"'>B.STSF_IVST_SCORE_VAL        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cmplReasonCont"'>B.CMPL_REASON_CONT        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "callCenSendDtFormat"'>B.CALL_CEN_SEND_DT        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "regDtFormat"'>B.REG_DT        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "stsfIvstMthCdNm"'> STSF_IVST_MTH_CD_NM.CMM_CD_TXT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                    <when test='item.field == "stsfIvstExpdCdNm"'> STSF_IVST_EXPD_CD_NM.CMM_CD_TXT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                    <when test='item.field == "stsfIvstTpCdNm"'> STSF_IVST_TP_CD_NM.CMM_CD_TXT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                    <when test='item.field == "usrNm"'> USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                    <when test='item.field == "stsfIvstYn"'> B.STSF_IVST_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                    <when test='item.field == "mngUsrNm"'> B.MNG_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                    <when test='item.field == "purcMngNm"'> B.PURC_MNG_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                    <when test='item.field == "useCustNm"'> B.USE_CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                    <when test='item.field == "useHpNo"'> B.USE_HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                    <otherwise>
+                                        B.STSF_IVST_RSLT_SEQ ASC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            B.STSF_IVST_RSLT_SEQ ASC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <insert id="insertSatisFactionManageTargExtUsr" parameterType="SatisFactionMobileResultVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.insertSatisFactionManageTargExtUsr] */
+        INSERT INTO CR_0905T    --만족도설문결과
+        (
+            DLR_CD                      --딜러코드
+            ,STSF_IVST_RSLT_SEQ         --만족도조사결과일련번호
+            ,STSF_IVST_SEQ              --만족도조사일련번호
+            ,SUBY_TMPL_SEQ              --설문템플릿일련번호
+            ,CUST_NO                    --고객번호
+            ,STSF_IVST_SCORE_VAL        --만족도조사점수값
+            ,STSF_IVST_DT               --만족도조사일자
+            ,STSF_IVST_EMP_ID           --만족도조사사원ID
+            ,DEL_YN                     --삭제여부
+            ,EMP_ID                     --사원설문ID
+            ,CMPL_REASON_CONT           --불만사유내용
+            ,REG_USR_ID                 --등록자ID
+            ,REG_DT                     --등록일자
+            ,CUST_EXTR_TERM_NO          --고객추출조건번호
+            ,HP_NO
+            ,TEL_NO
+            ,WECHAT_ID
+            ,EMAIL_NM
+            ,SUNG_NM
+            ,CITY_NM
+            ,DIST_NM
+            ,ZIP_CD
+            ,ADDR_NM
+            ,ADDR_DETL_CONT
+            ,CUST_NM
+            ,CUST_TP
+            ,PURC_MNG_NM
+        <choose>
+            <when test='stsfIvstTpCd == "01"'>
+            ,MNG_USR_ID
+            ,MNG_USR_NM
+            ,USE_TP
+            ,USE_NUM
+            ,VIN_NO
+            ,USE_CUST_NO
+            ,USE_CUST_NM
+            ,USE_HP_NO
+            </when>
+            <when test='stsfIvstTpCd == "02"'>
+            ,MNG_USR_ID
+            ,MNG_USR_NM
+            ,USE_TP
+            ,USE_NUM
+            ,VIN_NO
+            ,USE_CUST_NO
+            ,USE_CUST_NM
+            ,USE_HP_NO
+            </when>
+        </choose>
+        )
+        SELECT  B.DLR_CD
+                ,SEQ_CR_0905T.NEXTVAL
+                ,#{stsfIvstSeq} --만족도조사일련번호
+                ,#{subyTmplSeq} --설문템플릿일련번호
+                ,B.CUST_NO
+                ,NULL --만족도조사 점수값
+                ,NULL --만족도조사일자
+                ,NULL -- 만족도조사사원ID
+                ,'N' -- 삭제여부
+                ,NULL --사원설문ID
+                ,NULL --불만사유내용
+                ,#{regUsrId}--등록자
+                ,SYSDATE--등록일자
+                ,#{custExtrTermNo} --고객추출조건번호
+                ,C.HP_NO
+                ,C.TEL_NO
+                ,C.WECHAT_ID
+                ,C.EMAIL_NM
+                ,ADDR.SUNG_NM
+                ,ADDR.CITY_NM
+                ,ADDR.DIST_NM
+                ,ADDR.ZIP_CD
+                ,ADDR.SUNG_NM || ' ' || ADDR.CITY_NM || ' ' || ADDR.DIST_NM AS ADDR_NM
+                ,ADDR.ADDR_DETL_CONT
+                ,C.CUST_NM
+                ,C.CUST_TP
+                ,DECODE(C.CUST_TP,'02', C.PURC_MNG_NM,'') AS PURC_MNG_NM
+        <choose>
+            <when test='stsfIvstTpCd == "01"'>
+                ,SERVICE.SA_ID
+                ,SERVICE.SA_NM
+                ,'03'
+                ,SERVICE.RO_DOC_NO
+                ,SERVICE.VIN_NO
+                ,DRIVER.CUST_NO
+                ,DRIVER.CUST_NM
+                ,DRIVER.HP_NO
+            </when>
+            <when test='stsfIvstTpCd == "02"'>
+                ,MNG.USR_ID
+                ,MNG.USR_NM
+                ,'02'
+                ,CONT.CONTRACT_NO
+                ,CONT.VIN_NO
+                ,DRIVER.CUST_NO
+                ,DRIVER.CUST_NM
+                ,DRIVER.HP_NO
+            </when>
+        </choose>
+        FROM CR_1003T B
+       INNER JOIN CR_0101T C ON B.DLR_CD = C.DLR_CD AND B.CUST_NO = C.CUST_NO
+        LEFT OUTER JOIN CR_0116T ADDR ON C.CUST_NO = ADDR.REF_KEY_NM AND C.DLR_CD = ADDR.DLR_CD AND ADDR.REF_TABLE_NM = 'CR_0101T' AND FLAG_YN = 'Y' AND USE_YN = 'Y'
+        <choose>
+            <when test='stsfIvstTpCd == "01"'>
+        LEFT OUTER JOIN (SELECT *
+                           FROM (SELECT RO.DLR_CD
+                                      , RO.RO_DOC_NO
+                                      , RO.CAR_OWNER_ID
+                                      , RO.DRIVER_ID
+                                      , RO.VIN_NO
+                                      , RO.REG_USR_ID AS SA_ID
+                                      , FN_GET_USER_NM(RO.REG_USR_ID) AS SA_NM
+                                      , ROW_NUMBER() OVER (PARTITION BY RO.CAR_OWNER_ID ORDER BY CALC.CALC_DT DESC ) AS RN
+                                   FROM SE_0300T RO,
+                                        SE_0500T CALC,
+                                        SA_0121T VM
+                                  WHERE RO.DLR_CD = CALC.DLR_CD
+                                    AND RO.RO_DOC_NO = CALC.RO_DOC_NO
+                                    AND RO.VIN_NO = VM.VIN_NO
+                                    AND RO.DLR_CD = #{dlrCd}
+                                    AND CALC.CALC_STAT_CD = '00'
+                                    AND CALC.CALC_CANC_YN = 'N'
+                                    AND RO.RO_STAT_CD IN('00', '05')
+                                    AND RO.CAR_OWNER_ID IS NOT NULL
+                                    AND (RO.GOODWILL_YN != 'Y' OR RO.GOODWILL_YN IS NULL )
+                                    AND RO.RO_DT >= VM.CUST_SALE_DT )
+                            WHERE RN = 1 ) SERVICE ON B.DLR_CD = SERVICE.DLR_CD AND B.CUST_NO = SERVICE.CAR_OWNER_ID
+         LEFT OUTER JOIN CR_0101T DRIVER ON SERVICE.DLR_CD = DRIVER.DLR_CD AND SERVICE.DRIVER_ID = DRIVER.CUST_NO
+            </when>
+            <when test='stsfIvstTpCd == "02"'>
+         LEFT OUTER JOIN(SELECT *
+                           FROM (SELECT DLR_CD
+                                      , CONTRACT_NO
+                                      , VIN_NO
+                                      , SALE_EMP_NO
+                                      , REAL_DRIVER_CUST_NO
+                                      , CONTRACT_CUST_NO
+                                      , ROW_NUMBER() OVER (PARTITION BY CONTRACT_CUST_NO ORDER BY REAL_DL_DT DESC ) AS RN
+                                   FROM SA_0201T
+                                   WHERE DLR_CD = #{dlrCd}
+                                     AND CONTRACT_STAT_CD = '50' )
+                            WHERE RN = 1 ) CONT ON B.DLR_CD = CONT.DLR_CD AND B.CUST_NO = CONT.CONTRACT_CUST_NO
+         LEFT OUTER JOIN CR_0101T DRIVER ON CONT.DLR_CD = DRIVER.DLR_CD AND CONT.CONTRACT_CUST_NO = DRIVER.CUST_NO
+         LEFT OUTER JOIN CM_0801T MNG ON CONT.DLR_CD = MNG.DLR_CD AND CONT.SALE_EMP_NO = MNG.USR_ID
+            </when>
+        </choose>
+        WHERE   B.DLR_CD = #{dlrCd}
+        AND     B.SEQ = #{seq}
+    </insert>
+
+    <delete id="deleteSatisFactionMobileResult"  parameterType="SatisFactionMobileResultVO" >
+        DELETE  CR_0905T
+        WHERE   DLR_CD = #{dlrCd}
+        AND     STSF_IVST_RSLT_SEQ = #{stsfIvstRsltSeq}
+    </delete>
+
+
+    <!-- 20170705 이인문 사용안함
+    <update id="updateCallCenRslt" parameterType="SatisFactionMobileResultVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.updateCallCenRslt] */
+    UPDATE  CR_0905T
+    SET     CALL_CEN_SEND_DT = SYSDATE
+            ,CALL_CEN_RSLT_CONT = #{callCenRsltCont}
+    WHERE   DLR_CD = #{dlrCd}
+    AND     STSF_IVST_RSLT_SEQ = #{stsfIvstRsltSeq}
+    </update>
+    -->
+
+    <update id="updateStsfResultInvalidity" parameterType="SatisFactionMobileResultVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.updateStsfResultInvalidity] */
+    UPDATE  CR_0905T
+    SET     DEL_YN = 'Y'
+            ,UPDT_DT = SYSDATE
+            ,UPDT_USR_ID = #{updtUsrId}
+    WHERE   DLR_CD = #{dlrCd}
+    AND     STSF_IVST_RSLT_SEQ = #{stsfIvstRsltSeq}
+    </update>
+
+    <update id="updateSurveyResultScore" parameterType="SatisFactionMobileResultVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.updateSurveyResultScore] */
+    UPDATE  CR_0905T
+    SET     STSF_IVST_SCORE_VAL = #{stsfIvstScoreVal}
+            ,STSF_IVST_DT = SYSDATE
+            ,STSF_IVST_EMP_ID = #{updtUsrId}
+            <if test='stsfIvstYn != null and stsfIvstYn != ""'>
+                ,STSF_IVST_YN = #{stsfIvstYn}
+            </if>
+            <if test='cmplReasonCont != null and cmplReasonCont != ""'>
+                ,CMPL_REASON_CONT = #{cmplReasonCont}
+            </if>
+            <if test='custNm != null and custNm != ""'>
+                ,CUST_NM = #{custNm}
+            </if>
+            ,UPDT_DT = SYSDATE
+            ,UPDT_USR_ID = #{updtUsrId}
+    WHERE   DLR_CD = #{dlrCd}
+    AND     STSF_IVST_RSLT_SEQ = #{stsfIvstRsltSeq}
+    </update>
+
+    <update id="updateVocResult" parameterType="SatisFactionMobileResultVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.updateVocResult] */
+    UPDATE  CR_0905T
+    SET     VOC_PROC_DT = #{vocProcDt}
+            ,VOC_PROC_ID = #{vocProcId}
+            ,VOC_PROC_CONT = #{vocProcCont}
+            ,UPDT_DT = SYSDATE
+            ,UPDT_USR_ID = #{updtUsrId}
+    WHERE   DLR_CD = #{dlrCd}
+    AND     STSF_IVST_RSLT_SEQ = #{stsfIvstRsltSeq}
+    </update>
+
+    <!-- 콜센터 콜처리완료여부(CALL_PROC_END_YN)가 Y 이면 콜결과(CALL_RSLT_CD)를 각 업무 콜결과 (CALL_RSLT_CD) 에 업데이트 해준다. -->
+    <update id="updateCallCenRsltCont" parameterType="SatisFactionMobileResultVO" >
+        UPDATE CR_0905T SET                             -- 고객케어대상자
+             UPDT_DT            = SYSDATE                     -- 수정일자
+            ,UPDT_USR_ID        = #{updtUsrId}                -- 수정자ID
+            ,CALL_RSLT_CD       = #{callRsltCd}               -- 콜결과
+            ,CALL_CEN_RSLT_DT   = SYSDATE                     -- 콜센터결과일자
+        WHERE DLR_CD            = #{dlrCd}                    -- 딜러코드
+            AND STSF_IVST_RSLT_SEQ = #{stsfIvstRsltSeq}              -- 고객케어일련번호
+    </update>
+
+    <!-- 만족도 조사 객관식 답안결과 정보를 조회한다.-->
+    <select id="selectShortQuestionResultsByCondition" parameterType="SurveySatisFactionSearchVO" resultType="SurveySatisFactionVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectShortQuestionResultsByCondition] */
+        SELECT ROWNUM AS RNUM
+             , DLR_CD
+             , QEST_CONT
+             , SUBY_TMPL_SEQ
+             , SUBY_TMPL_QEST_SEQ
+             , ITEM_SEQ
+             , SORT_ORDER
+             , ANSW_CONT
+             , RESULT_CNT
+             , TRUNC((RESULT_CNT/ decode(ANSW_TOT_CNT, 0, 1, ANSW_TOT_CNT))*100) AS RESULT_PER
+        FROM (
+                SELECT QD.DLR_CD
+                     , QM.QEST_CONT
+                     , QD.SUBY_TMPL_SEQ
+                     , QD.SUBY_TMPL_QEST_SEQ
+                     , QD.ITEM_SEQ
+                     , QD.SORT_ORDER
+                     , QD.ANSW_CONT
+                     ,(SELECT
+                            COUNT(*)
+                        FROM CR_0906T AD
+                        WHERE AD.DLR_CD = QD.DLR_CD
+                        AND AD.SUBY_TMPL_SEQ = QD.SUBY_TMPL_SEQ
+                        AND AD.QEST_SEQ = QD.SUBY_TMPL_QEST_SEQ
+                        AND AD.ANSW_SEQ = QD.ITEM_SEQ
+                        AND AD.STSF_IVST_SEQ = #{sStsfIvstSeq}
+                    ) AS RESULT_CNT
+                    , (
+                        SELECT
+                            COUNT(*)
+                        FROM CR_0906T AD
+                        WHERE AD.DLR_CD = #{sDlrCd}
+                        AND AD.QEST_SEQ = QD.SUBY_TMPL_QEST_SEQ
+                        AND AD.STSF_IVST_SEQ = #{sStsfIvstSeq}
+                        AND AD.SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+                    ) AS ANSW_TOT_CNT
+                FROM CR_0904T QD, CR_0903T QM
+                WHERE QD.DLR_CD = #{sDlrCd}
+                AND QD.SUBY_TMPL_SEQ = QM.SUBY_TMPL_SEQ
+                AND QD.SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+                AND QD.SUBY_TMPL_QEST_SEQ = QM.SUBY_TMPL_QEST_SEQ
+                AND QM.QEST_TP_CD IN ('01','02')
+                GROUP BY QD.DLR_CD, QM.SORT_ORDER, QM.QEST_CONT, QD.SUBY_TMPL_SEQ, QD.SUBY_TMPL_QEST_SEQ, QD.ITEM_SEQ, QD.SORT_ORDER, QD.ANSW_CONT, QM.REG_DT
+                ORDER BY QM.SORT_ORDER ASC, QD.SORT_ORDER ASC, QM.REG_DT ASC, QD.SUBY_TMPL_QEST_SEQ ASC, QD.ITEM_SEQ ASC
+        )
+    </select>
+
+    <!-- 만족도 조사 주관식 답안결과 정보를 조회한다.-->
+    <select id="selectMultipleQuestionResultsByCondition" parameterType="SatisFactionMobileResultSearchVO" resultType="SatisFactionMobileResultVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectMultipleQuestionResultsByCondition] */
+            SELECT
+                  CR0904T.DLR_CD
+                , CR0904T.SUBY_TMPL_SEQ
+                , CR0904T.SUBY_TMPL_QEST_SEQ
+                , CR0904T.ITEM_SEQ
+                , CR0904T.SORT_ORDER
+                , CR0904T.ANSW_CONT
+            FROM CR_0904T CR0904T       -- 답변   목록 /    라디오, 체크 점수
+            <where>
+                AND CR0904T.DLR_CD = #{sDlrCd}
+                AND CR0904T.SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+            </where>
+            ORDER BY SUBY_TMPL_QEST_SEQ ASC, SORT_ORDER ASC
+    </select>
+
+    <!-- 만족도 조사 헤더 질문 정보를 조회한다.(질문목록)-->
+    <select id="selectSurveyResultDtlHeaderByCondition" parameterType="SatisFactionMobileResultSearchVO" resultType="String">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectSurveyResultDtlHeaderByCondition] */
+        SELECT
+             B.QEST_CONT
+        FROM CR_0905T A
+        INNER JOIN CR_0903T B
+        ON A.SUBY_TMPL_SEQ = B.SUBY_TMPL_SEQ
+        WHERE A.DLR_CD = #{sDlrCd}
+        AND A.STSF_IVST_SEQ = #{sStsfIvstSeq}
+<choose>
+    <when test='sQestTp == "C"'>
+        AND B.QEST_TP_CD  = '03'        -- 주관식 질문
+    </when>
+    <when test='sQestTp == "M"'>
+        AND B.QEST_TP_CD  != '03'       -- 객관식 질문
+    </when>
+</choose>
+        GROUP BY B.QEST_CONT, B.SORT_ORDER
+        ORDER BY B.SORT_ORDER
+    </select>
+
+    <!-- 만족도 조사 상세 정보를 조회한다. -->
+    <select id="selectSurveyResultDtlInfoByConditionCnt" parameterType="SatisFactionMobileResultSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectSurveyResultDtlInfoByConditionCnt] */
+        SELECT
+            COUNT(*) AS CNT
+        FROM
+            (
+                SELECT
+                       A.DLR_CD
+                      ,A.STSF_IVST_SEQ
+                      ,A.SUBY_TMPL_SEQ
+                      ,A.STSF_IVST_RSLT_SEQ
+                      ,A.CUST_NM            -- 고객명
+                      ,A.CUST_NO            -- 고객번호
+                      ,A.HP_NO              -- 연락처
+                      ,A.STSF_IVST_DT       -- 만족도 조사시간
+                      ,A.STSF_IVST_EMP_ID
+                      ,A.STSF_IVST_YN       -- 만족여부
+                      ,A.CMPL_REASON_CONT   -- 총평
+                      ,A.CALL_CEN_SEND_DT
+                      -- ,D.QEST_CONT          객관식 / 주관식 질문
+                      ,FN_GET_USER_NM(A.STSF_IVST_EMP_ID) AS USR_NM              -- 만족도 조사인
+                FROM CR_0905T A
+                INNER JOIN CR_0906T B ON A.DLR_CD = B.DLR_CD AND A.STSF_IVST_RSLT_SEQ = B.STSF_IVST_RSLT_SEQ
+                LEFT OUTER JOIN CR_0902T C ON B.DLR_CD = C.DLR_CD AND B.SUBY_TMPL_SEQ = C.SUBY_TMPL_SEQ
+                LEFT OUTER JOIN CR_0903T D ON C.DLR_CD = D.DLR_CD AND C.SUBY_TMPL_SEQ = D.SUBY_TMPL_SEQ AND B.QEST_SEQ = D.SUBY_TMPL_QEST_SEQ
+                LEFT OUTER JOIN CR_0904T E ON D.DLR_CD = E.DLR_CD AND D.SUBY_TMPL_SEQ = E.SUBY_TMPL_SEQ AND D.SUBY_TMPL_QEST_SEQ = E.SUBY_TMPL_QEST_SEQ AND B.QEST_SEQ = E.SUBY_TMPL_QEST_SEQ AND B.ANSW_SEQ = E.ITEM_SEQ
+                WHERE 1=1
+                    AND A.DLR_CD = #{sDlrCd}
+                    AND A.STSF_IVST_SEQ = #{sStsfIvstSeq}
+                GROUP BY A.DLR_CD
+                      ,A.STSF_IVST_SEQ
+                      ,A.SUBY_TMPL_SEQ
+                      ,A.STSF_IVST_RSLT_SEQ
+                      ,A.CUST_NM            -- 고객명
+                      ,A.CUST_NO            -- 고객번호
+                      ,A.HP_NO              -- 연락처
+                      ,A.STSF_IVST_DT       -- 만족도 조사시간
+                      ,A.STSF_IVST_EMP_ID
+                      ,A.STSF_IVST_YN       -- 만족여부
+                      ,A.CMPL_REASON_CONT   -- 총평
+                      ,A.CALL_CEN_SEND_DT
+              )
+    </select>
+
+    <!-- 만족도 조사 상세 정보를 조회한다. -->
+    <select id="selectSurveyResultDtlInfoByCondition" parameterType="SatisFactionMobileResultSearchVO" resultType="SatisFactionMobileResultVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectSurveyResultDtlInfoByCondition] */
+
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                       A.DLR_CD
+                      ,A.STSF_IVST_SEQ
+                      ,A.SUBY_TMPL_SEQ
+                      ,A.STSF_IVST_RSLT_SEQ
+                      ,A.CUST_NM            -- 고객명
+                      ,A.CUST_NO            -- 고객번호
+                      ,A.HP_NO              -- 연락처
+                      ,A.STSF_IVST_DT       -- 만족도 조사시간
+                      ,A.STSF_IVST_EMP_ID
+                      ,A.STSF_IVST_YN       -- 만족여부
+                      ,STSF_IVST_YN_NM.CMM_CD_TXT AS STSF_IVST_YN_NM
+                      ,A.CMPL_REASON_CONT   -- 총평
+                      ,A.CALL_CEN_SEND_DT
+                      -- ,D.QEST_CONT          객관식 / 주관식 질문
+                      ,A.REG_DT
+                      ,FN_GET_USER_NM(A.STSF_IVST_EMP_ID) AS USR_NM              -- 만족도 조사인
+
+                      ,A.MNG_USR_NM     --고객 담당자명
+                      ,A.MNG_USR_ID     --고객 담당자명
+                      ,A.PURC_MNG_NM    --구매담당자명
+                      ,A.USE_HP_NO      --사용처 연계 핸드폰 번호
+                      ,A.USE_CUST_NO    --사용처 연계 고객번호
+                      ,A.USE_CUST_NM    --사용처 연계 고객명
+
+                FROM CR_0905T A
+                INNER JOIN CR_0906T B ON A.DLR_CD = B.DLR_CD AND A.STSF_IVST_RSLT_SEQ = B.STSF_IVST_RSLT_SEQ
+                LEFT OUTER JOIN CR_0902T C ON B.DLR_CD = C.DLR_CD AND B.SUBY_TMPL_SEQ = C.SUBY_TMPL_SEQ
+                LEFT OUTER JOIN CR_0903T D ON C.DLR_CD = D.DLR_CD AND C.SUBY_TMPL_SEQ = D.SUBY_TMPL_SEQ AND B.QEST_SEQ = D.SUBY_TMPL_QEST_SEQ
+                LEFT OUTER JOIN CR_0904T E ON D.DLR_CD = E.DLR_CD AND D.SUBY_TMPL_SEQ = E.SUBY_TMPL_SEQ AND D.SUBY_TMPL_QEST_SEQ = E.SUBY_TMPL_QEST_SEQ AND B.QEST_SEQ = E.SUBY_TMPL_QEST_SEQ AND B.ANSW_SEQ = E.ITEM_SEQ
+                LEFT OUTER JOIN CM_0304T STSF_IVST_YN_NM ON STSF_IVST_YN_NM.CMM_GRP_CD = 'CRM096' AND STSF_IVST_YN_NM.LANG_CD = #{sLangCd} AND STSF_IVST_YN_NM.CMM_CD = A.STSF_IVST_YN
+                WHERE 1=1
+                    AND A.DLR_CD = #{sDlrCd}
+                    AND A.STSF_IVST_SEQ = #{sStsfIvstSeq}
+                GROUP BY A.DLR_CD
+                      ,A.STSF_IVST_SEQ
+                      ,A.SUBY_TMPL_SEQ
+                      ,A.STSF_IVST_RSLT_SEQ
+                      ,A.CUST_NM
+                      ,A.CUST_NO
+                      ,A.HP_NO
+                      ,A.STSF_IVST_DT
+                      ,A.STSF_IVST_EMP_ID
+                      ,A.STSF_IVST_YN
+                      ,A.CMPL_REASON_CONT
+                      ,A.CALL_CEN_SEND_DT
+                      ,A.REG_DT
+                      ,STSF_IVST_YN_NM.CMM_CD_TXT
+                      ,A.MNG_USR_NM     --고객 담당자명
+                      ,A.MNG_USR_ID     --고객 담당자명
+                      ,A.PURC_MNG_NM    --구매담당자명
+                      ,A.USE_HP_NO      --사용처 연계 핸드폰 번호
+                      ,A.USE_CUST_NO    --사용처 연계 고객번호
+                      ,A.USE_CUST_NM    --사용처 연계 고객명
+                ORDER BY A.STSF_IVST_RSLT_SEQ
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 만족도 조사 답변 정보를 조회한다. -->
+    <select id="selectSurveyResultDtlByCondition" parameterType="SatisFactionMobileResultSearchVO" resultType="SatisFactionMobileResultVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectSurveyResultDtlByCondition] */
+        SELECT
+               A.DLR_CD
+              ,A.STSF_IVST_SEQ
+              ,A.SUBY_TMPL_SEQ
+              ,A.STSF_IVST_RSLT_SEQ
+              ,D.QEST_TP_CD
+              ,D.QEST_CONT          -- 객관식 / 주관식 질문
+              ,B.SBJV_ANSW_CONT     -- 주관식 답변
+              ,LISTAGG(E.ANSW_CONT, ', ') within group ( order by E.ANSW_CONT ) ANSW_CONT      -- 객관식 답변 ( 다중 선택이 있을수 있기 때문에 group by )
+              ,D.SORT_ORDER
+              ----liuxueying update start --
+              ,D.SUBY_TMPL_QEST_SEQ
+               ----liuxueying update end --
+        FROM CR_0905T A
+        INNER JOIN CR_0906T B ON A.DLR_CD = B.DLR_CD AND A.STSF_IVST_RSLT_SEQ = B.STSF_IVST_RSLT_SEQ
+        LEFT OUTER JOIN CR_0902T C ON B.DLR_CD = C.DLR_CD AND B.SUBY_TMPL_SEQ = C.SUBY_TMPL_SEQ
+        LEFT OUTER JOIN CR_0903T D ON C.DLR_CD = D.DLR_CD AND C.SUBY_TMPL_SEQ = D.SUBY_TMPL_SEQ AND B.QEST_SEQ = D.SUBY_TMPL_QEST_SEQ
+        LEFT OUTER JOIN CR_0904T E ON D.DLR_CD = E.DLR_CD AND D.SUBY_TMPL_SEQ = E.SUBY_TMPL_SEQ AND D.SUBY_TMPL_QEST_SEQ = E.SUBY_TMPL_QEST_SEQ AND B.QEST_SEQ = E.SUBY_TMPL_QEST_SEQ AND B.ANSW_SEQ = E.ITEM_SEQ
+        WHERE 1=1
+            AND A.DLR_CD = #{sDlrCd}
+            AND A.STSF_IVST_SEQ = #{sStsfIvstSeq}
+            AND A.SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+            AND A.STSF_IVST_RSLT_SEQ = #{sStsfIvstRsltSeq}
+    <choose>
+        <when test='sQestTp == "C"'>
+            AND D.QEST_TP_CD  = '03'        -- 주관식 질문
+        </when>
+        <when test='sQestTp == "M"'>
+            AND D.QEST_TP_CD  != '03'       -- 객관식 질문
+        </when>
+    </choose>
+        GROUP BY A.DLR_CD
+                ,A.STSF_IVST_SEQ
+                ,A.SUBY_TMPL_SEQ
+                ,A.STSF_IVST_RSLT_SEQ
+                ,D.QEST_TP_CD
+                ,D.QEST_CONT          -- 객관식 / 주관식 질문
+                ,B.SBJV_ANSW_CONT     -- 주관식 답변
+                ,B.QEST_SEQ
+                ,D.SORT_ORDER
+                ----liuxueying update start --
+                ,D.SUBY_TMPL_QEST_SEQ
+                ----liuxueying update end --
+        ORDER BY D.SORT_ORDER ASC
+    </select>
+
+
+    <!-- 만족도 조사 결과 정보를 조회한다.-->
+    <select id="selectSurveyResultInfoByKey" parameterType="SatisFactionMobileResultSearchVO" resultType="SatisFactionMobileResultVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionMobileResultDAO.selectSurveyResultInfoByKey] */
+        SELECT
+             DLR_CD
+            ,STSF_IVST_SEQ
+            ,SUBY_TMPL_SEQ
+            ,STSF_IVST_RSLT_SEQ
+            ,STSF_IVST_DT
+            ,CMPL_REASON_CONT
+            ,STSF_IVST_YN
+        FROM CR_0905T A
+        WHERE A.DLR_CD = #{sDlrCd}
+        AND A.STSF_IVST_SEQ = #{sStsfIvstSeq}
+        AND A.SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+        AND A.STSF_IVST_RSLT_SEQ = #{sStsfIvstRsltSeq}
+    </select>
+
+</mapper>

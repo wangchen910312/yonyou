@@ -1,0 +1,412 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : SpeciaRequestDAO_SqlMap.xml
+    Description :DMS特殊申请
+    author wangc
+    since 2021年3月29日21:10:23
+    version 1.0
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.wac.service.dao.SpecialRequestDao">
+
+	<!-- 返回工单列表结果信息 -->
+    <select id="selectSpecialRequests" parameterType="SpecialRequestSearchVo" resultType="SpecialRequestSearchVo">
+    	SELECT specialRequest.CAR_REG_NO,specialRequest.VIN_NO,repairOrder.RO_DOC_NO,specialRequest.CAR_OWNER_NM,specialRequest.DRIVER_NM,
+		 specialRequest.DRIVER_HP_NO,specialRequest.REQ_REASON_TP,specialRequest.REQ_REASON_DESC,specialRequest.APPROVE_DESC, 
+		 specialRequest.REQ_USR_ID AS REQ_USR_NM, specialRequest.APPROVE_USR_NM, specialRequest.CAR_OWNER_NM, specialRequest.DRIVER_NM, 
+		 specialRequest.RO_DT, specialRequest.REQ_DT FROM (
+		 select  se0300t.RO_DOC_NO 
+		 from SE_0300T se0300t 
+		 where se0300t.DL_STAT_CD =  '02' 
+		 AND se0300t.RO_STAT_CD = '03'   
+		 AND se0300t.CUST_CONFIRM_YN ='Y'                                     
+		 ) repairOrder 
+		left join SE_1162T as specialRequest on specialRequest.RO_DOC_NO = repairOrder.RO_DOC_NO
+    </select>
+    
+    <!-- 申请工单列表详细信息 -->
+    <select id="selectSpecialRequestForSpecialBySpecial" parameterType="SpecialRequestSearchVo" resultType="SpecialRequestVo">
+        SELECT *
+         FROM (
+              SELECT ROWNUM AS RNUM , T1.*
+                FROM (
+                	 select  statcd.*,ROWNUM  from (
+						select statcd01.* from (	
+							SELECT repairOrder.CAR_REG_NO,repairOrder.VIN_NO,repairOrder.RO_DOC_NO,repairOrder.CAR_OWNER_ID,repairOrder.CAR_OWNER_NM,
+						 	   repairOrder.HP_NO as DRIVER_HP_NO,specialRequest.REQ_REASON_TP,specialRequest.REQ_REASON_DESC,specialRequest.APPROVE_DESC, 
+						       specialRequest.REQ_USR_NM AS REQ_USR_NM, specialRequest.APPROVE_USR_NM, specialRequest.CAR_OWNER_NM, repairOrder.DRIVER_NM, 
+						       repairOrder.RO_DT, specialRequest.REQ_DT,specialRequest.FILE_DOC_NO,
+						      (CASE when specialRequest.REQ_STAT_CD  is null  THEN '05' ELSE specialRequest.REQ_STAT_CD END) REQ_STAT_CD,
+						       repairOrder.DL_CHK_DT
+						 	FROM (
+								select repair.*,HP_NO from (select  se0300t.DLR_CD,se0300t.CAR_REG_NO,se0300t.VIN_NO,se0300t.RO_DOC_NO,se0300t.CAR_OWNER_ID,se0300t.CAR_OWNER_NM,
+									se0300t.DRIVER_ID,se0300t.DRIVER_NM,se0300t.RO_DT,se0300t.DL_CHK_DT
+								from SE_0300T se0300t 
+								where se0300t.DL_STAT_CD =  '02' 
+								AND se0300t.RO_STAT_CD = '03'   
+								AND se0300t.CUST_CONFIRM_YN ='Y'
+								and (se0300t.cust_confirm_cd = '02' or se0300t.cust_confirm_cd is null)                                     
+								) repair 
+								left join CR_0101T t on t.DLR_CD  = repair.DLR_CD AND t.CUST_NO = repair.DRIVER_ID
+						 	)repairOrder 
+						 	left join (select * from SE_1162T se where se.CANCEL_YN='N') as specialRequest on specialRequest.RO_DOC_NO = repairOrder.RO_DOC_NO
+						) as statcd01
+						UNION ALL
+						select statcd02.* from (	
+							SELECT repairOrder.CAR_REG_NO,repairOrder.VIN_NO,repairOrder.RO_DOC_NO,repairOrder.CAR_OWNER_ID,repairOrder.CAR_OWNER_NM,
+						 	   repairOrder.HP_NO as DRIVER_HP_NO,specialRequest.REQ_REASON_TP,specialRequest.REQ_REASON_DESC,specialRequest.APPROVE_DESC, 
+						       specialRequest.REQ_USR_NM AS REQ_USR_NM, specialRequest.APPROVE_USR_NM, specialRequest.CAR_OWNER_NM, repairOrder.DRIVER_NM, 
+						       repairOrder.RO_DT, specialRequest.REQ_DT,specialRequest.FILE_DOC_NO,
+						      (CASE when specialRequest.REQ_STAT_CD  is null  THEN '05' ELSE specialRequest.REQ_STAT_CD END) REQ_STAT_CD,
+						       repairOrder.DL_CHK_DT
+						 	FROM (
+								select repair.*,HP_NO from (select  se0300t.DLR_CD,se0300t.CAR_REG_NO,se0300t.VIN_NO,se0300t.RO_DOC_NO,se0300t.CAR_OWNER_ID,se0300t.CAR_OWNER_NM,
+									se0300t.DRIVER_ID,se0300t.DRIVER_NM,se0300t.RO_DT,se0300t.DL_CHK_DT
+								from SE_0300T se0300t 
+								where se0300t.DL_STAT_CD =  '02' 
+								AND se0300t.RO_STAT_CD = '03'   
+								AND se0300t.CUST_CONFIRM_YN ='Y'
+								and (se0300t.cust_confirm_cd = '01')                                     
+								) repair 
+								left join CR_0101T t on t.DLR_CD  = repair.DLR_CD AND t.CUST_NO = repair.DRIVER_ID
+						 	)repairOrder 
+						 	left join (select * from SE_1162T se where se.CANCEL_YN='N') as specialRequest on specialRequest.RO_DOC_NO = repairOrder.RO_DOC_NO 
+						) as statcd02 where 1=1 and statcd02.REQ_STAT_CD not in ('05','00')
+						) as statcd
+					 where 1 = 1
+					 <if test='sRoDocNo != null and sRoDocNo != "" '>
+	                 AND statcd.RO_DOC_NO = #{sRoDocNo}
+	                 </if>
+	                 <if test='sCarRegNo != null and sCarRegNo != "" '>
+	                 AND statcd.CAR_REG_NO = #{sCarRegNo}
+	                 </if>
+	                 <if test='sReqStatCd != null and sReqStatCd != "" '>
+	                 AND statcd.REQ_STAT_CD = #{sReqStatCd}
+	                 </if>
+	                 <if test='sFromReqDt !=null'>
+	                 AND statcd.REQ_DT <![CDATA[>=]]> #{sFromReqDt}
+	                 </if>
+	                 <if test='sToReqDt !=null'>
+	                 AND statcd.REQ_DT <![CDATA[<=]]> #{sToReqDt}+1
+	                 </if>
+                     <if test='sFromRoDt !=null'>
+                     AND statcd.RO_DT <![CDATA[>=]]> #{sFromRoDt}
+	                 </if>
+	                 <if test='sToRoDt !=null'>
+	                 AND statcd.RO_DT <![CDATA[<=]]> #{sToRoDt}+1
+	                 </if>
+	                 ORDER BY statcd.RO_DT desc
+                ) T1
+                 <where>
+                     <if test='firstIndex != -1 and lastIndex != -1'>
+                       AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                     </if>
+                 </where>
+         )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+    
+    
+    <!-- 申请工单列表详细信息（数量）-->
+    <select id="selectSpecialRequestForSpecialBySpecialCnt" parameterType="SpecialRequestSearchVo" resultType="int">
+           SELECT count(*)
+           FROM (
+              select  statcd.*,ROWNUM  from (
+						select statcd01.* from (	
+							SELECT repairOrder.CAR_REG_NO,repairOrder.VIN_NO,repairOrder.RO_DOC_NO,repairOrder.CAR_OWNER_ID,repairOrder.CAR_OWNER_NM,
+						 	   repairOrder.HP_NO as DRIVER_HP_NO,specialRequest.REQ_REASON_TP,specialRequest.REQ_REASON_DESC,specialRequest.APPROVE_DESC, 
+						       specialRequest.REQ_USR_NM AS REQ_USR_NM, specialRequest.APPROVE_USR_NM, specialRequest.CAR_OWNER_NM, repairOrder.DRIVER_NM, 
+						       repairOrder.RO_DT, specialRequest.REQ_DT,specialRequest.FILE_DOC_NO,
+						      (CASE when specialRequest.REQ_STAT_CD  is null  THEN '05' ELSE specialRequest.REQ_STAT_CD END) REQ_STAT_CD,
+						       repairOrder.DL_CHK_DT
+						 	FROM (
+								select repair.*,HP_NO from (select  se0300t.DLR_CD,se0300t.CAR_REG_NO,se0300t.VIN_NO,se0300t.RO_DOC_NO,se0300t.CAR_OWNER_ID,se0300t.CAR_OWNER_NM,
+									se0300t.DRIVER_ID,se0300t.DRIVER_NM,se0300t.RO_DT,se0300t.DL_CHK_DT
+								from SE_0300T se0300t 
+								where se0300t.DL_STAT_CD =  '02' 
+								AND se0300t.RO_STAT_CD = '03'   
+								AND se0300t.CUST_CONFIRM_YN ='Y'
+								and (se0300t.cust_confirm_cd = '02' or se0300t.cust_confirm_cd is null)                                     
+								) repair 
+								left join CR_0101T t on t.DLR_CD  = repair.DLR_CD AND t.CUST_NO = repair.DRIVER_ID
+						 	)repairOrder 
+						 	left join (select * from SE_1162T se where se.CANCEL_YN='N') as specialRequest on specialRequest.RO_DOC_NO = repairOrder.RO_DOC_NO
+						) as statcd01
+						UNION ALL
+						select statcd02.* from (	
+							SELECT repairOrder.CAR_REG_NO,repairOrder.VIN_NO,repairOrder.RO_DOC_NO,repairOrder.CAR_OWNER_ID,repairOrder.CAR_OWNER_NM,
+						 	   repairOrder.HP_NO as DRIVER_HP_NO,specialRequest.REQ_REASON_TP,specialRequest.REQ_REASON_DESC,specialRequest.APPROVE_DESC, 
+						       specialRequest.REQ_USR_NM AS REQ_USR_NM, specialRequest.APPROVE_USR_NM, specialRequest.CAR_OWNER_NM, repairOrder.DRIVER_NM, 
+						       repairOrder.RO_DT, specialRequest.REQ_DT,specialRequest.FILE_DOC_NO,
+						      (CASE when specialRequest.REQ_STAT_CD  is null  THEN '05' ELSE specialRequest.REQ_STAT_CD END) REQ_STAT_CD,
+						       repairOrder.DL_CHK_DT
+						 	FROM (
+								select repair.*,HP_NO from (select  se0300t.DLR_CD,se0300t.CAR_REG_NO,se0300t.VIN_NO,se0300t.RO_DOC_NO,se0300t.CAR_OWNER_ID,se0300t.CAR_OWNER_NM,
+									se0300t.DRIVER_ID,se0300t.DRIVER_NM,se0300t.RO_DT,se0300t.DL_CHK_DT
+								from SE_0300T se0300t 
+								where se0300t.DL_STAT_CD =  '02' 
+								AND se0300t.RO_STAT_CD = '03'   
+								AND se0300t.CUST_CONFIRM_YN ='Y'
+								and (se0300t.cust_confirm_cd = '01')                                     
+								) repair 
+								left join CR_0101T t on t.DLR_CD  = repair.DLR_CD AND t.CUST_NO = repair.DRIVER_ID
+						 	)repairOrder 
+						 	left join (select * from SE_1162T se where se.CANCEL_YN='N') as specialRequest on specialRequest.RO_DOC_NO = repairOrder.RO_DOC_NO 
+						) as statcd02 where 1=1 and statcd02.REQ_STAT_CD not in ('05','00')
+						) as statcd
+					 where 1 = 1
+					 <if test='sRoDocNo != null and sRoDocNo != "" '>
+	                 AND statcd.RO_DOC_NO = #{sRoDocNo}
+	                 </if>
+	                 <if test='sCarRegNo != null and sCarRegNo != "" '>
+	                 AND statcd.CAR_REG_NO = #{sCarRegNo}
+	                 </if>
+	                 <if test='sReqStatCd != null and sReqStatCd != "" '>
+	                 AND statcd.REQ_STAT_CD = #{sReqStatCd}
+	                 </if>
+	                 <if test='sFromReqDt !=null'>
+	                 AND statcd.REQ_DT <![CDATA[>=]]> #{sFromReqDt}
+	                 </if>
+	                 <if test='sToReqDt !=null'>
+	                 AND statcd.REQ_DT <![CDATA[<=]]> #{sToReqDt}+1
+	                 </if>
+                     <if test='sFromRoDt !=null'>
+                     AND statcd.RO_DT <![CDATA[>=]]> #{sFromRoDt}
+	                 </if>
+	                 <if test='sToRoDt !=null'>
+	                 AND statcd.RO_DT <![CDATA[<=]]> #{sToRoDt}+1
+	                 </if>
+	                 ORDER BY statcd.RO_DT desc
+           ) T1
+    </select>
+    
+   <!-- 根据维修委托单号查询是否有正在提报的信息 -->
+   <select id="getReqCountSpecial" parameterType="String" resultType="int">
+		SELECT count(*) FROM (select * from SE_1162T se where se.CANCEL_YN='N') as specialRequest where specialRequest.RO_DOC_NO = #{roDocNo} and specialRequest.REQ_STAT_CD in ('01','03')
+    </select>
+    <!-- 提报 -->
+   <update id="mergeReqSpecial"  parameterType="SpecialRequestVo"  >
+    	MERGE INTO SE_1162T in1162t
+		USING (select 
+		#{dlrCd} as	DLR_CD,
+		#{carRegNo} as	CAR_REG_NO,
+		#{vinNo} as	VIN_NO,
+		#{roDocNo} as RO_DOC_NO,
+		#{roDt} as	RO_DT,
+		#{roTp} as	RO_TP,
+		#{carOwnerId} as CAR_OWNER_ID,
+		#{carOwnerNm} as CAR_OWNER_NM,
+		#{driverId} as	DRIVER_ID,
+		#{driverNm} as	DRIVER_NM,
+		#{driverHpNo} as DRIVER_HP_NO,
+		#{fileDocNo} as	FILE_DOC_NO,
+		#{reqStatCd} as	REQ_STAT_CD,
+		#{reqReasonTp} as REQ_REASON_TP,
+		#{reqReasonDesc} as	REQ_REASON_DESC,
+		#{reqUsrId} as	REQ_USR_ID,
+		#{reqUsrNm} as	REQ_USR_NM,
+		#{reqTskNm} as REQ_TSK_NM,
+		#{reqDt} as	REQ_DT,
+		#{regUsrId} as	REG_USR_ID,
+		#{regDt} as	REG_DT,
+		#{reqHpNo} as REQ_HP_NO,
+		#{updtUserId} as UPDT_USR_ID,
+		#{updtDt} as UPDT_DT,
+		#{dlChkDt}  as DL_CHK_DT,
+		#{roUpdtDt} as	RO_UPDT_DT from dual ) se1162t
+		ON (in1162t.RO_DOC_NO=se1162t.RO_DOC_NO and in1162t.CANCEL_YN='N')
+		WHEN MATCHED THEN
+		UPDATE
+		SET in1162t.FILE_DOC_NO = se1162t.FILE_DOC_NO,
+		    in1162t.REQ_REASON_TP =se1162t.REQ_REASON_TP,
+		    in1162t.REQ_STAT_CD = se1162t.REQ_STAT_CD,
+		    in1162t.REQ_REASON_DESC = se1162t.REQ_REASON_DESC,
+		    in1162t.RO_TP = se1162t.RO_TP,
+		    in1162t.RO_DT = se1162t.RO_DT,
+		    in1162t.REQ_DT = se1162t.REQ_DT,
+		    in1162t.DL_CHK_DT = se1162t.DL_CHK_DT,
+		    in1162t.REQ_USR_NM = se1162t.REQ_USR_NM,
+		    in1162t.REQ_USR_ID = se1162t.REQ_USR_ID,
+		    in1162t.REQ_TSK_NM = se1162t.REQ_TSK_NM,
+		    in1162t.APPROVE_DESC = '',
+		    in1162t.APPROVE_USR_NM = '',
+		    in1162t.APPROVE_USR_ID = ''
+		WHEN NOT MATCHED THEN
+		INSERT (
+		in1162t.REQ_NO,in1162t.DLR_CD,in1162t.CAR_REG_NO,in1162t.VIN_NO,in1162t.RO_DOC_NO,in1162t.RO_DT,in1162t.RO_TP,in1162t.CAR_OWNER_ID,in1162t.CAR_OWNER_NM,
+		in1162t.DRIVER_ID,in1162t.DRIVER_NM,in1162t.DRIVER_HP_NO,in1162t.FILE_DOC_NO,in1162t.REQ_STAT_CD,in1162t.REQ_REASON_TP,in1162t.REQ_REASON_DESC,
+		in1162t.REQ_USR_ID,in1162t.REQ_USR_NM,in1162t.REQ_DT,in1162t.REG_USR_ID,in1162t.REG_DT,
+		in1162t.REQ_TSK_NM,in1162t.REQ_HP_NO,in1162t.UPDT_USR_ID,in1162t.UPDT_DT,in1162t.RO_UPDT_DT,in1162t.CANCEL_YN,in1162t.DL_CHK_DT
+		) VALUES (
+		SEQ_SE_1162T.nextval,se1162t.DLR_CD,se1162t.CAR_REG_NO,se1162t.VIN_NO,se1162t.RO_DOC_NO,se1162t.RO_DT,se1162t.RO_TP,se1162t.CAR_OWNER_ID,se1162t.CAR_OWNER_NM,
+		se1162t.DRIVER_ID,se1162t.DRIVER_NM,se1162t.DRIVER_HP_NO,se1162t.FILE_DOC_NO,se1162t.REQ_STAT_CD,se1162t.REQ_REASON_TP,se1162t.REQ_REASON_DESC,
+		se1162t.REQ_USR_ID,se1162t.REQ_USR_NM,se1162t.REQ_DT,se1162t.REG_USR_ID,se1162t.REG_DT,
+		se1162t.REQ_TSK_NM,se1162t.REQ_HP_NO,se1162t.UPDT_USR_ID,se1162t.UPDT_DT,se1162t.RO_UPDT_DT,'N',se1162t.DL_CHK_DT
+		)
+    </update>
+    
+    <!-- 保存 -->
+   <update id="mergeSaveSpecial"  parameterType="SpecialRequestVo"  >
+    	MERGE INTO SE_1162T in1162t
+		USING (select 
+		#{dlrCd} as	DLR_CD,
+		#{carRegNo} as	CAR_REG_NO,
+		#{vinNo} as	VIN_NO,
+		#{roDocNo} as RO_DOC_NO,
+		#{roDt} as	RO_DT,
+		#{roTp} as	RO_TP,
+		#{carOwnerId} as CAR_OWNER_ID,
+		#{carOwnerNm} as CAR_OWNER_NM,
+		#{driverId} as	DRIVER_ID,
+		#{driverNm} as	DRIVER_NM,
+		#{driverHpNo} as DRIVER_HP_NO,
+		#{fileDocNo} as	FILE_DOC_NO,
+		#{reqStatCd} as	REQ_STAT_CD,
+		#{reqReasonTp} as REQ_REASON_TP,
+		#{reqReasonDesc} as	REQ_REASON_DESC,
+		#{regUsrId} as	REG_USR_ID,
+		#{regDt} as	REG_DT,
+		#{updtUserId} as UPDT_USR_ID,
+		#{updtDt} as UPDT_DT,
+		#{dlChkDt}  as DL_CHK_DT,
+		#{roUpdtDt} as	RO_UPDT_DT from dual ) se1162t
+		ON (in1162t.RO_DOC_NO=se1162t.RO_DOC_NO and in1162t.CANCEL_YN='N')
+		WHEN MATCHED THEN
+		UPDATE
+		SET in1162t.FILE_DOC_NO = se1162t.FILE_DOC_NO,
+		    in1162t.REQ_REASON_TP =se1162t.REQ_REASON_TP,
+		    in1162t.REG_DT = se1162t.REG_DT,
+		    in1162t.REQ_STAT_CD = se1162t.REQ_STAT_CD,
+		    in1162t.REQ_REASON_DESC = se1162t.REQ_REASON_DESC,
+		    in1162t.RO_TP = se1162t.RO_TP,
+		    in1162t.RO_DT = se1162t.RO_DT,
+		    in1162t.DL_CHK_DT = se1162t.DL_CHK_DT,
+		    in1162t.APPROVE_DESC = '',
+		    in1162t.APPROVE_USR_NM = '',
+		    in1162t.APPROVE_USR_ID = ''
+		WHEN NOT MATCHED THEN
+		INSERT (
+		in1162t.REQ_NO,in1162t.DLR_CD,in1162t.CAR_REG_NO,in1162t.VIN_NO,in1162t.RO_DOC_NO,in1162t.RO_DT,in1162t.RO_TP,in1162t.CAR_OWNER_ID,in1162t.CAR_OWNER_NM,
+		in1162t.DRIVER_ID,in1162t.DRIVER_NM,in1162t.DRIVER_HP_NO,in1162t.FILE_DOC_NO,in1162t.REQ_STAT_CD,in1162t.REQ_REASON_TP,in1162t.REQ_REASON_DESC,
+		in1162t.REG_USR_ID,
+		in1162t.REG_DT,in1162t.UPDT_USR_ID,in1162t.UPDT_DT,in1162t.RO_UPDT_DT,in1162t.CANCEL_YN,in1162t.DL_CHK_DT
+		) VALUES (
+		SEQ_SE_1162T.nextval,se1162t.DLR_CD,se1162t.CAR_REG_NO,se1162t.VIN_NO,se1162t.RO_DOC_NO,se1162t.RO_DT,se1162t.RO_TP,se1162t.CAR_OWNER_ID,se1162t.CAR_OWNER_NM,
+		se1162t.DRIVER_ID,se1162t.DRIVER_NM,se1162t.DRIVER_HP_NO,se1162t.FILE_DOC_NO,se1162t.REQ_STAT_CD,se1162t.REQ_REASON_TP,se1162t.REQ_REASON_DESC,
+		se1162t.REG_USR_ID,
+		se1162t.REG_DT,se1162t.UPDT_USR_ID,se1162t.UPDT_DT,se1162t.RO_UPDT_DT,'N',se1162t.DL_CHK_DT
+		)
+    </update>
+
+   <!-- 根据维修委托单号、店代码、车辆识别码查询唯一申请信息 -->
+   <select id="selectSpecialRequest" parameterType="SpecialRequestVo" resultType="SpecialRequestVo">
+		SELECT * FROM (select * from SE_1162T se where se.CANCEL_YN='N') as specialRequest where specialRequest.RO_DOC_NO = #{roDocNo} and specialRequest.DLR_CD =#{dlrCd} and specialRequest.VIN_NO =#{vinNo}
+   </select>
+   
+      <!-- 根据维修委托单号查询工单信息 -->
+   <select id="selectWorkOrder" parameterType="String" resultType="SpecialRequestVo">
+		 select repair.*,HP_NO as DRIVER_HP_NO from (select  se0300t.DLR_CD,se0300t.CAR_REG_NO,se0300t.VIN_NO,se0300t.RO_DOC_NO,se0300t.CAR_OWNER_ID,
+		 se0300t.CAR_OWNER_NM,se0300t.DRIVER_ID,se0300t.DRIVER_NM,se0300t.UPDT_DT,se0300t.ro_tp,se0300t.ro_dt,se0300t.DL_CHK_DT,se0300t.cust_confirm_cd
+		 from SE_0300T se0300t 
+		 where se0300t.DL_STAT_CD =  '02' 
+		 AND se0300t.RO_STAT_CD = '03'   
+		 AND se0300t.CUST_CONFIRM_YN ='Y'  
+		 ) repair left join CR_0101T t on t.DLR_CD  = repair.DLR_CD AND t.CUST_NO = repair.DRIVER_ID	
+		 where repair.RO_DOC_NO = #{roDocNo}
+   </select>
+   
+   <!-- Excel的导出 wangc 2021年4月14日21:03:26 -->
+   <select id="selectSpecialRequestForSpecialBySpecialExcel" parameterType="SpecialRequestSearchVo" resultType="SpecialRequestVo">
+        SELECT *
+         FROM (
+              SELECT ROWNUM AS RNUM , T1.*,
+               (select CMM_CD_NM from CM_0303T where CMM_CD = T1.REQ_REASON_TPE and CMM_GRP_CD='SER602') as REQ_REASON_TP,
+ 			   (select CMM_CD_NM from CM_0303T where CMM_CD = T1.REQ_STAT_CDE and CMM_GRP_CD='SER601') as REQ_STAT_CD
+                FROM (
+                    select  statcd.*,ROWNUM  from (
+						select statcd01.* from (	
+							SELECT repairOrder.CAR_REG_NO,repairOrder.VIN_NO,repairOrder.RO_DOC_NO,repairOrder.CAR_OWNER_ID,repairOrder.CAR_OWNER_NM,
+						 	   repairOrder.HP_NO as DRIVER_HP_NO,specialRequest.REQ_REASON_TP as REQ_REASON_TPE,specialRequest.REQ_REASON_DESC,specialRequest.APPROVE_DESC, 
+						       specialRequest.REQ_USR_NM AS REQ_USR_NM, specialRequest.APPROVE_USR_NM, specialRequest.CAR_OWNER_NM, repairOrder.DRIVER_NM, 
+						       repairOrder.RO_DT, specialRequest.REQ_DT,specialRequest.FILE_DOC_NO,
+						      (CASE when specialRequest.REQ_STAT_CD  is null  THEN '05' ELSE specialRequest.REQ_STAT_CD END) REQ_STAT_CDE,
+						       repairOrder.DL_CHK_DT
+						 	FROM (
+								select repair.*,HP_NO from (select  se0300t.DLR_CD,se0300t.CAR_REG_NO,se0300t.VIN_NO,se0300t.RO_DOC_NO,se0300t.CAR_OWNER_ID,se0300t.CAR_OWNER_NM,
+									se0300t.DRIVER_ID,se0300t.DRIVER_NM,se0300t.RO_DT,se0300t.DL_CHK_DT
+								from SE_0300T se0300t 
+								where se0300t.DL_STAT_CD =  '02' 
+								AND se0300t.RO_STAT_CD = '03'   
+								AND se0300t.CUST_CONFIRM_YN ='Y'
+								and (se0300t.cust_confirm_cd = '02' or se0300t.cust_confirm_cd is null)                                     
+								) repair 
+								left join CR_0101T t on t.DLR_CD  = repair.DLR_CD AND t.CUST_NO = repair.DRIVER_ID
+						 	)repairOrder 
+						 	left join (select * from SE_1162T se where se.CANCEL_YN='N') as specialRequest on specialRequest.RO_DOC_NO = repairOrder.RO_DOC_NO
+						) as statcd01
+						UNION ALL
+						select statcd02.* from (	
+							SELECT repairOrder.CAR_REG_NO,repairOrder.VIN_NO,repairOrder.RO_DOC_NO,repairOrder.CAR_OWNER_ID,repairOrder.CAR_OWNER_NM,
+						 	   repairOrder.HP_NO as DRIVER_HP_NO,specialRequest.REQ_REASON_TP AS REQ_REASON_TPE,specialRequest.REQ_REASON_DESC,specialRequest.APPROVE_DESC, 
+						       specialRequest.REQ_USR_NM AS REQ_USR_NM, specialRequest.APPROVE_USR_NM, specialRequest.CAR_OWNER_NM, repairOrder.DRIVER_NM, 
+						       repairOrder.RO_DT, specialRequest.REQ_DT,specialRequest.FILE_DOC_NO,
+						      (CASE when specialRequest.REQ_STAT_CD  is null  THEN '05' ELSE specialRequest.REQ_STAT_CD END) REQ_STAT_CDE,
+						       repairOrder.DL_CHK_DT
+						 	FROM (
+								select repair.*,HP_NO from (select  se0300t.DLR_CD,se0300t.CAR_REG_NO,se0300t.VIN_NO,se0300t.RO_DOC_NO,se0300t.CAR_OWNER_ID,se0300t.CAR_OWNER_NM,
+									se0300t.DRIVER_ID,se0300t.DRIVER_NM,se0300t.RO_DT,se0300t.DL_CHK_DT
+								from SE_0300T se0300t 
+								where se0300t.DL_STAT_CD =  '02' 
+								AND se0300t.RO_STAT_CD = '03'   
+								AND se0300t.CUST_CONFIRM_YN ='Y'
+								and (se0300t.cust_confirm_cd = '01')                                     
+								) repair 
+								left join CR_0101T t on t.DLR_CD  = repair.DLR_CD AND t.CUST_NO = repair.DRIVER_ID
+						 	)repairOrder 
+						 	left join (select * from SE_1162T se where se.CANCEL_YN='N') as specialRequest on specialRequest.RO_DOC_NO = repairOrder.RO_DOC_NO 
+						) as statcd02 where 1=1 and statcd02.REQ_STAT_CDE not in ('05','00')
+						) as statcd
+					 where 1 = 1
+					 <if test='sRoDocNo != null and sRoDocNo != "" '>
+	                 AND statcd.RO_DOC_NO = #{sRoDocNo}
+	                 </if>
+	                 <if test='sCarRegNo != null and sCarRegNo != "" '>
+	                 AND statcd.CAR_REG_NO = #{sCarRegNo}
+	                 </if>
+	                 <if test='sReqStatCd != null and sReqStatCd != "" '>
+	                 AND statcd.REQ_STAT_CDE = #{sReqStatCd}
+	                 </if>
+	                 <if test='sFromReqDt !=null'>
+	                 AND statcd.REQ_DT <![CDATA[>=]]> #{sFromReqDt}
+	                 </if>
+	                 <if test='sToReqDt !=null'>
+	                 AND statcd.REQ_DT <![CDATA[<=]]> #{sToReqDt}+1
+	                 </if>
+                     <if test='sFromRoDt !=null'>
+                     AND statcd.RO_DT <![CDATA[>=]]> #{sFromRoDt}
+	                 </if>
+	                 <if test='sToRoDt !=null'>
+	                 AND statcd.RO_DT <![CDATA[<=]]> #{sToRoDt}+1
+	                 </if>
+	                 ORDER BY statcd.RO_DT desc
+                ) T1
+         )
+       
+    </select>
+   <!-- 根据岗位编码查询岗位信息 wangc  2021年4月21日20:56:16 -->
+   <select id="selectReqTskNm" parameterType="String" resultType="String">
+   	select TSK_NM from cm_2801t t where t.CMP_TP='10' and t.TSK_CD=#{tskCd};
+   </select>
+   
+   
+      <!-- 根据用户的id查询手机号码  wangc  2021年4月26日15:51:27 -->
+   <select id="selectReqHpNo" parameterType="String" resultType="String">
+   	select HP_NO from cm_0801t t where t.USR_ID=#{userId}
+   </select>
+</mapper>

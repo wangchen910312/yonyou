@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : HolidayDao_SqlMap.xml
+    Description : 휴일 목록 관한 데이터처리
+    author Byoung Chul Jeon
+    since 2015. 4. 18.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 04. 18.     Byoung Chul Jeon     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.sci.service.dao.HolidayDAO">
+
+    <!-- 휴일 목록을 추가한다. -->
+    <insert id="insertHoliday" parameterType="HolidayVO">
+        /* [chn.bhmc.dms.cmm.calendar.service.dao.HolidayDAO.insertHoliday] */
+        INSERT INTO CM_0210T(
+               CALENDAR_ID
+             , HDAY_DT
+             , HDAY_INFO_TXT
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+        ) VALUES (
+               #{calendarId}
+             , #{newHdayDt}
+             , #{hdayInfoTxt}
+             , #{regUsrId}
+             , SYSDATE
+             , #{regUsrId}
+             , SYSDATE
+        )
+    </insert>
+
+    <!-- 휴일 정보 목록을 수정한다. -->
+    <update id="updateHoliday" parameterType="HolidayVO">
+        /* [chn.bhmc.dms.cmm.calendar.service.dao.HolidayDAO.updateHoliday] */
+        UPDATE CM_0210T
+           SET HDAY_DT          = #{newHdayDt}
+             , HDAY_INFO_TXT    = #{hdayInfoTxt}
+             , UPDT_USR_ID      = #{updtUsrId}
+             , UPDT_DT          = SYSDATE
+         WHERE CALENDAR_ID  = #{calendarId}
+           AND HDAY_DT      = #{oldHdayDt}
+    </update>
+
+    <!-- 휴일 목록을 삭제한다. -->
+    <delete id="deleteHoliday" parameterType="HolidayVO">
+        /* [chn.bhmc.dms.cmm.calendar.service.dao.HolidayDAO.deleteWorking] */
+        DELETE FROM CM_0210T
+         WHERE CALENDAR_ID  = #{calendarId}
+           AND HDAY_DT      = #{oldHdayDt}
+    </delete>
+
+    <!-- 휴일 목록을 조회한다. -->
+    <select id="selectHolidayByCondition" parameterType="HolidaySearchVO" resultType="HolidayVO">
+        /* [chn.bhmc.dms.cmm.calendar.service.dao.HolidayDAO.selectHolidayByCondition] */
+        SELECT *
+          FROM (SELECT ROWNUM AS RNUM
+                     , T1.*
+                  FROM (SELECT T1.CALENDAR_ID
+                             , T2.HDAY_DT AS OLD_HDAY_DT
+                             , T2.HDAY_DT AS NEW_HDAY_DT
+                             , T2.HDAY_INFO_TXT
+                             , T2.REG_USR_ID
+                             , T2.REG_DT
+                             , T2.UPDT_USR_ID
+                             , T2.UPDT_DT
+                          FROM CM_0208T T1
+                         INNER JOIN CM_0210T T2
+                        <if test='sCalendarTp == "01"'>
+                            ON T1.HDAY_CALENDAR_ID = T2.CALENDAR_ID
+                        </if>
+
+                        <if test='sCalendarTp == "02"'>
+                            ON T1.CALENDAR_ID = T2.CALENDAR_ID
+                        </if>
+
+                        <where>
+                            AND T1.CALENDAR_ID = #{sCalendarId}
+                        </where>
+                         ORDER BY
+                        <choose>
+                            <when test='sort != null'>
+                                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                    <choose>
+                                        <when test='item.field == "hdayDt"'>HDAY_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <when test='item.field == "hdayInfoTxt"'>HDAY_INFO_TXT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                        <otherwise>
+                                            T1.CALENDAR_ID DESC
+                                          , T2.HDAY_DT DESC
+                                        </otherwise>
+                                    </choose>
+                                </foreach>
+                            </when>
+                            <otherwise>
+                                T1.CALENDAR_ID DESC
+                              , T2.HDAY_DT DESC
+                            </otherwise>
+                        </choose>) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>)
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 휴일 목록 Count를 조회한다. -->
+    <select id="selectHolidayByConditionCnt" parameterType="HolidaySearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.calendar.service.dao.HolidayDAO.selectCalendarInfoByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM CM_0208T T1
+         INNER JOIN CM_0210T T2
+        <if test='sCalendarTp == "01"'>
+            ON T1.HDAY_CALENDAR_ID = T2.CALENDAR_ID
+        </if>
+
+        <if test='sCalendarTp == "02"'>
+            ON T1.CALENDAR_ID = T2.CALENDAR_ID
+        </if>
+
+        <where>
+            AND T1.CALENDAR_ID = #{sCalendarId}
+        </where>
+    </select>
+</mapper>

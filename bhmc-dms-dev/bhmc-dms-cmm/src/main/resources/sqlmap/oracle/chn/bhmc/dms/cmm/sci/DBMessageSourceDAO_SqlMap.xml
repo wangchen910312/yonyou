@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : DBMessageSourceDao_SqlMap.xml
+    Description : 메세지소스에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 1. 18.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 18.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.sci.service.dao.DBMessageSourceDAO">
+
+	<!-- 메세지소스 정보를 등록한다. -->
+	<insert id="insertDBMessageSource" parameterType="DBMessageSourceVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.DBMessageSourceDAO.insertDBMessageSource] */
+		INSERT INTO CM_0501T(
+			 MESG_SEQ
+            ,BUNDLE_NM
+			,LANG_CD
+			,CNTRY_CD
+            ,MESG_KEY
+            ,MESG_TXT
+            ,LST_UPDT_DT
+            ,USE_YN
+            ,REG_USR_ID
+            ,REG_DT
+		)VALUES(
+			 SEQ_CM_0501T.NEXTVAL
+            ,#{bundleNm}
+			,#{langCd}
+			,#{cntryCd}
+            ,#{mesgKey}
+            ,#{mesgTxt}
+            ,SYSDATE
+            ,#{useYn}
+            ,#{regUsrId}
+            ,SYSDATE
+		)
+	</insert>
+
+	<!-- 메세지소스 정보 정보를 수정한다. -->
+	<update id="updateDBMessageSource" parameterType="DBMessageSourceVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.DBMessageSourceDAO.updateDBMessageSource] */
+		UPDATE CM_0501T SET
+             BUNDLE_NM = #{bundleNm}
+            ,LANG_CD = #{langCd}
+			,CNTRY_CD = #{cntryCd}
+            ,MESG_KEY = #{mesgKey}
+            ,MESG_TXT = #{mesgTxt}
+            ,LST_UPDT_DT = SYSDATE
+            ,USE_YN = #{useYn}
+            ,UPDT_USR_ID = #{updtUsrId}
+            ,UPDT_DT = SYSDATE
+		WHERE MESG_SEQ 	= #{mesgSeq}
+	</update>
+
+	<!-- 메세지소스 정보 정보를 삭제한다. -->
+	<delete id="deleteDBMessageSource" parameterType="DBMessageSourceVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.DBMessageSourceDAO.deleteDBMessageSource] */
+		DELETE FROM CM_0501T
+		WHERE MESG_SEQ = #{mesgSeq}
+	</delete>
+
+	<!-- 메세지소스 정보를 조회한다. -->
+	<select id="selectDBMessageSourceByKey" parameterType="map" resultType="DBMessageSourceVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.DBMessageSourceDAO.selectDBMessageSourceByKey] */
+        <bind name='cntryCd' value='@org.apache.commons.lang3.StringUtils@defaultIfBlank(cntryCd," ")' />
+		SELECT * FROM CM_0501T
+		WHERE 
+			LANG_CD = #{langCd}
+            AND NVL(CNTRY_CD,' ') = #{cntryCd}
+            AND MESG_KEY = #{mesgKey}
+	</select>
+
+	<!-- 메세지소스 정보 목록을 조회한다. -->
+	<select id="selectDBMessageSourcesByCondition" parameterType="DBMessageSourceSearchVO" resultType="DBMessageSourceVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.DBMessageSourceDAO.selectDBMessageSourcesByCondition] */
+		SELECT * FROM (
+            SELECT ROWNUM AS RNUM,T1.* FROM (
+                SELECT * FROM CM_0501T
+                <where>
+                    <if test='sBundleNm != null and sBundleNm != ""'>
+                        BUNDLE_NM = #{sBundleNm}
+                    </if>
+
+                    <if test='sMesgKey != null and sMesgKey != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sMesgKey,"*")'>
+                                <bind name='sMesgKey' value='@org.apache.commons.lang3.StringUtils@replace(sMesgKey,"*","%")' />
+                                 AND MESG_KEY LIKE #{sMesgKey}
+                            </when>
+                            <otherwise>
+                                 AND MESG_KEY = #{sMesgKey}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sLangCd != null and sLangCd != ""'>
+                        AND LANG_CD = #{sLangCd}
+                    </if>
+
+                    <if test='sMesgTxt != null and sMesgTxt != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sMesgTxt,"*")'>
+                                <bind name='sMesgTxt' value='@org.apache.commons.lang3.StringUtils@replace(sMesgTxt,"*","%")' />
+                                 AND MESG_TXT LIKE #{sMesgTxt}
+                            </when>
+                            <otherwise>
+                                 AND MESG_TXT = #{sMesgTxt}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sUseYn != null and sUseYn != ""'>
+                        AND USE_YN = #{sUseYn}
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "bundleNm"'>BUNDLE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "langCd"'>LANG_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "cntryCd"'>CNTRY_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "mesgKey"'>MESG_KEY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "mesgTxt"'>MESG_TXT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "lstUpdtDt"'>LST_UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "lstUpdtDtFormat"'>LST_UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "useYn"'>USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regUsrId"'>REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDt"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtUsrId"'>UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtDt"'>UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    MESG_KEY ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        MESG_KEY ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+	<!-- 메세지소스 정보 목록수를 조회한다. -->
+	<select id="selectDBMessageSourcesByConditionCnt" parameterType="DBMessageSourceSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.DBMessageSourceDAO.selectDBMessageSourcesByConditionCnt] */
+		SELECT COUNT(*) AS VALUE FROM CM_0501T
+		<where>
+			<if test='sBundleNm != null and sBundleNm != ""'>
+                BUNDLE_NM = #{sBundleNm}
+            </if>
+
+            <if test='sMesgKey != null and sMesgKey != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sMesgKey,"*")'>
+                        <bind name='sMesgKey' value='@org.apache.commons.lang3.StringUtils@replace(sMesgKey,"*","%")' />
+                         AND MESG_KEY LIKE #{sMesgKey}
+                    </when>
+                    <otherwise>
+                         AND MESG_KEY = #{sMesgKey}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sLangCd != null and sLangCd != ""'>
+                AND LANG_CD = #{sLangCd}
+            </if>
+
+            <if test='sMesgTxt != null and sMesgTxt != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sMesgTxt,"*")'>
+                        <bind name='sMesgTxt' value='@org.apache.commons.lang3.StringUtils@replace(sMesgTxt,"*","%")' />
+                         AND MESG_TXT LIKE #{sMesgTxt}
+                    </when>
+                    <otherwise>
+                         AND MESG_TXT = #{sMesgTxt}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sUseYn != null and sUseYn != ""'>
+                AND USE_YN = #{sUseYn}
+            </if>
+		</where>
+	</select>
+</mapper>

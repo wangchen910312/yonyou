@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : techManFnMasterDAO_SqlMap.xml
+    Description : 테크멘 기능관리 마스터에 관한 데이터처리
+    author Yin Xueyuan
+    since 2016. 02. 11.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 02. 11.  Yin Xueyuan      최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.svi.service.dao.TechManFnMasterDAO">
+
+    <!-- 테크멘 기능관리 등록-->
+    <insert id="insertTechManFnMaster" parameterType="TechManFnMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.TechManFnMasterDAO.insertTechManFnMaster] */
+        INSERT INTO SE_1026T    --테크멘 기능관리 마스터
+        (
+          DLR_CD                --딜러코드
+         ,TEC_ID                --테크멘 ID
+         ,TEC_NM                --테크멘 명
+         ,TEC_MFN_NM            --테크멘 주기능명
+         ,TEC_SFN_NM1           --테크멘 부기능명1
+         ,TEC_SFN_NM2           --테크멘 부기능명2
+         ,TEC_SFN_NM3           --테크멘 부기능명3
+         ,REG_USR_ID            --등록자ID
+         ,REG_DT                --등록일자
+         ,UPDT_USR_ID           --수정자ID
+         ,UPDT_DT               --수정일자
+         ,WRK_TP                --업무구분
+         ,SYS_NO
+        )
+        VALUES
+        (
+          #{dlrCd}                --딜러코드
+         ,#{tecId}                --테크멘 ID
+         ,#{tecNm}                --테크멘 명
+         ,#{tecMfnNm}             --테크멘 주기능명
+         ,#{tecSfnNm1}            --테크멘 부기능명1
+         ,#{tecSfnNm2}            --테크멘 부기능명2
+         ,#{tecSfnNm3}            --테크멘 부기능명3
+         ,#{regUsrId}             --등록자ID
+         ,SYSDATE                 --등록일자
+         ,#{updtUsrId}            --수정자ID
+         ,SYSDATE                 --수정일자
+         ,#{wrkTp}                --업무구분
+         ,#{sysNo}
+        )
+    </insert>
+
+    <!-- 테크멘 기능관리 수정 -->
+    <update id="updateTechManFnMaster" parameterType="TechManFnMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.TechManFnMasterDAO.updateTechManFnMaster] */
+        UPDATE SE_1026T    --테크멘 기능관리 마스터
+          SET
+               TEC_MFN_NM     = #{tecMfnNm}             --테크멘 주기능명
+              ,TEC_SFN_NM1    = #{tecSfnNm1}            --테크멘 부기능명1
+              ,TEC_SFN_NM2    = #{tecSfnNm2}            --테크멘 부기능명2
+              ,TEC_SFN_NM3    = #{tecSfnNm3}            --테크멘 부기능명3
+              ,UPDT_USR_ID    = #{updtUsrId}            --수정자ID
+              ,UPDT_DT        = SYSDATE                 --수정일자
+              ,WRK_TP         = #{wrkTp}                 --업무구분
+              ,SYS_NO         = #{sysNo}
+             WHERE 1 = 1
+               AND TEC_ID     = #{tecId}                --테크멘 ID
+               AND DLR_CD     = #{dlrCd}                --딜러코드
+    </update>
+
+    <!-- 테크멘 기능관리 삭제 -->
+    <delete id="deleteTechManFnMaster" parameterType="TechManFnMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.TechManFnMasterDAO.deleteTechManFnMaster] */
+        DELETE FROM SE_1026T
+        WHERE DLR_CD     = #{dlrCd}     --딜러코드
+        AND   TEC_ID     = #{tecId}     --테크멘 ID
+    </delete>
+
+    <!-- 테크멘 기능관리 리스트 -->
+    <select id="selectTechManFnMasterByCondition" parameterType="TechManFnMasterSearchVO" resultType="TechManFnMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.TechManFnMasterDAO.selectTechManFnMasterByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    T1.DLR_CD
+                    ,T1.TEC_ID
+                    ,T1.TEC_NM
+                    ,T1.TEC_MFN_NM
+                    ,T1.TEC_SFN_NM1
+                    ,T1.TEC_SFN_NM2
+                    ,T1.TEC_SFN_NM3
+                    ,T1.WRK_TP
+                    ,T1.REG_USR_ID
+                    ,T1.REG_DT
+                    ,T1.UPDT_USR_ID
+                    ,T1.UPDT_DT
+                    ,T1.SYS_NO
+                    ,V1.TSK_CD
+                    ,V1.DEPT_CD
+                    ,V2.DEPT_NM
+                    ,V3.TSK_NM
+                FROM  SE_1026T T1
+                INNER JOIN CM_0801T V1 ON T1.TEC_ID = V1.USR_ID 
+                AND V1.DEL_YN='N'   <!-- 2020/01/03  tianjx 维修派工岗位已删除的员工不显示 -->
+                LEFT JOIN CM_3401T V2 ON V1.DEPT_CD = V2.DEPT_CD AND V2.CMP_TP = '10'
+                LEFT JOIN CM_2801T V3 ON V1.TSK_CD = V3.TSK_CD AND V3.CMP_TP = '10'
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND T1.DLR_CD = #{sDlrCd}
+                    </if>
+                    <if test='sTecId != null and sTecId != ""'>
+                        AND T1.TEC_ID LIKE '%'||#{sTecId}||'%'
+                    </if>
+                    <if test='sSysNo != null and sSysNo != ""'>
+                        AND T1.SYS_NO LIKE '%'||#{sSysNo}||'%'
+                    </if>
+                    <if test='sTecNm != null and sTecNm != ""'>
+                        AND T1.TEC_NM LIKE '%'||#{sTecNm}||'%'
+                    </if>
+                    <if test='sDeptNm != null and sDeptNm != ""'>
+                        AND V2.DEPT_NM LIKE '%'||#{sDeptNm}||'%'
+                    </if>
+                    <if test='sWrkTp != null and sWrkTp != ""'>
+                        AND T1.WRK_TP = #{sWrkTp}
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "tecId"'>T1.TEC_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "tecNm"'>T1.TEC_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    T1.DLR_CD,T1.SYS_NO,T1.TEC_ID ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        T1.DLR_CD,T1.SYS_NO,T1.TEC_ID ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 테크멘 기능관리 목록수 -->
+    <select id="selectTechManFnMasterByConditionCnt" parameterType="TechManFnMasterSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.TechManFnMasterDAO.selectTechManFnMasterByConditionCnt] */
+        SELECT
+            COUNT(*) AS VALUE
+        FROM  SE_1026T T1
+        INNER JOIN CM_0801T V1 ON T1.TEC_ID = V1.USR_ID
+        LEFT JOIN CM_3401T V2 ON V1.DEPT_CD = V2.DEPT_CD AND V2.CMP_TP = '10'
+        LEFT JOIN CM_2801T V3 ON V1.TSK_CD = V3.TSK_CD AND V3.CMP_TP = '10'
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND T1.DLR_CD = #{sDlrCd}
+            </if>
+            <if test='sTecId != null and sTecId != ""'>
+                AND T1.TEC_ID LIKE '%'||#{sTecId}||'%'
+            </if>
+            <if test='sSysNo != null and sSysNo != ""'>
+                AND T1.SYS_NO LIKE '%'||#{sSysNo}||'%'
+            </if>
+            <if test='sTecNm != null and sTecNm != ""'>
+                AND T1.TEC_NM LIKE '%'||#{sTecNm}||'%'
+            </if>
+            <if test='sDeptNm != null and sDeptNm != ""'>
+                AND V2.DEPT_NM LIKE '%'||#{sDeptNm}||'%'
+            </if>
+            <if test='sWrkTp != null and sWrkTp != ""'>
+                AND T1.WRK_TP = #{sWrkTp}
+            </if>
+        </where>
+    </select>
+
+</mapper>

@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="ds1" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDistOfficeCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCarlineCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sYyyy"/>
+<O>
+<![CDATA[2016]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sSdptCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sYyyyMm"/>
+<O>
+<![CDATA[2016-05]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT case when nvl(Z.sdpt_cd, ' ') = ' ' then Z.sdpt_nm 
+            else '[' || Z.sdpt_cd || ']A' || Z.sdpt_nm 
+        end AS sdpt_nm
+     , case when nvl(Z.dist_office_cd, ' ') = ' ' then Z.dist_office_nm
+            else '[' || Z.dist_office_cd || ']A' || Z.dist_office_nm 
+         end AS dist_office_nm
+     , case when nvl(Z.dlr_cd, ' ') = ' ' then Z.dlr_nm
+            else '[' || Z.dlr_cd || ']A' || Z.dlr_nm 
+        end AS dlr_nm
+     , Z.YEAR_CNT
+     , Z.MONTH_CNT
+     , Z.NOW_CNT
+  FROM (
+        select a.sdpt_cd         -- 사업부코드
+             , (select divi_nm from cm_2501T z where z.divi_cd = a.sdpt_cd) as sdpt_nm
+             , a.dist_office_cd  -- 사무소코드
+             , (select off_nm  from cm_2601T z where z.divi_cd = a.sdpt_cd and z.off_cd = a.dist_office_cd ) as dist_office_nm
+             , a.dlr_cd
+             , a.dlr_nm 
+             , NVL(b.YEAR_CNT, 0)   AS YEAR_CNT
+             , NVL(C.MONTH_CNT, 0)  AS MONTH_CNT
+             , NVL(D.NOW_CNT, 0)    AS NOW_CNT
+           from cm_0101T a   -- 딜러정보
+               , (
+                 select DLR_CD
+                      , TO_CHAR(REAL_DL_DT, 'YYYY') AS REAL_DL_DT
+                      , COUNT(1) AS YEAR_CNT
+                   from sa_0201T
+                  where CONTRACT_STAT_CD = '50'
+                    and real_dl_dt is not null
+                    and CANC_DT is null   
+                    and to_char(REAL_DL_DT, 'YYYY-MM-DD') between '${sYyyy}'||'-01-01' and '${sYyyy}'||'-12-31'
+                    ${IF(LEN(sCarlineCd) == 0, ""," and carline_cd LIKE '"+sCarlineCd+"'")}
+                    group by DLR_CD, TO_CHAR(REAL_DL_DT, 'YYYY') 
+                )b           -- 년 계약완료건
+               , (
+                        select DLR_CD
+                      , TO_CHAR(REAL_DL_DT, 'YYYY-MM') AS REAL_DL_DT
+                      , COUNT(1) AS MONTH_CNT
+                   from sa_0201T a
+                  where a.CONTRACT_STAT_CD = '50'
+                    and a.real_dl_dt is not null
+                    and a.CANC_DT is null
+                    and to_char(REAL_DL_DT, 'YYYY-MM-DD') between '${sYyyyMm}'||'-01' and '${sYyyyMm}'||'-31'
+                    ${IF(LEN(sCarlineCd) == 0, ""," and carline_cd LIKE '"+sCarlineCd+"'")} 
+                   group by DLR_CD, TO_CHAR(REAL_DL_DT, 'YYYY-MM')         
+               )C
+               , (
+                 select DLR_CD
+                      , TO_CHAR(REAL_DL_DT, 'YYYY-MM-DD') AS REAL_DL_DT
+                      , COUNT(1) AS NOW_CNT
+                   from sa_0201T a
+                  where a.CONTRACT_STAT_CD = '50'
+                    and a.real_dl_dt is not null
+                    and a.CANC_DT is null
+                    and REAL_DL_DT > SYSDATE -1
+                    and REAL_DL_DT <= SYSDATE
+                    ${IF(LEN(sCarlineCd) == 0, ""," and carline_cd LIKE '"+sCarlineCd+"'")} 
+                   group by DLR_CD, TO_CHAR(REAL_DL_DT, 'YYYY-MM-DD')         
+               )D
+          where a.dlr_cd = b.dlr_cd(+)
+            AND A.DLR_CD = C.dlr_cd(+)
+            AND A.DLR_CD = D.dlr_cd(+)
+            ${IF(LEN(sSdptCd) == 0, ""," and A.sdpt_cd LIKE '"+sSdptCd+"'")}
+            ${IF(LEN(sDistOfficeCd) == 0, ""," and A.dist_office_cd LIKE '"+sDistOfficeCd+"'")}             
+            ${IF(LEN(sDlrCd) == 0, ""," and A.DLR_CD LIKE '"+sDlrCd+"'")} 
+            
+      ) Z]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="0" T="0"/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1152000,1152000,723900,723900,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[5040000,5040000,10800000,3600000,3600000,3600000,2743200,2743200,2743200,2743200,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" s="0">
+<O>
+<![CDATA[事业部]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="0">
+<O>
+<![CDATA[办事处]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0" s="0">
+<O>
+<![CDATA[经销商]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="0">
+<O>
+<![CDATA[当年]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0" s="0">
+<O>
+<![CDATA[当月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="0">
+<O>
+<![CDATA[现在]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="SDPT_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Scope val="1"/>
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="1" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="DIST_OFFICE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="DLR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="YEAR_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="MONTH_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="NOW_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting>
+<PaperSize width="33912000" height="46411200"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

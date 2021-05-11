@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : sqlname_sql.xml
+    Description : 설명을 기술합니다.
+    author Lee Seungmin
+    since 2016. 3. 23.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 3. 23.     Lee Seungmin     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.sal.orm.service.dao.OrderGradeDAO">
+
+    <select id="selectOrderGradeConditionCnt" parameterType="OrderGradeSearchVO" resultType="int">
+    <!-- selectOrderGradeConditionCnt -->
+        SELECT COUNT(Y.CARLINE_CD)
+          FROM SA_0172T Y
+        <where>
+            <if test='sCarlineCd != null and sCarlineCd != ""'>
+               AND Y.CARLINE_CD = #{sCarlineCd}
+            </if>
+            <if test='sModelCd != null and sModelCd != ""'>
+               AND Y.MODEL_CD = #{sModelCd}
+            </if>
+            <if test='sOcnCd != null and sOcnCd != ""'>
+               AND Y.OCN_CD = #{sOcnCd}
+            </if>
+            <if test='sExtColorCd != null and sExtColorCd != ""'>
+               AND Y.EXT_COLOR_CD = #{sExtColorCd}
+            </if>
+            <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+               AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = Y.MODEL_CD AND X.OCN_CD = Y.OCN_CD)  = #{sFscCd}
+            </if>
+            <if test='sFscCd == "None"'>
+               AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = Y.MODEL_CD AND X.OCN_CD = Y.OCN_CD) IS NULL
+            </if>
+        </where>
+    </select>
+
+    <select id="selectOrderGradeCondition" parameterType="OrderGradeSearchVO" resultType="OrderGradeVO">
+    <!-- selectOrderGradeCondition -->
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT  Y.CARLINE_CD
+                       ,Y.MODEL_CD
+                       ,Y.OCN_CD
+                       ,Y.EXT_COLOR_CD
+                       ,Y.INT_COLOR_CD
+                       ,FN_GET_CARLINE_NM_NC(Y.CARLINE_CD) AS CARLINE_NM
+                       ,FN_GET_MODEL_TP_NM(Y.MODEL_CD, Y.OCN_CD) AS MODEL_NM
+                       ,FN_GET_OCN_NM_NC(Y.MODEL_CD, Y.OCN_CD) AS OCN_NM
+                       ,FN_GET_EXT_COLOR_NM_NC(Y.EXT_COLOR_CD) AS EXT_COLOR_NM
+                       ,FN_GET_INT_COLOR_NM_NC(Y.INT_COLOR_CD) AS INT_COLOR_NM
+                       ,NVL(TRIM(Y.ORD_GRADE_CD),'A') AS ORD_GRADE_CD
+                       ,Y.PDI_ALLOC_COST_VAL
+                       ,Y.REG_USR_ID
+                       ,Y.REG_DT
+                       ,Y.UPDT_USR_ID
+                       ,Y.UPDT_DT
+                   FROM SA_0172T Y
+                <where>
+                    <if test='sCarlineCd != null and sCarlineCd != ""'>
+                       AND Y.CARLINE_CD = #{sCarlineCd}
+                    </if>
+                    <if test='sModelCd != null and sModelCd != ""'>
+                       AND Y.MODEL_CD = #{sModelCd}
+                    </if>
+                    <if test='sOcnCd != null and sOcnCd != ""'>
+                       AND Y.OCN_CD = #{sOcnCd}
+                    </if>
+                    <if test='sExtColorCd != null and sExtColorCd != ""'>
+                       AND Y.EXT_COLOR_CD = #{sExtColorCd}
+                    </if>
+                    <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                       AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = Y.MODEL_CD AND X.OCN_CD = Y.OCN_CD)  = #{sFscCd}
+                    </if>
+                    <if test='sFscCd == "None"'>
+                       AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = Y.MODEL_CD AND X.OCN_CD = Y.OCN_CD) IS NULL
+                    </if>
+                </where>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "carlineCd"'>Y.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelCd"'>Y.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnCd"'>Y.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "extColorCd"'>Y.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "intColorCd"'>Y.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ordGradeCd"'>Y.ORD_GRADE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDt"'>Y.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updDt"'>Y.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    Y.CARLINE_CD, Y.MODEL_CD, Y.OCN_CD, Y.EXT_COLOR_CD, Y.INT_COLOR_CD, Y.ORD_GRADE_CD, Y.REG_DT, Y.UPDT_DT NULLS LAST
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        Y.CARLINE_CD, Y.MODEL_CD, Y.OCN_CD, Y.EXT_COLOR_CD, Y.INT_COLOR_CD, Y.ORD_GRADE_CD, Y.REG_DT, Y.UPDT_DT NULLS LAST
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+</mapper>
+

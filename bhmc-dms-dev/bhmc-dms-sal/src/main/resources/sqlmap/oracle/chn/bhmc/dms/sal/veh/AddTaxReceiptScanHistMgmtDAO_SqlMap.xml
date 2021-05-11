@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : AddTaxReceiptScanHistMgmtDAO_SqlMap.xml
+    Description : [DMS] 기준정보 > 부가세영수증스캔이력관리
+    author chibeom.song
+    since 2017. 2. 20.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 7. 21.   chibeom.song     최초 생성1
+-->
+<mapper namespace="chn.bhmc.dms.sal.veh.service.dao.AddTaxReceiptScanHistMgmtDAO">
+
+    <!-- 기준정보 > 부가세영수증스캔이력관리 총 갯수를 조회한다. -->
+    <select id="selectSalesAddTaxReceiptScanHistMgmtSearchCnt" parameterType="AddTaxReceiptScanHistMgmtSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.veh.service.dao.AddTaxReceiptScanHistMgmtDAO.selectSalesAddTaxReceiptScanHistMgmtSearchCnt] */
+
+        SELECT
+                COUNT(*) AS VALUE
+            FROM (
+                    SELECT
+                         A.DLR_CD AS dlrCd
+                        ,A.UP_DT AS upDt
+                        ,A.RECEIPT_NO AS receiptNo
+                        ,A.RECEIPT_TYPE AS receiptType
+                        ,A.VIN_NO AS vinNo
+                        ,A.VIN_NO1 AS vinNo1
+                        ,A.VIN_NO2 AS vinNo2
+                        ,A.TAXPAYER_ID_CD AS taxpayerIdCd
+                        ,A.RECEIPT_CD AS receiptCd
+                        ,A.RECEIPT_CUST_NM AS receiptCustNm
+                        ,A.SSN_CRN_NO AS ssnCrnNo
+                        ,A.RECEIPT_ISS_DT AS receiptIssDt
+                        ,A.SCAN_VIN_NO AS scanVinNo
+                        ,A.SUM_AMT AS sumAmt
+                        ,A.CERT_NO AS certNo
+                        ,A.ENGN_NO AS engnNo
+                        ,A.SUM_INC_TAX AS sumIncTax
+                        ,A.SUM_EXC_TAX AS sumExcTax
+                        ,A.TAX_RT AS taxRt
+                        ,A.TAX_AMT AS taxAmt
+                        ,A.MERCH_NM AS merchNm
+                        ,A.ADDR AS custAddr
+                        ,A.TMR_CD AS tmrCd
+                        ,A.REG_USR_ID AS regUsrId
+                        ,A.REG_DT AS regDt
+                        ,(SELECT MAX(Z.CUST_SALE_DT) FROM SA_0121T Z WHERE Z.VIN_NO = A.VIN_NO) AS custSaleDt
+                        ,(CASE WHEN A.RECEIPT_TYPE = 'P' THEN (SELECT MAX(Z.ERR_UP_CD) FROM SA_0501T Z WHERE Z.VIN_NO = A.VIN_NO)
+                           WHEN A.RECEIPT_TYPE = 'V' THEN (SELECT MAX(Z.ERR_UP_CD) FROM SA_0502T Z WHERE Z.VIN_NO = A.VIN_NO)
+                           END ) AS receiptStat
+                    FROM SA_0503T A
+                    WHERE A.RECEIPT_TYPE = 'V'
+                    AND A.DLR_CD = #{sDlrCd}
+                    <if test='sUploadStDt != null and sUploadStDt != "" and sUploadEdDt != null and sUploadEdDt != ""'>
+                        AND TO_CHAR(A.UP_DT, 'YYYYMMDD') BETWEEN #{sUploadStDt} AND #{sUploadEdDt}
+                    </if>
+                    <if test='sVinNo != null and sVinNo != ""'>
+                        AND A.VIN_NO = #{sVinNo}
+                    </if>
+                    <if test='sReceiptNo != null and sReceiptNo != ""'>
+                        AND A.RECEIPT_NO = #{sReceiptNo}
+                    </if>
+            )
+
+    </select>
+
+    <!-- 기준정보 > 부가세영수증스캔이력관리 정보를 조회한다. -->
+    <select id="selectSalesAddTaxReceiptScanHistMgmtSearchData" parameterType="AddTaxReceiptScanHistMgmtSearchVO" resultType="ReceiptScanHistMgmtVO">
+    /* [chn.bhmc.dms.sal.veh.service.dao.AddTaxReceiptScanHistMgmtDAO.selectSalesAddTaxReceiptScanHistMgmtSearchData] */
+        SELECT * FROM (
+                SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT
+                         A.DLR_CD AS dlrCd
+                        ,A.UP_DT AS upDt
+                        ,A.RECEIPT_NO AS receiptNo
+                        ,A.RECEIPT_TYPE AS receiptType
+                        ,A.VIN_NO AS vinNo
+                        ,A.VIN_NO1 AS vinNo1
+                        ,A.VIN_NO2 AS vinNo2
+                        ,A.TAXPAYER_ID_CD AS taxpayerIdCd
+                        ,A.RECEIPT_CD AS receiptCd
+                        ,A.RECEIPT_CUST_NM AS receiptCustNm
+                        ,A.SSN_CRN_NO AS ssnCrnNo
+                        ,A.RECEIPT_ISS_DT AS receiptIssDt
+                        ,A.SCAN_VIN_NO AS scanVinNo
+                        ,A.SUM_AMT AS sumAmt
+                        ,A.CERT_NO AS certNo
+                        ,A.ENGN_NO AS engnNo
+                        ,A.SUM_INC_TAX AS sumIncTax
+                        ,A.SUM_EXC_TAX AS sumExcTax
+                        ,A.TAX_RT AS taxRt
+                        ,A.TAX_AMT AS taxAmt
+                        ,A.MERCH_NM AS merchNm
+                        ,A.ADDR AS custAddr
+                        ,A.TMR_CD AS tmrCd
+                        ,A.REG_USR_ID AS regUsrId
+                        ,A.REG_DT AS regDt
+                        ,(SELECT MAX(Z.CUST_SALE_DT) FROM SA_0121T Z WHERE Z.VIN_NO = A.VIN_NO) AS custSaleDt
+                        ,(CASE WHEN A.RECEIPT_TYPE = 'P' THEN (SELECT MAX(Z.ERR_UP_CD) FROM SA_0501T Z WHERE Z.VIN_NO = A.VIN_NO)
+                           WHEN A.RECEIPT_TYPE = 'V' THEN (SELECT MAX(Z.ERR_UP_CD) FROM SA_0502T Z WHERE Z.VIN_NO = A.VIN_NO)
+                           END ) AS receiptStat
+                    FROM SA_0503T A
+                    WHERE A.RECEIPT_TYPE = 'V'
+                    AND A.DLR_CD = #{sDlrCd}
+                    <if test='sUploadStDt != null and sUploadStDt != "" and sUploadEdDt != null and sUploadEdDt != ""'>
+                        AND TO_CHAR(A.UP_DT, 'YYYYMMDD') BETWEEN #{sUploadStDt} AND #{sUploadEdDt}
+                    </if>
+                    <if test='sVinNo != null and sVinNo != ""'>
+                        AND A.VIN_NO = #{sVinNo}
+                    </if>
+                    <if test='sReceiptNo != null and sReceiptNo != ""'>
+                        AND A.RECEIPT_NO = #{sReceiptNo}
+                    </if>
+                    ORDER BY A.UP_DT DESC
+                ) T1
+                <where>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        ROWNUM <![CDATA[<=]]> #{lastIndex}
+                    </if>
+                </where>
+            )
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    RNUM > #{firstIndex}
+                </if>
+            </where>
+
+    </select>
+
+</mapper>

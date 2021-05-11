@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : TargetSalemanStatusDAO_SqlMap.xml
+    Description : [딜러사] 판매고문 실적현황
+    author chibeom.song
+    since 2016. 10. 23.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 10. 23.   chibeom.song     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mis.tss.service.dao.TargetSalemanStatusDAO">
+
+    <!-- 조회 조건에 해당하는 [딜러사] 판매고문 실적현황  총 갯수를 조회한다. -->
+    <select id="selectTargetSalemanStatusGridCnt" parameterType="TargetSalemanStatusSearchVO" resultType="int">
+    /* [chn.bhmc.dms.mis.tss.service.dao.TargetSalemanStatusDAO.selectTargetSalemanStatusGridCnt] */
+        SELECT
+         COUNT(*)
+        FROM MS_0105T A
+        WHERE A.GOAL_YY||A.GOAL_MM = #{sSalemanStatusYyMm}
+        AND A.EMP_NO = 'D0103007'
+
+    </select>
+
+    <!-- 조회 조건에 해당하는 [딜러사] 판매고문 실적현황 정보를 조회한다. -->
+    <select id="selectTargetSalemanStatusGrid" parameterType="TargetSalemanStatusSearchVO" resultType="TargetSalemanStatusSearchVO">
+    /* [chn.bhmc.dms.mis.tss.service.dao.TargetSalemanStatusDAO.selectTargetSalemanStatusGrid] */
+        SELECT
+         A.GOAL_YY AS goalYy
+        ,A.GOAL_MM AS goalMm
+        ,A.EMP_NO AS empNo
+        ,A.CARLINE_CD AS carlineCd
+        ,(CASE WHEN A.CARLINE_CD = 'ZZ' THEN '其他'
+              WHEN A.CARLINE_CD = 'ZZ0' THEN '非重点车型'
+              ELSE (SELECT Z.CARLINE_NM FROM SA_0101T Z WHERE Z.CARLINE_CD = A.CARLINE_CD AND Z.USE_YN = 'Y') END) AS carlineNm
+        ,A.GOAL_PREF_VAL AS goalPrefVal
+        ,(SELECT COUNT(*) FROM SA_0201T Z
+        WHERE SUBSTR(TO_CHAR(Z.CONTRACT_DT, 'YYYYMM'),1,6) = #{sSalemanStatusYyMm}
+        AND Z.SALE_EMP_NO = 'D0103007'
+        AND Z.CARLINE_CD = A.CARLINE_CD) AS dealPrefVal
+        FROM MS_0105T A
+        WHERE A.GOAL_YY||A.GOAL_MM = #{sSalemanStatusYyMm}
+        AND A.EMP_NO = 'D0103007'
+    </select>
+
+</mapper>

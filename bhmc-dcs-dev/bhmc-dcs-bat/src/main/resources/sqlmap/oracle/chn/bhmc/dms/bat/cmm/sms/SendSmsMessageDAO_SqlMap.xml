@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.bat.cmm.sms.service.dao.SendSmsMessageDAO">
+
+    <!--  Relay 서버에 SMS 전송할 메시지 조회한다. -->
+    <select id="selectRequestSMSMessage" resultType="SendSmsMessageVO">
+
+        /* [chn.bhmc.dms.bat.cmm.sms.service.dao.SendSmsMessageDAO.selectRequestSMSMessage] */
+        SELECT SEQ
+             , DLR_CD
+             , SMS_SEND_DSTIN_CD
+             , TEL_NO
+             , SMS_CONT
+             , RESV_DT
+             , SMS_SEND_YN
+             , SEND_MESG_ID
+          FROM CM_3101T                     --SMS 수신자별 전송 이력
+         WHERE SMS_SEND_YN = 'N'
+         --历史数据避免发送
+	 AND DECODE(RESV_DT, NULL,REG_DT ,TO_DATE(RESV_DT,'YYYYMMDDHH24MI'))<![CDATA[>]]> TRUNC(SYSDATE,'DD')
+         AND REG_DT <![CDATA[>]]> TRUNC(SYSDATE,'DD')
+         AND UPDT_DT <![CDATA[>]]> TRUNC(SYSDATE,'DD')
+         AND ROWNUM <![CDATA[<]]> 500
+
+    </select>
+
+    <!-- DCS - SMS Relay 서버간 RESTFUL 전송내역을 저장한다. -->
+    <update id="updateSmsSeq" parameterType="map" >
+        /* [chn.bhmc.dms.bat.cmm.sms.service.dao.SendSmsMessageDAO.updateSmsSeq] */
+        UPDATE CM_3101T
+           SET SEND_MESG_ID = #{sendMesgId}
+             , SMS_SEND_YN = 'Y'
+         WHERE DLR_CD = #{dlrCd}
+           AND SEQ = #{seq}
+    </update>
+
+    <update id="updateSmsSeqIR" parameterType="map" >
+        /* [chn.bhmc.dms.bat.cmm.sms.service.dao.SendSmsMessageDAO.updateSmsSeqIR] */
+        UPDATE CM_3103IR
+           SET SEND_MESG_ID = #{sendMesgId}
+             , SMS_SEND_YN = 'Y'
+         WHERE DLR_CD = #{dlrCd}
+           AND SEQ = #{seq}
+    </update>
+
+    <!-- DCS - SMS Relay 서버간 RESTFUL 전송내역을 저장한다. -->
+    <insert id="insertSendSMSMessage" parameterType="SmsMessageResultVO" >
+        /* [chn.bhmc.dms.bat.cmm.sms.service.dao.SendSmsMessageDAO.insertSendSMSMessage] */
+        INSERT INTO CM_3102T                --SMS 전송별 송신 이력
+        VALUES (#{sendMesgId}, TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+              , (SELECT DISTINCT DLR_CD FROM CM_3101T Z WHERE Z.SEND_MESG_ID = #{sendMesgId})
+              , #{sendRsltCd}, #{sendRsltDetlCont}, #{receiveRsltCd}, #{receiveRsltDetlCont}
+              , #{regUsrId}, SYSDATE, #{updtUsrId}, SYSDATE)
+    </insert>
+
+    <!-- DCS - SMS Relay 서버간 RESTFUL 전송 결과(상태)를  저장한다. -->
+    <update id="updateSmsResponse" parameterType="SmsMessageResultVO" >
+        /* [chn.bhmc.dms.bat.cmm.sms.service.dao.SendSmsMessageDAO.updateSmsResponse] */
+        UPDATE CM_3101T
+           SET RECEIVE_RSLT_CD = #{receiveRsltCd}
+             , SMS_SEND_YN = 'A'
+         WHERE SEND_MESG_ID = #{sendMesgId}
+    </update>
+
+    <!-- DCS - SMS Relay 서버간 RESTFUL 전송 결과(상태)를  저장한다. -->
+    <update id="updateSmsResponseIR" parameterType="SmsMessageResultVO" >
+        /* [chn.bhmc.dms.bat.cmm.sms.service.dao.SendSmsMessageDAO.updateSmsResponseIR] */
+        UPDATE CM_3103IR
+           SET RECEIVE_RSLT_CD = #{receiveRsltCd}
+             , SMS_SEND_YN = 'A'
+         WHERE SEND_MESG_ID = #{sendMesgId}
+    </update>
+
+    <!-- DCS - SMS Relay 서버간 RESTFUL 전송 결과(상태)를  저장한다. -->
+    <update id="insertSmsResponseIS" parameterType="SmsMessageResultVO" >
+        /* [chn.bhmc.dms.bat.cmm.sms.service.dao.SendSmsMessageDAO.insertSmsResponseIS] */
+        INSERT INTO CM_3103IS
+        SELECT DLR_CD,SEQ,SMS_SEND_DSTIN_CD,TEL_NO,SMS_CONT,RESV_DT,SMS_SEND_YN,SEND_MESG_ID
+              ,APP_DSTIN_CD,APP_SEQ,RECEIVE_RSLT_CD,REG_USR_ID,REG_DT,UPDT_USR_ID,UPDT_DT
+              ,NULL,NULL,NULL,NULL,NULL, CUST_NO
+          FROM cm_3103IR a
+         WHERE DLR_CD = #{dlrCd}
+           AND SMS_SEND_YN = 'A'
+           AND NOT EXISTS (SELECT 1 FROM cm_3103IS Z WHERE A.DLR_CD = Z.DLR_CD AND A.SEQ = Z.SEQ)
+    </update>
+</mapper>

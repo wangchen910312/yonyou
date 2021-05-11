@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.com.service.dao.CommercialInsuranceDAO">
+
+
+	<!-- 根据车牌号查询 license_type-->
+	<select id="selectInfoByLicenseNo" parameterType="CommercialInsuranceVO" resultType="CommercialInsuranceVO">
+      		SELECT ZFNEWSUB,CAR_REG_NO FROM SA_0121T WHERE CAR_REG_NO = #{licenseNo}
+	</select>
+	
+	<select id="selectTypeByLicenseNo" parameterType="CommercialInsuranceVO" resultType="CommercialInsuranceVO">
+      		SELECT VIN_NO,ZFNEWSUB,CAR_REG_NO FROM SA_0121T WHERE  VIN_NO = #{sVinNo}
+	</select> 
+	
+	<!-- 保单号加车牌号查询 -->
+	<select id="selectcontByCarNo" parameterType="CommercialInsuranceVO" resultType="int">
+        SELECT count(*)
+          FROM COMMERCIAL_INSURANCE A        
+         WHERE 1 = 1
+         <if test='vinNo != null and vinNo != ""'>
+             AND A.VIN_NO = #{vinNo}
+         </if>
+         <if test='carRegNo != null and carRegNo != ""'>
+           AND A.CAR_REG_NO = #{carRegNo}                     
+         </if>
+          <if test='policyNo != null and policyNo != ""'>
+           AND A.POLICY_NO = #{policyNo}                     
+         </if>
+         <if test='startDateStartStr != null'>
+             AND A.INSURANCE_START_DATE >= #{startDateStartStr}
+         </if>
+         <if test='startDateEndStr != null'>
+             AND A.INSURANCE_START_DATE <![CDATA[<]]> #{startDateEndStr}+1
+         </if>
+         <if test='synchronizationDtStartStr != null'>
+             AND A.SYNCHRONIZATION_DATE >= #{synchronizationDtStartStr}
+         </if>
+         <if test='endDateStartStr != null'>
+             AND A.INSURANCE_END_DATE >= #{endDateStartStr}
+         </if>
+         <if test='endDateEndStr != null'>
+             AND A.INSURANCE_END_DATE <![CDATA[<]]> #{endDateEndStr}+1
+         </if>
+         <if test='synchronizationDtEndStr != null'>
+             AND A.SYNCHRONIZATION_DATE <![CDATA[<]]> #{synchronizationDtEndStr}+1
+         </if>
+         <if test='note3 != null and note3 != ""'>
+             AND A.NOTE3 = #{note3}                     
+         </if>
+          <if test='code != null and code != ""'>
+             AND A.CODE = #{code}                     
+         </if>
+    </select>
+    <!--  保险历史查询-->
+    <select id="selectInfoByParams" parameterType="CommercialInsuranceVO" resultType="CommercialInsuranceVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, V1.* FROM (
+                SELECT T1.*
+                FROM COMMERCIAL_INSURANCE T1
+                WHERE  1 = 1
+                    <if test='vinNo != null and vinNo != ""'>
+                        AND T1.VIN_NO = #{vinNo}
+                    </if>
+                    <if test='startDateStartStr != null'>
+                        AND T1.INSURANCE_START_DATE >= #{startDateStartStr}
+                    </if>
+                    <if test='startDateEndStr != null'>
+                        AND T1.INSURANCE_START_DATE <![CDATA[<]]> #{startDateEndStr}+1
+                    </if>
+                     <if test='synchronizationDtStartStr != null'>
+                        AND T1.SYNCHRONIZATION_DATE >= #{synchronizationDtStartStr}
+                    </if>
+                    <if test='synchronizationDtEndStr != null'>
+                        AND T1.SYNCHRONIZATION_DATE <![CDATA[<]]> #{synchronizationDtEndStr}+1
+                    </if>
+                    <if test='carRegNo != null and carRegNo != ""'>
+          				 AND T1.CAR_REG_NO = #{carRegNo}                       
+         			</if>
+                    <if test='endDateStartStr != null'>
+                        AND T1.INSURANCE_END_DATE >= #{endDateStartStr}
+                    </if>
+                    <if test='endDateEndStr != null'>
+                        AND T1.INSURANCE_END_DATE <![CDATA[<]]> #{endDateEndStr}+1
+                    </if>
+                     <if test='note1 != null and note1 != ""'>
+                      AND T1.NOTE1 = #{note1}                     
+                    </if>
+                     <if test='note2 != null and note2 != ""'>
+                      AND T1.NOTE2 = #{note2}                     
+                    </if>
+                     <if test='note3 != null and note3 != ""'>
+                      AND T1.NOTE3 = #{note3}                     
+                    </if>
+                     <if test='note4 != null and note4 != ""'>
+                      AND T1.NOTE4 = #{note4}                     
+                    </if>
+                     <if test='note5 != null and note5 != ""'>
+                      AND T1.NOTE5 = #{note5}                     
+                    </if>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "vinNo"'>T1.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carRegNo"'>T1.CAR_REG_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "policyNo"'>T1.POLICY_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "icCode"'>T1.IC_CODE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "icName"'>T1.IC_NAME <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "code"'>T1.CODE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "insuranceStartDate"'>T1.INSURANCE_START_DATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "insuranceEndDate"'>T1.INSURANCE_END_DATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "synchronizationDate"'>T1.SYNCHRONIZATION_DATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    T1.INS_SEQ DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        T1.INS_SEQ  DESC
+                    </otherwise>
+                </choose>
+            ) V1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    
+    
+    
+    <!--删除保险信息-->
+     <delete id="deleteIns" parameterType="CommercialInsuranceVO">
+        DELETE
+          FROM COMMERCIAL_INSURANCE
+        WHERE CAR_REG_NO = #{carRegNo}
+    </delete>
+    
+     <insert id="insertInsInfo" parameterType="CommercialInsuranceVO">
+        INSERT
+          INTO COMMERCIAL_INSURANCE(
+              INS_SEQ
+            , VIN_NO
+            , CAR_REG_NO
+            , POLICY_NO
+            , IC_CODE
+            , IC_NAME
+            , CODE
+            , INSURANCE_START_DATE
+            , INSURANCE_END_DATE
+            , SYNCHRONIZATION_DATE
+            , NOTE1
+            , NOTE2
+            , NOTE3
+            , NOTE4
+            , NOTE5
+          )VALUES(
+             SEQ_COMMERCIAL_INSURANCE.nextval
+            , #{vinNo}
+            , #{carRegNo}
+            , #{policyNo}
+            , #{icCode}
+            , #{icName}
+            , #{code}
+            , #{insuranceStartDate}
+            , #{insuranceEndDate}
+            , SYSDATE
+            , #{note1}
+            , #{note2}
+            , #{note3}
+            , #{note4}
+            , #{note5}
+          )
+    </insert>
+    
+    
+    
+    <update id="updateData" parameterType="CommercialInsuranceVO">
+        UPDATE COMMERCIAL_INSURANCE
+           SET IC_CODE            	= #{icCode}                   
+             , IC_NAME  		  	= #{icName}           
+             , INSURANCE_END_DATE 	= #{insuranceEndDate}              
+             , INSURANCE_START_DATE = #{insuranceStartDate}                   
+             , NOTE1         		= #{note1}               
+             , NOTE2           		= #{note2}                 
+             , NOTE4             	= #{note4}                   
+             , NOTE5         		= #{note5}                
+             , SYNCHRONIZATION_DATE = SYSDATE                
+             , VIN_NO            	= #{vinNo} 
+         WHERE CAR_REG_NO        	= #{carRegNo}    
+           <if test='policyNo != null and policyNo != ""'>
+                    AND POLICY_NO         	= #{policyNo} 
+           </if>
+           <if test='code != null and code != ""'>
+                      AND CODE              	= #{code}       
+           </if>        
+           AND NOTE3             	= #{note3}    
+    </update>
+    
+</mapper>

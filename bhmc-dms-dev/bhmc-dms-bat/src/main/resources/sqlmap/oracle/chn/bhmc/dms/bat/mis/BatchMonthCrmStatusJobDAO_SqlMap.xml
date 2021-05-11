@@ -1,0 +1,477 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : BatchMonthCrmStatusJobDAO_SqlMap.xml
+    Description : [BatchJob] 고객정보(MS_1005T_2016)
+    author chibeom.song
+    since 2016. 9. 25.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 9. 25.  chibeom.song     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.bat.mis.service.dao.BatchMonthCrmStatusJobDAO">
+
+    <!-- [BatchJob] 고객정보(MS_1005T_2016) -->
+    <select id="selectMonthCrmStatusJob" resultType="BatchMonthCrmStatusJobVO">
+    <![CDATA[
+    	INSERT INTO MS_1005T_2016(
+        	 STD_YY
+	        ,STD_MM
+	        ,CARLINE_CD
+	        ,IDCC_HOLD_CUST_CNT
+	        ,SHOP_HOLD_CUST_CNT
+	        ,IDCC_UDR_CUST_CNT
+	        ,SHOP_UDR_CUST_CNT
+	        ,IDCC_CUST_VSIT_CNT
+	        ,IDCC_FST_VSIT_CNT
+	        ,IDCC_VSIT_REQ_RATE
+	        ,IDCC_DEAL_CNT
+	        ,IDCC_DEAL_RATE
+	        ,SHOP_CUST_VSIT_CNT
+	        ,SHOP_FST_VSIT_CNT
+	        ,SHOP_PRSN_INFO_COLLC_RATE
+	        ,SHOP_DEAL_CNT
+	        ,SHOP_DEAL_RATE
+	        ,IDCC_VALID_LEAD_QTY
+	        ,BAT_ID
+	        ,BAT_DT
+	   	)
+        SELECT
+        	 TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYY') AS A
+            ,TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'MM') AS B
+            ,Z.INTR_CARLINE_CD AS C
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA, CR_0101T BB
+               	WHERE 
+               		AA.CUST_NO = BB.CUST_NO
+               		AND AA.INFO_TP = '02'
+               		AND BB.CUST_CD = '02'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+               		AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+            ) AS D
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA, CR_0101T BB
+               	WHERE 
+               		AA.CUST_NO = BB.CUST_NO
+               		AND AA.INFO_TP = '01'
+               		AND BB.CUST_CD = '02'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+                	AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+         	) AS E
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA, CR_0101T BB
+               	WHERE 
+               		AA.CUST_NO = BB.CUST_NO
+               		AND AA.INFO_TP = '02'
+               		AND BB.CUST_CD = '01'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+                	AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+         	) AS F
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA, CR_0101T BB
+               	WHERE 
+               		AA.CUST_NO = BB.CUST_NO
+               		AND AA.INFO_TP = '01'
+               		AND BB.CUST_CD = '01'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+                	AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+         	) AS G
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA
+               	WHERE 
+               		AA.INFO_TP = '02'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+                	AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+          	) AS H
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA
+               	WHERE 
+               		AA.VSIT_RESV_DT IS NOT NULL
+               		AND AA.VSIT_DT IS NOT NULL
+               		AND AA.INFO_TP = '02'
+               		AND AA.VSIT_RESV_DT <= AA.VSIT_DT
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+                	AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+           	) AS I
+            ,(
+            	SELECT NVL(ROUND((NULLIF(X.IDCC_CUST_CNT,0)/NULLIF(X.IDCC_CUST_QTY,0))*100,2),0) 
+            	FROM (
+            		SELECT
+	             		(
+	             			SELECT COUNT(*) 
+	             			FROM CR_0211T AA
+	            			WHERE 
+	            				AA.VSIT_RESV_DT IS NOT NULL
+	             				AND AA.VSIT_DT IS NOT NULL
+	            	 			AND AA.INFO_TP = '02'
+	             				AND AA.VSIT_RESV_DT <= AA.VSIT_DT
+	             				AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+	              				AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+	              		) AS IDCC_CUST_CNT
+	             		,(
+	             			SELECT COUNT(*) 
+	             			FROM CR_0214T AA
+	             			WHERE 
+	             				AA.INFO_TP = '02'
+	             				AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+	              				AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+	              		) AS IDCC_CUST_QTY
+             		FROM DUAL
+             	) X
+       		) AS J
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA
+               	WHERE 
+               		AA.INFO_TP = '02'
+               		AND AA.LEAD_STAT_CD = '05'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+               		AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+         	) AS K
+            ,(
+            	SELECT NVL(ROUND((NULLIF(X.IDCC_DEAL_CNT, 0)/NULLIF(X.IDCC_CUST_CNT,0))*100,2),0) 
+            	FROM (
+            		SELECT
+             			(
+             				SELECT COUNT(*) 
+             				FROM CR_0211T AA
+             				WHERE 
+             					AA.INFO_TP = '02'
+             					AND AA.LEAD_STAT_CD = '05'
+             					AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+             					AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+             			) AS IDCC_DEAL_CNT
+             			,(
+             				SELECT COUNT(*) 
+             				FROM CR_0214T AA
+             				WHERE 
+             					AA.INFO_TP = '02'
+             					AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+             					AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+             			) AS IDCC_CUST_CNT
+             		FROM DUAL
+             	) X
+             )  AS K
+             ,(
+             	SELECT COUNT(*) 
+             	FROM CR_0214T AA
+               	WHERE 
+               		AA.INFO_TP = '01'
+               		AND AA.RVSIT_YN = 'N'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+               		AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+         	) AS L
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0214T AA
+               	WHERE 
+               		AA.INFO_TP = '01'
+               		AND AA.CUST_NM IS NOT NULL
+               		AND AA.HP_NO IS NOT NULL
+               		AND AA.RVSIT_YN = 'N'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+               		AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+         	) AS M
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA
+               	WHERE 
+               		AA.INFO_TP = '01'
+               		AND AA.LEAD_STAT_CD = '05'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+               		AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+          	) AS N
+            ,(
+            	SELECT NVL(ROUND(((X.SHOP_DEAL_CNT/NULLIF(X.SHOP_CUST_CNT,0))*X.SHOP_CUST_INFO), 2), 0) 
+            	FROM (
+            		SELECT
+               			(
+               				SELECT COUNT(*) 
+               				FROM CR_0211T AA
+               				WHERE 
+               					AA.INFO_TP = '01'
+               					AND AA.LEAD_STAT_CD = '05'
+               					AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+               					AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+               			) AS SHOP_DEAL_CNT
+               			,(
+               				SELECT COUNT(*) 
+               				FROM CR_0214T AA
+               				WHERE 
+               					AA.INFO_TP = '01'
+               					AND AA.RVSIT_YN = 'N'
+               					AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+               					AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+               			) AS SHOP_CUST_CNT
+               			,(
+               				SELECT COUNT(*) 
+               				FROM CR_0214T AA
+               				WHERE 
+               					AA.INFO_TP = '01'
+               					AND AA.CUST_NM IS NOT NULL
+               					AND AA.HP_NO IS NOT NULL
+               					AND AA.RVSIT_YN = 'N'
+               					AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+               					AND TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+               			) AS SHOP_CUST_INFO
+               		FROM DUAL
+             	) X
+          	) AS O
+            ,(
+            	SELECT COUNT(*) 
+            	FROM SA_0211T AA
+              	WHERE TO_CHAR(AA.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+           	) AS P
+            ,'0'
+            ,'BatchCustTotal'
+            ,SYSDATE
+            FROM CR_0211T Z
+            WHERE 
+            	Z.INTR_CARLINE_CD IS NOT NULL
+            	AND TO_CHAR(Z.REG_DT, 'YYYYMM') = TO_CHAR(ADD_MONTHS(SYSDATE, -1), 'YYYYMM')
+            GROUP BY Z.INTR_CARLINE_CD
+            ORDER BY Z.INTR_CARLINE_CD
+    ]]>
+    </select>
+    
+    <!-- 2017.04.24 주석처리 by 한강석 : 월 추출 쿼리 변경
+    <select id="selectMonthCrmStatusJob" resultType="BatchMonthCrmStatusJobVO">
+    <![CDATA[
+    	INSERT INTO MS_1005T_2016(
+        	 STD_YY
+	        ,STD_MM
+	        ,CARLINE_CD
+	        ,IDCC_HOLD_CUST_CNT
+	        ,SHOP_HOLD_CUST_CNT
+	        ,IDCC_UDR_CUST_CNT
+	        ,SHOP_UDR_CUST_CNT
+	        ,IDCC_CUST_VSIT_CNT
+	        ,IDCC_FST_VSIT_CNT
+	        ,IDCC_VSIT_REQ_RATE
+	        ,IDCC_DEAL_CNT
+	        ,IDCC_DEAL_RATE
+	        ,SHOP_CUST_VSIT_CNT
+	        ,SHOP_FST_VSIT_CNT
+	        ,SHOP_PRSN_INFO_COLLC_RATE
+	        ,SHOP_DEAL_CNT
+	        ,SHOP_DEAL_RATE
+	        ,IDCC_VALID_LEAD_QTY
+	        ,BAT_ID
+	        ,BAT_DT
+	   	)
+        SELECT
+        	 SUBSTR(TO_CHAR(SYSDATE - 1, 'YY,./YYMMDD'), 1, 4) AS A
+            ,SUBSTR(TO_CHAR(SYSDATE, 'YYYYMM')-1, 5, 2) AS B
+            ,Z.INTR_CARLINE_CD AS C
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA, CR_0101T BB
+               	WHERE 
+               		AA.CUST_NO = BB.CUST_NO
+               		AND AA.INFO_TP = '02'
+               		AND BB.CUST_CD = '02'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+               		AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+            ) AS D
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA, CR_0101T BB
+               	WHERE 
+               		AA.CUST_NO = BB.CUST_NO
+               		AND AA.INFO_TP = '01'
+               		AND BB.CUST_CD = '02'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+                	AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+         	) AS E
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA, CR_0101T BB
+               	WHERE 
+               		AA.CUST_NO = BB.CUST_NO
+               		AND AA.INFO_TP = '02'
+               		AND BB.CUST_CD = '01'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+                	AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+         	) AS F
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA, CR_0101T BB
+               	WHERE 
+               		AA.CUST_NO = BB.CUST_NO
+               		AND AA.INFO_TP = '01'
+               		AND BB.CUST_CD = '01'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+                	AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+         	) AS G
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA
+               	WHERE 
+               		AA.INFO_TP = '02'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+                	AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+          	) AS H
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA
+               	WHERE 
+               		AA.VSIT_RESV_DT IS NOT NULL
+               		AND AA.VSIT_DT IS NOT NULL
+               		AND AA.INFO_TP = '02'
+               		AND AA.VSIT_RESV_DT <= AA.VSIT_DT
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+                	AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+           	) AS I
+            ,(
+            	SELECT NVL(ROUND((NULLIF(X.IDCC_CUST_CNT,0)/NULLIF(X.IDCC_CUST_QTY,0))*100,2),0) 
+            	FROM (
+            		SELECT
+	             		(
+	             			SELECT COUNT(*) 
+	             			FROM CR_0211T AA
+	            			WHERE 
+	            				AA.VSIT_RESV_DT IS NOT NULL
+	             				AND AA.VSIT_DT IS NOT NULL
+	            	 			AND AA.INFO_TP = '02'
+	             				AND AA.VSIT_RESV_DT <= AA.VSIT_DT
+	             				AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+	              				AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+	              		) AS IDCC_CUST_CNT
+	             		,(
+	             			SELECT COUNT(*) 
+	             			FROM CR_0214T AA
+	             			WHERE 
+	             				AA.INFO_TP = '02'
+	             				AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+	              				AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+	              		) AS IDCC_CUST_QTY
+             		FROM DUAL
+             	) X
+       		) AS J
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA
+               	WHERE 
+               		AA.INFO_TP = '02'
+               		AND AA.LEAD_STAT_CD = '05'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+               		AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+         	) AS K
+            ,(
+            	SELECT NVL(ROUND((NULLIF(X.IDCC_DEAL_CNT, 0)/NULLIF(X.IDCC_CUST_CNT,0))*100,2),0) 
+            	FROM (
+            		SELECT
+             			(
+             				SELECT COUNT(*) 
+             				FROM CR_0211T AA
+             				WHERE 
+             					AA.INFO_TP = '02'
+             					AND AA.LEAD_STAT_CD = '05'
+             					AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+             					AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+             			) AS IDCC_DEAL_CNT
+             			,(
+             				SELECT COUNT(*) 
+             				FROM CR_0214T AA
+             				WHERE 
+             					AA.INFO_TP = '02'
+             					AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+             					AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+             			) AS IDCC_CUST_CNT
+             		FROM DUAL
+             	) X
+             )  AS K
+             ,(
+             	SELECT COUNT(*) 
+             	FROM CR_0214T AA
+               	WHERE 
+               		AA.INFO_TP = '01'
+               		AND AA.RVSIT_YN = 'N'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+               		AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+         	) AS L
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0214T AA
+               	WHERE 
+               		AA.INFO_TP = '01'
+               		AND AA.CUST_NM IS NOT NULL
+               		AND AA.HP_NO IS NOT NULL
+               		AND AA.RVSIT_YN = 'N'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+               		AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+         	) AS M
+            ,(
+            	SELECT COUNT(*) 
+            	FROM CR_0211T AA
+               	WHERE 
+               		AA.INFO_TP = '01'
+               		AND AA.LEAD_STAT_CD = '05'
+               		AND AA.INTR_CARLINE_CD = Z.INTR_CARLINE_CD
+               		AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+          	) AS N
+            ,(
+            	SELECT NVL(ROUND(((X.SHOP_DEAL_CNT/NULLIF(X.SHOP_CUST_CNT,0))*X.SHOP_CUST_INFO), 2), 0) 
+            	FROM (
+            		SELECT
+               			(
+               				SELECT COUNT(*) 
+               				FROM CR_0211T AA
+               				WHERE 
+               					AA.INFO_TP = '01'
+               					AND AA.LEAD_STAT_CD = '05'
+               					AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+               					AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+               			) AS SHOP_DEAL_CNT
+               			,(
+               				SELECT COUNT(*) 
+               				FROM CR_0214T AA
+               				WHERE 
+               					AA.INFO_TP = '01'
+               					AND AA.RVSIT_YN = 'N'
+               					AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+               					AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+               			) AS SHOP_CUST_CNT
+               			,(
+               				SELECT COUNT(*) 
+               				FROM CR_0214T AA
+               				WHERE 
+               					AA.INFO_TP = '01'
+               					AND AA.CUST_NM IS NOT NULL
+               					AND AA.HP_NO IS NOT NULL
+               					AND AA.RVSIT_YN = 'N'
+               					AND AA.INTR_CARLINE_CD = INTR_CARLINE_CD
+               					AND TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+               			) AS SHOP_CUST_INFO
+               		FROM DUAL
+             	) X
+          	) AS O
+            ,(
+            	SELECT COUNT(*) 
+            	FROM SA_0211T AA
+              	WHERE TO_CHAR(AA.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+           	) AS P
+            ,'0'
+            ,'BatchCustTotal'
+            ,SYSDATE
+            FROM CR_0211T Z
+            WHERE 
+            	Z.INTR_CARLINE_CD IS NOT NULL
+            	AND TO_CHAR(Z.REG_DT, 'YYYYMM') = (TO_CHAR(SYSDATE, 'YYYYMM')-1)
+            GROUP BY Z.INTR_CARLINE_CD
+            ORDER BY Z.INTR_CARLINE_CD
+    ]]>
+    </select>
+    -->
+
+
+</mapper>

@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.bsc.service.dao.FinancialProductMngDAO">
+
+    <!-- 금융상품 수를 조회한다. -->
+    <select id="selectFinancialProductMngByConditionCnt" parameterType="FinancialProductsManagementSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0117T
+         WHERE 1=1
+        <if test='sDlrCd != null and sDlrCd != ""'>
+           AND DLR_CD = #{sDlrCd}
+        </if>
+        <if test='sFincCmpCd != null and sFincCmpCd != ""'>
+           AND FINC_CMP_CD = #{sFincCmpCd}
+        </if>
+        <if test='sFincItemCd != null and sFincItemCd != ""'>
+           AND FINC_ITEM_CD = #{sFincItemCd}
+        </if>
+        <if test='sFincItemNm != null and sFincItemNm != ""'>
+           AND FINC_ITEM_NM = #{sFincItemNm}
+        </if>
+    </select>
+
+    <!-- 금융상품 목록 Data  -->
+    <select id="selectFinancialProductMngByCondition" parameterType="FinancialProductsManagementSearchVO" resultType="FinancialProductsManagementVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , T1.*
+              FROM (
+                    SELECT DLR_CD
+                         , FINC_CMP_CD
+                         , FINC_ITEM_NM
+                         , FINC_ITEM_CD
+                         , USE_YN
+                      FROM SA_0117T
+                     WHERE 1=1
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                       AND DLR_CD = #{sDlrCd}
+                    </if>
+                    <if test='sFincCmpCd != null and sFincCmpCd != ""'>
+                       AND FINC_CMP_CD = #{sFincCmpCd}
+                    </if>
+                    <if test='sFincItemCd != null and sFincItemCd != ""'>
+                       AND FINC_ITEM_CD = #{sFincItemCd}
+                    </if>
+                    <if test='sFincItemNm != null and sFincItemNm != ""'>
+                       AND FINC_ITEM_NM = #{sFincItemNm}
+                    </if>
+                     ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "fincCmpCd"'>FINC_CMP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "fincItemCd"'>FINC_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "fincItemNm"'>FINC_ITEM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        FINC_CMP_CD ASC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            FINC_CMP_CD ASC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 금융상품 Data  -->
+    <select id="selectFinancialProductMngByKey" parameterType="VehicleSettlementOrderVO" resultType="VehicleSettlementOrderVO">
+        SELECT DLR_CD
+             , FINC_CMP_CD
+             , FINC_ITEM_CD
+             , FINC_ITEM_NM
+             , FINC_ITEM_TP
+             , FINC_ITEM_PRID
+             , CREDIT_GRADE_CD
+             , CUST_TP
+             , CONTRACT_AMT
+             , PREPAY_RATE
+             , PREPAY_DL_AMT
+             , LATEPAY_DL_AMT
+             , CASH_PRC
+             , MM_PAY_AMT_RATE
+             , REM_INTR_RATE
+             , INST_INTR_RATE
+             , HDLG_FEE_RATE
+             , HDLG_FEE_AMT
+             , GRTE_INCA_RATE
+             , GRTE_INC_AMT
+             , STAMP_AMT
+             , AUTH_AMT
+             , INST_SBODT_AMT
+             , BP_CD
+             , CONTRACT_AMT_RATE
+             , USE_YN
+             , FINC_ITEM_KIND_CD
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+          FROM SA_0117T
+         WHERE DLR_CD = #{dlrCd}
+           AND FINC_CMP_CD = #{fincCmpCd}
+           AND FINC_ITEM_CD = #{fincItemCd}
+    </select>
+
+    <!-- 금융상품 수를 조회한다. -->
+    <select id="selectFinancialProductsManagementByConditionCnt" parameterType="FinancialProductsManagementSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0117T
+         WHERE 1=1
+        <if test='sDlrCd != null and sDlrCd != ""'>
+           AND DLR_CD = #{sDlrCd}
+        </if>
+        <if test='sFincCmpCd != null and sFincCmpCd != ""'>
+           AND FINC_CMP_CD = #{sFincCmpCd}
+        </if>
+        <if test='sFincItemTp != null and sFincItemTp != ""'>
+           AND FINC_ITEM_TP = #{sFincItemTp}
+        </if>
+    </select>
+
+
+
+    <!-- 금융 상품 등록  -->
+    <insert id="insertFinancialProductMng" parameterType="FinancialProductsManagementVO">
+        INSERT INTO SA_0117T (
+             DLR_CD
+            ,FINC_CMP_CD
+            ,FINC_ITEM_NM
+            ,FINC_ITEM_CD
+            ,USE_YN
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+        ) VALUES (
+             #{dlrCd}
+            ,#{fincCmpCd}
+            ,#{fincItemNm}
+            ,#{fincItemCd}
+            ,#{useYn}
+
+            ,#{regUsrId}
+            ,SYSDATE
+            ,#{updtUsrId}
+            ,SYSDATE
+        )
+    </insert>
+
+    <!-- 금융상품 수정  -->
+    <update id="updateFinancialProductMng" parameterType="FinancialProductsManagementVO">
+        UPDATE SA_0117T
+           SET FINC_CMP_CD = #{fincCmpCd}
+             , FINC_ITEM_NM = #{fincItemNm}
+             , FINC_ITEM_CD = #{fincItemCd}
+             , USE_YN = #{useYn}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE DLR_CD = #{dlrCd}
+           AND FINC_CMP_CD = #{fincCmpCd}
+           AND FINC_ITEM_CD = #{fincItemCd}
+    </update>
+
+    <!-- 금융상품 리스트 -->
+    <select id="selectFinancialProductAmtListsByCondition" parameterType="FinancialProductsManagementSearchVO" resultType="FinancialProductsManagementVO">
+        SELECT DLR_CD
+             , FINC_CMP_CD
+             , FINC_ITEM_NM
+             , FINC_ITEM_CD
+             , USE_YN
+          FROM SA_0117T
+         WHERE DLR_CD = #{sDlrCd}
+           AND USE_YN = 'Y'
+         <if test='sFincCmpCd != null and sFincCmpCd != ""'>
+           AND FINC_CMP_CD = #{sFincCmpCd}
+         </if>
+         <if test='sFincItemCd != null and sFincItemCd != ""'>
+           AND FINC_ITEM_CD = #{sFincItemCd}
+         </if>
+         <if test='sFincItemNm != null and sFincItemNm != ""'>
+           AND FINC_ITEM_NM = #{sFincItemNm}
+         </if>
+           ORDER BY FINC_CMP_CD ASC, FINC_ITEM_CD ASC
+    </select>
+
+    <!-- BHAF 상품정보 리스트 -->
+    <select id="selectFinancialBhafProductListsByCondition" parameterType="FinancialProductsManagementSearchVO" resultType="FinancialProductsManagementVO">
+        SELECT DLR_CD
+             , CARLINE_CD
+             , FINC_CMP_CD
+             , FINC_ITEM_NM
+             , FINC_ITEM_CD
+             , MODEL_CD
+             , 'Y' AS USE_YN
+          FROM SA_0174T
+         WHERE DLR_CD = #{sDlrCd}
+         <if test='sFincCmpCd != null and sFincCmpCd != ""'>
+           AND FINC_CMP_CD = #{sFincCmpCd}
+         </if>
+           AND USE_START_DT <![CDATA[ <= ]]> SYSDATE
+           AND USE_END_DT   <![CDATA[ >= ]]> SYSDATE -1
+    </select>
+
+</mapper>

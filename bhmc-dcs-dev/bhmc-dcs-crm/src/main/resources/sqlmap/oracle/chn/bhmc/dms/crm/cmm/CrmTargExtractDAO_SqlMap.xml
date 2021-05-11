@@ -1,0 +1,885 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CrmTargExtractDAO_SqlMap.xml
+    Description : 대상자 추출에 관한 데이터처리
+    author hyoung jun an
+    since 2016. 03. 04.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016.03.04     hyoung jun an    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO">
+
+    <!-- 고객추출 마스터 정보를 등록한다. -->
+    <insert id="insertCrmTargExtractMaster" parameterType="CrmTargExtractVO" >
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.insertCrmTargExtractMaster] */
+        INSERT INTO CR_1201T    --고객추출조건마스터
+        (
+         DLR_CD                   --딜러코드
+        ,CUST_EXTR_TERM_NO        --고객추출조건번호
+        ,CUST_EXTR_TERM_NM        --고객추출조건명
+        ,RANDOM_YN                --랜덤추출여부
+        ,RANDOM_CNT               --랜덤추출갯수
+        ,USE_YN                   --사용여부
+        ,REG_USR_ID               --등록자ID
+        ,REG_DT                   --등록일자
+        ,UPDT_USR_ID              --수정자ID
+        ,UPDT_DT                  --수정일자
+        )
+        VALUES
+        (
+         #{dlrCd}                   --딜러코드
+        ,#{custExtrTermNo}          --고객추출조건번호
+        ,#{custExtrTermNm}          --고객추출조건명
+        ,#{randomYn}                --랜덤추출여부
+        ,#{randomCnt}               --랜덤추출갯수
+        ,#{useYn}                   --사용여부
+        ,#{regUsrId}                --등록자ID
+        ,SYSDATE                    --등록일자
+        ,#{updtUsrId}               --수정자ID
+        ,SYSDATE                    --수정일자
+        )
+    </insert>
+
+
+    <!-- 고객추출 마스터 정보를 수정한다. -->
+    <update id="updateCrmTargExtractMaster" parameterType="CrmTargExtractVO" >
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.updateCrmTargExtractMaster] */
+        UPDATE CR_1201T    --고객추출조건마스터
+           SET
+               CUST_EXTR_TERM_NM = #{custExtrTermNm}          --고객추출조건명
+              <if test='randomYn != null and randomYn != null'>
+              ,RANDOM_YN         = #{randomYn}                --랜덤추출여부
+              </if>
+              <if test='randomCnt != null and randomCnt != null'>
+              ,RANDOM_CNT        = #{randomCnt}               --랜덤추출갯수
+              </if>
+              <if test='useYn != null and useYn != null'>
+              ,USE_YN            = #{useYn}                   --사용여부
+              </if>
+              ,UPDT_USR_ID       = #{updtUsrId}               --수정자ID
+              ,UPDT_DT           = SYSDATE                    --수정일자
+         WHERE 1 = 1
+           AND DLR_CD             = #{dlrCd}                  --딜러코드
+           AND CUST_EXTR_TERM_NO  = #{custExtrTermNo}         --고객추출조건번호
+    </update>
+
+    <!-- 고객추출 마스터 정보를 삭제한다. -->
+    <update id="deleteCrmTargExtractMaster" parameterType="CrmTargExtractVO" >
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.deleteCrmTargExtractMaster] */
+        DELETE FROM CR_1201T    --고객추출조건마스터
+         WHERE 1 = 1
+           AND DLR_CD             = #{dlrCd}                  --딜러코드
+           AND CUST_EXTR_TERM_NO  = #{custExtrTermNo}         --고객추출조건번호
+    </update>
+
+    <!-- 마케팅 캠페인 정보 목록을 조회한다. -->
+    <select id="selectCrmTargExtractMastersByCondition" parameterType="CrmTargExtractSearchVO" resultType="CrmTargExtractVO">
+        /* [chn.bhmc.dms.crm.mcm.service.dao.MarketingCampaignDAO.selectMarketingCampaignsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+               SELECT
+                      CR_1201T.DLR_CD                   --딜러코드
+                     ,CR_1201T.CUST_EXTR_TERM_NO        --고객추출조건번호
+                     ,CR_1201T.CUST_EXTR_TERM_NM        --고객추출조건명
+                     ,CR_1201T.RANDOM_YN                --랜덤추출여부
+                     ,CR_1201T.RANDOM_CNT               --랜덤추출갯수
+                     ,CR_1201T.USE_YN                   --사용여부
+                     ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = CR_1201T.REG_USR_ID) AS REG_USR_ID --등록자ID
+                     ,CR_1201T.REG_DT                   --등록일자
+                     ,CR_1201T.UPDT_DT                  --수정일자
+                     ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = CR_1201T.UPDT_USR_ID) AS UPDT_USR_ID --등록자ID
+                 FROM CR_1201T CR_1201T --고객추출조건마스터
+                <where>
+                    AND CR_1201T.DLR_CD = #{sDlrCd}
+                    AND CR_1201T.USE_YN = 'Y'
+                <if test='sCustExtrTermNm   != null and sCustExtrTermNm   != ""'>
+                    AND CR_1201T.CUST_EXTR_TERM_NM LIKE '%' || #{sCustExtrTermNm} || '%'
+                </if>
+                <if test='sCustExtrTermNmDup   != null and sCustExtrTermNmDup   != ""'>
+                    AND CR_1201T.CUST_EXTR_TERM_NM = #{sCustExtrTermNmDup}
+                </if>
+                <if test='sCustExtrTermNoDeny != null and sCustExtrTermNoDeny != ""'>
+                <![CDATA[
+                    AND CR_1201T.CUST_EXTR_TERM_NO <> #{sCustExtrTermNoDeny}
+                ]]>
+                </if>
+                <if test='sRegFromDt != null and sRegEndDt != null'>
+                   AND TO_CHAR(CR_1201T.REG_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sRegFromDt},'YYYYMMDD') AND TO_CHAR(#{sRegEndDt},'YYYYMMDD')
+                </if>
+                </where>
+                ORDER BY
+                <choose>
+                        <when test='sort != null'>
+                                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                        <choose>
+                                                <when test='item.field == "dlrCd"'>            CR_1201T.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                                <when test='item.field == "custExtrTermNo"'>   CR_1201T.CUST_EXTR_TERM_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                                <when test='item.field == "custExtrTermNm"'>   CR_1201T.CUST_EXTR_TERM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                                <when test='item.field == "randomYn"'>         CR_1201T.RANDOM_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                                <when test='item.field == "randomCnt"'>        CR_1201T.RANDOM_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                                <when test='item.field == "useYn"'>            CR_1201T.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                                <when test='item.field == "regUsrId"'>         REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                                                <when test='item.field == "regDtFormat"'>      CR_1201T.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                                <otherwise>
+                                                CR_1201T.REG_DT DESC
+                                                </otherwise>
+                                        </choose>
+                                </foreach>
+                        </when>
+                        <otherwise>
+                        CR_1201T.REG_DT DESC
+                        </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 고객추출 마스터 정보 목록수를 조회한다. -->
+    <select id="selectCrmTargExtractMastersByConditionCnt" parameterType="CrmTargExtractSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.selectCrmTargExtractMastersByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_1201T CR_1201T
+        <where>
+            AND CR_1201T.DLR_CD = #{sDlrCd}
+            AND CR_1201T.USE_YN = 'Y'
+            <if test='sCustExtrTermNm   != null and sCustExtrTermNm   != ""'>
+                AND CR_1201T.CUST_EXTR_TERM_NM LIKE '%' || #{sCustExtrTermNm} || '%'
+            </if>
+            <if test='sCustExtrTermNmDup   != null and sCustExtrTermNmDup   != ""'>
+                AND CR_1201T.CUST_EXTR_TERM_NM = #{sCustExtrTermNmDup}
+            </if>
+            <if test='sCustExtrTermNoDeny != null and sCustExtrTermNoDeny != ""'>
+            <![CDATA[
+                AND CR_1201T.CUST_EXTR_TERM_NO <> #{sCustExtrTermNoDeny}
+            ]]>
+            </if>
+            <if test='sRegFromDt != null and sRegEndDt != null'>
+               AND TO_CHAR(CR_1201T.REG_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sRegFromDt},'YYYYMMDD') AND TO_CHAR(#{sRegEndDt},'YYYYMMDD')
+            </if>
+        </where>
+    </select>
+
+
+    <!-- 고객추출상세조건 저장시 기존 조건이 존재하는지 체크한다. -->
+    <select id="selectCrmTargExtractDetailSavesByConditionCnt" parameterType="CrmTargExtractSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.selectCrmTargExtractDetailSavesByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_1202T CR_1202T
+        <where>
+                AND CR_1202T.DLR_CD            = #{sDlrCd}
+                AND CR_1202T.CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                AND CR_1202T.DETL_EXTR_TERM_CD = #{sDetlExtrTermCd}
+        </where>
+    </select>
+
+    <!-- 고객추출 상세정보를 등록한다. -->
+    <insert id="insertCrmTargExtractDetail" parameterType="CrmTargExtractVO" >
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.insertCrmTargExtractDetail] */
+        INSERT INTO CR_1202T    --고객추출조건상세
+        (
+         DLR_CD                   --딜러코드
+        ,CUST_EXTR_TERM_NO        --고객추출조건번호
+        ,DETL_EXTR_TERM_CD        --상세추출조건코드
+        ,TERM_VAL1                --조건값1
+        ,TERM_VAL2                --조건값2
+        ,TERM_VAL3                --조건값3
+        ,TERM_VAL4                --조건값4
+        ,TERM_VAL5                --조건값5
+        ,REG_USR_ID               --등록자ID
+        ,REG_DT                   --등록일자
+        ,UPDT_USR_ID              --수정자ID
+        ,UPDT_DT                  --수정일자
+        )
+        VALUES
+        (
+         #{dlrCd}                   --딜러코드
+        ,#{custExtrTermNo}          --고객추출조건번호
+        ,#{detlExtrTermCd}          --상세추출조건코드
+        ,#{termVal1}                --조건값1
+        ,#{termVal2}                --조건값2
+        ,#{termVal3}                --조건값3
+        ,#{termVal4}                --조건값4
+        ,#{termVal5}                --조건값5
+        ,#{regUsrId}                --등록자ID
+        ,SYSDATE                    --등록일자
+        ,#{updtUsrId}               --수정자ID
+        ,SYSDATE                    --수정일자
+        )
+    </insert>
+
+
+    <!-- 고객추출 마스터 정보를 수정한다. -->
+    <update id="updateCrmTargExtractDetail" parameterType="CrmTargExtractVO" >
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.updateCrmTargExtractDetail] */
+        UPDATE CR_1202T    --고객추출조건상세
+           SET
+               TERM_VAL1         = #{termVal1}                --조건값1
+              ,TERM_VAL2         = #{termVal2}                --조건값2
+              ,TERM_VAL3         = #{termVal3}                --조건값3
+              ,TERM_VAL4         = #{termVal4}                --조건값4
+              ,TERM_VAL5         = #{termVal5}                --조건값5
+              ,UPDT_USR_ID       = #{updtUsrId}               --수정자ID
+              ,UPDT_DT           = SYSDATE                    --수정일자
+         WHERE 1 = 1
+           AND DLR_CD             = #{dlrCd}                  --딜러코드
+           AND CUST_EXTR_TERM_NO  = #{custExtrTermNo}         --고객추출조건번호
+           AND DETL_EXTR_TERM_CD  = #{detlExtrTermCd}         --상세추출조건코드
+    </update>
+
+    <!-- 고객추출 마스터 정보를 삭제한다. -->
+    <update id="deleteCrmTargExtractDetail" parameterType="CrmTargExtractVO" >
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.deleteCrmTargExtractDetail] */
+        DELETE FROM CR_1202T    --고객추출조건상세
+         WHERE 1 = 1
+           AND DLR_CD             = #{dlrCd}                  --딜러코드
+           AND CUST_EXTR_TERM_NO  = #{custExtrTermNo}         --고객추출조건번호
+    </update>
+
+    <!-- 고객추출 상세 정보 목록을 조회한다. -->
+    <select id="selectCrmTargExtractDetailsByCondition" parameterType="CrmTargExtractSearchVO" resultType="CrmTargExtractVO">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.selectCrmTargExtractDetailsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                       CR_1202T.DLR_CD                   --딜러코드
+                      ,CR_1202T.CUST_EXTR_TERM_NO        --고객추출조건번호
+                      ,CR_1202T.DETL_EXTR_TERM_CD        --상세추출조건코드
+                      ,(SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                          FROM CM_0303T A, CM_0304T B
+                         WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                           AND A.CMM_CD = B.CMM_CD
+                           AND B.LANG_CD = #{langCd}
+                           AND A.CMM_GRP_CD = 'CRM751'
+                           AND A.USE_YN = 'Y'
+                           AND A.REMARK1 || A.REMARK2 || A.CMM_CD = CR_1202T.DETL_EXTR_TERM_CD
+                       ) AS DETL_EXTR_TERM_NM            --상세추출조건명
+                      ,CASE WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500104' THEN
+                                 CR_1202T.TERM_VAL1 || '.' || CR_1202T.TERM_VAL2 || ' ~ ' || CR_1202T.TERM_VAL3 || '.' || CR_1202T.TERM_VAL4
+                            WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500102' THEN
+                                 (SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                                    FROM CM_0303T A, CM_0304T B
+                                   WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                                     AND A.CMM_CD = B.CMM_CD
+                                     AND B.LANG_CD = #{langCd}
+                                     AND A.CMM_GRP_CD = 'COM017'
+                                     AND A.USE_YN = 'Y'
+                                     AND A.CMM_CD = CR_1202T.TERM_VAL1
+                                 )
+                            WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500103' THEN
+                                 (SELECT CITY_NM
+                                    FROM CM_0205T
+                                   WHERE USE_YN = 'Y'
+                                     AND CITY_CD = CR_1202T.TERM_VAL1
+                                   GROUP BY CITY_NM) || '/' ||
+                                 (SELECT DIST_NM
+                                    FROM CM_0205T
+                                   WHERE USE_YN = 'Y'
+                                     AND DIST_CD = CR_1202T.TERM_VAL2
+                                   GROUP BY DIST_NM
+                                 )
+                            WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500214' THEN
+                                 (SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                                    FROM CM_0303T A, CM_0304T B
+                                   WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                                     AND A.CMM_CD = B.CMM_CD
+                                     AND B.LANG_CD = #{langCd}
+                                     AND A.CMM_GRP_CD = 'CRM372'
+                                     AND A.USE_YN = 'Y'
+                                     AND A.CMM_CD = CR_1202T.TERM_VAL1
+                                 )
+                            WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500150' THEN
+                                 (SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                                    FROM CM_0303T A, CM_0304T B
+                                   WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                                     AND A.CMM_CD = B.CMM_CD
+                                     AND B.LANG_CD = #{langCd}
+                                     AND A.CMM_GRP_CD = 'CRM023'
+                                     AND A.USE_YN = 'Y'
+                                     AND A.CMM_CD = CR_1202T.TERM_VAL1
+                                 )
+                            WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500323' THEN
+                              <![CDATA[
+                                   (SELECT SUBSTR(XMLAGG(XMLELEMENT(X, ',', TERM_VAL1) ORDER BY TERM_VAL1).EXTRACT('//text()'),2) CONTENTS
+                                      FROM (
+                                            SELECT (SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                                                      FROM CM_0303T A, CM_0304T B
+                                                     WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                                                       AND A.CMM_CD = B.CMM_CD
+                                                       AND B.LANG_CD = #{langCd}
+                                                       AND A.CMM_GRP_CD = 'SER031'
+                                                       AND A.USE_YN = 'Y'
+                                                       AND A.CMM_CD = TERM_VAL1) AS TERM_VAL1
+                                              FROM (
+                                                    SELECT DISTINCT REGEXP_SUBSTR(TXT, '[^,]+', 1, LEVEL) AS TERM_VAL1
+                                                      FROM
+                                                           (SELECT TERM_VAL1 AS TXT
+                                                              FROM CR_1002T
+                                                             WHERE DLR_CD = #{sDlrCd}
+                                                               AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                                                               AND DETL_EXTR_TERM_CD = 'CRM7500323'
+                                                           )
+                                                   CONNECT BY LEVEL <= LENGTH(REGEXP_REPLACE(TXT, '[^,]+', '')) + 1
+                                                   )
+                                           )
+                                   )
+                              ]]>
+                            WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500748' THEN
+                            <![CDATA[
+                                 (SELECT SUBSTR(XMLAGG(XMLELEMENT(X, ',', TERM_VAL1) ORDER BY TERM_VAL1).EXTRACT('//text()'),2) CONTENTS
+                                    FROM (
+                                          SELECT (SELECT A.MAK_NM
+                                                FROM CR_0701T A
+                                                WHERE A.DEL_YN ='N'
+                                                AND A.DLR_CD = #{sDlrCd}
+                                                AND A.MAK_CD = TERM_VAL1) AS TERM_VAL1
+                                            FROM (
+                                                  SELECT DISTINCT REGEXP_SUBSTR(TXT, '[^,]+', 1, LEVEL) AS TERM_VAL1
+                                                    FROM
+                                                         (SELECT TERM_VAL1 AS TXT
+                                                            FROM CR_1002T
+                                                           WHERE DLR_CD = #{sDlrCd}
+                                                             AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                                                             AND DETL_EXTR_TERM_CD = 'CRM7500748'
+                                                         )
+                                                 CONNECT BY LEVEL <= LENGTH(REGEXP_REPLACE(TXT, '[^,]+', '')) + 1
+                                                 )
+                                         )
+                                 )
+                            ]]>
+<!--                                  (SELECT MAK_NM -->
+<!--                                     FROM CR_0701T -->
+<!--                                    WHERE DEL_YN = 'N' -->
+<!--                                      AND DLR_CD = #{sDlrCd} -->
+<!--                                      AND MAK_CD = CR_1002T.TERM_VAL1 -->
+<!--                                  ) -->
+                            WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500105' OR CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500106' OR CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500108' OR
+                                 CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500319' OR CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500425' OR CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500432' OR
+                                 CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500533' OR CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500534' OR CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500535' OR
+                                 CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500536' OR CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500537' OR CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500538' OR
+                                 CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500539' THEN
+                                 CR_1202T.TERM_VAL1
+                            WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500110' THEN
+                            <![CDATA[
+                                 (SELECT SUBSTR(XMLAGG(XMLELEMENT(X, ',', TERM_VAL1) ORDER BY TERM_VAL1).EXTRACT('//text()'),2) CONTENTS
+                                    FROM (
+                                          SELECT (SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                                                    FROM CM_0303T A, CM_0304T B
+                                                   WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                                                     AND A.CMM_CD = B.CMM_CD
+                                                     AND B.LANG_CD = #{langCd}
+                                                     AND A.CMM_GRP_CD = 'CRM008'
+                                                     AND A.USE_YN = 'Y'
+                                                     AND A.CMM_CD = TERM_VAL1) AS TERM_VAL1
+                                            FROM (
+                                                  SELECT DISTINCT REGEXP_SUBSTR(TXT, '[^,]+', 1, LEVEL) AS TERM_VAL1
+                                                    FROM
+                                                         (SELECT TERM_VAL1 AS TXT
+                                                            FROM CR_1202T
+                                                           WHERE DLR_CD = #{sDlrCd}
+                                                             AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                                                             AND DETL_EXTR_TERM_CD = 'CRM7500110'
+                                                         )
+                                                 CONNECT BY LEVEL <= LENGTH(REGEXP_REPLACE(TXT, '[^,]+', '')) + 1
+                                                 )
+                                         )
+                                 )
+                            ]]>
+                            WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500212' THEN
+                            <![CDATA[
+                                 (SELECT SUBSTR(XMLAGG(XMLELEMENT(X, ',', TERM_VAL1) ORDER BY TERM_VAL1).EXTRACT('//text()'),2) CONTENTS
+                                    FROM (
+                                          SELECT FN_GET_CARLINE_NM(TERM_VAL1) AS TERM_VAL1
+                                            FROM (
+                                                  SELECT DISTINCT REGEXP_SUBSTR(TXT, '[^,]+', 1, LEVEL) AS TERM_VAL1
+                                                    FROM
+                                                         (SELECT TERM_VAL1 AS TXT
+                                                            FROM CR_1202T
+                                                           WHERE DLR_CD = #{sDlrCd}
+                                                             AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                                                             AND DETL_EXTR_TERM_CD = 'CRM7500212'
+                                                         )
+                                                 CONNECT BY LEVEL <= LENGTH(REGEXP_REPLACE(TXT, '[^,]+', '')) + 1
+                                                 )
+                                         )
+                                 )
+                            ]]>
+                            WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500213' THEN
+                            <![CDATA[
+                                 (SELECT SUBSTR(XMLAGG(XMLELEMENT(X, ',', TERM_VAL1) ORDER BY TERM_VAL1).EXTRACT('//text()'),2) CONTENTS
+                                    FROM (
+                                          SELECT (SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                                                    FROM CM_0303T A, CM_0304T B
+                                                   WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                                                     AND A.CMM_CD = B.CMM_CD
+                                                     AND B.LANG_CD = #{langCd}
+                                                     AND A.CMM_GRP_CD = 'CRM363'
+                                                     AND A.USE_YN = 'Y'
+                                                     AND A.CMM_CD = TERM_VAL1) AS TERM_VAL1
+                                            FROM (
+                                                  SELECT DISTINCT REGEXP_SUBSTR(TXT, '[^,]+', 1, LEVEL) AS TERM_VAL1
+                                                    FROM
+                                                         (SELECT TERM_VAL1 AS TXT
+                                                            FROM CR_1202T
+                                                           WHERE DLR_CD = #{sDlrCd}
+                                                             AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                                                             AND DETL_EXTR_TERM_CD = 'CRM7500213'
+                                                         )
+                                                 CONNECT BY LEVEL <= LENGTH(REGEXP_REPLACE(TXT, '[^,]+', '')) + 1
+                                                 )
+                                         )
+                                 )
+                            ]]>
+                            WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500426' THEN
+                            <![CDATA[
+                                 (SELECT SUBSTR(XMLAGG(XMLELEMENT(X, ',', TERM_VAL1) ORDER BY TERM_VAL1).EXTRACT('//text()'),2) CONTENTS
+                                    FROM (
+                                          SELECT FN_GET_CARLINE_NM(TERM_VAL1) AS TERM_VAL1
+                                            FROM (
+                                                  SELECT DISTINCT REGEXP_SUBSTR(TXT, '[^,]+', 1, LEVEL) AS TERM_VAL1
+                                                    FROM
+                                                         (SELECT TERM_VAL1 AS TXT
+                                                            FROM CR_1202T
+                                                           WHERE DLR_CD = #{sDlrCd}
+                                                             AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                                                             AND DETL_EXTR_TERM_CD = 'CRM7500426'
+                                                         )
+                                                 CONNECT BY LEVEL <= LENGTH(REGEXP_REPLACE(TXT, '[^,]+', '')) + 1
+                                                 )
+                                         )
+                                 )
+                            ]]>
+                            WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500428' THEN
+                            <![CDATA[
+                                 (SELECT SUBSTR(XMLAGG(XMLELEMENT(X, ',', TERM_VAL1) ORDER BY TERM_VAL1).EXTRACT('//text()'),2) CONTENTS
+                                    FROM (
+                                          SELECT FN_GET_CARLINE_NM(TERM_VAL1) AS TERM_VAL1
+                                            FROM (
+                                                  SELECT DISTINCT REGEXP_SUBSTR(TXT, '[^,]+', 1, LEVEL) AS TERM_VAL1
+                                                    FROM
+                                                         (SELECT TERM_VAL1 AS TXT
+                                                            FROM CR_1202T
+                                                           WHERE DLR_CD = #{sDlrCd}
+                                                             AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                                                             AND DETL_EXTR_TERM_CD = 'CRM7500428'
+                                                         )
+                                                 CONNECT BY LEVEL <= LENGTH(REGEXP_REPLACE(TXT, '[^,]+', '')) + 1
+                                                 )
+                                         )
+                                 )
+                            ]]>
+                            WHEN CR_1202T.DETL_EXTR_TERM_CD = 'CRM7500640' THEN
+                            <![CDATA[
+                                 (SELECT SUBSTR(XMLAGG(XMLELEMENT(X, ',', TERM_VAL1) ORDER BY TERM_VAL1).EXTRACT('//text()'),2) CONTENTS
+                                    FROM (
+                                          SELECT (SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                                                    FROM CM_0303T A, CM_0304T B
+                                                   WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                                                     AND A.CMM_CD = B.CMM_CD
+                                                     AND B.LANG_CD = #{langCd}
+                                                     AND A.CMM_GRP_CD = 'CRM321'
+                                                     AND A.USE_YN = 'Y'
+                                                     AND A.CMM_CD = TERM_VAL1) AS TERM_VAL1
+                                            FROM (
+                                                  SELECT DISTINCT REGEXP_SUBSTR(TXT, '[^,]+', 1, LEVEL) AS TERM_VAL1
+                                                    FROM
+                                                         (SELECT TERM_VAL1 AS TXT
+                                                            FROM CR_1202T
+                                                           WHERE DLR_CD = #{sDlrCd}
+                                                             AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                                                             AND DETL_EXTR_TERM_CD = 'CRM7500640'
+                                                         )
+                                                 CONNECT BY LEVEL <= LENGTH(REGEXP_REPLACE(TXT, '[^,]+', '')) + 1
+                                                 )
+                                         )
+                                 )
+                            ]]>
+                            ELSE CR_1202T.TERM_VAL1 || ' ~ ' || CR_1202T.TERM_VAL2
+                       END TERM_VAL1                     --조건값1
+                 FROM CR_1202T CR_1202T            --고객추출조건상세
+                <where>
+                        AND CR_1202T.DLR_CD            = #{sDlrCd}
+                        AND CR_1202T.CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                </where>
+                ORDER BY
+                <choose>
+                        <when test='sort != null'>
+                                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                        <choose>
+                                                <when test='item.field == "dlrCd"'>            CR_1202T.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                                <when test='item.field == "custExtrTermNo"'>   CR_1202T.CUST_EXTR_TERM_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                                <when test='item.field == "detlExtrTermCd"'>   CR_1202T.DETL_EXTR_TERM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                                <when test='item.field == "detlExtrTermNm"'>   DETL_EXTR_TERM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                                <when test='item.field == "termVal1"'>         TERM_VAL1 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                                                <when test='item.field == "termVal2"'>         CR_1202T.TERM_VAL2 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                                <when test='item.field == "termVal3"'>         CR_1202T.TERM_VAL3 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                                <when test='item.field == "termVal4"'>         CR_1202T.TERM_VAL4 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                                <when test='item.field == "termVal5"'>         CR_1202T.TERM_VAL5 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                                <otherwise>
+                                                 CR_1202T.DLR_CD ASC
+                                                ,CR_1202T.CUST_EXTR_TERM_NO ASC
+                                                ,CR_1202T.DETL_EXTR_TERM_CD ASC
+                                                </otherwise>
+                                        </choose>
+                                </foreach>
+                        </when>
+                        <otherwise>
+                         CR_1202T.DLR_CD ASC
+                        ,CR_1202T.CUST_EXTR_TERM_NO ASC
+                        ,CR_1202T.DETL_EXTR_TERM_CD ASC
+                        </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 고객추출 마스터 정보 목록수를 조회한다. -->
+    <select id="selectCrmTargExtractDetailsByConditionCnt" parameterType="CrmTargExtractSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.selectCrmTargExtractDetailsByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_1202T CR_1202T
+        <where>
+                AND CR_1202T.DLR_CD            = #{sDlrCd}
+                AND CR_1202T.CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+        </where>
+    </select>
+
+     <!-- 고객추출조건 비교를 위한 조건 목록을 조회한다. -->
+    <select id="selectCrmTargExtractDetailDupByCondition" parameterType="CrmTargExtractSearchVO" resultType="CrmTargExtractVO">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDao.selectCrmTargExtractDetailDupByCondition] */
+        SELECT
+            T1.DLR_CD, T1.CUST_EXTR_TERM_NO, T1.DETL_EXTR_TERM_CD
+            , T1.DETL_EXTR_TERM_CD||T1.TERM_VAL1||T1.TERM_VAL2||T1.TERM_VAL3||T1.TERM_VAL4||T1.TERM_VAL5 AS DETL_EXTR_TERM_CD_TERM_VAL
+            , T2.CNT as CNT
+        FROM CR_1202T T1
+        INNER JOIN (
+        SELECT CUST_EXTR_TERM_NO ,COUNT(*) AS CNT
+        FROM CR_1202T
+        WHERE DLR_CD = #{sDlrCd}
+        <if test='sCustExtrTermNo != null and sCustExtrTermNo != ""'>
+        <![CDATA[
+            AND CUST_EXTR_TERM_NO <> #{sCustExtrTermNo}
+        ]]>
+        </if>
+        GROUP BY CUST_EXTR_TERM_NO
+        HAVING COUNT(*) = #{conditionCnt}
+        ) T2 ON T1.CUST_EXTR_TERM_NO = T2.CUST_EXTR_TERM_NO
+        ORDER BY T1.CUST_EXTR_TERM_NO ASC, DETL_EXTR_TERM_CD ASC
+    </select>
+
+    <!-- 고객추출 상세 페이지에  정보를 조회한다. -->
+    <select id="selectCrmTargExtractDetailKeys" parameterType="CrmTargExtractSearchVO" resultType="CrmTargExtractVO">
+    <![CDATA[
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDao.selectCrmTargExtractDetailKeys] */
+        SELECT
+               CR_1201T.DLR_CD                   --딜러코드
+              ,CR_1201T.CUST_EXTR_TERM_NO        --고객추출조건번호
+              ,CR_1201T.CUST_EXTR_TERM_NM        --고객추출조건명
+              ,CR_1201T.RANDOM_YN                --랜덤추출여부
+              ,CR_1201T.RANDOM_CNT               --랜덤추출갯수
+              ,CR_1201T.USE_YN                   --사용여부
+         FROM CR_1201T CR_1201T                  --고객추출조건마스터
+        WHERE CR_1201T.DLR_CD            = #{sDlrCd}
+          AND CR_1201T.CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+    ]]>
+    </select>
+
+    <!-- 고객추출 상세 페이지에  정보를 조회한다. -->
+    <select id="selectCrmTargExtractDetails" parameterType="CrmTargExtractSearchVO" resultType="CrmTargExtractVO">
+    <![CDATA[
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDao.selectCrmTargExtractDetails] */
+        SELECT
+               CR_1202T.DLR_CD                   --딜러코드
+              ,CR_1202T.CUST_EXTR_TERM_NO        --고객추출조건번호
+              ,(SELECT CUST_EXTR_TERM_NM FROM CR_1201T WHERE DLR_CD = CR_1202T.DLR_CD AND CUST_EXTR_TERM_NO = CR_1202T.CUST_EXTR_TERM_NO) AS CUST_EXTR_TERM_NM
+              ,CR_1202T.DETL_EXTR_TERM_CD        --상세추출조건코드
+              ,CR_1202T.TERM_VAL1                --조건값1
+         FROM (
+                SELECT  DLR_CD
+                       ,CUST_EXTR_TERM_NO
+                       ,DETL_EXTR_TERM_CD || '-01' AS DETL_EXTR_TERM_CD
+                       ,TERM_VAL1
+                  FROM CR_1202T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                   AND DETL_EXTR_TERM_CD = 'CRM7500104'
+                 UNION ALL
+                SELECT  DLR_CD
+                       ,CUST_EXTR_TERM_NO
+                       ,DETL_EXTR_TERM_CD || '-02'
+                       ,TERM_VAL2
+                  FROM CR_1202T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                   AND DETL_EXTR_TERM_CD = 'CRM7500104'
+                 UNION ALL
+                SELECT  DLR_CD
+                       ,CUST_EXTR_TERM_NO
+                       ,DETL_EXTR_TERM_CD || '-03'
+                       ,TERM_VAL3
+                  FROM CR_1202T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                   AND DETL_EXTR_TERM_CD = 'CRM7500104'
+                 UNION ALL
+                SELECT  DLR_CD
+                       ,CUST_EXTR_TERM_NO
+                       ,DETL_EXTR_TERM_CD || '-04'
+                       ,TERM_VAL4
+                  FROM CR_1202T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                   AND DETL_EXTR_TERM_CD = 'CRM7500104'
+                 UNION ALL
+                SELECT  DLR_CD
+                       ,CUST_EXTR_TERM_NO
+                       ,DETL_EXTR_TERM_CD || '-01'
+                       ,TERM_VAL1
+                  FROM CR_1202T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                   AND TERM_VAL2 IS NOT NULL
+                   AND DETL_EXTR_TERM_CD <> 'CRM7500104'
+                 UNION ALL
+                SELECT  DLR_CD
+                       ,CUST_EXTR_TERM_NO
+                       ,DETL_EXTR_TERM_CD || '-02'
+                       ,TERM_VAL2
+                  FROM CR_1202T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                   AND TERM_VAL2 IS NOT NULL
+                   AND DETL_EXTR_TERM_CD <> 'CRM7500104'
+                 UNION ALL
+                SELECT  DLR_CD
+                       ,CUST_EXTR_TERM_NO
+                       ,DETL_EXTR_TERM_CD || '-01'
+                       ,TERM_VAL1
+                  FROM CR_1202T
+                 WHERE DLR_CD            = #{sDlrCd}
+                   AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                   AND TERM_VAL2 IS NULL
+                   AND DETL_EXTR_TERM_CD <> 'CRM7500104'
+             ) CR_1202T                          --고객추출조건상세
+         ORDER BY CR_1202T.DETL_EXTR_TERM_CD
+    ]]>
+    </select>
+
+    <!-- 도시코드 데이터를 조회한다. 공통으로 DropdownList에서 쓰기위함. (중복 모델 display 방지)  -->
+    <select id="selectCityListByCondition" parameterType="CrmTargExtractSearchVO" resultType="CrmTargExtractVO">
+        SELECT CITY_CD, CITY_NM
+          FROM CM_0205T
+         WHERE USE_YN = 'Y'
+         GROUP BY CITY_CD, CITY_NM
+         ORDER BY CITY_CD, CITY_NM
+    </select>
+
+    <!-- 지역코드 데이터를 조회한다. 공통으로 DropdownList에서 쓰기위함. (중복 모델 display 방지)  -->
+    <select id="selectDistListByCondition" parameterType="CrmTargExtractSearchVO" resultType="CrmTargExtractVO">
+        SELECT DIST_CD, DIST_NM
+          FROM CM_0205T
+         WHERE USE_YN = 'Y'
+           AND CITY_CD = #{cmmCd}
+         GROUP BY DIST_CD, DIST_NM
+         ORDER BY DIST_CD, DIST_NM
+    </select>
+
+    <!-- 대상자 정보 목록 검색조건. -->
+    <sql id="searchTargExtract">
+        <where>
+            AND T1.DLR_CD = #{sDlrCd}
+            AND T1.SEQ    = #{sSeq}
+            AND T1.CUST_DLR_CD = T2.DLR_CD
+            AND T2.DLR_CD = T3.DLR_CD(+)
+            AND T1.CUST_NO = T2.CUST_NO
+            AND T2.CUST_NO = T3.REF_KEY_NM(+)
+            AND T2.DEL_YN = 'N'
+        </where>
+    </sql>
+    <!-- 대상자 정보 목록 수량을 조회한다. -->
+    <select id="selectTargExtractsByConditionCnt" parameterType="CrmTargExtractSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDao.selectTargExtractsByConditionCnt] */
+        SELECT
+            COUNT(*) AS VALUE
+          FROM CR_1003T T1,
+               CR_0101T T2,
+               (SELECT *
+                  FROM CR_0116T
+                 WHERE REF_TABLE_NM = 'CR_0101T'
+                   AND FLAG_YN = 'Y'
+               ) T3
+          <include refid="searchTargExtract" />
+    </select>
+    <!-- 대상자 정보 목록을 조회한다. -->
+    <select id="selectTargExtractsByCondition" parameterType="CrmTargExtractSearchVO" resultType="CrmTargExtractVO">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDao.selectTargExtractsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT T1.CUST_NO,
+                       T2.CUST_NM,
+                       T2.TEL_NO,
+                       T2.HP_NO,
+                       T2.WECHAT_ID,
+                       T2.EMAIL_NM,
+                       T3.ZIP_CD,
+                       T3.EXT_ZIP_CD,
+                       T3.SUNG_NM,
+                       T3.CITY_NM,
+                       T3.DIST_NM,
+                       T3.ADDR_NM,
+                       T3.ADDR_DETL_CONT,
+                       DECODE(T2.BLUE_MEMBERSHIP_NO, NULL, 'N', 'Y') AS BLUE_MEMBERSHIP_YN,
+                       DECODE((SELECT DISTINCT CUST_NO FROM CR_0801T WHERE DLR_CD = #{sDlrCd} AND CUST_NO = T2.CUST_NO), NULL, 'N', 'Y')  AS MEMBERSHIP_YN
+                        ,(
+                            SELECT
+                                MAX(SA_0121T.CAR_REG_NO) KEEP (DENSE_RANK FIRST ORDER BY SA_0121T.MANUFACT_YY_MM_DT DESC)
+                            FROM SA_0121T SA_0121T
+                            INNER JOIN SA_0123T SA_0123T
+                            ON SA_0121T.DLR_CD = SA_0123T.DLR_CD AND SA_0121T.CAR_ID = SA_0123T.CAR_ID
+                            WHERE SA_0121T.MANUFACT_YY_MM_DT IS NOT NULL
+                            AND SA_0123T.USE_YN = 'Y'
+                            AND SA_0123T.BP_CD = T1.CUST_NO
+                          ) AS CAR_REG_NO
+                        ,FN_GET_CARLINE_NM((
+                            SELECT
+                                MAX(SA_0121T.CARLINE_CD) KEEP (DENSE_RANK FIRST ORDER BY SA_0121T.MANUFACT_YY_MM_DT DESC)
+                            FROM SA_0121T SA_0121T
+                            INNER JOIN SA_0123T SA_0123T
+                            ON SA_0121T.DLR_CD = SA_0123T.DLR_CD AND SA_0121T.CAR_ID = SA_0123T.CAR_ID
+                            WHERE SA_0121T.MANUFACT_YY_MM_DT IS NOT NULL
+                            AND SA_0123T.USE_YN = 'Y'
+                            AND SA_0123T.BP_CD = T1.CUST_NO
+                          )) AS CARLINE_NM
+                        ,FN_GET_MODEL_NM((
+                            SELECT
+                                MAX(SA_0121T.MODEL_CD) KEEP (DENSE_RANK FIRST ORDER BY SA_0121T.MANUFACT_YY_MM_DT DESC)
+                            FROM SA_0121T SA_0121T
+                            INNER JOIN SA_0123T SA_0123T
+                            ON SA_0121T.DLR_CD = SA_0123T.DLR_CD AND SA_0121T.CAR_ID = SA_0123T.CAR_ID
+                            WHERE SA_0121T.MANUFACT_YY_MM_DT IS NOT NULL
+                            AND SA_0123T.USE_YN = 'Y'
+                            AND SA_0123T.BP_CD = T1.CUST_NO
+                          )) AS MODEL_NM
+                        ,T2.SEX_CD
+                        ,FN_CMM_CD_NM('COM017',T2.SEX_CD, #{langCd}, 'N') AS SEX_CD_NM
+                        ,T2.BIRTH_DT
+                        ,(SELECT count(B.VIN_NO) FROM SA_0123T A INNER JOIN SA_0121T B ON A.CAR_ID = B.CAR_ID WHERE A.USE_YN = 'Y' AND A.DLR_CD = #{sDlrCd} and A.BP_CD = T1.CUST_NO ) AS HAVE_CAR_CNT
+                  FROM CR_1003T T1,
+                       CR_0101T T2,
+                       (SELECT *
+                          FROM CR_0116T
+                         WHERE REF_TABLE_NM = 'CR_0101T'
+                           AND FLAG_YN = 'Y'
+                       ) T3
+                 <include refid="searchTargExtract" />
+                 ORDER BY T2.CUST_NM, T1.CUST_NO
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 대상자 정보 목록을 조회한다. -->
+     <select id="selectTargetExtractSaveExcel" statementType="CALLABLE" parameterType="CrmTargExtractVO">
+         { call SP_CRM_TARG_EXTRACT (
+           #{dlrCd, mode=IN, jdbcType=VARCHAR}
+         , #{custExtrTermNo, mode=IN, jdbcType=VARCHAR}
+         , #{regUsrId, mode=IN, jdbcType=VARCHAR}
+         , #{updtUsrId, mode=IN, jdbcType=VARCHAR}
+         , #{result, mode=OUT, jdbcType=VARCHAR}
+         , #{seq, mode=OUT, jdbcType=VARCHAR}
+         ) }
+    </select>
+
+    <!-- TEMP01 대상자 정보를 삭제한다. -->
+    <update id="deleteTemp01" parameterType="CrmTargExtractSearchVO" >
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDao.deleteTemp01] */
+        DELETE FROM CR_1003T    --대상자 TEMP01
+        WHERE 1 = 1
+        AND DLR_CD          = #{sDlrCd}                    --딜러코드
+        AND SEQ             = #{sSeq}                      --시퀀스
+    </update>
+
+    <!-- TEMP02 대상자 정보를 삭제한다. -->
+    <update id="deleteTemp02" parameterType="CrmTargExtractSearchVO" >
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDao.deleteTemp02] */
+        DELETE FROM CR_1004T    --대상자 TEMP02
+        WHERE 1 = 1
+        AND DLR_CD          = #{sDlrCd}                    --딜러코드
+        AND SEQ             = #{sSeq}                      --시퀀스
+    </update>
+
+    <!-- 대상자추출조건을 조회한다.(콤보박스 구성) -->
+    <select id="selectTargExtractListByCondition" parameterType="CrmTargExtractSearchVO" resultType="CrmTargExtractVO">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDao.selectTargExtractListByCondition] */
+        SELECT
+               CUST_EXTR_TERM_NO --고객추출조건번호
+              ,CUST_EXTR_TERM_NM --고객추출조건명
+         FROM CR_1201T     --고객추출조건마스터
+        WHERE USE_YN = 'Y'
+          AND DLR_CD = #{sDlrCd} --딜러코드
+        ORDER BY CUST_EXTR_TERM_NM
+    </select>
+
+    <!-- 캠페인을 조회한다.(콤보박스 구성) -->
+    <select id="selectCampaignListByCondition" parameterType="CrmTargExtractSearchVO" resultType="CrmTargExtractVO">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDao.selectCampaignListByCondition] */
+        SELECT
+               MAK_CD --캠페인코드
+              ,MAK_NM --캠페인명
+         FROM CR_1101T     --캠페인마스터
+        WHERE DEL_YN = 'N'
+          AND DLR_CD = #{sDlrCd} --딜러코드
+        ORDER BY MAK_NM
+    </select>
+
+    <!-- 고객추출 조건을 삭제시 다른업무에서 사용하고 있는지 확인한다. -->
+    <select id="selectCrmTargExtractDeleteByConditionCnt" parameterType="CrmTargExtractSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CrmTargExtractDAO.selectCrmTargExtractDeleteByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM (
+                SELECT CUST_EXTR_TERM_NO
+                  FROM CR_1103T
+                 WHERE DLR_CD = #{sDlrCd}
+                   AND CUST_EXTR_TERM_NO = #{sCustExtrTermNo}
+                 UNION ALL
+                 SELECT RCPE_EXTR_SEQ
+                  FROM CR_0901T
+                 WHERE DLR_CD = #{sDlrCd}
+                   AND RCPE_EXTR_SEQ = #{sCustExtrTermNo}
+               )
+    </select>
+
+</mapper>

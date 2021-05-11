@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CurrencyDao_SqlMap.xml
+    Description : 통화코드에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.sci.service.dao.CurrencyDAO">
+
+	<!-- 통화코드 정보를 등록한다. -->
+	<insert id="insertCurrency" parameterType="CurrencyVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.CurrencyDAO.insertCurrency] */
+		INSERT INTO CM_0204T(
+			 CURRENCY_CD
+            ,CURRENCY_SYM
+            ,SYMBOL_POS_TP
+            ,EXR_UNIT_AMT
+            ,CURRENCY_NM
+            ,FRACTION_CNT
+            ,NUMBER_SYM
+            ,DECIMAL_SYM
+            ,EXR_TARG_YN
+            ,REG_USR_ID
+            ,REG_DT
+		)VALUES(
+			 #{currencyCd}
+            ,#{currencySym}
+            ,#{symbolPosTp}
+            ,#{exrUnitAmt}
+            ,#{currencyNm}
+            ,#{fractionCnt}
+            ,#{numberSym}
+            ,#{decimalSym}
+            ,#{exrTargYn}
+            ,#{regUsrId}
+            ,SYSDATE
+		)
+	</insert>
+
+	<!-- 통화 정보 정보를 수정한다. -->
+	<update id="updateCurrency" parameterType="CurrencyVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.CurrencyDAO.updateCurrency] */
+		UPDATE CM_0204T SET
+			 CURRENCY_SYM = #{currencySym}
+            ,SYMBOL_POS_TP = #{symbolPosTp}
+            ,EXR_UNIT_AMT = #{exrUnitAmt}
+            ,CURRENCY_NM = #{currencyNm}
+            ,FRACTION_CNT = #{fractionCnt}
+            ,NUMBER_SYM = #{numberSym}
+            ,DECIMAL_SYM = #{decimalSym}
+            ,EXR_TARG_YN = #{exrTargYn}
+            ,UPDT_USR_ID = #{updtUsrId}
+            ,UPDT_DT = SYSDATE
+		WHERE CURRENCY_CD = #{currencyCd}
+	</update>
+
+	<!-- 통화 정보 정보를 삭제한다. -->
+	<delete id="deleteCurrency" parameterType="CurrencyVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.CurrencyDAO.deleteCurrency] */
+		DELETE FROM CM_0204T
+		WHERE CURRENCY_CD = #{currencyCd}
+	</delete>
+
+	<!-- 통화 정보를 조회한다. -->
+	<select id="selectCurrencyByKey" parameterType="string" resultType="CurrencyVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.CurrencyDAO.selectCurrencyByKey] */
+		SELECT * FROM CM_0204T
+		WHERE CURRENCY_CD = #{currencyCd}
+	</select>
+
+	<!-- 통화 정보 목록을 조회한다. -->
+	<select id="selectCurrenciesByCondition" parameterType="CurrencySearchVO" resultType="CurrencyVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.CurrencyDAO.selectCurrenciesByCondition] */
+		SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT * FROM CM_0204T
+                <where>
+                    <if test='sCurrencyCd != null and sCurrencyCd != ""'>
+                        CURRENCY_CD = #{sCurrencyCd}
+                    </if>
+
+                    <if test='sCurrencyNm != null and sCurrencyNm != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sCurrencyNm,"*")'>
+                                <bind name='sCurrencyNm' value='@org.apache.commons.lang3.StringUtils@replace(sCurrencyNm, "*", "%")' />
+                                 AND CURRENCY_NM LIKE #{sCurrencyNm}
+                            </when>
+                            <otherwise>
+                                 AND CURRENCY_NM = #{sCurrencyNm}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sExrTargYn != null and sExrTargYn != ""'>
+                        AND EXR_TARG_YN = #{sExrTargYn}
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "currencyCd"'>CURRENCY_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "currencySym"'>CURRENCY_SYM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "currencyNm"'>CURRENCY_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "symbolPosTp"'>SYMBOL_POS_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "exrUnitAmt"'>EXR_UNIT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "fractionCnt"'>FRACTION_CMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "numberSym"'>NUMBER_SYM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "decimalSym"'>DECIMAL_SYM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "exrTargYn"'>EXR_TARG_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regUsrId"'>REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDt"'>REG_DE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtUsrId"'>UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtDt"'>UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    CURRENCY_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        CURRENCY_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+	<!-- 통화 정보 목록수를 조회한다. -->
+	<select id="selectCurrenciesByConditionCnt" parameterType="CurrencySearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.CurrencyDAO.selectCurrenciesByConditionCnt] */
+		SELECT COUNT(*) AS VALUE FROM CM_0204T
+		<where>
+			<if test='sCurrencyCd != null and sCurrencyCd != ""'>
+                CURRENCY_CD = #{sCurrencyCd}
+            </if>
+
+            <if test='sCurrencyNm != null and sCurrencyNm != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sCurrencyNm,"*")'>
+                        <bind name='sCurrencyNm' value='@org.apache.commons.lang3.StringUtils@replace(sCurrencyNm, "*", "%")' />
+                         AND CURRENCY_NM LIKE #{sCurrencyNm}
+                    </when>
+                    <otherwise>
+                         AND CURRENCY_NM = #{sCurrencyNm}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sExrTargYn != null and sExrTargYn != ""'>
+                AND EXR_TARG_YN = #{sExrTargYn}
+            </if>
+		</where>
+	</select>
+</mapper>

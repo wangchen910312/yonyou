@@ -1,0 +1,1103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO">
+
+
+    <!-- 목록 갯수  -->
+    <select id="selectUsedCarContractsByConditionCnt" parameterType="UsedCarContractSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0243T A    --중고계약헤더
+         INNER JOIN SA_0245T B1               /* 계약고객 */
+            ON A.DLR_CD = B1.DLR_CD
+           and A.CONTRACT_NO = B1.CONTRACT_NO
+           and B1.PARTNER_TP = 'C'   -- 계약자   : SAL028
+         INNER JOIN SA_0245T B2               /* 실운전자 */
+            ON A.DLR_CD = B2.DLR_CD
+           and A.CONTRACT_NO = B2.CONTRACT_NO
+           and B2.PARTNER_TP = 'D'   -- 실운전자 : SAL028
+          LEFT OUTER JOIN SA_0248T C         /* 번호판 */
+            ON A.DLR_CD = C.DLR_CD
+           AND A.CONTRACT_NO = C.CONTRACT_NO
+          LEFT OUTER JOIN SA_0249T D          /* 보험 헤더 */
+            ON A.DLR_CD = D.DLR_CD
+           AND A.CONTRACT_NO = D.CONTRACT_NO
+          LEFT OUTER JOIN SA_0251T E          /* 금융 */
+            ON A.DLR_CD = E.DLR_CD
+           AND A.CONTRACT_NO = E.CONTRACT_NO
+          LEFT OUTER JOIN SA_0132T F           /* 2급딜러 */
+            ON A.LV2_DLR_ORG_CD = F.LV2_DLR_CD
+          WHERE 1 = 1
+          <if test='sDlrCd != null and sDlrCd != ""'>
+            AND A.DLR_CD = #{sDlrCd}                       -- 딜러코드
+          </if>
+          <if test='sSaleEmpNo != null and sSaleEmpNo != ""'>
+            AND A.SALE_EMP_NO = #{sSaleEmpNo}     -- 판매사원번호
+          </if>
+          <if test='sContractCustNo != null and sContractCustNo != ""'>
+            AND ( B1.CUST_CD = #{sContractCustNo} OR B2.CUST_CD = #{sContractCustNo} )   -- 고객코드
+          </if>
+          <if test='sCorpCarDstinCd != null and sCorpCarDstinCd != ""'>
+            AND A.CORP_CAR_DSTIN_CD = #{sCorpCarDstinCd}            -- 자사차여부
+          </if>
+          <if test='sContractNo != null and sContractNo != ""'>
+          <choose>
+            <when test='@org.apache.commons.lang3.StringUtils@contains(sContractNo,"*")'>
+              <bind name='sContractNo' value='@org.apache.commons.lang3.StringUtils@replace(sContractNo, "*", "%")' />
+                AND A.CONTRACT_NO LIKE #{sContractNo}       -- 계약번호
+            </when>
+            <otherwise>
+                AND A.CONTRACT_NO = #{sContractNo}          -- 계약번호
+            </otherwise>
+          </choose>
+          </if>
+          <if test='sContractStatCd != null and sContractStatCd != ""'>
+            AND A.CONTRACT_STAT_CD = #{sContractStatCd}      -- 계약상태
+          </if>
+          <if test='sStartContractDt != null'>
+            AND A.CONTRACT_DT <![CDATA[>=]]> TRUNC(#{sStartContractDt},'DD')
+          </if>
+          <if test='sEndContractDt != null'>
+            AND A.CONTRACT_DT <![CDATA[<]]> TRUNC(#{sEndContractDt},'DD')+1
+          </if>
+          <if test='sCarlineCd != null and sCarlineCd != ""'>
+            AND A.CARLINE_CD = #{sCarlineCd}     -- 차종
+          </if>
+          <if test='sModelCd != null and sModelCd != ""'>
+            AND A.MODEL_CD = #{sModelCd}     -- 모델
+          </if>
+          <if test='sOcnCd != null and sOcnCd != ""'>
+            AND A.OCN_CD = #{sOcnCd}     -- OCN
+          </if>
+          <if test='sExtColorCd != null and sExtColorCd != ""'>
+            AND A.EXT_COLOR_CD = #{sExtColorCd}     -- 외장
+          </if>
+          <if test='sIntColorCd != null and sIntColorCd != ""'>
+            AND A.INT_COLOR_CD = #{sIntColorCd}     -- 외장
+          </if>
+          <if test='sCarBrandCd != null and sCarBrandCd != ""'>
+            AND A.CAR_BRAND_CD = #{sCarBrandCd}     -- 브랜드
+          </if>
+          <if test='sCarNm != null and sCarNm != ""'>
+              <choose>
+                <when test='@org.apache.commons.lang3.StringUtils@contains(sCarNm,"*")'>
+                  <bind name='sCarNm' value='@org.apache.commons.lang3.StringUtils@replace(sCarNm, "*", "%")' />
+                    AND A.CAR_NM LIKE #{sCarNm}       -- 차종명
+                </when>
+                <otherwise>
+                    AND A.CAR_NM = #{sCarNm}          -- 차종명
+                </otherwise>
+              </choose>
+          </if>
+    </select>
+
+	<!-- 조회 목록  -->
+	<select id="selectUsedCarContractsByCondition" parameterType="UsedCarContractSearchVO" resultType="UsedCarContractVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A.DLR_CD                     --딜러코드
+                     , A.CONTRACT_NO                --계약번호
+                     , A.CONTRACT_STAT_CD           --계약상태코드
+                     , A.CONTRACT_DT                --계약일자
+                     , A.SALE_EMP_NO                --판매사원번호
+                     , A.CONTRACT_CUST_NO           --계약고객번호
+                     , A.REAL_DRIVER_CUST_NO        --실제운전자고객번호
+                     , A.REAL_DRIVER_SAME_YN        --실제운전자동일여부
+                     , A.SALE_MNG_NO                --판매관리번호
+                     , A.PAY_TP                     --지불유형
+                     , A.VIN_NO                     --차대번호
+                     , A.CORP_CAR_DSTIN_CD          --자사차량구분코드
+                     , A.CARLINE_CD                 --차종코드
+                     , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+                     , A.MODEL_CD                   --모델코드
+                     , FN_GET_MODEL_NM(A.MODEL_CD) AS MODEL_NM
+                     , A.OCN_CD                     --OCN코드
+                     , FN_GET_OCN_NM(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+                     , A.EXT_COLOR_CD               --외장색상코드
+                     , FN_GET_EXT_COLOR_NM(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+                     , A.INT_COLOR_CD               --내장색상코드
+                     , FN_GET_INT_COLOR_NM(A.INT_COLOR_CD) AS INT_COLOR_NM
+                     , A.CAR_BRAND_CD               --차량브랜드코드
+                     , A.CAR_NM                     --차량명
+
+                     , A.EVAL_AMT                   --평가금액
+                     , A.CAR_SALE_AMT               --차량판매금액
+
+                     , A.RETL_AMT                   --소매금액
+                     , A.INC_AMT                    --보험금액
+                     , A.AAP_AMT                    --대행금액
+                     , A.VAT_AMT                    --부가가치세금액
+                     , A.REAL_CAR_AMT               --실제차량금액
+                     , A.ETC_SUM_AMT                --기타합계금액
+                     , A.REAL_PAY_AMT               --실제지불금액
+
+                     , A.CONTRACT_PDPST_NM          --계약입금자명
+                     , A.CONTRACT_RCPT_NO           --계약영수증번호
+                     , A.CONTRACT_RCPT_AMT          --계약영수증금액
+                     , A.CONTRACT_RCPT_ID           --계약영수증ID
+                     , A.CONTRACT_RCPT_DT           --계약영수증일자
+
+                     , A.REG_TP                     --등록유형
+                     , A.REAL_REG_AMT   AS REG_AMT  --실제등록금액
+                     , A.REG_FEE_AMT                --등록수수료금액
+                     , A.INC_AAP_TP                 --보험대행금액
+                     , A.INC_FEE_AMT                --보험수수료금액
+                     , A.FINC_REQ_YN                --금융요청여부
+                     , A.FINC_FEE_AMT               --금융수수료금액
+                     , A.DL_REQ_DT                  --인도요청일자
+                     , A.REAL_DL_DT                 --실제인도일자
+                     , A.FILE_DOC_ID                --파일문서ID
+                     , A.REMARK                     --비고
+                     , A.LV2_DLR_YN                 --2급딜러여부
+                     , A.LV2_DLR_ORG_CD             --2급딜러조직코드
+                     , F.LV2_DLR_NM       AS LV2_DLR_ORG_NM
+                     , A.REG_USR_ID                 --등록자ID
+                     , A.REG_DT                     --등록일자
+                     , A.UPDT_USR_ID                --수정자ID
+                     , A.UPDT_DT                    --수정일자
+
+                     , B1.CUST_NO                   -- 고객코드
+                     , B1.CUST_TP                   -- 고객유형
+                     , B1.CUST_NM                   -- 고객명
+                     , B1.TEL_NO1                   -- 전화번호1
+                     , B1.TEL_NO2                   -- 전화번호2
+                     , B1.EMAIL_NM                  -- 이메일명
+                     , B1.SSN_CRN_NO                -- 신분증번호
+                     , B1.MATH_DOC_TP
+                     , B1.ZIP_CD                    -- 우편번호
+                     , B1.SUNG_CD
+                     , B1.CITY_CD
+                     , B1.DIST_CD
+                     , B1.SUNG_NM
+                     , B1.CITY_NM
+                     , B1.DIST_NM
+                     , B1.ADDR_NM
+                     , B1.ADDR_DETL_CONT
+
+                     , B2.CUST_NO            as DRV_CUST_NO
+                     , B2.CUST_TP            as DRV_CUST_TP
+                     , B2.CUST_NM            as DRV_CUST_NM
+                     , B2.TEL_NO1            as DRV_TEL_NO1
+                     , B2.TEL_NO2            as DRV_TEL_NO2
+                     , B2.EMAIL_NM           as DRV_EMAIL_NM
+                     , B2.MATH_DOC_TP        as DRV_MATH_DOC_TP
+                     , B2.SSN_CRN_NO         as DRV_SSN_CRN_NO
+                     , B2.ZIP_CD             as DRV_ZIP_CD
+                     , B2.SUNG_CD            as DRV_SUNG_CD
+                     , B2.CITY_CD            as DRV_CITY_CD
+                     , B2.DIST_CD            as DRV_DIST_CD
+                     , B2.SUNG_NM            AS DRV_SUNG_NM
+                     , B2.CITY_NM            AS DRV_CITY_NM
+                     , B2.DIST_NM            AS DRV_DIST_NM
+                     , B2.ADDR_NM            AS DRV_ADDR_NM
+                     , B2.ADDR_DETL_CONT     AS DRV_ADDR_DETL_CONT
+
+                     , C.REG_PRE_AMT            --등록선수금액
+                     , C.REAL_REG_AMT           --실제등록금액
+                     , C.REG_FEE_AMT         AS REAL_REG_FEE_AMT
+                     , C.REG_DIST_CD            --등록지역코드
+                     , C.REG_EXPC_DT            --등록예상일자
+                     , C.PURC_PRE_AMT
+                     , C.REAL_PURC_AMT
+
+                     , D.INC_CMP_CD
+                     , D.INC_PROFIT_NM
+                     , D.INC_JOIN_DT
+                     , D.INC_EXPC_AMT
+                     , D.REAL_INC_AMT
+                     , D.INC_FEE_AMT          AS REAL_INC_FEE_AMT
+                     , D.REMARK               AS INC_REMARK
+
+                     , E.FINC_CMP_CD
+                     , E.FINC_ITEM_CD
+                     , E.FINC_REQ_DT
+                     , E.FINC_REQ_AMT
+                     , E.FINC_END_DT
+                     , E.FINC_FEE_AMT         AS REAL_FINC_FEE_AMT
+                     , E.FINC_RPAY_PRID
+                     , E.FINC_LOAN_RATE
+                  FROM SA_0243T A    --중고계약헤더
+                 INNER JOIN SA_0245T B1               /* 계약고객 */
+                    ON A.DLR_CD = B1.DLR_CD
+                   and A.CONTRACT_NO = B1.CONTRACT_NO
+                   and B1.PARTNER_TP = 'C'   -- 계약자   : SAL028
+                 INNER JOIN SA_0245T B2               /* 실운전자 */
+                    ON A.DLR_CD = B2.DLR_CD
+                   and A.CONTRACT_NO = B2.CONTRACT_NO
+                   and B2.PARTNER_TP = 'D'   -- 실운전자 : SAL028
+                  LEFT OUTER JOIN SA_0248T C         /* 번호판 */
+                    ON A.DLR_CD = C.DLR_CD
+                   AND A.CONTRACT_NO = C.CONTRACT_NO
+                  LEFT OUTER JOIN SA_0249T D          /* 보험 헤더 */
+                    ON A.DLR_CD = D.DLR_CD
+                   AND A.CONTRACT_NO = D.CONTRACT_NO
+                  LEFT OUTER JOIN SA_0251T E          /* 금융 */
+                    ON A.DLR_CD = E.DLR_CD
+                   AND A.CONTRACT_NO = E.CONTRACT_NO
+                  LEFT OUTER JOIN SA_0132T F           /* 2급딜러 */
+                    ON A.LV2_DLR_ORG_CD = F.LV2_DLR_CD
+                  WHERE 1 = 1
+                  <if test='sDlrCd != null and sDlrCd != ""'>
+                    AND A.DLR_CD = #{sDlrCd}                       -- 딜러코드
+                  </if>
+                  <if test='sSaleEmpNo != null and sSaleEmpNo != ""'>
+                    AND A.SALE_EMP_NO = #{sSaleEmpNo}     -- 판매사원번호
+                  </if>
+                  <if test='sContractCustNo != null and sContractCustNo != ""'>
+                    AND ( B1.CUST_CD = #{sContractCustNo} OR B2.CUST_CD = #{sContractCustNo} )   -- 고객코드
+                  </if>
+                  <if test='sCorpCarDstinCd != null and sCorpCarDstinCd != ""'>
+                    AND A.CORP_CAR_DSTIN_CD = #{sCorpCarDstinCd}            -- 자사차여부
+                  </if>
+                  <if test='sContractNo != null and sContractNo != ""'>
+                  <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sContractNo,"*")'>
+                      <bind name='sContractNo' value='@org.apache.commons.lang3.StringUtils@replace(sContractNo, "*", "%")' />
+                        AND A.CONTRACT_NO LIKE #{sContractNo}       -- 계약번호
+                    </when>
+                    <otherwise>
+                        AND A.CONTRACT_NO = #{sContractNo}          -- 계약번호
+                    </otherwise>
+                  </choose>
+                  </if>
+                  <if test='sContractStatCd != null and sContractStatCd != ""'>
+                    AND A.CONTRACT_STAT_CD = #{sContractStatCd}      -- 계약상태
+                  </if>
+                  <if test='sStartContractDt != null'>
+                    AND A.CONTRACT_DT <![CDATA[>=]]> TRUNC(#{sStartContractDt},'DD')
+                  </if>
+                  <if test='sEndContractDt != null'>
+                    AND A.CONTRACT_DT <![CDATA[<]]> TRUNC(#{sEndContractDt},'DD')+1
+                  </if>
+                  <if test='sCarlineCd != null and sCarlineCd != ""'>
+                    AND A.CARLINE_CD = #{sCarlineCd}     -- 차종
+                  </if>
+                  <if test='sModelCd != null and sModelCd != ""'>
+                    AND A.MODEL_CD = #{sModelCd}     -- 모델
+                  </if>
+                  <if test='sOcnCd != null and sOcnCd != ""'>
+                    AND A.OCN_CD = #{sOcnCd}     -- OCN
+                  </if>
+                  <if test='sExtColorCd != null and sExtColorCd != ""'>
+                    AND A.EXT_COLOR_CD = #{sExtColorCd}     -- 외장
+                  </if>
+                  <if test='sIntColorCd != null and sIntColorCd != ""'>
+                    AND A.INT_COLOR_CD = #{sIntColorCd}     -- 외장
+                  </if>
+                  <if test='sCarBrandCd != null and sCarBrandCd != ""'>
+                    AND A.CAR_BRAND_CD = #{sCarBrandCd}     -- 브랜드
+                  </if>
+                  <if test='sCarNm != null and sCarNm != ""'>
+                      <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sCarNm,"*")'>
+                          <bind name='sCarNm' value='@org.apache.commons.lang3.StringUtils@replace(sCarNm, "*", "%")' />
+                            AND A.CAR_NM LIKE #{sCarNm}       -- 차종명
+                        </when>
+                        <otherwise>
+                            AND A.CAR_NM = #{sCarNm}          -- 차종명
+                        </otherwise>
+                      </choose>
+                  </if>
+                  ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "contractNo"'>A.CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractDt"'>A.CONTRACT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractStatCd"'>A.CONTRACT_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "custNo"'>B1.CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "custNm"'>B1.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "saleEmpNo"'>A.SALE_EMP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "corpCarDstinCd"'>A.CORP_CAR_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineNm"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelNm"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnNm"'>A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "extColorNm"'>A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itnColorCd"'>A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carBrandCd"'>A.CAR_BRAND_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carNm"'>A.CAR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "realPayAmt"'>A.REAL_PAY_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "vinNo"'>A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.CONTRACT_DT DESC, A.CONTRACT_NO DESC, A.CONTRACT_STAT_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.CONTRACT_DT DESC, A.CONTRACT_NO DESC, A.CONTRACT_STAT_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+    <!-- 계약 헤더에 저장한다.  -->
+    <insert id="insertContract" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.insertContract] */
+        INSERT INTO SA_0243T    --중고차계약헤더
+        (
+              DLR_CD                     --딜러코드
+             ,CONTRACT_NO                --계약번호
+             ,CONTRACT_STAT_CD           --계약상태코드
+             ,CONTRACT_DT                --계약일자
+             ,SALE_EMP_NO                --판매사원번호
+             ,CONTRACT_CUST_NO           --계약고객번호
+             ,REAL_DRIVER_CUST_NO        --실제운전자고객번호
+             ,REAL_DRIVER_SAME_YN        --실제운전자동일여부
+             ,SALE_MNG_NO                --판매관리번호
+             ,PAY_TP                     --지불유형
+             ,VIN_NO                     --차대번호
+             ,CORP_CAR_DSTIN_CD          --자사차량구분코드
+             ,CARLINE_CD                 --차종코드
+             ,MODEL_CD                   --모델코드
+             ,OCN_CD                     --OCN코드
+             ,EXT_COLOR_CD               --외장색상코드
+             ,INT_COLOR_CD               --내장색상코드
+             ,CAR_BRAND_CD               --차량브랜드코드
+             ,CAR_NM                     --차량명
+             ,EVAL_AMT                   --평가금액
+             ,CAR_SALE_AMT               --차량판매금액
+             ,RETL_AMT                   --소매금액
+             ,INC_AMT                    --보험금액
+             ,AAP_AMT                    --대행금액
+             ,VAT_AMT                    --부가가치세금액
+             ,REAL_CAR_AMT               --실제차량금액
+             ,ETC_SUM_AMT                --기타합계금액
+             ,REAL_PAY_AMT               --실제지불금액
+             ,CONTRACT_PDPST_NM          --계약입금자명
+             ,CONTRACT_RCPT_NO           --계약영수증번호
+             ,CONTRACT_RCPT_AMT          --계약영수증금액
+             ,CONTRACT_RCPT_ID           --계약영수증ID
+             ,CONTRACT_RCPT_DT           --계약영수증일자
+             ,REG_TP                     --등록유형
+             ,REAL_REG_AMT               --실제등록금액
+             ,REG_FEE_AMT                --등록수수료금액
+             ,INC_AAP_TP                 --보험대행금액
+             ,INC_FEE_AMT                --보험수수료금액
+             ,FINC_REQ_YN                --금융요청여부
+             ,FINC_FEE_AMT               --금융수수료금액
+             ,DL_REQ_DT                  --인도요청일자
+             ,REAL_DL_DT                 --실제인도일자
+             ,FILE_DOC_ID                --파일문서ID
+             ,REMARK                     --비고
+             ,LV2_DLR_YN                 --2급딜러여부
+             ,LV2_DLR_ORG_CD             --2급딜러조직코드
+
+             ,REG_USR_ID                 --등록자ID
+             ,REG_DT                     --등록일자
+             ,UPDT_USR_ID                --수정자ID
+             ,UPDT_DT                    --수정일자
+
+        )VALUES(
+
+              #{dlrCd}                     --딜러코드
+             ,#{contractNo}                --계약번호
+             ,#{contractStatCd}            --계약상태코드
+             ,#{contractDt}                --계약일자
+             ,#{saleEmpNo}                 --판매사원번호
+             ,#{contractCustNo}            --계약고객번호
+             ,#{realDriverCustNo}          --실제운전자고객번호
+             ,#{realDriverSameYn}          --실제운전자동일여부
+             ,#{saleMngNo}                 --판매관리번호
+             ,#{payTp}                     --지불유형
+             ,#{vinNo}                     --차대번호
+             ,#{corpCarDstinCd}            --자사차량구분코드
+             ,#{carlineCd}                 --차종코드
+             ,#{modelCd}                   --모델코드
+             ,#{ocnCd}                     --OCN코드
+             ,#{extColorCd}                --외장색상코드
+             ,#{intColorCd}                --내장색상코드
+             ,#{carBrandCd}                --차량브랜드코드
+             ,#{carNm}                     --차량명
+             ,#{evalAmt}                   --평가금액
+             ,#{carSaleAmt}                --차량판매금액
+             ,#{retlAmt}                   --소매금액
+             ,#{incAmt}                    --보험금액
+             ,#{aapAmt}                    --대행금액
+             ,#{vatAmt}                    --부가가치세금액
+             ,#{realCarAmt}                --실제차량금액
+             ,#{etcSumAmt}                 --기타합계금액
+             ,#{realPayAmt}                --실제지불금액
+             ,#{contractPdpstNm}           --계약입금자명
+             ,#{contractRcptNo}            --계약영수증번호
+             ,#{contractRcptAmt}           --계약영수증금액
+             ,#{contractRcptId}            --계약영수증ID
+             ,#{contractRcptDt}            --계약영수증일자
+             ,#{regTp}                     --등록유형
+             ,#{realRegAmt}                --실제등록금액
+             ,#{regFeeAmt}                 --등록수수료금액
+             ,#{incAapTp}                  --보험대행금액
+             ,#{incFeeAmt}                 --보험수수료금액
+             ,#{fincReqYn}                 --금융요청여부
+             ,#{fincFeeAmt}                --금융수수료금액
+             ,#{dlReqDt}                   --인도요청일자
+             ,#{realDlDt}                  --실제인도일자
+             ,#{fileDocId}                 --파일문서ID
+             ,#{remark}                    --비고
+             ,#{lv2DlrYn}                  --2급딜러여부
+             ,#{lv2DlrOrgCd}               --2급딜러조직코드
+
+             ,#{regUsrId}                  --등록자ID
+             ,SYSDATE
+             ,#{updtUsrId}                 --수정자ID
+             ,SYSDATE
+        )
+    </insert>
+
+
+    <!-- SA_0245 : 실운전자 저장 -->
+    <insert id="insertContractCustomer" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.insertContractCustomer] */
+        INSERT INTO SA_0245T    --중고차계약고객
+        (
+          DLR_CD                --딜러코드
+         ,CONTRACT_NO           --계약번호
+         ,PARTNER_TP            --파트너유형
+         ,CUST_NO               --고객번호
+         ,CUST_TP               --고객유형
+         ,CUST_NM               --고객명
+         ,TEL_NO1               --전화번호1
+         ,TEL_NO2               --전화번호2
+         ,EMAIL_NM              --이메일명
+         ,MATH_DOC_TP           --주요인증유형
+         ,SSN_CRN_NO            --주민사업자등록번호
+         ,ZIP_CD                --우편번호
+         ,SUNG_CD               --성코드
+         ,CITY_CD               --도시코드
+         ,DIST_CD               --지역코드
+         ,SUNG_NM               --성명
+         ,CITY_NM               --도시명
+         ,DIST_NM               --지역명
+         ,ADDR_NM               --주소명
+         ,ADDR_DETL_CONT        --주소상세내용
+         ,REG_USR_ID            --등록자ID
+         ,REG_DT                --등록일자
+         ,UPDT_USR_ID           --수정자ID
+         ,UPDT_DT               --수정일자
+        )VALUES(
+          #{dlrCd}                --딜러코드
+         ,#{contractNo}           --계약번호
+         ,#{partnerTp}            --파트너유형
+         ,#{custNo}               --고객번호
+         ,#{custTp}               --고객유형
+         ,#{custNm}               --고객명
+         ,#{telNo1}               --전화번호1
+         ,#{telNo2}               --전화번호2
+         ,#{emailNm}              --이메일명
+         ,#{mathDocTp}            --주요인증유형
+         ,#{ssnCrnNo}             --주민사업자등록번호
+         ,#{zipCd}                --우편번호
+         ,#{sungCd}               --성코드
+         ,#{cityCd}               --도시코드
+         ,#{distCd}               --지역코드
+         ,#{sungNm}               --성명
+         ,#{cityNm}               --도시명
+         ,#{distNm}               --지역명
+         ,#{addrNm}               --주소명
+         ,#{addrDetlCont}         --주소상세내용
+         ,#{regUsrId}             --등록자ID
+         ,SYSDATE
+         ,#{updtUsrId}            --수정자ID
+         ,SYSDATE
+        )
+    </insert>
+
+    <!-- SA_0248 : 번호판 저장 -->
+    <insert id="insertReg" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.insertReg] */
+        INSERT INTO SA_0248T    --중고차계약번호판등록서비스
+        (
+          DLR_CD               --딜러코드
+         ,CONTRACT_NO          --계약번호
+         ,REG_PRE_AMT          --등록선수금액
+         ,REAL_REG_AMT         --실제등록금액
+         ,REG_FEE_AMT          --등록수수료금액
+         ,REG_DIST_CD          --등록지역코드
+         ,REG_EXPC_DT          --등록예상일자
+         ,PURC_PRE_AMT         --구입선수금액
+         ,REAL_PURC_AMT        --실제구입금액
+         ,REG_USR_ID           --등록자ID
+         ,REG_DT               --등록일자
+         ,UPDT_USR_ID          --수정자ID
+         ,UPDT_DT              --수정일자
+        )
+        VALUES
+        (
+          #{dlrCd}               --딜러코드
+         ,#{contractNo}          --계약번호
+         ,#{regPreAmt}           --등록선수금액
+         ,#{realRegAmt}          --실제등록금액
+         ,#{regFeeAmt}           --등록수수료금액
+         ,#{regDistCd}           --등록지역코드
+         ,#{regExpcDt}           --등록예상일자
+         ,#{purcPreAmt}          --구입선수금액
+         ,#{realPurcAmt}         --실제구입금액
+         ,#{regUsrId}            --등록자ID
+         ,SYSDATE
+         ,#{updtUsrId}           --수정자ID
+         ,SYSDATE
+        )
+    </insert>
+
+    <!-- SA_0249 : 보험헤더 저장 -->
+    <insert id="insertIncHead" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.insertIncHead] */
+        INSERT INTO SA_0249T    --중고차계약보험서비스헤더
+        (
+          DLR_CD               --딜러코드
+         ,CONTRACT_NO          --계약번호
+         ,INC_CMP_CD           --보험회사코드
+         ,INC_PROFIT_NM        --보험수익자명
+         ,INC_JOIN_DT          --보험가입일자
+         ,INC_EXPC_AMT         --보험예상금액
+         ,REAL_INC_AMT         --실보험금액
+         ,INC_FEE_AMT          --보험수수료금액
+         ,REMARK               --비고
+         ,REG_USR_ID           --등록자ID
+         ,REG_DT               --등록일자
+         ,UPDT_USR_ID          --수정자ID
+         ,UPDT_DT              --수정일자
+        )
+        VALUES
+        (
+          #{dlrCd}               --딜러코드
+         ,#{contractNo}          --계약번호
+         ,#{incCmpCd}            --보험회사코드
+         ,#{incProfitNm}         --보험수익자명
+         ,#{incJoinDt}           --보험가입일자
+         ,#{incExpcAmt}          --보험예상금액
+         ,#{realIncAmt}          --실보험금액
+         ,#{incFeeAmt}           --보험수수료금액
+         ,#{remark}              --비고
+         ,#{regUsrId}            --등록자ID
+         ,SYSDATE
+         ,#{updtUsrId}           --수정자ID
+         ,SYSDATE
+        )
+    </insert>
+
+    <!-- SA_0249 : 금융서비스 저장 -->
+    <insert id="insertFinc" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.insertFinc] */
+        INSERT INTO SA_0251T    --중고차계약금융정보
+        (
+          DLR_CD                --딜러코드
+         ,CONTRACT_NO           --계약번호
+         ,FINC_CMP_CD           --금융회사코드
+         ,FINC_ITEM_CD          --금융품목코드
+         ,FINC_REQ_DT           --금융요청일자
+         ,FINC_REQ_AMT          --금융요청금액
+         ,FINC_END_DT           --금융만기일자
+         ,FINC_FEE_AMT          --금융수수료금액
+         ,FINC_RPAY_PRID        --금융상환기간
+         ,FINC_LOAN_RATE        --금융대출비율
+         ,REG_USR_ID            --등록자ID
+         ,REG_DT                --등록일자
+         ,UPDT_USR_ID           --수정자ID
+         ,UPDT_DT               --수정일자
+        )VALUES(
+          #{dlrCd}                --딜러코드
+         ,#{contractNo}           --계약번호
+         ,#{fincCmpCd}            --금융회사코드
+         ,#{fincItemCd}           --금융품목코드
+         ,#{fincReqDt}            --금융요청일자
+         ,#{fincReqAmt}           --금융요청금액
+         ,#{fincEndDt}            --금융만기일자
+         ,#{fincFeeAmt}           --금융수수료금액
+         ,#{fincRpayPrid}         --금융상환기간
+         ,#{fincLoanRate}         --금융대출비율
+         ,#{regUsrId}             --등록자ID
+         ,SYSDATE
+         ,#{updtUsrId}            --수정자ID
+         ,SYSDATE
+        )
+    </insert>
+
+    <!-- 계약 헤더에 수정한다.  -->
+    <update id="updateContract" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.updateContract] */
+        UPDATE SA_0243T    --중고차계약헤더
+           SET CONTRACT_STAT_CD    = #{contractStatCd}            --계약상태코드
+             , CONTRACT_DT         = #{contractDt}                --계약일자
+             , SALE_EMP_NO         = #{saleEmpNo}                 --판매사원번호
+             , CONTRACT_CUST_NO    = #{contractCustNo}            --계약고객번호
+             , REAL_DRIVER_CUST_NO = #{realDriverCustNo}          --실제운전자고객번호
+             , REAL_DRIVER_SAME_YN = #{realDriverSameYn}          --실제운전자동일여부
+             , SALE_MNG_NO         = #{saleMngNo}                 --판매관리번호
+             , PAY_TP              = #{payTp}                     --지불유형
+             , VIN_NO              = #{vinNo}                     --차대번호
+             , CORP_CAR_DSTIN_CD   = #{corpCarDstinCd}            --자사차량구분코드
+             , CARLINE_CD          = #{carlineCd}                 --차종코드
+             , MODEL_CD            = #{modelCd}                   --모델코드
+             , OCN_CD              = #{ocnCd}                     --OCN코드
+             , EXT_COLOR_CD        = #{extColorCd}                --외장색상코드
+             , INT_COLOR_CD        = #{intColorCd}                --내장색상코드
+             , CAR_BRAND_CD        = #{carBrandCd}                --차량브랜드코드
+             , CAR_NM              = #{carNm}                     --차량명
+             , EVAL_AMT            = #{evalAmt}                   --평가금액
+             , CAR_SALE_AMT        = #{carSaleAmt}                --차량판매금액
+             , RETL_AMT            = #{retlAmt}                   --소매금액
+             , INC_AMT             = #{incAmt}                    --보험금액
+             , AAP_AMT             = #{aapAmt}                    --대행금액
+             , VAT_AMT             = #{vatAmt}                    --부가가치세금액
+             , REAL_CAR_AMT        = #{realCarAmt}                --실제차량금액
+             , ETC_SUM_AMT         = #{etcSumAmt}                 --기타합계금액
+             , REAL_PAY_AMT        = #{realPayAmt}                --실제지불금액
+             , CONTRACT_PDPST_NM   = #{contractPdpstNm}           --계약입금자명
+             , CONTRACT_RCPT_NO    = #{contractRcptNo}            --계약영수증번호
+             , CONTRACT_RCPT_AMT   = #{contractRcptAmt}           --계약영수증금액
+             , CONTRACT_RCPT_ID    = #{contractRcptId}            --계약영수증ID
+             , CONTRACT_RCPT_DT    = #{contractRcptDt}            --계약영수증일자
+             , REG_TP              = #{regTp}                     --등록유형
+             , REAL_REG_AMT        = #{realRegAmt}                --실제등록금액
+             , REG_FEE_AMT         = #{regFeeAmt}                 --등록수수료금액
+             , INC_AAP_TP          = #{incAapTp}                  --보험대행금액
+             , INC_FEE_AMT         = #{incFeeAmt}                 --보험수수료금액
+             , FINC_REQ_YN         = #{fincReqYn}                 --금융요청여부
+             , FINC_FEE_AMT        = #{fincFeeAmt}                --금융수수료금액
+             , DL_REQ_DT           = #{dlReqDt}                   --인도요청일자
+             , REAL_DL_DT          = #{realDlDt}                  --실제인도일자
+             , FILE_DOC_ID         = #{fileDocId}                 --파일문서ID
+             , REMARK              = #{remark}                    --비고
+             , LV2_DLR_YN          = #{lv2DlrYn}                  --2급딜러여부
+             , LV2_DLR_ORG_CD      = #{lv2DlrOrgCd}               --2급딜러조직코드
+             , UPDT_USR_ID         = #{updtUsrId}            --수정자ID
+             , UPDT_DT             = SYSDATE
+         WHERE 1 = 1
+           AND DLR_CD              = #{dlrCd}                     --딜러코드
+           AND CONTRACT_NO         = #{contractNo}                --계약번호
+    </update>
+
+    <!-- 계약 고객을 수정한다.  -->
+    <update id="updateContractCustomer" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.updateContractCustomer] */
+        UPDATE SA_0245T    --중고차계약고객
+           SET CUST_NO        = #{custNo}               --고객번호
+             , CUST_TP        = #{custTp}               --고객유형
+             , CUST_NM        = #{custNm}               --고객명
+             , TEL_NO1        = #{telNo1}               --전화번호1
+             , TEL_NO2        = #{telNo2}               --전화번호2
+             , EMAIL_NM       = #{emailNm}              --이메일명
+             , MATH_DOC_TP    = #{mathDocTp}            --주요인증유형
+             , SSN_CRN_NO     = #{ssnCrnNo}             --주민사업자등록번호
+             , ZIP_CD         = #{zipCd}                --우편번호
+             , SUNG_CD        = #{sungCd}               --성코드
+             , CITY_CD        = #{cityCd}               --도시코드
+             , DIST_CD        = #{distCd}               --지역코드
+             , SUNG_NM        = #{sungNm}               --성명
+             , CITY_NM        = #{cityNm}               --도시명
+             , DIST_NM        = #{distNm}               --지역명
+             , ADDR_NM        = #{addrNm}               --주소명
+             , ADDR_DETL_CONT = #{addrDetlCont}         --주소상세내용
+             , UPDT_USR_ID    = #{updtUsrId}            --수정자ID
+             , UPDT_DT        = SYSDATE
+         WHERE 1 = 1
+           AND DLR_CD         = #{dlrCd}                --딜러코드
+           AND CONTRACT_NO    = #{contractNo}           --계약번호
+           AND PARTNER_TP     = #{partnerTp}            --파트너유형
+    </update>
+
+    <!-- 계약 번호판 내역을 수정한다. -->
+    <update id="updateReg" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.updateReg] */
+        UPDATE SA_0248T    --중고차계약번호판등록서비스
+           SET REG_PRE_AMT   = #{regPreAmt}           --등록선수금액
+             , REAL_REG_AMT  = #{realRegAmt}          --실제등록금액
+             , REG_FEE_AMT   = #{regFeeAmt}           --등록수수료금액
+             , REG_DIST_CD   = #{regDistCd}           --등록지역코드
+             , REG_EXPC_DT   = #{regExpcDt}           --등록예상일자
+             , PURC_PRE_AMT  = #{purcPreAmt}          --구입선수금액
+             , REAL_PURC_AMT = #{realPurcAmt}         --실제구입금액
+             , REG_USR_ID    = #{regUsrId}            --등록자ID
+             , REG_DT        = #{regDt}               --등록일자
+             , UPDT_USR_ID   = #{updtUsrId}           --수정자ID
+             , UPDT_DT       = SYSDATE
+         WHERE 1 = 1
+           AND DLR_CD        = #{dlrCd}               --딜러코드
+           AND CONTRACT_NO   = #{contractNo}          --계약번호
+    </update>
+
+    <!-- SA_0248T : 번호판 저장된 갯수 확인 -->
+    <select id="selectRegCnt" parameterType="UsedCarContractVO" resultType="int">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.selectRegCnt] */
+        SELECT COUNT(*)
+          FROM SA_0248T
+         WHERE DLR_CD      = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </select>
+
+    <!-- SA_0248T : 번호판의 내역을 삭제 -->
+    <delete id="deleteReg" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.deleteReg] */
+        DELETE
+          FROM SA_0248T
+         WHERE DLR_CD      = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </delete>
+
+    <!-- SA_0249T : 보험헤더 수정 -->
+    <update id="updateIncHead" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.updateIncHead] */
+        UPDATE SA_0249T    --중고차계약보험서비스헤더
+           SET INC_CMP_CD    = #{incCmpCd}            --보험회사코드
+             , INC_PROFIT_NM = #{incProfitNm}         --보험수익자명
+             , INC_JOIN_DT   = #{incJoinDt}           --보험가입일자
+             , INC_EXPC_AMT  = #{incExpcAmt}          --보험예상금액
+             , REAL_INC_AMT  = #{realIncAmt}          --실보험금액
+             , INC_FEE_AMT   = #{incFeeAmt}           --보험수수료금액
+             , REMARK        = #{remark}              --비고
+             , UPDT_USR_ID   = #{updtUsrId}           --수정자ID
+             , UPDT_DT       = SYSDATE
+         WHERE 1 = 1
+           AND DLR_CD        = #{dlrCd}               --딜러코드
+           AND CONTRACT_NO   = #{contractNo}          --계약번호
+    </update>
+
+    <!-- SA_0249T : 보험헤더 저장된 갯수 확인 -->
+    <select id="selectIncHeadCnt" parameterType="UsedCarContractVO" resultType="int">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.selectIncHeadCnt] */
+        SELECT COUNT(*)
+          FROM SA_0249T
+         WHERE DLR_CD      = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </select>
+
+    <!-- SA_0249T : 보험헤더의 내역을 삭제 -->
+    <delete id="deleteIncHead" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.deleteIncHead] */
+        DELETE
+          FROM SA_0249T
+         WHERE DLR_CD      = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </delete>
+
+    <!-- SA_0250T : 보험 아이템을 삭제한다. -->
+    <delete id="deleteIncAll" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.deleteIncAll] */
+        DELETE
+          FROM SA_0250T    --계약보험서비스아이템
+         WHERE DLR_CD       = #{dlrCd}              --딜러코드
+           AND CONTRACT_NO  = #{contractNo}         --계약번호
+    </delete>
+
+    <!-- SA_0251T : 금융 서비스 수정 -->
+    <update id="updateFinc" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.updateFinc] */
+        UPDATE SA_0251T    --중고차계약금융정보
+           SET FINC_CMP_CD    = #{fincCmpCd}            --금융회사코드
+             , FINC_ITEM_CD   = #{fincItemCd}           --금융품목코드
+             , FINC_REQ_DT    = #{fincReqDt}            --금융요청일자
+             , FINC_REQ_AMT   = #{fincReqAmt}           --금융요청금액
+             , FINC_END_DT    = #{fincEndDt}            --금융만기일자
+             , FINC_FEE_AMT   = #{fincFeeAmt}           --금융수수료금액
+             , FINC_RPAY_PRID = #{fincRpayPrid}         --금융상환기간
+             , FINC_LOAN_RATE = #{fincLoanRate}         --금융대출비율
+             , UPDT_USR_ID    = #{updtUsrId}            --수정자ID
+             , UPDT_DT        = SYSDATE
+         WHERE 1 = 1
+           AND DLR_CD         = #{dlrCd}                --딜러코드
+           AND CONTRACT_NO    = #{contractNo}           --계약번호
+    </update>
+
+    <!-- SA_0223T : 금융 서비스 저장된 갯수 확인 -->
+    <select id="selectFincCnt" parameterType="UsedCarContractVO" resultType="int">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.selectFincCnt] */
+        SELECT COUNT(*)
+          FROM SA_0251T
+         WHERE DLR_CD      = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </select>
+
+    <!-- SA_0223T : 금융 서비스의 내역을 삭제 -->
+    <delete id="deleteFinc" parameterType="UsedCarContractVO">
+    /* [chn.bhmc.dms.sal.uco.service.dao.UsedCarContractDAO.deleteFinc] */
+        DELETE
+          FROM SA_0251T
+         WHERE DLR_CD      = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </delete>
+
+    <!-- 계약된 입/출금내역 조회 -->
+    <select id="selectPayInfoListsByConditionCnt" parameterType="UsedCarContractSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0246T
+         WHERE DLR_CD = #{sDlrCd}
+           AND CONTRACT_NO = #{sContractNo}
+    </select>
+    <select id="selectPayInfoListsByCondition" parameterType="UsedCarContractSearchVO" resultType="UsedCarContractPayInfoVO">
+        SELECT DLR_CD
+             , CONTRACT_NO
+             , SEQ
+             , RCV_TP
+             , DPST_WDRW_TP
+             , DPST_WDRW_DT
+             , DPST_WDRW_TARG_TP
+             , DPST_WDRW_AMT
+             , REMARK
+          FROM SA_0246T
+         WHERE DLR_CD = #{sDlrCd}
+           AND CONTRACT_NO = #{sContractNo}
+    </select>
+
+    <!-- 계약된 입/출금내역 저장 -->
+    <insert id="insertPayInfo" parameterType="UsedCarContractPayInfoVO">
+        INSERT INTO SA_0246T    --중고차계약입출금
+        (
+           DLR_CD                   --딜러코드
+         , CONTRACT_NO              --계약번호
+         , SEQ                      --일련번호
+         , RCV_TP                   --수납유형
+         , DPST_WDRW_TP             --입출금유형
+         , DPST_WDRW_DT             --입출금일자
+         , DPST_WDRW_TARG_TP        --입출금대상유형
+         , DPST_WDRW_AMT            --입출금금액
+         , REMARK                   --비고
+         , REG_USR_ID               --등록자ID
+         , REG_DT                   --등록일자
+         , UPDT_USR_ID              --수정자ID
+         , UPDT_DT                  --수정일자
+        )VALUES(
+           #{dlrCd}                   --딜러코드
+         , #{contractNo}              --계약번호
+         ,(SELECT NVL(MAX(SEQ),0)+1 FROM SA_0246T WHERE DLR_CD = #{dlrCd} AND CONTRACT_NO = #{contractNo})
+         , #{rcvTp}                   --수납유형
+         , #{dpstWdrwTp}              --입출금유형
+         , #{dpstWdrwDt}              --입출금일자
+         , #{dpstWdrwTargTp}          --입출금대상유형
+         , #{dpstWdrwAmt}             --입출금금액
+         , #{remark}                  --비고
+         , #{regUsrId}                --등록자ID
+         , SYSDATE
+         , #{updtUsrId}               --수정자ID
+         , SYSDATE
+        )
+    </insert>
+
+    <!-- 계약된 입/출금내역 수정 -->
+    <update id="updatePayInfo" parameterType="UsedCarContractPayInfoVO">
+        UPDATE SA_0246T    --계약입출금관리
+           SET RCV_TP            = #{rcvTp}                   --수납유형
+             , DPST_WDRW_TP      = #{dpstWdrwTp}              --입출금유형
+             , DPST_WDRW_DT      = #{dpstWdrwDt}              --입출금일자
+             , DPST_WDRW_TARG_TP = #{dpstWdrwTargTp}          --입출금대상유형
+             , DPST_WDRW_AMT     = #{dpstWdrwAmt}             --입출금금액
+             , REMARK            = #{remark}                  --비고
+             , UPDT_USR_ID       = #{updtUsrId}               --수정자ID
+             , UPDT_DT           = SYSDATE
+         WHERE 1 = 1
+           AND DLR_CD            = #{dlrCd}                   --딜러코드
+           AND CONTRACT_NO       = #{contractNo}              --계약번호
+           AND SEQ               = #{seq}                     --일련번호
+    </update>
+
+    <!-- 계약된 입/출금내역 삭제 -->
+    <delete id="deletePayInfo" parameterType="UsedCarContractPayInfoVO">
+        DELETE FROM SA_0246T    --계약입출금관리
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND CONTRACT_NO       = #{contractNo}              --계약번호
+           AND SEQ               = #{seq}                     --일련번호
+    </delete>
+
+    <!-- 계약된 보험내역 조회 -->
+    <select id="selectIncListsByConditionCnt" parameterType="UsedCarContractSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0250T
+         WHERE DLR_CD = #{sDlrCd}
+           AND CONTRACT_NO = #{sContractNo}
+        <if test='sIncTp != null and sIncTp != ""'>
+           AND INC_TP = #{sIncTp}
+        </if>
+    </select>
+    <select id="selectIncListsByCondition" parameterType="UsedCarContractSearchVO" resultType="UsedCarContractIncVO">
+        SELECT DLR_CD
+             , CONTRACT_NO
+             , INC_TP
+             , INC_EXPC_AMT
+             , REAL_INC_AMT
+             , INC_PRID
+             , INC_START_DT
+             , INC_END_DT
+             , REMARK
+          FROM SA_0250T
+         WHERE DLR_CD = #{sDlrCd}
+           AND CONTRACT_NO = #{sContractNo}
+    </select>
+
+    <!-- 계약된 보험내역 저장 -->
+    <insert id="insertInc" parameterType="UsedCarContractIncVO">
+        INSERT INTO SA_0250T    --계약보험서비스아이템
+        (
+          DLR_CD              --딜러코드
+         ,CONTRACT_NO         --계약번호
+         ,INC_TP              --보험유형
+         ,INC_EXPC_AMT        --보험예상금액
+         ,REAL_INC_AMT        --실보험금액
+         ,INC_PRID            --보험기간
+         ,INC_START_DT        --보험시작일자
+         ,INC_END_DT          --보험종료일자
+         ,REMARK              --비고
+         ,REG_USR_ID          --등록자ID
+         ,REG_DT              --등록일자
+         ,UPDT_USR_ID         --수정자ID
+         ,UPDT_DT             --수정일자
+        )
+        VALUES
+        (
+          #{dlrCd}              --딜러코드
+         ,#{contractNo}         --계약번호
+         ,#{incTp}              --보험유형
+         ,#{incExpcAmt}         --보험예상금액
+         ,#{realIncAmt}         --실보험금액
+         ,#{incPrid}            --보험기간
+         ,#{incStartDt}         --보험시작일자
+         ,#{incEndDt}           --보험종료일자
+         ,#{remark}             --비고
+         ,#{regUsrId}           --등록자ID
+         ,SYSDATE
+         ,#{updtUsrId}          --수정자ID
+         ,SYSDATE
+        )
+    </insert>
+
+    <!-- 계약된 보험내역 수정 -->
+    <update id="updateInc" parameterType="UsedCarContractIncVO">
+        UPDATE SA_0250T    --중고차계약보험서비스아이템
+           SET INC_TP       = #{incTp}              --보험유형
+             , INC_EXPC_AMT = #{incExpcAmt}         --보험예상금액
+             , REAL_INC_AMT = #{realIncAmt}         --실보험금액
+             , INC_PRID     = #{incPrid}            --보험기간
+             , INC_START_DT = #{incStartDt}         --보험시작일자
+             , INC_END_DT   = #{incEndDt}           --보험종료일자
+             , REMARK       = #{remark}             --비고
+             , UPDT_USR_ID  = #{updtUsrId}          --수정자ID
+             , UPDT_DT      = SYSDATE
+         WHERE 1 = 1
+           AND DLR_CD       = #{dlrCd}              --딜러코드
+           AND CONTRACT_NO  = #{contractNo}         --계약번호
+           AND INC_TP       = #{incTp}              --보험유형
+    </update>
+
+    <!-- 계약된 보험내역 삭제 -->
+    <delete id="deleteInc" parameterType="UsedCarContractIncVO">
+        DELETE FROM SA_0250T    --계약보험서비스아이템
+         WHERE DLR_CD       = #{dlrCd}              --딜러코드
+           AND CONTRACT_NO  = #{contractNo}         --계약번호
+           AND INC_TP       = #{incTp}              --보험유형
+    </delete>
+
+    <!-- 계약된 부가비용 조회 -->
+    <select id="selectOptionListsByConditionCnt" parameterType="UsedCarContractSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0247T
+         WHERE DLR_CD = #{sDlrCd}
+           AND CONTRACT_NO = #{sContractNo}
+    </select>
+    <select id="selectOptionListsByCondition" parameterType="UsedCarContractSearchVO" resultType="UsedCarContractOptionVO">
+        SELECT DLR_CD
+             , CONTRACT_NO
+             , SEQ
+             , ADD_ATC_NM
+             , ADD_ATC_AMT
+          FROM SA_0247T
+         WHERE DLR_CD = #{sDlrCd}
+           AND CONTRACT_NO = #{sContractNo}
+    </select>
+
+    <!-- 계약 부가비용 저장 -->
+    <insert id="insertOption" parameterType="UsedCarContractOptionVO">
+        INSERT INTO SA_0247T    --계약부가비용
+        (
+          DLR_CD             --딜러코드
+         ,CONTRACT_NO        --계약번호
+         ,SEQ                --일련번호
+         ,ADD_ATC_NM         --부가항목명
+         ,ADD_ATC_AMT        --부가금액
+         ,REG_USR_ID         --등록자ID
+         ,REG_DT             --등록일자
+         ,UPDT_USR_ID        --수정자ID
+         ,UPDT_DT            --수정일자
+        )
+        VALUES
+        (
+          #{dlrCd}             --딜러코드
+         ,#{contractNo}        --계약번호
+         ,(SELECT NVL(MAX(SEQ),0)+1 FROM SA_0247T WHERE DLR_CD = #{dlrCd} AND CONTRACT_NO = #{contractNo})
+         ,#{addAtcNm}          --부가항목명
+         ,#{addAtcAmt}            --부가금액
+         ,#{regUsrId}          --등록자ID
+         ,SYSDATE
+         ,#{updtUsrId}         --수정자ID
+         ,SYSDATE
+        )
+    </insert>
+
+    <!-- 계약 부가비용 수정 -->
+    <update id="updateOption" parameterType="UsedCarContractOptionVO">
+        UPDATE SA_0247T    --계약부가비용
+           SET DLR_CD      = #{dlrCd}             --딜러코드
+             , CONTRACT_NO = #{contractNo}        --계약번호
+             , SEQ         = #{seq}               --일련번호
+             , ADD_ATC_NM  = #{addAtcNm}          --부가항목명
+             , ADD_ATC_AMT = #{addAtcAmt}         --부가금액
+             , UPDT_USR_ID = #{updtUsrId}         --수정자ID
+             , UPDT_DT     = SYSDATE
+         WHERE 1 = 1
+           AND DLR_CD      = #{dlrCd}             --딜러코드
+           AND CONTRACT_NO = #{contractNo}        --계약번호
+           AND SEQ         = #{seq}               --일련번호
+    </update>
+
+    <!-- 계약 부가비용 삭제 -->
+    <delete id="deleteOption" parameterType="UsedCarContractOptionVO">
+        DELETE FROM SA_0247T    --계약부가비용
+         WHERE 1 = 1
+           AND DLR_CD      = #{dlrCd}             --딜러코드
+           AND CONTRACT_NO = #{contractNo}        --계약번호
+           AND SEQ         = #{seq}               --일련번호
+    </delete>
+
+    <!-- 계약 승인확정한다.(상태만 변경)  -->
+    <update id="approval" parameterType="UsedCarContractVO">
+        UPDATE SA_0243T
+           SET CONTRACT_STAT_CD = '20'
+         WHERE DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </update>
+
+    <!-- 계약을 삭제한다.(상태만 변경)  -->
+    <update id="deleteContract" parameterType="UsedCarContractVO">
+        UPDATE SA_0243T
+           SET CONTRACT_STAT_CD = '90'
+         WHERE DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </update>
+
+    <!-- 계약을 삭제한다.(상태만 변경)  -->
+    <update id="cancelContract" parameterType="UsedCarContractVO">
+        UPDATE SA_0243T
+           SET CONTRACT_STAT_CD = '91'
+         WHERE DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </update>
+
+    <!-- 중고차 마스터 차량사태 변경 -->
+    <update id="updateUsedCarMasterStat" parameterType="UsedCarContractVO">
+        UPDATE SA_0128T
+           SET CAR_STAT_CD = #{carStatCd}
+         WHERE VIN_NO = #{vinNo}
+    </update>
+
+</mapper>

@@ -1,0 +1,1458 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20170715" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="selectSerTotCarLineNmDs" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sStartYyMmDd"/>
+<O>
+<![CDATA[20170501]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCarlineCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sEndYyMmDd"/>
+<O>
+<![CDATA[20170530]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sFosterTp"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrRoTp"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[-- 서비스종합리포트 : 시간 조회
+SELECT CARLINE_NM
+       ,NVL(COL01, 0) AS COL01
+       ,NVL(COL02, 0) AS COL02
+       ,NVL(COL03, 0) AS COL03
+       ,NVL(COL04, 0) AS COL04
+       ,NVL(COL05, 0) AS COL05
+       ,NVL(COL06, 0) AS COL06
+       ,NVL(COL07, 0) AS COL07
+       ,NVL(COL08, 0) AS COL08
+       ,NVL(COL09, 0) AS COL09
+       ,NVL(COL10, 0) AS COL10
+       ,NVL(COL11, 0) AS COL11
+       ,NVL(COL12, 0) AS COL12
+       ,NVL(COL13, 0) AS COL13
+       ,NVL(COL14, 0) AS COL14
+       ,NVL(COL15, 0) AS COL15
+       ,NVL(COL16, 0) AS COL16
+       ,NVL(COL17, 0) AS COL17
+       ,NVL(COL18, 0) AS COL18
+       ,NVL(COL19, 0) AS COL19
+       ,NVL(COL20, 0) AS COL20
+       ,NVL(COL21, 0) AS COL21
+       ,NVL(COL22, 0) AS COL22
+       ,NVL(COL23, 0) AS COL23
+       ,NVL(COL24, 0) AS COL24
+       ,NVL(COL25, 0) AS COL25
+       ,NVL(COL26, 0) AS COL26
+FROM (
+    SELECT CARLINE_CD
+           ,CASE WHEN CARLINE_CD IS NOT NULL
+                 THEN NVL(FN_GET_CARLINE_NM(CARLINE_CD), 'No Name')
+                 ELSE 'Other Car' END AS CARLINE_NM
+           ,COLUMN_NM
+           ,COLUMN_VAL
+    FROM (
+            WITH T1 AS (
+                SELECT * FROM (
+                    SELECT RO.DLR_CD
+                          ,RO.DIAG_DOC_NO
+                          ,RO.VIN_NO
+                          ,RO.RO_DOC_NO
+                          ,RO.RO_STAT_CD
+                          ,RO.DL_STAT_CD
+                          ,RO.WRK_STAT_CD
+                          ,(SELECT CARLINE_CD FROM SA_0121T WHERE VIN_NO = RO.VIN_NO AND ROWNUM = 1) AS CARLINE_CD
+                          ,RO.RO_TP
+                          ,RO.RO_DT
+                          ,RO.DL_CHK_DT
+                          ,RO.QT_TEST_START_DT
+                          ,RO.QT_TEST_END_DT
+                          ,RO.CAR_WASH_START_DT
+                          ,RO.CAR_WASH_END_DT
+                          ,RO.EXPC_DL_DT
+                          ,TO_CHAR(RO.RO_DT,'MM') AS PRE_MM
+                      FROM SE_0300T RO
+                     WHERE RO.DLR_CD = '${sDlrCd}'
+                       AND TO_CHAR(RO.RO_DT,'YYYYMMDD') BETWEEN '${sStartYyMmDd}' AND '${sEndYyMmDd}'
+                       AND RO.RO_STAT_CD != '06'
+                       ${IF(LEN(sFosterTp) <= 0,""," AND NVL(RO.RO_TP, 'NONE')='" + sFosterTp + "'")}   --위탁유형
+                       ${IF(LEN(sDlrRoTp) <= 0,""," AND NVL(RO.DLR_RO_TP, 'NONE')='" + sDlrRoTp + "'")} --자체정의위닥유형
+                )
+                WHERE 1=1
+                ${IF(LEN(sCarlineCd) <= 0,""," AND NVL(CARLINE_CD, 'NONE')='" + sCarlineCd + "'")}   --차종
+            )
+            SELECT 1 AS COLUMN_SEQ, 'COL01' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (
+                SELECT DLR_CD
+                       ,PRE_CHK_DT - REG_DT AS TERM
+                       ,TO_CHAR(PRE_CHK_DT,'MM') AS PRE_MM
+                       ,(SELECT CARLINE_CD FROM SA_0121T WHERE VIN_NO = VIN_NO AND ROWNUM = 1) AS CARLINE_CD
+                FROM SE_0200T
+                WHERE DLR_CD = '${sDlrCd}'
+                 AND TO_CHAR(PRE_CHK_DT,'YYYYMMDD') BETWEEN '${sStartYyMmDd}' AND '${sEndYyMmDd}'
+                 AND DIAG_STAT_CD != 'C'
+                 ${IF(LEN(sFosterTp) <= 0,""," AND NVL('01', 'NONE')='" + sFosterTp + "'")}   --위탁유형
+                 ${IF(LEN(sDlrRoTp) <= 0,""," AND NVL('01', 'NONE')='" + sDlrRoTp + "'")}   --자체정의위닥유형
+            )
+            GROUP BY CARLINE_CD     -- 사전점검시간(차량 딜러도착 인식시간에서 사전점검 확인시간까지의 시간산출(단위:시간))
+
+            UNION ALL
+
+            SELECT 2 AS COLUMN_SEQ, 'COL02' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,RO.RO_DT - PRE.PRE_CHK_DT AS TERM
+                       ,RO.PRE_MM
+                       ,RO.CARLINE_CD
+                FROM T1 RO
+                INNER JOIN SE_0200T PRE
+                  ON RO.DLR_CD = PRE.DLR_CD
+                 AND RO.DIAG_DOC_NO = PRE.DIAG_DOC_NO
+               WHERE PRE.DIAG_STAT_CD != 'C'
+            )
+            GROUP BY CARLINE_CD     -- 정비위탁시간(사전점검 확인시간에서 RO 확인시간까지의 시간산출(단위:시간))
+
+            UNION ALL
+
+            SELECT 3 AS COLUMN_SEQ, 'COL03' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,((SELECT MAX(REG_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) - RO.RO_DT) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.CARLINE_CD
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY CARLINE_CD     -- 배정대기시간(RO 확인시간에서 수리배정 시작시간까지의 시간산출(단위:시간))
+
+            UNION ALL
+
+            SELECT 4 AS COLUMN_SEQ, 'COL04' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (      -- 수리배정시간(RO 확인시간에서 수리배정 완료시간까지의 시간산출(단위:시간))
+                SELECT RO.DLR_CD
+                       ,((SELECT MAX(REG_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) - RO.RO_DT) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.CARLINE_CD
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY CARLINE_CD
+
+            UNION ALL
+
+            SELECT 5 AS COLUMN_SEQ, 'COL05' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,(RO.DL_CHK_DT - (SELECT MAX(REG_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.CARLINE_CD
+                FROM T1 RO
+                WHERE DL_STAT_CD IS NOT NULL
+                AND RO_STAT_CD != '01'
+            )
+            GROUP BY CARLINE_CD     -- 수리서비스시간(수리배정 완료시간에서 인도체크 확인시간까지의 시간산출(단위:시간))
+
+            UNION ALL
+
+            SELECT 6 AS COLUMN_SEQ, 'COL06' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,((SELECT MIN(WRK_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) - (SELECT MIN(REG_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.CARLINE_CD
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY CARLINE_CD     -- 수리대기시간(수리시작시간 - 배정시간(단위:시간))
+
+            UNION ALL
+
+            SELECT 7 AS COLUMN_SEQ, 'COL07' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,((SELECT MAX(WRK_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) - (SELECT MIN(WRK_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.CARLINE_CD
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY CARLINE_CD     -- 수리조작시간(수리시작시간에서 수리완료까지 과정에서 조작 시간 산출(단위:시간))
+
+            UNION ALL
+
+            SELECT 8 AS COLUMN_SEQ, 'COL08' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,0 AS TERM
+                       ,RO.PRE_MM
+                       ,RO.CARLINE_CD
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY CARLINE_CD     -- 수리중단시간(수리시작시간에서 수리완료까지 과정에서 중단 시간 산출(단위:시간)) OTL ;;
+
+            UNION ALL
+
+            SELECT 9 AS COLUMN_SEQ, 'COL09' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,QT_TEST_END_DT - QT_TEST_START_DT AS TERM
+                       ,RO.PRE_MM
+                       ,RO.CARLINE_CD
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY CARLINE_CD     -- 품질점검시간(품검시작시간에서 품검완료시간까지 시간 산출(단위:시간)) OTL ;;
+
+            UNION ALL
+
+            SELECT 10 AS COLUMN_SEQ, 'COL10' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,CAR_WASH_END_DT - CAR_WASH_START_DT AS TERM
+                       ,RO.PRE_MM
+                       ,RO.CARLINE_CD
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY CARLINE_CD     -- 세차시간(세차시작시간에서 세차완료시간까지 시간 산출(단위:시간))
+
+            UNION ALL
+
+            SELECT 11 AS COLUMN_SEQ, 'COL11' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       --,(CA.CALC_DT - RO.DL_CHK_DT) AS TERM1
+                       --,((SELECT MAX(RCPT_DT) FROM SE_0560T WHERE DLR_CD = RCV.DLR_CD AND RCV_DOC_NO = RCV.RCV_DOC_NO) - CA.CALC_DT) AS TERM2
+                       ,RO.DL_CHK_DT - NVL(RO.QT_TEST_END_DT, (SELECT MAX(WRK_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.CARLINE_CD
+                FROM T1 RO
+                INNER JOIN SE_0500T CA
+                ON RO.DLR_CD = CA.DLR_CD
+                AND RO.RO_DOC_NO = CA.RO_DOC_NO
+                INNER JOIN SE_0550T RCV
+                ON RO.DLR_CD = RCV.DLR_CD
+                AND RO.RO_DOC_NO = RCV.RO_DOC_NO
+                WHERE CA.CALC_STAT_CD = '00'
+                AND RCV.RCV_STAT_CD = 'F'
+                AND CA.SER_PAR_DSTIN_CD = 'SER'
+                AND CA.CALC_CANC_YN = 'N'
+            )
+            GROUP BY CARLINE_CD     -- 정비인도시간(인도체크 확인시간에서 수납등록 완료시간까지 시간 산출(단위:시간))
+
+            UNION ALL
+
+            SELECT 12 AS COLUMN_SEQ, 'COL12' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,(CA.CALC_DT - RO.DL_CHK_DT) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.CARLINE_CD
+                FROM T1 RO
+                INNER JOIN SE_0500T CA
+                ON RO.DLR_CD = CA.DLR_CD
+                AND RO.RO_DOC_NO = CA.RO_DOC_NO
+                INNER JOIN SE_0550T RCV
+                ON RO.DLR_CD = RCV.DLR_CD
+                AND RO.RO_DOC_NO = RCV.RO_DOC_NO
+                WHERE CA.CALC_STAT_CD = '00'
+                AND RCV.RCV_STAT_CD = 'F'
+                AND CA.SER_PAR_DSTIN_CD = 'SER'
+                AND CA.CALC_CANC_YN = 'N'
+            )
+            GROUP BY CARLINE_CD     -- 정비정산시간(인도체크 확인시간에서 정산완료시간까지 시간 산출(단위:시간))
+
+            UNION ALL
+
+            SELECT 13 AS COLUMN_SEQ, 'COL13' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (
+                SELECT CA.DLR_CD
+                       ,((SELECT MAX(RCPT_DT) FROM SE_0560T WHERE DLR_CD = RCV.DLR_CD AND RCV_DOC_NO = RCV.RCV_DOC_NO) - CA.CALC_DT) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.CARLINE_CD
+                FROM T1 RO
+                INNER JOIN SE_0500T CA
+                ON RO.DLR_CD = CA.DLR_CD
+                AND RO.RO_DOC_NO = CA.RO_DOC_NO
+                INNER JOIN SE_0550T RCV
+                ON RO.DLR_CD = RCV.DLR_CD
+                AND RO.RO_DOC_NO = RCV.RO_DOC_NO
+                WHERE CA.CALC_STAT_CD = '00'
+                AND RCV.RCV_STAT_CD = 'F'
+                AND CA.SER_PAR_DSTIN_CD = 'SER'
+                AND CA.CALC_CANC_YN = 'N'
+            )
+            GROUP BY CARLINE_CD     -- 정비수납시간(정산완료시간에서 수납등록완료시간까지 시간 산출(단위:시간))
+
+            UNION ALL
+
+            SELECT 14 AS COLUMN_SEQ, 'COL14' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, CARLINE_CD, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,(CA.CALC_DT - RO.RO_DT) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.CARLINE_CD
+                FROM T1 RO
+                INNER JOIN SE_0500T CA
+                ON RO.DLR_CD = CA.DLR_CD
+                AND RO.RO_DOC_NO = CA.RO_DOC_NO
+                WHERE CA.CALC_STAT_CD = '00'
+                AND CA.SER_PAR_DSTIN_CD = 'SER'
+                AND CA.CALC_CANC_YN = 'N'
+            )
+            GROUP BY CARLINE_CD     -- 고객대기시간(RO 확인시간에서 정산완료시간까지 시간 산출(단위:시간))
+
+            UNION ALL
+
+            SELECT 15 AS COLUMN_SEQ, 'COL15' AS COLUMN_NM, COUNT(RO.RO_DOC_NO) COLUMN_VAL, CARLINE_CD, 'CNT' AS TYPE
+            FROM T1 RO
+            INNER JOIN SE_0500T CA
+            ON RO.DLR_CD = CA.DLR_CD
+            AND RO.RO_DOC_NO = CA.RO_DOC_NO
+            INNER JOIN SE_0550T RCV
+            ON RO.DLR_CD = RCV.DLR_CD
+            AND RO.RO_DOC_NO = RCV.RO_DOC_NO
+            WHERE CA.CALC_STAT_CD = '00'
+            AND RCV.RCV_STAT_CD = 'F'
+            AND CA.SER_PAR_DSTIN_CD = 'SER'
+            AND CA.CALC_CANC_YN = 'N'
+            AND DL_CHK_DT <= CA.CALC_DT
+            GROUP BY CARLINE_CD     -- on time인도대차(인도확인시간이 예상인도시간보다 작거나 같은 RO대차)
+
+            UNION ALL
+
+            SELECT 16 AS COLUMN_SEQ, 'COL16' AS COLUMN_NM, ROUND((COUNT(DL_RO_DOC_NO)/COUNT(RO_DOC_NO)), 2) AS COLUMN_VAL, CARLINE_CD, 'CNT' AS TYPE
+            FROM(
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS DL_RO_DOC_NO, CARLINE_CD
+                FROM T1
+                WHERE DL_CHK_DT <= EXPC_DL_DT
+                UNION ALL
+                SELECT RO_DOC_NO, '' AS DL_RO_DOC_NO, CARLINE_CD
+                FROM T1
+            )
+            GROUP BY CARLINE_CD     -- on time인도율(on time인도대차/RO대차)
+
+            UNION ALL
+
+            SELECT 17 AS COLUMN_SEQ, 'COL17' AS COLUMN_NM, COUNT(ON_RO_DOC_NO) AS COLUMN_VAL, CARLINE_CD, 'CNT' AS TYPE
+            FROM (
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS ON_RO_DOC_NO, CARLINE_CD
+                FROM T1 RO
+                WHERE (SELECT MIN(WRK_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) <= (SELECT MIN(ALLOC_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+                UNION ALL
+                SELECT '' AS RO_DOC_NO, '' AS DL_RO_DOC_NO, '' AS CARLINE_CD
+                FROM DUAL
+            )
+            GROUP BY CARLINE_CD     -- on time작업시작대차(수리시작시간이 예상시작시간보다 작거나 같은 RO 수량)
+
+            UNION ALL
+
+            SELECT 18 AS COLUMN_SEQ, 'COL18' AS COLUMN_NM, ROUND((COUNT(ON_RO_DOC_NO)/COUNT(RO_DOC_NO)), 2) AS COLUMN_VAL, CARLINE_CD, 'CNT' AS TYPE      -- on time작업시작율(on time작업시작대차/RO대차)
+            FROM(
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS ON_RO_DOC_NO, CARLINE_CD
+                FROM T1 RO
+                WHERE (SELECT MIN(WRK_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) <= (SELECT MIN(ALLOC_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+                UNION ALL
+                SELECT RO_DOC_NO, '' AS DL_RO_DOC_NO, CARLINE_CD
+                FROM T1 RO
+            )
+            GROUP BY CARLINE_CD
+
+            UNION ALL
+
+            SELECT 19 AS COLUMN_SEQ, 'COL19' AS COLUMN_NM, COUNT(ON_RO_DOC_NO) AS COLUMN_VAL, CARLINE_CD, 'CNT' AS TYPE
+            FROM (
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS ON_RO_DOC_NO, CARLINE_CD
+                FROM T1 RO
+                WHERE (SELECT MAX(WRK_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) <= (SELECT MAX(ALLOC_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+                UNION ALL
+                SELECT '' AS RO_DOC_NO, '' AS DL_RO_DOC_NO, '' AS CARLINE_CD
+                FROM DUAL
+            )
+            GROUP BY CARLINE_CD     -- on time작업완료대차(수리완료시간이 예상완료시간보다 작거나 같은 RO 수량)
+
+            UNION ALL
+
+            SELECT 20 AS COLUMN_SEQ, 'COL20' AS COLUMN_NM, ROUND((COUNT(ON_RO_DOC_NO)/COUNT(RO_DOC_NO)), 2) AS COLUMN_VAL, CARLINE_CD, 'CNT' AS TYPE
+            FROM(
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS ON_RO_DOC_NO, CARLINE_CD
+                FROM T1 RO
+                WHERE (SELECT MAX(WRK_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) <= (SELECT MAX(ALLOC_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+                UNION ALL
+                SELECT RO_DOC_NO, '' AS DL_RO_DOC_NO, CARLINE_CD
+                FROM T1 RO
+            )
+            GROUP BY CARLINE_CD     -- on time작업완료율(on time작업완료대차/RO대차)
+
+            UNION ALL
+
+            SELECT 21 AS COLUMN_SEQ, 'COL21' AS COLUMN_NM, COUNT(RO_DOC_NO) AS COLUMN_VAL, CARLINE_CD, 'CNT' AS TYPE
+            FROM T1 RO
+            WHERE (SELECT MIN(WRK_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) > (SELECT MIN(ALLOC_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+            GROUP BY CARLINE_CD     -- 지연작업시작대차(수리시작시간이 예상시작시간보다 큰 RO 수량)
+
+            UNION ALL
+
+            SELECT 22 AS COLUMN_SEQ, 'COL22' AS COLUMN_NM, ROUND((COUNT(ON_RO_DOC_NO)/COUNT(RO_DOC_NO)), 2) AS COLUMN_VAL, CARLINE_CD, 'CNT' AS TYPE
+            FROM(
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS ON_RO_DOC_NO, CARLINE_CD
+                FROM T1 RO
+                WHERE (SELECT MIN(WRK_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) > (SELECT MIN(ALLOC_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+                UNION ALL
+                SELECT RO_DOC_NO, '' AS DL_RO_DOC_NO, CARLINE_CD
+                FROM T1 RO
+            )
+            GROUP BY CARLINE_CD     -- 지연작업시작율(지연작업시작대차/RO대차)
+
+            UNION ALL
+
+            SELECT 23 AS COLUMN_SEQ, 'COL23' AS COLUMN_NM, COUNT(RO_DOC_NO) AS COLUMN_VAL, CARLINE_CD, 'CNT' AS TYPE
+            FROM T1 RO
+            WHERE (SELECT MAX(WRK_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) > (SELECT MAX(ALLOC_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+            GROUP BY CARLINE_CD     -- 지연작업완료대차(수리완료시간이 예상완료시간보다 큰 RO 수량)
+
+            UNION ALL
+
+            SELECT 24 AS COLUMN_SEQ, 'COL24' AS COLUMN_NM, ROUND((COUNT(ON_RO_DOC_NO)/COUNT(RO_DOC_NO)), 2) AS COLUMN_VAL, CARLINE_CD, 'CNT' AS TYPE
+            FROM(
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS ON_RO_DOC_NO, CARLINE_CD
+                FROM T1 RO
+                WHERE (SELECT MAX(WRK_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) > (SELECT MAX(ALLOC_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+                UNION ALL
+                SELECT RO_DOC_NO, '' AS DL_RO_DOC_NO, CARLINE_CD
+                FROM T1 RO
+            )
+            GROUP BY CARLINE_CD     -- 지연작업완료율(지연작업완료대차/RO대차)
+
+            UNION ALL
+
+            SELECT 25 AS COLUMN_SEQ, 'COL25' AS COLUMN_NM, COUNT(T1.RO_DOC_NO) COLUMN_VAL, CARLINE_CD, 'CNT' AS TYPE
+            FROM T1
+            INNER JOIN ( SELECT DLR_CD, RO_DOC_NO
+                         FROM SE_0330HT
+                         WHERE 1=1
+                         AND WRK_STAT_CD = '03'
+                         GROUP BY DLR_CD, RO_DOC_NO ) HT
+            ON T1.DLR_CD = HT.DLR_CD
+            AND T1.RO_DOC_NO = HT.RO_DOC_NO
+            GROUP BY CARLINE_CD     -- 수리중단대차(수리중단 발생 RO 수량)
+
+            UNION ALL
+
+            SELECT 26 AS COLUMN_SEQ, 'COL26' AS COLUMN_NM, ROUND((COUNT(ST_RO_DOC_NO)/COUNT(RO_DOC_NO)), 1) AS COLUMN_VAL, CARLINE_CD, 'CNT' AS TYPE
+            FROM(
+                SELECT '' AS RO_DOC_NO, T1.RO_DOC_NO AS ST_RO_DOC_NO, CARLINE_CD
+                FROM T1
+                INNER JOIN ( SELECT DLR_CD, RO_DOC_NO
+                             FROM SE_0330HT
+                             WHERE 1=1
+                             AND WRK_STAT_CD = '03'
+                             GROUP BY DLR_CD, RO_DOC_NO ) HT
+                ON T1.DLR_CD = HT.DLR_CD
+                AND T1.RO_DOC_NO = HT.RO_DOC_NO
+                UNION ALL
+                SELECT RO_DOC_NO, '' AS DL_RO_DOC_NO, CARLINE_CD
+                FROM T1
+            )
+            GROUP BY CARLINE_CD     -- 수리중단율(수리중단대차/RO대차)
+
+    )
+)PIVOT(
+      SUM(COLUMN_VAL)
+      FOR COLUMN_NM IN(
+        'COL01' AS "COL01"
+        ,'COL02' AS "COL02"
+        ,'COL03' AS "COL03"
+        ,'COL04' AS "COL04"
+        ,'COL05' AS "COL05"
+        ,'COL06' AS "COL06"
+        ,'COL07' AS "COL07"
+        ,'COL08' AS "COL08"
+        ,'COL09' AS "COL09"
+        ,'COL10' AS "COL10"
+        ,'COL11' AS "COL11"
+        ,'COL12' AS "COL12"
+        ,'COL13' AS "COL13"
+        ,'COL14' AS "COL14"
+        ,'COL15' AS "COL15"
+        ,'COL16' AS "COL16"
+        ,'COL17' AS "COL17"
+        ,'COL18' AS "COL18"
+        ,'COL19' AS "COL19"
+        ,'COL20' AS "COL20"
+        ,'COL21' AS "COL21"
+        ,'COL22' AS "COL22"
+        ,'COL23' AS "COL23"
+        ,'COL24' AS "COL24"
+        ,'COL25' AS "COL25"
+        ,'COL26' AS "COL26"
+    )
+) ORDER BY CARLINE_CD;]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="0" T="0"/>
+<FR/>
+<HC/>
+<FC/>
+<UPFCR COLUMN="false" ROW="true"/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1152000,1152000,1152000,1152000,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[5829300,3600000,3600000,3600000,3600000,3600000,3600000,3600000,3600000,3600000,3600000,3600000,3600000,3600000,3600000,3600000,3168000,3600000,3600000,3600000,3600000,3600000,3600000,3600000,3600000,0,0,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" s="0">
+<O>
+<![CDATA[数据名称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="0">
+<O>
+<![CDATA[服务接车时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0" s="0">
+<O>
+<![CDATA[维修委托时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="0">
+<O>
+<![CDATA[派工等待时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0" s="0">
+<O>
+<![CDATA[维修派工时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="0">
+<O>
+<![CDATA[维修服务时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="0" s="0">
+<O>
+<![CDATA[维修等待时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="0" s="0">
+<O>
+<![CDATA[维修操作时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="0" s="0">
+<O>
+<![CDATA[维修中断时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="0" s="0">
+<O>
+<![CDATA[质量检验时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="0" s="0">
+<O>
+<![CDATA[清洗车辆时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="0" s="0">
+<O>
+<![CDATA[交车检查时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="0" s="0">
+<O>
+<![CDATA[服务结算时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="0" s="0">
+<O>
+<![CDATA[服务收款时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="0" s="0">
+<O>
+<![CDATA[客户等候时间]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="0" s="0">
+<O>
+<![CDATA[准时交车台次]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="0" s="0">
+<O>
+<![CDATA[准时交车率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="0" s="0">
+<O>
+<![CDATA[准时开工台次]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="0" s="0">
+<O>
+<![CDATA[准时开工率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="0" s="0">
+<O>
+<![CDATA[准时完工台次]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="0" s="0">
+<O>
+<![CDATA[准时完工率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="0" s="0">
+<O>
+<![CDATA[延迟开工台次]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="0" s="0">
+<O>
+<![CDATA[延迟开工率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="0" s="0">
+<O>
+<![CDATA[延迟完工台次]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="0" s="0">
+<O>
+<![CDATA[延迟完工率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="0" s="0">
+<O>
+<![CDATA[维修中断台次]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="0" s="0">
+<O>
+<![CDATA[维修中断率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1" s="1">
+<O>
+<![CDATA[合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(B4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(C4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(D4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(E4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(F4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(G4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(H4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(I4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(J4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(K4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(L4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(M4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(N4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(O4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(P4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="1" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(R4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="1" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(T4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="1" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(V4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="1" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(X4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="1" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(Z4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="1" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="2" s="1">
+<O>
+<![CDATA[平均]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(B4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(C4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(D4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(E4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(F4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(G4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(H4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(I4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(J4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(K4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(L4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(M4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(N4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(O4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(P4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(Q4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(R4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(S4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(T4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(U4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(V4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(W4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(X4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(Y4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(Z4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(AA4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="3" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="CARLINE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Scope val="1"/>
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="1" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL01"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL02"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL03"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL04"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL05"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL06"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL07"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL08"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL09"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="10" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL10"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL11"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="12" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL12"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="13" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL13"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL14"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="15" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL15"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="16" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL16"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="17" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL17"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="18" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL18"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="19" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL19"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="20" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL20"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="21" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL21"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="22" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL22"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="23" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL23"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="24" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL24"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="25" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL25"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="26" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotCarLineNmDs" columnName="COL26"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="36000000" height="100800000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID/>
+</WorkBook>

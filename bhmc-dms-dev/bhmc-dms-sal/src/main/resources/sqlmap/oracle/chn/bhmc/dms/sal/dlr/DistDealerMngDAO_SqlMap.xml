@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.dlr.service.dao.DistDealerMngDAO">
+
+	<!-- 지역사무소관리 - 사무소  -->
+	<select id="selectDistDealerMngByCondition" parameterType="DistDealerSearchVO" resultType="DistDealerVO">
+        SELECT CM0801.USR_ID,CM0801.USR_NM,CM0801.DUTY_CD,CM0801.DLR_CD
+          FROM CM_0801T CM0801
+         WHERE 1=1
+           AND CM0801.DLR_CD = 'A07AA'
+           -- AND CM0801.DUTY_CD IN ('02','03','04')
+         ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "usrId"'>USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "usrNm"'>USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "dutyCd"'>DUTY_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            USR_ID ASC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                USR_ID ASC
+            </otherwise>
+        </choose>
+	</select>
+
+
+	<!-- 지역사무소관리 - 사무소 목록 갯수  -->
+	<select id="selectDistDealerMngByConditionCnt" parameterType="DistDealerSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM CM_0801T CM0801
+         WHERE 1=1
+           AND CM0801.DLR_CD = 'A07AA'
+         --  AND CM0801.DUTY_CD IN ('02','03','04')
+    </select>
+
+
+    <!-- 지역사무소관리 - 딜러  -->
+    <select id="selectDealerByCondition" parameterType="DistDealerSearchVO" resultType="DistDealerVO">
+        SELECT CM0101.DLR_CD,CM0101.DLR_NM,WM_CONCAT(SA0439.USR_ID) AS USR_ID
+          FROM CM_0101T CM0101,SA_0439T SA0439
+         WHERE 1=1
+           AND CM0101.DLR_CD = SA0439.MNG_DLR_CD(+)
+           AND CM0101.DLR_CD LIKE 'D%'
+         GROUP BY CM0101.DLR_CD,CM0101.DLR_NM
+         ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "dlrNm"'>DLR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            DLR_CD ASC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                DLR_CD ASC
+            </otherwise>
+        </choose>
+    </select>
+
+
+    <!-- 지역사무소관리 - 딜러 목록 갯수  -->
+    <select id="selectDealerByConditionCnt" parameterType="DistDealerSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM (
+                SELECT CM0101.DLR_CD,CM0101.DLR_NM,WM_CONCAT(SA0439.USR_ID) AS USR_ID
+                  FROM CM_0101T CM0101,SA_0439T SA0439
+                 WHERE 1=1
+                   AND CM0101.DLR_CD = SA0439.MNG_DLR_CD(+)
+                   AND CM0101.DLR_CD LIKE 'D%'
+                 GROUP BY CM0101.DLR_CD,CM0101.DLR_NM
+                )
+    </select>
+
+
+    <!-- 지역딜러 등록  -->
+    <insert id="insertDealer" parameterType="DistDealerVO" >
+        INSERT INTO SA_0439T
+        ( DLR_CD
+         ,USR_ID
+         ,PSIT_CD
+         ,MNG_DLR_CD
+         ,REG_USR_ID
+         ,REG_DT
+         ,UPDT_USR_ID
+         ,UPDT_DT
+        ) VALUES
+        ( #{dlrCd}
+         ,#{usrId}
+         ,#{psitCd}
+         ,#{mngDlrCd}
+         ,#{regUsrId}
+         ,SYSDATE
+         ,#{regUsrId}
+         ,SYSDATE
+         )
+    </insert>
+
+
+    <!-- 지역딜러 삭제  -->
+    <insert id="deleteDealer" parameterType="DistDealerVO" >
+        DELETE SA_0439T
+         WHERE 1=1
+           AND DLR_CD = #{dlrCd}
+           AND USR_ID = #{usrId}
+    </insert>
+
+</mapper>

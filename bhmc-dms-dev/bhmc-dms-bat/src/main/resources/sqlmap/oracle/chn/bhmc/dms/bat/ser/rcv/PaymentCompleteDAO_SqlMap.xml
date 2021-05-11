@@ -1,0 +1,904 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.bat.ser.rcv.service.dao.PaymentCompleteDAO">
+
+   <select id="selectByParams"  parameterType="PaymentCompleteVO"  resultType="PaymentCompleteVO">
+			select 
+			 A.RCV_SUB_DOC_NO
+			,A.RCV_DOC_NO
+			,A.TRADE_ID
+			,A.CALC_AMT
+			,A.RCV_AMT
+			,A.PAYM_AMT
+			,A.DLR_CD
+			,A.REG_USR_ID
+			,B.CALC_DOC_NO 
+			,B.RO_DOC_NO
+			from SE_0560T A,SE_0550T B 
+			WHERE A.TRADE_ID IS NOT NULL AND  A.TRADE_ID  <![CDATA[ <> ]]> #{tradeId}
+			AND B.DLR_CD = A.DLR_CD 
+			AND B.RCV_DOC_NO = A.RCV_DOC_NO 
+			AND B.CALC_STAT_CD = '00' 
+			AND B.SER_PAR_DSTIN_CD = 'SER' 
+			AND A.PAY_YN = 'N'
+    </select>
+    
+    
+    <select id="selectInfoByTradeId"  parameterType="PaymentCompleteVO"  resultType="PaymentCompleteVO">
+			select 
+			 A.RCV_SUB_DOC_NO
+			,A.RCV_DOC_NO
+			,A.TRADE_ID
+			,A.CALC_AMT
+			,A.RCV_AMT
+			,A.PAYM_AMT
+			,A.DLR_CD
+			,A.REG_USR_ID
+			,B.CALC_DOC_NO 
+			,B.RO_DOC_NO
+			from SE_0560T A,SE_0550T B 
+			WHERE A.TRADE_ID = #{tradeId}
+			AND B.DLR_CD = A.DLR_CD 
+			AND B.RCV_DOC_NO = A.RCV_DOC_NO 
+			AND B.CALC_STAT_CD = '00' 
+			AND B.SER_PAR_DSTIN_CD = 'SER' 
+			AND A.PAY_YN = 'N'
+    </select>
+    
+    
+    <select id="selectDetail"  parameterType="PaymentCompleteVO" resultType="PaymentCompleteVO">
+            select RCV_SUB_DOC_NO,RCV_DOC_NO from SE_0570T WHERE RCV_SUB_DOC_NO =  #{rcvSubDocNo}
+    </select> 
+    
+    
+    
+    <select id="selectCalculateByKey" parameterType="PayCalculateSearchVO" resultType="PayCalculateVO">
+        SELECT A.*
+              ,B.RO_DT
+              ,B.RO_STAT_CD
+              ,B.QT_TEST_MTH_CD
+              ,B.QT_TEST_STAT_CD
+              ,B.GOODWILL_YN
+              ,B.PDI_YN
+              ,C.RCV_DOC_NO
+              ,C.RCV_STAT_CD
+              ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.REG_USR_ID AND DLR_CD = A.DLR_CD) AS REG_USR_NM
+              ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = B.REG_USR_ID AND DLR_CD = B.DLR_CD) AS RO_USR_NM
+              ,NVL((SELECT CMM_CD_TXT
+                      FROM SE_1010T A1 , CM_0304T B1
+                     WHERE A1.DLR_CD = A.DLR_CD
+                       AND CMM_CD = NEXT_FREE_HM_CD
+                       AND CMM_GRP_CD ='SER126'
+                       AND LANG_CD ='zh') ,'6') AS NEXT_FREE_MONTH
+              ,NVL((SELECT CMM_CD_TXT
+                      FROM SE_1010T A1 , CM_0304T B1
+                     WHERE A1.DLR_CD = A.DLR_CD
+                       AND CMM_CD = NEXT_FREE_RUN_DIST_VAL_CD
+                       AND CMM_GRP_CD ='SER127'
+                       AND LANG_CD ='zh'),'5000') AS NEXT_FREE_RUN_DIST_VAL
+              ,B.GI_RUN_DIST_VAL
+              ,B.COM_ITEM_YN
+          FROM SE_0500T A
+         LEFT OUTER JOIN SE_0300T B
+           ON A.DLR_CD    = B.DLR_CD
+          AND A.RO_DOC_NO = B.RO_DOC_NO
+          AND B.RO_STAT_CD != '06'
+         LEFT JOIN SE_0550T C
+          ON A.DLR_CD      = C.DLR_CD
+         AND A.RO_DOC_NO   = C.RO_DOC_NO
+         AND A.CALC_DOC_NO = C.CALC_DOC_NO
+        WHERE A.CALC_STAT_CD != '07'
+        <if test='sDlrCd != null and sDlrCd != ""'>
+          AND A.DLR_CD = #{sDlrCd}
+        </if>
+        <if test='sRoDocNo != null and sRoDocNo != ""'>
+          AND A.RO_DOC_NO = #{sRoDocNo}
+          AND A.CALC_CANC_YN = 'N'
+        </if>
+        <if test='sCalcDocNo != null and sCalcDocNo != ""'>
+          AND A.CALC_DOC_NO = #{sCalcDocNo}
+        </if>
+        <if test='sSerHistYn != null and sSerHistYn != ""'>
+          AND A.CALC_STAT_CD = '00'
+        </if>
+    </select>
+    
+    
+     <select id="selectServiceReceiveDetailsByCondition" parameterType="PayServiceReceiveSearchVO" resultType="PayServiceReceiveDetailVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                     DLR_CD                                    --딜러코드
+                    ,RCV_DOC_NO                               --수납문서번호
+                    ,RCV_SUB_DOC_NO                           --수납문서번호
+                    ,PAYM_TP                                  --라인번호
+                    ,PAYM_PRID
+                    ,PAYM_MTH_CD
+                    ,NVL(PAYM_AMT,0) AS PAYM_AMT
+                    ,NVL(NPAY_AMT,0)  AS NPAY_AMT
+                    ,PAYM_REMARK
+                    ,REG_USR_ID
+                    ,REG_DT
+                    ,PAYM_USR_NM
+                    ,NVL(CALC_AMT,0) AS CALC_AMT              --정산금액
+                    ,NVL(RCV_AMT,0) AS RCV_AMT                --실수금액
+                    ,RCV_CPLT_DT                              --수납완성일자
+                    ,NPAY_CHK_DT                              --미수확인일자
+                    ,RCPT_TP                                  --영수증유형
+                    ,RCPT_NO                                  --영수증번호
+                    ,RCPT_DT                                  --영수증일자
+                    ,RCV_REMARK                               --수납비고
+                    ,NVL(T1.RCV_STAT_CD, 'O') RCV_STAT_CD     --수납상태
+                    ,RCV_CANC_YN                              --수납취소여부
+                    ,RCV_CANC_DT                              --수납취소일자
+                    ,RCV_CANC_ID                              --수납취소ID
+                    ,PAYM_CD
+                    ,NVL(PAR_AMT,0) AS PAR_AMT
+                    ,NVL(LBR_AMT,0) AS LBR_AMT
+                    ,NVL(ETC_AMT,0) AS ETC_AMT
+                    ,NVL(WON_UNIT_CUT_AMT,0) AS WON_UNIT_CUT_AMT
+                    ,NVL(DEMIC_POINT_CUT_AMT,0) AS DEMIC_POINT_CUT_AMT
+                    ,DC_PERM_CD
+                    ,NVL(DC_RATE,0) AS DC_RATE
+                    ,NVL(BAL_AMT,0) AS BAL_AMT
+                    ,NVL(PRE_AMT,0) AS PRE_AMT
+                    ,CUPN_NO
+                    ,NVL(CUPN_AMT,0) AS CUPN_AMT
+                    ,NVL(REFD_AMT,0) AS REFD_AMT
+                    ,REFD_DT
+                    ,REFD_PRSN_NM
+                    ,REFD_REMARK
+                FROM SE_0560T T1
+                <where>
+                    <if test='sRcvDocNo != null and sRcvDocNo != ""'>
+                 AND T1.RCV_DOC_NO = #{sRcvDocNo}
+                    </if>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                 AND DLR_CD = #{sDlrCd}
+                    </if>
+                    <if test='sRcvSubDocNo != null and sRcvSubDocNo != ""'>
+                 AND RCV_SUB_DOC_NO = #{sRcvSubDocNo}
+                    </if>
+                    <!-- 服务结算的时候可能多个聚合支付方式。 BY WUSHIBIN -->
+                	<if test='paymMthCd != null and paymMthCd != ""'>
+                 AND PAYM_MTH_CD = #{paymMthCd}
+                	</if>
+                </where>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+    
+    
+    
+    
+    <update id="updateServiceReceiveDetail" parameterType="PayServiceReceiveDetailVO">
+        UPDATE SE_0560T SET
+             UPDT_USR_ID  = #{updtUsrId}
+            ,UPDT_DT      = SYSDATE
+            <if test='paymTp != null and paymTp != ""'>
+            ,PAYM_TP     =  #{paymTp}                            --지불유형
+            </if>
+            <if test='payYn != null and payYn != ""'>
+            ,PAY_YN     =  #{payYn}                            
+            </if>
+            <if test='paymPrid != null and paymPrid != ""'>
+            ,PAYM_PRID    = #{paymPrid}                           --지불기간
+            </if>
+            <if test='paymMthCd != null and paymMthCd != ""'>
+            ,PAYM_MTH_CD  = #{paymMthCd}                          --지불방법
+            </if>
+            <if test='paymRemark != null and paymRemark != ""'>
+            ,PAYM_REMARK  = #{paymRemark}
+            </if>
+            <if test='rcvCpltDt != null'>
+            ,RCV_CPLT_DT          = #{rcvCpltDt}                  --수납완성일자
+            </if>
+            <if test='rcvStatCd != null and rcvStatCd != "" '>
+                <choose>
+                    <when test='rcvStatCd == "C" '>  -- 수납상태 : C (취소)
+                        ,RCV_AMT              = 0                       --수납금액
+                        ,NPAY_AMT             = 0                       --미수금액
+                    </when>
+                    <otherwise>
+
+                     <if test='rcvStatCd == "R"'> --환불
+                        ,RCV_AMT              = NVL(RCV_AMT,0) - #{refdAmt}   --수납 금액
+                        ,NPAY_AMT             = NVL(NPAY_AMT,0)+ #{refdAmt}   --미수금액
+                     </if>
+                     <if test='rcvStatCd == "F" or rcvStatCd == "02" '> --완료 , 미수
+                        ,RCV_AMT              = NVL(RCV_AMT,0) + #{rcvAmt}    --수납 금액
+                        ,NPAY_AMT             = #{npayAmt}                    --미수금액
+                     </if>
+                    </otherwise>
+                </choose>
+            </if>
+            <choose>
+                <when test='rcvStatCd == "R" '>  -- 수납상태 : R (환불)
+                    ,REFD_AMT         = #{refdAmt}           --환불금액
+                    ,REFD_DT          = #{refdDt}            --환불일자
+                    ,REFD_PRSN_NM     = #{refdPrsnNm}        --환불담당자명
+                    ,REFD_REMARK      = #{refdRemark}        --환불비고
+                </when>
+                <otherwise>
+                    ,REFD_AMT         = 0                    --환불금액
+                    ,REFD_DT          = null                 --환불일자
+                    ,REFD_PRSN_NM     = ''                   --환불담당자명
+                    ,REFD_REMARK      = ''                   --환불비고
+                </otherwise>
+            </choose>
+            <if test='npayChkDt != null'>
+            ,NPAY_CHK_DT          = #{npayChkDt}                  --미수확인일자
+            </if>
+            ,RCPT_TP              = #{rcptTp}                     --영수증유형
+            ,RCPT_NO              = #{rcptNo}                     --영수증번호
+            ,RCPT_DT              = #{rcptDt}                     --영수증일자
+            ,RCV_REMARK           = #{rcvRemark}                  --수납비고
+            <if test='rcvCancYn != null and rcvCancYn != ""'>
+            ,RCV_CANC_YN          = #{rcvCancYn}                  --수납취소여부
+            </if>
+            <if test='rcvCancDt != null'>
+            ,RCV_CANC_DT          = #{rcvCancDt}                  --수납취소일자
+            </if>
+            <if test='rcvCancId != null and rcvCancId != ""'>
+            ,RCV_CANC_ID          = #{rcvCancId}                  --수납취소ID
+            </if>
+            <if test='tradeId != null and tradeId != ""'>
+            ,TRADE_ID          = #{tradeId}                  --tradeId
+            </if>
+            <if test='gotoUrl != null and gotoUrl != ""'>
+            ,GOTO_URL          = #{gotoUrl}                  --gotoUrl
+            </if>
+            <if test='rcvStatCd != null and rcvStatCd != "" '>
+                <choose>
+                    <when test='rcvStatCd == "C" '>
+                        ,RCV_STAT_CD          = 'O'
+                    </when>
+                    <when test='paymPrid == "02" '>
+                        ,RCV_STAT_CD          = #{rcvStatCd}
+                    </when>
+                    <otherwise>
+                        ,RCV_STAT_CD          = CASE WHEN #{rcvStatCd} = 'R'
+                                                     THEN (CASE WHEN ( (NVL(RCV_AMT,0) - #{refdAmt}) = 0) THEN 'O' ELSE '02' END)
+                                                     ELSE #{rcvStatCd} END
+                    </otherwise>
+                </choose>
+            </if>
+        WHERE RCV_SUB_DOC_NO = #{rcvSubDocNo} --수납하위 문서번호
+          AND RCV_DOC_NO     = #{rcvDocNo}    --수납문서번호
+          AND DLR_CD         = #{dlrCd}       --딜러코드
+    </update>
+    
+    
+    
+    
+    <insert id="insertServiceReceiveHistory" parameterType="PayServiceReceiveDetailVO">
+          INSERT INTO SE_0570T    --수납지불이력
+            (
+              DLR_CD                     --딜러코드
+             ,RCV_DOC_NO                 --수납문서번호
+             ,LINE_NO                    --라인번호
+             ,PAYM_TP                    --결제유형
+             ,PAYM_PRID                  --결제기간
+             ,PAYM_MTH_CD                --결제방법코드
+             ,PAYM_AMT                   --결제금액
+             ,NPAY_AMT                   --미수금액
+             ,PAYM_REMARK                --결제비고
+             ,REG_USR_ID                 --등록자ID
+             ,REG_DT                     --등록일자
+             ,PAYM_USR_NM                --결제사용자명
+             ,RCV_SUB_DOC_NO             --수납하위문서번호
+             ,RCV_AMT                    --수납금액
+             ,RCV_CPLT_DT                --수납완성일자
+             ,NPAY_CHK_DT                --미수확인일자
+             ,RCPT_TP                    --영수증유형
+             ,RCPT_NO                    --영수증번호
+             ,RCPT_DT                    --영수증일자
+             ,RCV_REMARK                 --수납비고
+             ,RCV_STAT_CD                --수납상태코드
+             ,RCV_CANC_YN                --수납취소여부
+             ,RCV_CANC_DT                --수납취소일자
+             ,RCV_CANC_ID                --수납취소ID
+             ,REFD_AMT                   --환불금액
+             ,REFD_DT                    --환불일자
+             ,REFD_PRSN_NM               --환불담당자명
+             ,REFD_REMARK                --환불비고
+             ,PAYM_CD                    --결재자코드
+             ,PAR_AMT                    --부품금액
+             ,LBR_AMT                    --공임금액
+             ,ETC_AMT                    --기타금액
+             ,WON_UNIT_CUT_AMT           --원단위절사금액
+             ,DEMIC_POINT_CUT_AMT        --소수점절사금액
+             ,DC_PERM_CD                 --할인권한코드
+             ,DC_RATE                    --할인율
+             ,BAL_AMT                    --예치금액
+             ,PRE_AMT                    --선수금액
+             ,CALC_AMT                   --정산금액
+             ,PAYM_USR_ID                --지불자코드
+             ,DC_PERM_NM                 --할인권한명
+             ,CUPN_AMT                   --쿠폰금액
+             ,CUPN_NO                    --쿠폰번호
+             ,PAYM_YN                    --환불여부
+             ,TRADE_ID					 --pos订单id by wushibin
+             ,DISCOUNT_AMT			     --优惠金额
+             ,RECEIVED_AMT				 --实收金额
+            )
+           SELECT DLR_CD                     --딜러코드
+                 ,RCV_DOC_NO                 --수납문서번호
+                 ,(
+                   SELECT NVL(MAX(LINE_NO),0) +1
+                     FROM SE_0570T
+                    WHERE DLR_CD     = #{dlrCd}
+                      AND RCV_DOC_NO = #{rcvDocNo}
+                  ) LINE_NO                   --라인번호
+                 ,PAYM_TP                    --결제유형
+                 ,PAYM_PRID                  --결제기간
+                 ,CASE WHEN #{rcvStatCd} = 'C' THEN '' ELSE #{paymMthCd} END AS PAYM_MTH_CD --결제방법코드
+                 ,PAYM_AMT                   --결제금액
+                 ,NPAY_AMT                   --미수금액
+                 ,PAYM_REMARK                --결제비고
+                 ,#{regUsrId}                --등록자ID
+                 ,SYSDATE                    --등록일자
+                 ,PAYM_USR_NM                --결제사용자명
+                 ,RCV_SUB_DOC_NO             --수납하위문서번호
+                 ,CASE WHEN #{rcvStatCd} = 'C' THEN 0 ELSE #{rcvAmt}  END AS RCV_AMT --수납금액
+                 ,RCV_CPLT_DT                --수납완성일자
+                 ,NPAY_CHK_DT                --미수확인일자
+                 ,RCPT_TP                    --영수증유형
+                 ,RCPT_NO                    --영수증번호
+                 ,RCPT_DT                    --영수증일자
+                 ,RCV_REMARK                 --수납비고
+                 ,#{rcvStatCd}               --수납상태코드
+                 ,RCV_CANC_YN                --수납취소여부
+                 ,RCV_CANC_DT                --수납취소일자
+                 ,RCV_CANC_ID                --수납취소ID
+                 ,REFD_AMT                   --환불금액
+                 ,REFD_DT                    --환불일자
+                 ,REFD_PRSN_NM               --환불담당자명
+                 ,REFD_REMARK                --환불비고
+                 ,PAYM_CD                    --결재자코드
+                 ,PAR_AMT                    --부품금액
+                 ,LBR_AMT                    --공임금액
+                 ,ETC_AMT                    --기타금액
+                 ,WON_UNIT_CUT_AMT           --원단위절사금액
+                 ,DEMIC_POINT_CUT_AMT        --소수점절사금액
+                 ,DC_PERM_CD                 --할인권한코드
+                 ,DC_RATE                    --할인율
+                 ,BAL_AMT                    --예치금액
+                 ,PRE_AMT                    --선수금액
+                 ,CALC_AMT                   --정산금액
+                 ,PAYM_USR_ID                --지불자코드
+                 ,DC_PERM_NM                 --할인권한명
+                 ,CUPN_AMT                   --쿠폰금액
+                 ,CUPN_NO                    --쿠폰번호
+                 ,#{paymYn}                  --환불여부
+                 ,#{tradeId}				--pos订单id
+                 ,#{discountAmt}            --优惠金额
+             	 ,#{receivedAmt}            --实收金额
+            FROM SE_0560T
+           WHERE DLR_CD         = #{dlrCd}                  --딜러코드
+             AND RCV_DOC_NO     = #{rcvDocNo}               --수납문서번호
+             AND RCV_SUB_DOC_NO = #{rcvSubDocNo}
+    </insert>
+    
+    
+    
+    <select id="selectServiceReceiveConfimByKey" parameterType="PayServiceReceiveSearchVO" resultType="PayServiceReceiveDetailVO">
+        SELECT COUNT(1) RCV_TOT_CNT
+              ,SUM(CASE WHEN PAYM_YN = 'N' THEN 0 ELSE 1 END) PAYM_CNT
+              ,SUM(CASE WHEN CAL_PAYM_YN = 'N' THEN 0 ELSE 1 END) CALC_PAYM_CNT
+          FROM (
+          SELECT CASE WHEN NVL(B.RCV_AMT,0) = NVL(B.PAYM_AMT,0) THEN 'Y' ELSE 'N' END AS PAYM_YN
+                ,CASE WHEN (NVL(B.RCV_AMT,0) = NVL(B.PAYM_AMT,0) AND A.RCV_STAT_CD != 'O') THEN 'Y' ELSE 'N' END AS CAL_PAYM_YN
+                ,A.RCV_STAT_CD
+            FROM SE_0550T A , SE_0560T B
+           WHERE A.DLR_CD = B.DLR_CD
+             AND A.RCV_DOC_NO = B.RCV_DOC_NO
+             <if test='sRcvDocNo != null and sRcvDocNo != ""'>
+             AND B.RCV_DOC_NO = #{sRcvDocNo}
+             </if>
+             <if test='sCalcDocNo != null and sCalcDocNo != ""'>
+             AND A.CALC_DOC_NO = #{sCalcDocNo}
+             </if>
+             <if test='sDlrCd != null and sDlrCd != ""'>
+             AND B.DLR_CD = #{sDlrCd}
+             </if>
+        )
+    </select>
+    
+    
+    
+    <!-- 수납관리 수정 -->
+    <update id="updateServiceReceive" parameterType="PayServiceReceiveVO">
+        UPDATE SE_0550T    --수납관리
+          SET
+               UPDT_USR_ID          = #{updtUsrId}                  --수정자ID
+              ,UPDT_DT              = SYSDATE                       --수정일자
+              <if test='lbrCalcAmt != null and lbrCalcAmt != ""'>
+              ,LBR_CALC_AMT         = #{lbrCalcAmt}                 --공임정산금액
+              </if>
+              <if test='lbrDcRate != null and lbrDcRate != ""'>
+              ,LBR_DC_RATE          = #{lbrDcRate}                  --공임할인율
+              </if>
+              <if test='lbrDcAmt != null and lbrDcAmt != ""'>
+              ,LBR_DC_AMT           = #{lbrDcAmt}                   --공임할인금액
+              </if>
+              <if test='lbrBmPointUseAmt != null and lbrBmPointUseAmt != ""'>
+              ,LBR_BM_POINT_USE_AMT = #{lbrBmPointUseAmt}           --공임BM포인트사용금액
+              </if>
+              <if test='lbrPointUseAmt != null and lbrPointUseAmt != ""'>
+              ,LBR_POINT_USE_AMT    = #{lbrPointUseAmt}             --공임포인트사용금액
+              </if>
+              <if test='lbrEtcDcAmt != null and lbrEtcDcAmt != ""'>
+              ,LBR_ETC_DC_AMT       = #{lbrEtcDcAmt}                --공임기타할인금액
+              </if>
+              <if test='lbrCalcSumAmt != null and lbrCalcSumAmt != ""'>
+              ,LBR_CALC_SUM_AMT     = #{lbrCalcSumAmt}              --공임정산합계금액
+              </if>
+              <if test='parCalcAmt != null and parCalcAmt != ""'>
+              ,PAR_CALC_AMT         = #{parCalcAmt}                 --부품정산금액
+              </if>
+              <if test='parDcRate != null and parDcRate != ""'>
+              ,PAR_DC_RATE          = #{parDcRate}                  --부품할인율
+              </if>
+              <if test='parDcAmt != null and parDcAmt != ""'>
+              ,PAR_DC_AMT           = #{parDcAmt}                   --부품할인금액
+              </if>
+              <if test='parBmPointUseAmt != null and parBmPointUseAmt != ""'>
+              ,PAR_BM_POINT_USE_AMT = #{parBmPointUseAmt}           --부품BM포인트사용금액
+              </if>
+              <if test='parPointUseAmt != null and parPointUseAmt != ""'>
+              ,PAR_POINT_USE_AMT    = #{parPointUseAmt}             --부품포인트사용금액
+              </if>
+              <if test='parEtcDcAmt != null and parEtcDcAmt != ""'>
+              ,PAR_ETC_DC_AMT       = #{parEtcDcAmt}                --부품기타할인금액
+              </if>
+              <if test='parCalcSumAmt != null and parCalcSumAmt != ""'>
+              ,PAR_CALC_SUM_AMT     = #{parCalcSumAmt}              --부품정산합계금액
+              </if>
+              <if test='etcCalcAmt != null and etcCalcAmt != ""'>
+              ,ETC_CALC_AMT         = #{etcCalcAmt}                 --기타정산금액
+              </if>
+              <if test='etcDcRate != null and etcDcRate != ""'>
+              ,ETC_DC_RATE          = #{etcDcRate}                  --기타할인율
+              </if>
+              <if test='etcDcAmt != null and etcDcAmt != ""'>
+              ,ETC_DC_AMT           = #{etcDcAmt}                   --기타할인금액
+              </if>
+              <if test='etcBmPointUseAmt != null and etcBmPointUseAmt != ""'>
+              ,ETC_BM_POINT_USE_AMT = #{etcBmPointUseAmt}           --기타BM포인트사용금액
+              </if>
+              <if test='etcPointUseAmt != null and etcPointUseAmt != ""'>
+              ,ETC_POINT_USE_AMT    = #{etcPointUseAmt}             --기타포인트사용금액
+              </if>
+              <if test='etcOtherDcAmt != null and etcOtherDcAmt != ""'>
+              ,ETC_OTHER_DC_AMT     = #{etcOtherDcAmt}              --기타다른할인금액
+              </if>
+              <if test='etcCalcSumAmt != null and etcCalcSumAmt != ""'>
+              ,ETC_CALC_SUM_AMT     = #{etcCalcSumAmt}              --기타정산합계금액
+              </if>
+              <if test='calcTotAmt != null and calcTotAmt != ""'>
+              ,CALC_TOT_AMT         = #{calcTotAmt}                 --정산총금액
+              </if>
+              <if test='dcTotRate != null and dcTotRate != ""'>
+              ,DC_TOT_RATE          = #{dcTotRate}                  --할인총율
+              </if>
+              <if test='dcTotAmt != null and dcTotAmt != ""'>
+              ,DC_TOT_AMT           = #{dcTotAmt}                   --할인총금액
+              </if>
+              <if test='bmPointTotAmt != null and bmPointTotAmt != ""'>
+              ,BM_POINT_TOT_AMT     = #{bmPointTotAmt}              --BM포인트총금액
+              </if>
+              <if test='pointTotAmt != null and pointTotAmt != ""'>
+              ,POINT_TOT_AMT        = #{pointTotAmt}                --포인트총금액
+              </if>
+              <if test='etcTotAmt != null and etcTotAmt != ""'>
+              ,ETC_TOT_AMT          = #{etcTotAmt}                  --기타총금액
+              </if>
+              <if test='lastCalcTotAmt != null and lastCalcTotAmt != ""'>
+              ,LAST_CALC_TOT_AMT    = #{lastCalcTotAmt}             --최종정산총금액
+              </if>
+              <if test='calcDt != null'>
+              ,CALC_DT              = #{calcDt}                     --정산일자
+              </if>
+              <if test='calcStatCd != null and calcStatCd != ""'>
+              ,CALC_STAT_CD         = #{calcStatCd}                 --정산상태코드
+              </if>
+              <if test='rcvStatCd != null and rcvStatCd != ""'>
+              ,RCV_STAT_CD          = #{rcvStatCd}                  --수납상태
+              </if>
+              <if test='custTp != null and custTp != ""'>
+              ,CUST_TP          = #{custTp}                         --고객유형
+              </if>
+         WHERE 1 = 1
+           AND DLR_CD               = #{dlrCd}                      --딜러코드
+           AND RCV_DOC_NO           = #{rcvDocNo}                   --수납문서번호
+    </update>
+    <!-- RO접수  수정. -->
+    <update id="updateRepairOrder" parameterType="PayRepairOrderVO">
+          UPDATE SE_0300T SET
+             UPDT_USR_ID              = #{updtUsrId}                     --수정자ID
+            ,UPDT_DT                  = SYSDATE                          --수정일자
+            <if test='roTp != null and roTp != ""'>
+            ,RO_TP                     = #{roTp}                         --RO유형
+            </if>
+            <if test='resvDocNo != null and resvDocNo != ""'>
+            ,RESV_DOC_NO              = #{resvDocNo}                     --예약문서번호
+            </if>
+            <if test='carRegNo != null and carRegNo != ""'>
+            ,CAR_REG_NO               = #{carRegNo}                      --차량등록번호
+            </if>
+            <if test='enginNo != null and enginNo != ""'>
+            ,ENGIN_NO                 = #{enginNo}                       --엔진시리얼번호
+            </if>
+            <if test='carOwnerId != null and carOwnerId != ""'>
+            ,CAR_OWNER_ID             = #{carOwnerId}                    --차량소유자ID
+            </if>
+            <if test='carOwnerNm != null and carOwnerNm != ""'>
+            ,CAR_OWNER_NM             = #{carOwnerNm}                    --차량소유자명
+            </if>
+            <if test='driverId != null and driverId != ""'>
+            ,DRIVER_ID                = #{driverId}                      --운전자ID
+            </if>
+            <if test='driverNm != null and driverNm != ""'>
+            ,DRIVER_NM                = #{driverNm}                      --운전자명
+            </if>
+            <if test='resvTp != null and resvTp != ""'>
+            ,RESV_TP                  = #{resvTp}                        --예약유형
+            </if>
+            <if test='resvDt != null'>
+            ,RESV_DT                  = #{resvDt}                        --예약일자
+            </if>
+            <if test='bayNo != null and bayNo != ""'>
+            ,BAY_NO                   = #{bayNo}                         --베이번호
+            </if>
+            <if test='tecId != null and tecId != ""'>
+            ,TEC_ID                   = #{tecId}                         --TecManID
+            </if>
+            <if test='tecNm != null and tecNm != ""'>
+            ,TEC_NM                   = #{tecNm}                         --TecMan명
+            </if>
+            <if test='saId != null and saId != ""'>
+            ,SA_ID                    = #{saId}                          --SAID
+            </if>
+            <if test='saNm != null and saNm != ""'>
+            ,SA_NM                    = #{saNm}                          --SA명
+            </if>
+            <if test='operResvDt != null'>
+            ,OPER_RESV_DT             = #{operResvDt}                    --작업예약일자
+            </if>
+            <if test='serResvStartDt != null'>
+            ,SER_RESV_START_DT        = #{serResvStartDt}                --서비스예약일자
+            </if>
+            <if test='serResvEndDt != null'>
+            ,SER_RESV_END_DT          = #{serResvEndDt}                  --서비스예약일자
+            </if>
+            <if test='parAmt != null'>
+            ,PAR_AMT                  = #{parAmt}                        --부품금액
+            </if>
+            <if test='lbrAmt != null and lbrAmt != ""'>
+            ,LBR_AMT                  = #{lbrAmt}                        --공임금액
+            </if>
+            <if test='etcAmt != null'>
+            ,ETC_AMT                  = #{etcAmt}                        --기타금액
+            </if>
+            <if test='dcAmt != null and dcAmt != ""'>
+            ,DC_AMT                   = #{dcAmt}                         --할인금액
+            </if>
+            <if test='sumAmt != null and sumAmt != ""'>
+            ,SUM_AMT                  = #{sumAmt}                        --합계금액
+            </if>
+            <if test='vatAmt != null and vatAmt != ""'>
+            ,VAT_AMT                  = #{vatAmt}                        --부가가치세금액
+            </if>
+            <if test='totAmt != null and totAmt != ""'>
+            ,TOT_AMT                  = #{totAmt}                        --총금액
+            </if>
+            <if test='balAmt != null and balAmt != ""'>
+            ,BAL_AMT                  = #{balAmt}                        --예치금액
+            </if>
+            <if test='cancReasonCd != null and cancReasonCd != ""'>
+            ,CANC_REASON_CD           = #{cancReasonCd}                  --취소사유코드
+            </if>
+            <if test='cancReasonCont != null and cancReasonCont != ""'>
+            ,CANC_REASON_CONT         = #{cancReasonCont}                --취소사유내용
+            </if>
+            <if test='distUnitCd != null and distUnitCd != ""'>
+            ,DIST_UNIT_CD             = #{distUnitCd}                    --거리단위코드
+            </if>
+            <if test='runDistVal != null and runDistVal != ""'>
+            ,RUN_DIST_VAL             = #{runDistVal}                    --주행거리값
+            </if>
+            <if test='diagDocNo != null and diagDocNo != ""'>
+            ,DIAG_DOC_NO               = #{diagDocNo}                    --사전점검번호
+            </if>
+            <if test='baseRoNo != null and baseRoNo != ""'>
+            ,BASE_RO_NO               = #{baseRoNo}                      --원RO번호
+            </if>
+            <if test='incReqNo != null'>
+            ,INC_REQ_NO               = #{incReqNo}                      --보험신청번호
+            </if>
+            <if test='custWaitMthCd != null and custWaitMthCd != ""'>
+            ,CUST_WAIT_MTH_CD         = #{custWaitMthCd}                 --고객대기방법코드
+            </if>
+            <if test='atqProcTp != null and atqProcTp != ""'>
+            ,ATQ_PROC_TP              = #{atqProcTp}                     --고품처리유형
+            </if>
+            <if test='carWashTp != null and carWashTp != ""'>
+            ,CAR_WASH_TP              = #{carWashTp}                     --차량세차유형
+            </if>
+            <if test='carDriveReqTp != null and carDriveReqTp != ""'>
+            ,CAR_DRIVE_REQ_TP         = #{carDriveReqTp}                 --차량시승요청유형
+            </if>
+            <if test='expcDlDt != null'>
+            ,EXPC_DL_DT               = #{expcDlDt}                      --예정인도일자
+            </if>
+            <if test='atqProcYn != null and atqProcYn != ""'>
+            ,ATQ_PROC_YN              = #{atqProcYn}                     --고품처리여부
+            </if>
+            <if test='carWashYn != null and carWashYn != ""'>
+            ,CAR_WASH_YN              = #{carWashYn}                     --차량세차여부
+            </if>
+            <if test='vsitCarReceiveDt != null'>
+            ,VSIT_CAR_RECEIVE_DT      = #{vsitCarReceiveDt}              --방문차량수령일자
+            </if>
+            <if test='vsitCarReceiveIfNm != null and vsitCarReceiveIfNm != ""'>
+            ,VSIT_CAR_RECEIVE_IF_NM   = #{vsitCarReceiveIfNm}             --방문차량수령연계인명
+            </if>
+            <if test='vsitCarReceiveCinoNo != null and vsitCarReceiveCinoNo != ""'>
+            ,VSIT_CAR_RECEIVE_CINO_NO = #{vsitCarReceiveCinoNo}           --방문차량수령연락처번호
+            </if>
+            <if test='vsitCarReceiveAddrNm != null and vsitCarReceiveAddrNm != ""'>
+            ,VSIT_CAR_RECEIVE_ADDR_NM = #{vsitCarReceiveAddrNm}           --방문차량수령주소명
+            </if>
+            <if test='carReceiveDt != null'>
+            ,CAR_RECEIVE_DT           = #{carReceiveDt}                   --차량수령일자
+            </if>
+            <if test='vsitDlIfNm != null and vsitDlIfNm != ""'>
+            ,VSIT_DL_IF_NM            = #{vsitDlIfNm}                     --방문인도연계인명
+            </if>
+            <if test='vsitDlCinoNo != null and vsitDlCinoNo != ""'>
+            ,VSIT_DL_CINO_NO          = #{vsitDlCinoNo}                   --방문인도연락처번호
+            </if>
+            <if test='vsitDlAddrNm != null and vsitDlAddrNm != ""'>
+            ,VSIT_DL_ADDR_NM          = #{vsitDlAddrNm}                   --방문인도주소명
+            </if>
+            <if test='vsitDt != null'>
+            ,VSIT_DT                  = #{vsitDt}                         --방문일자
+            </if>
+            <if test='vsitIfNm != null and vsitIfNm != ""'>
+            ,VSIT_IF_NM               = #{vsitIfNm}                       --방문연계인명
+            </if>
+            <if test='vsitCinoNo != null and vsitCinoNo != ""'>
+            ,VSIT_CINO_NO             = #{vsitCinoNo}                     --방문연락처번호
+            </if>
+            <if test='vsitAddrNm != null and vsitAddrNm != ""'>
+            ,VSIT_ADDR_NM             = #{vsitAddrNm}                     --방문주소명
+            </if>
+            <if test='roStatCd != null and roStatCd != ""'>
+            ,RO_STAT_CD               = #{roStatCd}
+            </if>
+            <if test='roDt != null'>
+            ,RO_DT                    = #{roDt}
+            </if>
+            <if test='carWashStatCd != null and carWashStatCd != ""'>
+            ,CAR_WASH_STAT_CD         = #{carWashStatCd}
+            </if>
+            <if test='paintStatCd != null and paintStatCd != ""'>
+            ,PAINT_STAT_CD            = #{paintStatCd}
+            </if>
+            <if test='qtTestStatCd != null'>
+            ,QT_TEST_STAT_CD          = #{qtTestStatCd}
+            </if>
+            <if test='roGrpNo != null and roGrpNo != ""'>
+            ,RO_GRP_NO          = #{roGrpNo}
+            </if>
+            <if test='roStartDt != null'>
+            ,RO_START_DT         = #{roStartDt}
+            </if>
+             <if test='roEndDt != null'>
+            ,RO_END_DT              = #{roEndDt}
+            </if>
+            <if test='paintQty != null and paintQty != ""'>
+            ,PAINT_QTY          = #{paintQty}
+            </if>
+            <if test='paintColorCd != null and paintColorCd != ""'>
+            ,PAINT_COLOR_CD          = #{paintColorCd}
+            </if>
+            <if test='carColorCd != null and carColorCd != ""'>
+            ,CAR_COLOR_CD          = #{carColorCd}
+            </if>
+            <if test='paintTp != null and paintTp != ""'>
+            ,PAINT_TP          = #{paintTp}
+            </if>
+            <if test='roRemark != null and roRemark != ""'>
+            ,RO_REMARK          = #{roRemark}
+            </if>
+            <if test='qtTestMthCd != null and qtTestMthCd != ""'>
+            ,QT_TEST_MTH_CD          = #{qtTestMthCd}
+            </if>
+            <if test='chgExpcDlDt != null'>
+            ,CHG_EXPC_DL_DT          = #{chgExpcDlDt}
+            </if>
+            <if test='cauCd1 != null and cauCd1 != ""'>
+            ,CAU_CD1 = #{cauCd1}
+            </if>
+            <if test='cauNm1 != null and cauNm1 != ""'>
+            ,CAU_NM1 = #{cauNm1}
+            </if>
+            <if test='phenCd1 != null and phenCd1 != ""'>
+            ,PHEN_CD1 = #{phenCd1}
+            </if>
+            <if test='phenNm1 != null and phenNm1 != ""'>
+            ,PHEN_NM1 = #{phenNm1}
+            </if>
+            <if test='cauCd2 != null and cauCd2 != ""'>
+            ,CAU_CD2 = #{cauCd2}
+            </if>
+            <if test='cauNm2 != null and cauNm2 != ""'>
+            ,CAU_NM2 = #{cauNm2}
+            </if>
+            <if test='phenCd2 != null and phenCd2 != ""'>
+            ,PHEN_CD2 = #{phenCd2}
+            </if>
+            <if test='phenNm2 != null and phenNm2 != ""'>
+            ,PHEN_NM2 = #{phenNm2}
+            </if>
+            <if test='carWashPrsnNm != null and carWashPrsnNm != ""'>
+            ,CAR_WASH_PRSN_NM = #{carWashPrsnNm}
+            </if>
+            <if test='carWashPrsnCd != null and carWashPrsnCd != ""'>
+            ,CAR_WASH_PRSN_CD = #{carWashPrsnCd}
+            </if>
+            <choose>
+                <when test='carWashStatCd == "W3"'>
+                    ,CAR_WASH_START_DT = #{carWashStartDt}
+                    ,CAR_WASH_END_DT = #{carWashEndDt}
+                </when>
+                <otherwise>
+                    <if test='carWashStartDt != null'>
+                    ,CAR_WASH_START_DT          = #{carWashStartDt}
+                    </if>
+                    <if test='carWashEndDt != null'>
+                    ,CAR_WASH_END_DT          = #{carWashEndDt}
+                    </if>
+                </otherwise>
+            </choose>
+            <if test='carWashCancDt != null'>
+            ,CAR_WASH_CANC_DT          = #{carWashCancDt}
+            </if>
+            <if test='qtTestPrsnNm != null and qtTestPrsnNm != ""'>
+            ,QT_TEST_PRSN_NM = #{qtTestPrsnNm}
+            </if>
+            <if test='qtTestPrsnCd != null and qtTestPrsnCd != ""'>
+            ,QT_TEST_PRSN_CD = #{qtTestPrsnCd}
+            </if>
+            <choose>
+                <when test='qtTestStatCd == "Q5"'>
+                    ,QT_TEST_START_DT = #{qtTestStartDt}
+                    ,QT_TEST_END_DT = #{qtTestEndDt}
+                </when>
+                <otherwise>
+                    <if test='qtTestStartDt != null'>
+                        ,QT_TEST_START_DT = #{qtTestStartDt}
+                    </if>
+                    <if test='qtTestEndDt != null'>
+                        ,QT_TEST_END_DT = #{qtTestEndDt}
+                    </if>
+                </otherwise>
+            </choose>
+            <if test='rwrkCd != null and rwrkCd != ""'>
+            ,RWRK_CD = #{rwrkCd}
+            </if>
+            <if test='rwrkRemark != null and rwrkRemark != ""'>
+            ,RWRK_REMARK = #{rwrkRemark}
+            </if>
+            <if test='roEndChkYn != null and roEndChkYn != ""'>
+            ,RO_END_CHK_YN = #{roEndChkYn}
+            </if>
+            <if test='atqProcChkYn != null and atqProcChkYn != ""'>
+            ,ATQ_PROC_CHK_YN = #{atqProcChkYn}
+            </if>
+            <if test='qtChkYn != null and qtChkYn != ""'>
+            ,QT_CHK_YN = #{qtChkYn}
+            </if>
+            <if test='carWashChkYn != null and carWashChkYn != ""'>
+            ,CAR_WASH_CHK_YN = #{carWashChkYn}
+            </if>
+            <if test='serTagChkYn != null and serTagChkYn != ""'>
+            ,SER_TAG_CHK_YN = #{serTagChkYn}
+            </if>
+            <if test='giRunDistVal != null and giRunDistVal != ""'>
+            ,GI_RUN_DIST_VAL = #{giRunDistVal}
+            </if>
+            <if test='preAmt != null and preAmt != ""'>
+            ,PRE_AMT         = #{preAmt}
+            </if>
+            <if test='allocStatCd != null and allocStatCd != ""'>
+            ,ALLOC_STAT_CD = #{allocStatCd}                  --배정상태코드
+            </if>
+            <if test='wrkStatCd != null and wrkStatCd != ""'>
+            ,WRK_STAT_CD = #{wrkStatCd}                      --작업상태코드
+            </if>
+            <if test='dlStatCd != null and dlStatCd != ""'>
+            ,DL_STAT_CD = #{dlStatCd}                        --인도상태코드
+            </if>
+            <if test='goodwillYn != null and goodwillYn != ""'>
+            ,GOODWILL_YN = #{goodwillYn}                      --GOODWILL 여부
+            </if>
+            <if test='goodwillStatCd != null and goodwillStatCd != ""'>
+            ,GOODWILL_STAT_CD = #{goodwillStatCd}            --GOODWILL 사용여부
+            </if>
+            <if test='dlrRoTp != null and dlrRoTp != ""'>
+            ,DLR_RO_TP = #{dlrRoTp}             --딜러자체RO유형
+            </if>
+            <if test='carWashCancPrsnCd != null and carWashCancPrsnCd != ""'>
+            ,CAR_WASH_CANC_PRSN_CD = #{carWashCancPrsnCd}             --세차취소자ID
+            </if>
+            <if test='carWashCancPrsnNm != null and carWashCancPrsnNm != ""'>
+            ,CAR_WASH_CANC_PRSN_NM = #{carWashCancPrsnNm}             --세차취소자명
+            </if>
+            <if test='carWashCancReasonCd != null and carWashCancReasonCd != ""'>
+            ,CAR_WASH_CANC_REASON_CD = #{carWashCancReasonCd}             --세차취소원인코드
+            </if>
+            <if test='carWashCancReasonCont != null and carWashCancReasonCont != ""'>
+            ,CAR_WASH_CANC_REASON_CONT = #{carWashCancReasonCont}             --세차취소원인내용
+            </if>
+            <if test='roPrintDt != null'>
+            ,RO_PRINT_DT          = #{roPrintDt}
+            </if>
+            <choose>
+                <when test='dlStatCd == "01"'>
+                    ,DL_CHK_DT = #{dlChkDt}
+                    ,DL_CHK_PRSN_CD = #{dlChkPrsnCd}
+                    ,DL_CHK_PRSN_NM = #{dlChkPrsnNm}
+                </when>
+                <otherwise>
+                    <if test='dlChkDt != null'>
+                    ,DL_CHK_DT = #{dlChkDt}
+                    </if>
+                    <if test='dlChkPrsnCd != null and dlChkPrsnCd != ""'>
+                    ,DL_CHK_PRSN_CD = #{dlChkPrsnCd}
+                    </if>
+                    <if test='dlChkPrsnNm != null and dlChkPrsnNm != ""'>
+                    ,DL_CHK_PRSN_NM = #{dlChkPrsnNm}
+                    </if>
+                </otherwise>
+            </choose>
+            <if test='pdiYn != null and pdiYn != ""'>
+            ,PDI_YN = #{pdiYn}
+            </if>
+            <if test='firstRoYn != null and firstRoYn != ""'>
+            ,FIRST_RO_YN = #{firstRoYn}  --처음수리여부
+            </if>
+            <if test='freeRoYn != null and freeRoYn != ""'>
+            ,FREE_RO_YN = #{freeRoYn}  --처음보양여부
+            </if>
+            WHERE DLR_CD = #{dlrCd}
+            <choose>
+                <when test='roDocNo !=null and roDocNo != "" '>
+                    AND RO_DOC_NO = #{roDocNo}
+                </when>
+                <when test='roGrpNo !=null and roGrpNo != "" '>
+                    AND RO_GRP_NO = #{roGrpNo}
+                </when>
+                <otherwise>
+                    AND RO_DOC_NO = 'RO'
+                </otherwise>
+            </choose>
+            <if test='vinNo != null and vinNo != ""'>
+               AND VIN_NO   = #{vinNo}  --차대번호
+            </if>
+    </update>
+</mapper>

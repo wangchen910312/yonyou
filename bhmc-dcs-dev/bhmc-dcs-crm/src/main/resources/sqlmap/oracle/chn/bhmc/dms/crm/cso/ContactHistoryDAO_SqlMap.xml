@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : ContactHistoryDAO_SqlMap.xml
+    Description : 컨택히스토리 등록에 관한 데이터처리
+    author in moon Lee
+    since 2016.04.06.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016.04.06.     in moon Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cso.service.dao.ContactHistoryDAO">
+
+
+    <!-- 컨택히스토리 정보 를 등록한다. -->
+    <insert id="insertContactHistory" parameterType="ContactHistoryVO" >
+        /* [chn.bhmc.dms.crm.sac.service.dao.ContactHistoryDAO.insertContactHistory] */
+
+        INSERT INTO DMSDB.CR_0306T    --접촉통합
+        (
+             DLR_CD                --딜러코드
+            ,CONTACT_NO             --접촉번호
+            ,CUST_NO               --고객번호
+            ,CONTACT_STAT_CD        --접촉입출력코드 IN / OUT
+            ,CONTACT_TP             --접촉유형 (문자,WECHAT,EMAIL,전화)
+            ,CONTACT_BIZ_CD         --업무(고객,리드,기회,VOC,만족도,캠페인,멤버십)
+            ,CONTACT_CONT           --접촉내용
+            ,REF_TABLE_NM          --출처참조테이블명
+            ,REF_KEY_NM            --출처참조키명
+            ,REG_USR_ID            --등록자ID
+            ,REG_DT                --등록일자
+        ) VALUES (
+             #{dlrCd}                --딜러코드
+            ,SEQ_CR_0306T.NEXTVAL    --접촉번호
+            ,#{custNo}               --고객번호
+            ,#{contactStatCd}         --접촉입출력코드 IN / OUT
+            ,#{contactTp}             --접촉유형 (문자,WECHAT,EMAIL,전화)
+            ,#{contactBizCd}          --업무(고객,리드,기회,VOC,만족도,캠페인,멤버십
+            ,#{contactCont}          --접촉내용
+            ,#{refTableNm}           --출처참조테이블명
+            ,#{refKeyNm}             --출처참조키명
+            ,#{regUsrId}             --등록자ID
+            ,SYSDATE                 --등록일자
+        )
+    </insert>
+
+    <!-- [그룹전송] 컨택히스토리 정보 를 등록한다. ( SMS 전송 대상자 임시 테이블에서 select insert )-->
+    <insert id="insertGroupContactHistory" parameterType="ContactHistoryVO" >
+        /* [chn.bhmc.dms.crm.sac.service.dao.ContactHistoryDAO.insertGroupContactHistory] */
+
+        INSERT INTO DMSDB.CR_0306T    --접촉통합
+        (
+             DLR_CD                --딜러코드
+            ,CONTACT_NO             --접촉번호
+            ,CUST_NO               --고객번호
+            ,CONTACT_STAT_CD        --접촉입출력코드 IN / OUT
+            ,CONTACT_TP             --접촉유형 (문자,WECHAT,EMAIL,전화)
+            ,CONTACT_BIZ_CD         --업무(고객,리드,기회,VOC,만족도,캠페인,멤버십)
+            ,CONTACT_CONT           --접촉내용
+            ,REF_TABLE_NM          --출처참조테이블명
+            ,REF_KEY_NM            --출처참조키명
+            ,REG_USR_ID            --등록자ID
+            ,REG_DT                --등록일자
+        ) SELECT
+             #{dlrCd}                --딜러코드
+            ,SEQ_CR_0306T.NEXTVAL    --접촉번호
+            ,CUST_NO               --고객번호
+            ,#{contactStatCd}         --접촉입출력코드 IN / OUT
+            ,#{contactTp}             --접촉유형 (문자,WECHAT,EMAIL,전화)
+            ,#{contactBizCd}          --업무(고객,리드,기회,VOC,만족도,캠페인,멤버십
+            ,#{contactCont}          --접촉내용
+            ,#{refTableNm}           --출처참조테이블명
+            ,REF_KEY_NM              --출처참조키명
+            ,#{regUsrId}             --등록자ID
+            ,SYSDATE                 --등록일자
+            FROM CR_0104T
+            WHERE SEQ = #{smsTmplUserSeq}
+    </insert>
+
+
+    <!-- 컨택히스토리 검색조건 -->
+    <sql id="searchMsgHistory">
+
+        LEFT OUTER JOIN CM_0801T USRT ON CR0306T.REG_USR_ID = USRT.USR_ID
+
+        <where>
+            AND CR0306T.DLR_CD = #{sDlrCd}
+            AND CR0306T.CONTACT_BIZ_CD = #{sContactBizCd}
+            AND CR0306T.REF_TABLE_NM = #{sRefTableNm}
+            AND CR0306T.REF_KEY_NM = #{sRefKeyNm}
+
+            <if test='sCustNo != null and sCustNo  != ""'>
+                AND CR0306T.CUST_NO = #{sCustNo }
+            </if>
+
+        </where>
+    </sql>
+
+    <!-- 컨택히스토리 목록을 조회한다. -->
+    <select id="selectMsgHistorysByCondition" parameterType="ContactHistorySearchVO" resultType="ContactHistoryVO">
+        /* [chn.bhmc.dms.crm.sac.service.dao.ContactHistoryDAO.selectMsgHistorysByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    CR0306T.DLR_CD                 --딜러코드
+                   ,CR0306T.CONTACT_NO             --접촉번호
+                   ,CR0306T.CUST_NO                --고객번호
+                   ,CR0306T.CONTACT_STAT_CD        --접촉 입력,출력코드 I :IN / O:OUT
+                   ,CR0306T.CONTACT_TP             --접촉유형 (문자,WECHAT,EMAIL,전화)
+                   ,CR0306T.CONTACT_BIZ_CD         --업무(고객,리드,기회,VOC,만족도,캠페인,멤버십
+                   ,CR0306T.CONTACT_CONT           --접촉내용
+                   ,CR0306T.REF_TABLE_NM           --출처참조테이블명
+                   ,CR0306T.REF_KEY_NM             --출처참조키명
+                   ,CR0306T.REG_USR_ID             --등록자ID
+                   ,USRT.USR_NM AS REG_USR_NM            --등록자이름
+                   ,CR0306T.REG_DT                 --등록일자
+                FROM CR_0306T CR0306T    --접촉통합
+                <include refid="searchMsgHistory" />
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>          CR0306T.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "contactNo"'>      CR0306T.CONTACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "custNo"'>         CR0306T.CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "contactStatCd"'>  CR0306T.CONTACT_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contactTp"'>      CR0306T.CONTACT_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "contactBizCd"'>   CR0306T.CONTACT_BIZ_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "contactCont"'>    CR0306T.CONTACT_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "refTableNm"'>     CR0306T.REF_TABLE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                <when test='item.field == "refKeyNm"'>       CR0306T.REF_KEY_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "regUsrId"'>       CR0306T.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "regDt"'>          CR0306T.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "updtUsrId"'>      CR0306T.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "updtDt"'>         CR0306T.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <otherwise>
+                                    CR0306T.CONTACT_NO DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        CR0306T.CONTACT_NO DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 컨택히스토리 목록수를 조회한다. -->
+    <select id="selectMsgHistorysByConditionCnt" parameterType="ContactHistorySearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.sac.service.dao.ContactHistoryDAO.selectMsgHistorysByCondition] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_0306T CR0306T
+        <include refid="searchMsgHistory" />
+    </select>
+</mapper>

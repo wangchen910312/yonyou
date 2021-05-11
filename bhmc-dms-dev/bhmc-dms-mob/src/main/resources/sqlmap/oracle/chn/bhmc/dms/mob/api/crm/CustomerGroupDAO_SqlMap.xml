@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CustomerGroupDAO_SqlMap.xml
+    Description : 고객그룹 관한 데이터처리
+    author Kyo Jin Lee
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kyo Jin Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.crm.dao.CrmCustomerGroupDAO">
+
+	<!-- 고객 조회 검색조건 -->
+    <sql id="searchWhere">
+        WHERE 1=1
+        AND DLR_CD = #{sDlrCd}
+        <if test='sGrpTp != null and sGrpTp != ""'>
+            AND GRP_TP = #{sGrpTp}
+        </if>
+        <if test='sGrpNm != null and sGrpNm != ""'>
+            AND GRP_NM = #{sGrpNm}
+        </if>
+        <if test='sUsrId != null and sUsrId != ""'>
+            AND USR_ID = #{sUsrId}
+        </if>
+        <if test='sDelYn != null and sDelYn != ""'>
+            AND DEL_YN = #{sDelYn}
+        </if>
+    </sql>
+
+    <!-- 그룹 정보 목록을 조회한다. -->
+    <select id="selectCustomerGroupByCondition" parameterType="CustomerGroupSearchVO" resultType="chn.bhmc.dms.mob.api.crm.vo.CustomerGroupVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO.selectCustomerGroupByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    GRP_SEQ
+                    , USR_ID
+                    , GRP_NM
+                    , SORT_ORDER
+                    , DEL_YN
+                    , GRP_TP
+                    , (SELECT COUNT(*) FROM CR_0115T WHERE GRP_SEQ=T1.GRP_SEQ) AS GROUP_CNT
+                FROM CR_0114T T1
+                <include refid="searchWhere" />
+                ORDER BY SORT_ORDER ASC
+            ) T1
+            WHERE 1=1
+        <if test='firstIndex != -1 and lastIndex != -1'>
+            AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+        </if>
+        )
+        <where>
+        <if test='firstIndex != -1 and lastIndex != -1'>
+            RNUM > #{firstIndex}
+        </if>
+        </where>
+    </select>
+
+    <!-- 고객의 그룹 목록을 조회한다. -->
+    <select id="selectCustomerGroupByKey" parameterType="CustomerGroupVO" resultType="chn.bhmc.dms.mob.api.crm.vo.CustomerGroupVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO.selectCustomerGroupByKey] */
+        SELECT  T1.*, T2.GRP_NM
+          FROM  CR_0115T T1, CR_0114T T2
+         WHERE  T1.DLR_CD = #{dlrCd}
+           AND  T1.CUST_NO = #{custNo}
+           AND  T1.DLR_CD = T2.DLR_CD
+           AND  T2.DEL_YN = 'N'
+        <if test='grpTp != null and grpTp != ""'>
+           AND  T1.GRP_TP = #{grpTp}
+        </if>
+           AND  T1.GRP_SEQ = T2.GRP_SEQ(+)
+    </select>
+</mapper>

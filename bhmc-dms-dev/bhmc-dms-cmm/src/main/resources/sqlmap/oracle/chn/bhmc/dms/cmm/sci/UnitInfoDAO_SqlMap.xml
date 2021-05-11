@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : UnitInfoDao_SqlMap.xml
+    Description : 단위에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.sci.service.dao.UnitInfoDAO">
+
+	<!-- 단위를 등록한다. -->
+	<insert id="insertUnitInfo" parameterType="UnitInfoVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.UnitInfoDAO.insertUnitInfo] */
+		INSERT INTO CM_0207T (  	
+        	 UNIT_SEQ              <!-- 단위일련번호 -->
+            ,UNIT_CD               <!-- 단위코드 -->
+            ,UNIT_EXT_CD           <!-- 단위외부코드 -->
+            ,UNIT_TP               <!-- 단위유형 -->
+            ,UNIT_NM               <!-- 단위명 -->
+            ,UNIT_STD_YN           <!-- 단위기준여부 -->
+            ,NMRTR_VAL             <!-- 분자값 -->
+            ,DENMNTR_VAL           <!-- 분모값 -->
+            ,USE_YN                <!-- 단위사용여부 -->
+            ,REG_USR_ID            <!-- 등록자ID -->
+            ,REG_DT                <!-- 등록일자 -->
+        ) VALUES (
+        	 SEQ_CM_0207T.NEXTVAL 	
+            ,#{unitCd}            	
+            ,#{unitExtCd}         
+            ,#{unitTp}            	
+            ,#{unitNm}            	
+            ,#{unitStdYn}         	
+            ,#{nmrtrVal}          	
+            ,#{denmntrVal}        	
+            ,#{useYn}         		
+            ,#{regUsrId}          	
+            ,SYSDATE              	
+        )
+	</insert>
+
+	<!-- 단위 정보를 수정한다. -->
+	<update id="updateUnitInfo" parameterType="UnitInfoVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.UnitInfoDAO.updateUnitInfo] */
+		UPDATE CM_0207T SET
+			 UNIT_CD = #{unitCd}
+            ,UNIT_EXT_CD = #{unitExtCd}
+            ,UNIT_TP = #{unitTp}
+            ,UNIT_NM = #{unitNm}
+            ,UNIT_STD_YN = #{unitStdYn}
+            ,NMRTR_VAL = #{nmrtrVal}
+            ,DENMNTR_VAL = #{denmntrVal}
+            ,USE_YN = #{useYn}
+            ,UPDT_USR_ID = #{updtUsrId}
+            ,UPDT_DT = SYSDATE
+		WHERE UNIT_SEQ = #{unitSeq}
+	</update>
+
+	<!-- 단위 정보를 삭제한다. -->
+	<delete id="deleteUnitInfo" parameterType="int">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.UnitInfoDAO.deleteUnitInfo] */
+		DELETE FROM CM_0207T
+		WHERE UNIT_SEQ = #{value}
+	</delete>
+
+	<!-- 단위를 조회한다. -->
+	<select id="selectUnitInfoByKey" parameterType="int" resultType="UnitInfoVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.UnitInfoDAO.selectUnitInfoByKey] */
+		SELECT * FROM CM_0207T
+		WHERE UNIT_SEQ = #{value}
+	</select>
+
+	<!-- 단위 목록을 조회한다. -->
+	<select id="selectUnitInfosByCondition" parameterType="UnitInfoSearchVO" resultType="UnitInfoVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.UnitInfoDAO.selectUnitInfosByCondition] */
+		SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT * FROM CM_0207T
+                <where>
+                    <if test='sUnitCd != null and sUnitCd != ""'>
+                        UNIT_CD = #{sUnitCd}
+                    </if>
+
+                    <if test='sUnitTp != null and sUnitTp != ""'>
+                        AND UNIT_TP = #{sUnitTp}
+                    </if>
+
+                    <if test='sUnitNm != null and sUnitNm != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sUnitNm,"*")'>
+                                <bind name='sUnitNm' value='@org.apache.commons.lang3.StringUtils@replace(sUnitNm, "*", "%")' />
+                                 AND UNIT_NM LIKE #{sUnitNm}
+                            </when>
+                            <otherwise>
+                                 AND UNIT_NM = #{sUnitNm}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sUnitStdYn != null and sUnitStdYn != ""'>
+                        AND UNIT_STD_YN = #{sUnitStdYn}
+                    </if>
+
+                    <if test='sUseYn != null and sUseYn != ""'>
+                        AND USE_YN = #{sUseYn}
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "unitCd"'>UNIT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "unitExtCd"'>UNIT_EXT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "unitTp"'>UNIT_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "unitNm"'>UNIT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "unitStdYn"'>UNIT_STD_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "nmrtrVal"'>NMRTR_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "denmntrVal"'>DENMNTR_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "useYn"'>USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    UNIT_TP ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        UNIT_TP ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+	<!-- 단위 목록수를 조회한다. -->
+	<select id="selectUnitInfosByConditionCnt" parameterType="UnitInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.UnitInfoDAO.selectUnitInfosByConditionCnt] */
+		SELECT COUNT(*) AS VALUE FROM CM_0207T
+		<where>
+            <if test='sUnitCd != null and sUnitCd != ""'>
+                UNIT_CD = #{sUnitCd}
+            </if>
+
+            <if test='sUnitTp != null and sUnitTp != ""'>
+                AND UNIT_TP = #{sUnitTp}
+            </if>
+
+            <if test='sUnitNm != null and sUnitNm != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sUnitNm,"*")'>
+                        <bind name='sUnitNm' value='@org.apache.commons.lang3.StringUtils@replace(sUnitNm, "*", "%")' />
+                         AND UNIT_NM LIKE #{sUnitNm}
+                    </when>
+                    <otherwise>
+                         AND UNIT_NM = #{sUnitNm}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sUnitStdYn != null and sUnitStdYn != ""'>
+                AND UNIT_STD_YN = #{sUnitStdYn}
+            </if>
+
+            <if test='sUseYn != null and sUseYn != ""'>
+                AND USE_YN = #{sUseYn}
+            </if>
+        </where>
+	</select>
+</mapper>

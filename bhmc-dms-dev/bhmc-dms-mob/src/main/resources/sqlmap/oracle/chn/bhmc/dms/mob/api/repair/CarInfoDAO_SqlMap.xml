@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.mob.api.repair.dao.RepairCarInfoDAO">
+
+    <select id="selectCarListsByCondition" parameterType="CarInfoSearchVO" resultType="chn.bhmc.dms.mob.api.repair.vo.CarInfoVO">
+        SELECT A.CARLINE_CD         -- 차종코드
+             , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+             , FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM_NC
+             , A.CARLINE_EN_NM      -- 차종영문명
+          FROM SA_0101T A           -- 차종마스터
+         WHERE 1 = 1
+         <if test='useYn != null and useYn != ""'>
+           AND A.USE_YN = #{useYn}  -- 사용여부
+         </if>
+         <if test='carlineCd != null and carlineCd != ""'>
+           AND A.CARLINE_CD = #{carlineCd}
+         </if>
+           AND A.START_DT <![CDATA[ <= ]]> SYSDATE      -- 시작일
+           AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+         GROUP BY A.CARLINE_CD
+                , A.CARLINE_NM
+                , A.CARLINE_EN_NM
+         ORDER BY A.CARLINE_CD, A.CARLINE_NM
+    </select>
+
+</mapper>

@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : RoleDAO_SqlMap.xml
+    Description : 역할에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 1. 18.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 18.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.ath.service.dao.RoleDAO">
+
+    <!-- 역할 정보를 등록한다. -->
+    <insert id="insertRole" parameterType="RoleVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleDAO.insertRole] */
+        INSERT INTO CM_0804T(
+            SYS_CD
+            ,ROLE_ID
+            ,ROLE_NM
+            ,ROLE_DETL_CONT
+            ,ROLE_TP
+            ,REG_DT
+            ,REG_USR_ID
+        )VALUES(
+            #{sysCd}
+            ,#{roleId}
+            ,#{roleNm}
+            ,#{roleDetlCont}
+            ,#{roleTp}
+            ,SYSDATE
+            ,#{regUsrId}
+        )
+    </insert>
+
+    <!-- 역할 정보를 수정한다. -->
+    <update id="updateRole" parameterType="RoleVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleDAO.updateRole] */
+        UPDATE CM_0804T SET
+            ROLE_NM = #{roleNm}
+            ,ROLE_DETL_CONT = #{roleDetlCont}
+            ,ROLE_TP = #{roleTp}
+            ,UPDT_USR_ID = #{updtUsrId}
+            ,UPDT_DT = SYSDATE
+        WHERE SYS_CD = #{sysCd}
+            AND ROLE_ID = #{roleId}
+    </update>
+
+    <!-- 역할 정보를 삭제한다. -->
+    <update id="deleteRole" parameterType="RoleVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleDAO.deleteRole] */
+        UPDATE CM_0804T SET USE_YN = 'N'
+        WHERE SYS_CD = #{sysCd}
+            AND ROLE_ID = #{roleId}
+    </update>
+
+    <!-- 역할 정보를 조회한다. -->
+    <select id="selectRoleByKey" parameterType="map" resultType="RoleVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleDAO.selectRoleByKey] */
+        SELECT * FROM CM_0804T
+        WHERE SYS_CD = #{sysCd}
+            AND ROLE_ID = #{roleId}
+    </select>
+
+    <!-- 역할 정보 목록을 조회한다. -->
+    <select id="selectRolesByCondition" parameterType="RoleSearchVO" resultType="RoleVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleDAO.selectRolesByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT *
+                FROM CM_0804T
+                WHERE USE_YN = 'Y'
+                    AND ROLE_TP != 'SYS'
+                    <if test='sSysCd != null and sSysCd != ""'>
+                        AND SYS_CD = #{sSysCd}
+                    </if>
+
+                    <if test='sRoleId != null and sRoleId != ""'>
+                        AND ROLE_ID = #{sRoleId}
+                    </if>
+
+                    <if test='sRoleNm != null and sRoleNm != ""'>
+                        AND ROLE_NM LIKE '%'||#{sRoleNm}||'%'
+                    </if>
+
+                    <if test='sRoleTp != null and sRoleTp != ""'>
+                        AND ROLE_TP = #{sRoleTp}
+                    </if>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "roleId"'>ROLE_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "roleNm"'>ROLE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "roleDetlCont"'>ROLE_DETL_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "roleTp"'>ROLE_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regUsrId"'>REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDt"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtUsrId"'>UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtDt"'>UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    ROLE_NM ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        ROLE_NM  ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 역할 정보 목록수를 조회한다. -->
+    <select id="selectRolesByConditionCnt" parameterType="RoleSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleDAO.selectRolesByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CM_0804T
+        WHERE USE_YN = 'Y'
+            AND ROLE_TP != 'SYS'
+            <if test='sSysCd != null and sSysCd != ""'>
+                AND SYS_CD = #{sSysCd}
+            </if>
+
+            <if test='sRoleId != null and sRoleId != ""'>
+                AND ROLE_ID = #{sRoleId}
+            </if>
+
+            <if test='sRoleNm != null and sRoleNm != ""'>
+                AND ROLE_NM LIKE '%'||#{sRoleNm}||'%'
+            </if>
+
+            <if test='sRoleTp != null and sRoleTp != ""'>
+                AND ROLE_TP = #{sRoleTp}
+            </if>
+    </select>
+
+    <!-- 역할-계층 정보를 등록한다. -->
+    <insert id="insertRoleHirarchy" parameterType="RoleHirarchyVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleMappingDAO.insertRoleHirarchy] */
+        INSERT INTO CM_0805T(
+             SYS_CD
+            ,PARENT_ROLE_ID
+            ,CHILD_ROLE_ID
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+        )VALUES(
+             #{sysCd}
+            ,#{parentRoleId}
+            ,#{childRoleId}
+            ,#{regUsrId}
+            ,SYSDATE
+            ,#{regUsrId}
+            ,SYSDATE
+        )
+    </insert>
+
+    <!-- 역할-계층 정보를 삭제한다. -->
+    <update id="deleteRoleHirarchy" parameterType="RoleHirarchyVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleMappingDAO.deleteRoleHirarchy] */
+        UPDATE CM_0805T SET USE_YN = 'N'
+        WHERE SYS_CD = #{sysCd}
+            AND PARENT_ROLE_ID = #{parentRoleId}
+            AND CHILD_ROLE_ID = #{childRoleId}
+    </update>
+
+</mapper>

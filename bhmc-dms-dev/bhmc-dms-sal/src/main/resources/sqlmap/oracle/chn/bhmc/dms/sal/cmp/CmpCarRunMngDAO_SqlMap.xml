@@ -1,0 +1,579 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.cmp.service.dao.CmpCarRunMngDAO">
+    <!-- 회사차운행관리 목록 갯수  -->
+    <select id="selectCmpCarRunMngByConditionCnt" parameterType="CmpCarRunMngSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0305T A, SA_0121T B
+         WHERE A.VIN_NO = B.VIN_NO(+)
+           AND A.DLR_CD = #{sDlrCd}
+         <if test='sVinNo != null and sVinNo != ""'>
+            AND A.VIN_NO LIKE '%' || #{sVinNo} || '%'
+         </if>
+         <if test='sCarStatCd != null and sCarStatCd != ""'>
+            AND A.CAR_STAT_CD = #{sCarStatCd}
+         </if>
+         <if test='sCpnCarTp != null and sCpnCarTp != ""'>
+            AND A.CPN_CAR_TP = #{sCpnCarTp}
+         </if>
+         <if test='sCarlineCd != null and sCarlineCd != ""'>
+            AND A.CARLINE_CD = #{sCarlineCd}
+         </if>
+         <if test='sStartDt != null and sEndDt != null'>
+           AND A.START_DT <![CDATA[>=]]> TRUNC(#{sStartDt},'DD')
+           AND A.END_DT <![CDATA[<]]> TRUNC(#{sEndDt},'DD')+1
+         </if>
+    </select>
+
+	<!-- 회사차운행관리 목록 조회  -->
+	<select id="selectCmpCarRunMngByCondition" parameterType="CmpCarRunMngSearchVO" resultType="CmpCarRunMngVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A.DLR_CD,
+                       A.VIN_NO,
+                       FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM,
+                       FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD) AS MODEL_NM,
+                       A.OCN_CD,
+                       FN_GET_OCN_NM_NC(A.MODEL_CD, A.OCN_CD) AS OCN_NM,
+                       FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD) AS EXT_COLOR_NM,
+                       A.CAR_STAT_CD,
+                       A.CPN_CAR_TP,
+                       A.START_DT,
+                       A.END_DT,
+                       B.ENGIN_MODEL_CD||B.ENGIN_SERIAL_NO AS ENGINE_NO,
+                       A.REG_USR_ID,
+                       A.REG_DT,
+                       (SYSDATE - A.START_DT) AS ING_DT_CNT,
+                       (SELECT NVL(SUM(X.RUN_KM), 0)
+                          FROM SA_0306T X
+                         WHERE X.VIN_NO = A.VIN_NO) AS TOT_RUN_KM,
+                       (SELECT NVL(MAX(X.END_KM), 0)
+                          FROM SA_0306T X
+                         WHERE X.VIN_NO = A.VIN_NO) AS LAST_RUN_KM,
+                       B.CAR_REG_NO,
+                       (SELECT MAX(X.USE_START_DT)
+                          FROM SA_0306T X
+                         WHERE X.VIN_NO = A.VIN_NO) AS OLD_USE_START_DT,
+                       (SELECT MAX(X.USE_END_DT)
+                          FROM SA_0306T X
+                         WHERE X.VIN_NO = A.VIN_NO) AS OLD_USE_END_DT,
+                       (SELECT COUNT(*) AS VALUE
+                          FROM SA_0306T X
+                         WHERE X.VIN_NO = A.VIN_NO) AS SUB_DATA_CNT
+                  FROM SA_0305T A, SA_0121T B
+                 WHERE A.VIN_NO = B.VIN_NO(+)
+                   AND A.DLR_CD = #{sDlrCd}
+				    <!--
+                    start
+                   2019-04-24
+                  问题编号：R19042301539
+                  原因：业务逻辑问题
+                  改为：只显示这三个状态：在途 在库 零售，即B.CAR_STAT_CD IN ('50','60','70')
+                  -->
+                   AND B.CAR_STAT_CD IN ('50','60','70')
+                  <!-- Update By Zhang QH   end -->
+                 <if test='sVinNo != null and sVinNo != ""'>
+                    AND A.VIN_NO LIKE '%' || #{sVinNo} || '%'
+                 </if>
+                 <if test='sCarStatCd != null and sCarStatCd != ""'>
+                    AND A.CAR_STAT_CD = #{sCarStatCd}
+                 </if>
+                 <if test='sCpnCarTp != null and sCpnCarTp != ""'>
+                    AND A.CPN_CAR_TP = #{sCpnCarTp}
+                 </if>
+                 <if test='sCarlineCd != null and sCarlineCd != ""'>
+                    AND A.CARLINE_CD = #{sCarlineCd}
+                 </if>
+                 <if test='sStartDt != null and sEndDt != null'>
+                   AND A.START_DT <![CDATA[>=]]> TRUNC(#{sStartDt},'DD')
+                   AND A.END_DT <![CDATA[<]]> TRUNC(#{sEndDt},'DD')+1
+                 </if>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+         ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "carStatCd"'>CAR_STAT_CD<choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "cpnCarTp"'>CPN_CAR_TP<choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "vinNo"'>VIN_NO<choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "carlineNm"'>CARLINE_NM<choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "modelNm"'>MODEL_NM<choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ocnCd"'>OCN_CD<choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ocnNm"'>OCN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "extColorNm"'>EXT_COLOR_NM<choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "startDt"'>START_DT<choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "endDt"'>END_DT<choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ingDtCnt"'>ING_DT_CNT<choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "totRunKm"'>TOT_RUN_KM<choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "engineNo"'>ENGINE_NO<choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                          REG_DT DESC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                REG_DT DESC
+            </otherwise>
+        </choose>
+	</select>
+
+    <!-- 회사차운행관리 상세 목록 갯수  -->
+    <select id="selectCmpCarRunMngSubCnt" parameterType="CmpCarRunMngSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0306T A
+         WHERE A.VIN_NO = #{sVinNo}
+    </select>
+
+    <!-- 회사차운행관리 상세 목록 갯수  -->
+    <select id="selectCmpCarRunMngSub" parameterType="CmpCarRunMngSearchVO" resultType="CmpCarRunMngVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A.DLR_CD,
+                       A.VIN_NO,
+                       FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM,
+                       FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD) AS MODEL_NM,
+                       A.OCN_CD,
+                       FN_GET_OCN_NM_NC(A.MODEL_CD, A.OCN_CD) AS OCN_NM,
+                       FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD) AS EXT_COLOR_NM,
+                       A.CAR_STAT_CD,
+                       A.CPN_CAR_TP,
+                       A.START_DT,
+                       A.END_DT,
+                       A.ENGINE_NO,
+                       B.SEQ,
+                       B.VIN_NO,
+                       B.CAR_REG_NO,
+                       B.USER_ID,
+                       B.USE_START_DT,
+                       B.USE_END_DT,
+                       B.START_KM,
+                       B.END_KM,
+                       B.RUN_KM,
+                       B.ETC_CMNT,
+                       B.USED_OIL,
+                       B.REG_USR_ID,
+                       B.REG_DT
+                  FROM SA_0305T A, SA_0306T B
+                 WHERE A.VIN_NO = B.VIN_NO
+                   AND B.VIN_NO = #{sVinNo}
+                 ORDER BY B.SEQ DESC
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 회사차운행관리 내용을 저장.  -->
+    <update id="updateCmpCarRunMng" parameterType="CmpCarRunMngVO">
+        UPDATE SA_0211T
+           SET USE_START_DT = #{useStartDt}
+             , USE_END_DT = #{useEndDt}
+             , USE_START_KM_VAL = #{useStartKmVal}
+             , USE_END_KM_VAL = #{useEndKmVal}
+             , USR_ID = #{usrId}
+             , REMARK = #{remark}
+             , USE_FUEL_QTY = #{useFuelQty}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+        WHERE VIN_NO = #{vinNo}
+          AND USE_START_DT = #{useStartDt}
+    </update>
+
+    <!-- 회사차운행관리 정보를 등록한다. -->
+    <insert id="insertCmpCarRunMng" parameterType="CmpCarRunMngVO">
+        INSERT INTO SA_0211T(
+               VIN_NO
+             , USE_START_DT
+             , USE_END_DT
+             , CAR_REG_NO
+             , CARLINE_CD
+             , MODEL_CD
+             , OCN_CD
+             , USR_ID
+             , USE_START_KM_VAL
+             , USE_END_KM_VAL
+             , CMP_CAR_DSTIN_CD
+             , REMARK
+             , REG_USR_ID
+             , REG_DT
+             , USE_FUEL_QTY
+        )VALUES(
+               #{vinNo}
+             , #{useStartDt}
+             , #{useEndDt}
+             , #{carRegNo}
+             , #{carlineCd}
+             , #{modelCd}
+             , #{ocnCd}
+             , #{usrId}
+             , #{useStartKmVal}
+             , #{useEndKmVal}
+             , #{cmpCarDstinCd}
+             , #{remark}
+             , #{regUsrId}
+             , SYSDATE
+             , #{useFuelQty}
+        )
+    </insert>
+
+    <select id="selectByPkChk" parameterType="CmpCarRunMngVO" resultType="int">
+    	SELECT COUNT(*) AS VALUE
+    	  FROM SA_0306T A
+    	 WHERE 1=1
+    	   AND A.VIN_NO = #{vinNo}
+    	   AND A.USE_START_DT = #{useStartDt}
+    </select>
+
+    <!-- 시작일시 ~ 종료일시를 체크하여 중복차량 체크  -->
+    <select id="selectUseDtChkCnt" parameterType="CmpCarRunMngVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM (SELECT *
+                  FROM SA_0306T
+                 WHERE VIN_NO = #{vinNo}
+                ) A
+         WHERE 1 = 1
+           AND #{useStartDt} BETWEEN A.USE_START_DT AND A.USE_END_DT OR #{useEndDt} BETWEEN A.USE_START_DT AND A.USE_END_DT
+            OR (A.USE_START_DT <![CDATA[>]]> #{useStartDt} AND A.USE_END_DT <![CDATA[<]]> #{useEndDt})
+    </select>
+
+    <!-- 차량의 이전 종료km 가져오기  -->
+    <select id="selectUseKmChkCnt" parameterType="CmpCarRunMngVO" resultType="string">
+        SELECT NVL(MAX(USE_END_KM_VAL),0) AS CHK_USE_END_KM
+          FROM (
+                SELECT * FROM SA_0211T WHERE VIN_NO = #{vinNo}
+                <if test='useStartDt != null'>
+                AND USE_START_DT != #{useStartDt}
+                </if>
+                )  SA0211
+         WHERE 1=1
+           AND SA0211.VIN_NO = #{vinNo}
+    </select>
+
+    <!-- 회사차운행관리헤더 정보를 등록한다. -->
+    <insert id="insertCmpCarRunMngMain" parameterType="CmpCarRunMngVO">
+        MERGE INTO SA_0305T A
+        USING (SELECT #{dlrCd}                                  AS DLR_CD,
+                      #{vinNo}                                  AS VIN_NO,
+                      #{carlineCd}                              AS CARLINE_CD,
+                      #{modelCd}                                AS MODEL_CD,
+                      #{ocnCd}                                  AS OCN_CD,
+                      #{extColorCd}                             AS EXT_COLOR_CD,
+                      DECODE(#{carStatCd},'','U', #{carStatCd}) AS CAR_STAT_CD,
+                      #{cpnCarTp}                               AS CPN_CAR_TP,
+                      #{startDt}                                AS START_DT,
+                      #{endDt}                                  AS END_DT,
+                      #{engineNo}                               AS ENGINE_NO,
+                      #{updtUsrId}                              AS REG_USR_ID,
+                      SYSDATE                                   AS REG_DT,
+                      #{updtUsrId}                              AS UPDT_USR_ID,
+                      SYSDATE                                   AS UPDT_DT
+                 FROM DUAL) B
+        ON (A.DLR_CD = B.DLR_CD AND A.VIN_NO = B.VIN_NO)
+        WHEN MATCHED THEN
+            UPDATE
+               SET A.CAR_STAT_CD = B.CAR_STAT_CD,
+                   A.START_DT    = B.START_DT,
+                   A.END_DT      = B.END_DT,
+                   A.UPDT_USR_ID = B.UPDT_USR_ID,
+                   A.UPDT_DT     = B.UPDT_DT
+        WHEN NOT MATCHED THEN
+            INSERT
+                (A.DLR_CD,
+                 A.VIN_NO,
+                 A.CARLINE_CD,
+                 A.MODEL_CD,
+                 A.OCN_CD,
+                 A.EXT_COLOR_CD,
+                 A.CAR_STAT_CD,
+                 A.CPN_CAR_TP,
+                 A.START_DT,
+                 A.END_DT,
+                 A.ENGINE_NO,
+                 A.REG_USR_ID,
+                 A.REG_DT,
+                 A.UPDT_USR_ID,
+                 A.UPDT_DT)
+            VALUES
+                (B.DLR_CD,
+                 B.VIN_NO,
+                 B.CARLINE_CD,
+                 B.MODEL_CD,
+                 B.OCN_CD,
+                 B.EXT_COLOR_CD,
+                 B.CAR_STAT_CD,
+                 B.CPN_CAR_TP,
+                 B.START_DT,
+                 B.END_DT,
+                 B.ENGINE_NO,
+                 B.REG_USR_ID,
+                 B.REG_DT,
+                 B.UPDT_USR_ID,
+                 B.UPDT_DT)
+    </insert>
+
+    <update id="updateMasterVheicleUpdate">
+        UPDATE SA_0121T
+           SET CMP_CAR_YN = 'Y'
+             , CMP_CAR_DSTIN_CD = #{cpnCarTp}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+        WHERE VIN_NO = #{vinNo}
+    </update>
+
+    <!-- 회사차운행관리디테일 정보를 등록한다. -->
+    <insert id="insertCmpCarRunMngSub" parameterType="CmpCarRunMngVO">
+        <selectKey resultType="int" keyProperty="seq" order="BEFORE">
+          SELECT NVL(MAX(SEQ), 0) + 1 AS seq
+            FROM SA_0306T
+           WHERE VIN_NO = #{vinNo}
+        </selectKey>
+        INSERT INTO SA_0306T
+            (SEQ,
+             VIN_NO,
+             CAR_REG_NO,
+             USER_ID,
+             USE_START_DT,
+             USE_END_DT,
+             START_KM,
+             END_KM,
+             RUN_KM,
+             ETC_CMNT,
+             USED_OIL,
+             REG_USR_ID,
+             REG_DT)
+        VALUES(
+             #{seq},
+             #{vinNo},
+             #{carRegNo},
+             #{userId},
+             #{useStartDt},
+             #{useEndDt},
+             #{startKm},
+             #{endKm},
+             #{runKm},
+             #{etcCmnt},
+             #{usedOil},
+             #{regUsrId},
+             SYSDATE)
+    </insert>
+
+    <select id="selectVehicleMasterPopupSrchCnt" parameterType="CmpCarRunMngSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0121T A, SA_0305T B
+         WHERE A.ORD_DLR_CD = B.DLR_CD(+)
+           AND A.VIN_NO = B.VIN_NO(+)
+           AND A.ORD_DLR_CD = #{sDlrCd}
+           AND A.CAR_STAT_CD IN ('50','60','70')
+           AND A.NCAR_DSTIN_CD = 'N'
+        <if test='sCarlineCd != null and sCarlineCd != ""'>
+            AND A.CARLINE_CD = #{sCarlineCd}
+        </if>
+        <if test='sModelCd != null and sModelCd != ""'>
+            AND A.MODEL_CD = #{sModelCd}
+        </if>
+        <if test='sOcnCd != null and sOcnCd != ""'>
+            AND A.OCN_CD = #{sOcnCd}
+        </if>
+        <if test='sExtColorCd != null and sExtColorCd != ""'>
+            AND A.EXT_COLOR_CD = #{sExtColorCd}
+        </if>
+        <if test='sIntColorCd != null and sIntColorCd != ""'>
+            AND A.INT_COLOR_CD = #{sIntColorCd}
+        </if>
+        <if test='sVinNo != null and sVinNo != ""'>
+            AND A.VIN_NO LIKE '%' || #{sVinNo} || '%'
+        </if>
+        <if test='sCarStatCd != null and sCarStatCd != ""'>
+            AND A.CAR_STAT_CD = #{sCarStatCd}
+        </if>
+        <if test='sCarRegNo != null and sCarRegNo != ""'>
+            AND A.CAR_REG_NO LIKE '%' || #{sCarRegNo} || '%'
+        </if>
+        <if test='sCpnCarTp != null and sCpnCarTp != ""'>
+            AND B.CPN_CAR_TP = #{sCpnCarTp}
+        </if>
+        <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+            AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD)  = #{sFscCd}
+        </if>
+        <if test='sFscCd == "None"'>
+            AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+        </if>
+    </select>
+
+    <select id="selectVehicleMasterPopupSrch" parameterType="CmpCarRunMngSearchVO" resultType="CmpCarRunMngVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_CARLINE_NM_NC(T1.CARLINE_CD) AS CARLINE_NM
+                 , FN_GET_MODEL_TP_NM(T1.MODEL_CD, T1.OCN_CD) AS MODEL_NM
+                 , FN_GET_OCN_NM_NC(T1.MODEL_CD, T1.OCN_CD) AS OCN_NM
+                 , FN_GET_EXT_COLOR_NM_NC(T1.EXT_COLOR_CD) AS EXT_COLOR_NM
+                 , FN_GET_INT_COLOR_NM_NC(T1.INT_COLOR_CD) AS INT_COLOR_NM
+                 , T1.* FROM (
+                SELECT A.CAR_ID
+                     , A.VIN_NO
+                     , A.CARLINE_CD
+                     , A.MODEL_CD
+                     , A.OCN_CD
+                     , A.EXT_COLOR_CD
+                     , A.INT_COLOR_CD
+                     , A.CAR_STAT_CD
+                     , A.CAR_REG_NO
+                     , A.ORD_TP
+                     , A.CAR_REG_NO
+                     , A.ENGIN_SERIAL_NO
+                     , DECODE(B.CPN_CAR_TP, '', '99', B.CPN_CAR_TP) AS CPN_CAR_TP
+                     , ( SELECT Z8.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL053'   /*회사차유형*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z8
+                         WHERE B.CPN_CAR_TP = Z8.CMM_CD
+                       ) AS CPN_CAR_TP_NM
+                  FROM SA_0121T A, SA_0305T B
+                 WHERE A.ORD_DLR_CD = B.DLR_CD(+)
+                   AND A.VIN_NO = B.VIN_NO(+)
+                   AND A.ORD_DLR_CD = #{sDlrCd}
+                   AND A.CAR_STAT_CD IN ('50','60','70')
+                   AND A.NCAR_DSTIN_CD = 'N'
+                <if test='sCarlineCd != null and sCarlineCd != ""'>
+                    AND A.CARLINE_CD = #{sCarlineCd}
+                </if>
+                <if test='sModelCd != null and sModelCd != ""'>
+                    AND A.MODEL_CD = #{sModelCd}
+                </if>
+                <if test='sOcnCd != null and sOcnCd != ""'>
+                    AND A.OCN_CD = #{sOcnCd}
+                </if>
+                <if test='sExtColorCd != null and sExtColorCd != ""'>
+                    AND A.EXT_COLOR_CD = #{sExtColorCd}
+                </if>
+                <if test='sIntColorCd != null and sIntColorCd != ""'>
+                    AND A.INT_COLOR_CD = #{sIntColorCd}
+                </if>
+                <if test='sVinNo != null and sVinNo != ""'>
+                    AND A.VIN_NO LIKE '%' || #{sVinNo} || '%'
+                </if>
+                <if test='sCarStatCd != null and sCarStatCd != ""'>
+                    AND A.CAR_STAT_CD = #{sCarStatCd}
+                </if>
+                <if test='sCarRegNo != null and sCarRegNo != ""'>
+                    AND A.CAR_REG_NO LIKE '%' || #{sCarRegNo} || '%'
+                </if>
+                 <if test='sCpnCarTp != null and sCpnCarTp != ""'>
+                    AND B.CPN_CAR_TP = #{sCpnCarTp}
+                 </if>
+                <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                    AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) = #{sFscCd}
+                </if>
+                <if test='sFscCd == "None"'>
+                    AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+                </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "vinNo"'>A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carId"'>A.CAR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carStatNm"'>A.CAR_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineNm"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelNm"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnNm"'>A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "extColorNm"'>A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "intColorNm"'>A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "mmCnt"'>A.MM_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.REG_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.REG_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+                <where>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        ROWNUM <![CDATA[<=]]> #{lastIndex}
+                    </if>
+                </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <update id="updateCmpCarMngDoneVheicle">
+        UPDATE SA_0305T
+           SET CAR_STAT_CD = 'D'
+             , UPDT_USR_ID = 'EXPIRED'
+             , UPDT_DT = SYSDATE
+        WHERE END_DT <![CDATA[<]]> SYSDATE
+          AND CAR_STAT_CD = 'U'
+    </update>
+
+    <select id="selectStartKmChk" parameterType="CmpCarRunMngVO" resultType="int">
+        SELECT NVL(MAX(END_KM),0)
+          FROM SA_0306T
+         WHERE VIN_NO = #{vinNo}
+    </select>
+
+    <delete id="deleteCmpCarRunMngMain" parameterType="CmpCarRunMngVO">
+        DELETE SA_0305T
+         WHERE DLR_CD = #{dlrCd}
+           AND VIN_NO = #{vinNo}
+    </delete>
+
+    <update id="updateMasterVheicleRemoveUpdate">
+        UPDATE SA_0121T
+           SET CMP_CAR_YN = 'N'
+             , CMP_CAR_DSTIN_CD = ''
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+        WHERE VIN_NO = #{vinNo}
+    </update>
+
+    <delete id="deleteCmpCarRunMngSub" parameterType="CmpCarRunMngVO">
+        DELETE SA_0306T
+         WHERE VIN_NO = #{vinNo}
+           AND SEQ = #{seq}
+    </delete>
+
+    <select id="selectSubDataChk" parameterType="CmpCarRunMngVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0306T
+         WHERE VIN_NO = #{vinNo}
+    </select>
+</mapper>

@@ -1,0 +1,1332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : ReservationReceiptDAO_SqlMap.xml
+    Description : BAY 관리에 관한 데이터처리
+    author KyungMok Kim
+    since 2016. 01. 19.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 19.  KyungMok Kim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.cmm.service.dao.VehOfCustInfoDAO">
+
+    <!-- 조회. -->
+    <select id="selectVehOfCustInfoByCondition" parameterType="VehOfCustInfoSearchVO" resultType="VehOfCustInfoVO">
+            /* [chn.bhmc.dms.ser.cmm.service.dao.VehOfCustInfoDAO.selectVehOfCustInfoByCondition] */
+            SELECT * FROM (
+                   SELECT * FROM (
+                        SELECT ROWNUM AS RNUM
+                              ,VN.*
+                              ,CU.CUST_NO
+                              ,CU.CAR_OWNER_ID
+                              ,CU.CAR_OWNER_NM
+                              ,CU.CAR_OWNER_TEL_NO
+                              ,CU.CAR_OWNER_HP_NO
+                              ,CU.BHMC_YN
+                          FROM (
+                                  SELECT CAR_ID                     --CAR ID
+                                        ,VIN_NO                     --차대번호
+                                        ,VIN_NO1                    --차대번호1
+                                        ,VIN_NO2                    --차대번호2
+                                        ,CAR_DSTIN_CD               --차량구분코드
+                                        ,CAR_REG_NO                 --차량등록번호
+                                        ,ENGIN_MODEL_CD||ENGIN_SERIAL_NO AS ENGIN_NO -- 엔진번호
+                                        ,SIGNOFF_DT                 --생산일자
+                                        ,GRTE_START_DT              --보증시작일자.
+                                        ,NVL(CAR_RUN_DIST_VAL,0)CAR_RUN_DIST_VAL --차량주행거리값
+                                        ,CARLINE_CD                 --차종코드
+                                        ,FN_GET_CARLINE_NM_NC(CARLINE_CD) AS CARLINE_NM
+                                        ,DLR_CD
+                                    FROM SA_0121T
+                                    WHERE DEL_YN ='N'
+                                      AND CAR_STAT_CD >= '50' -- 임시로 딜러 입고 상태부터 조회 ( 50 : 딜러입고 , 60 : 계약 ,70 : 출고)
+                                      AND DLR_CD = #{sDlrCd}
+                                      <if test='sVinNo != null and sVinNo != ""'>
+                                         AND VIN_NO LIKE '%${sVinNo}%'
+                                     </if>
+                                      <choose>
+                                        <when test='sVinNo != null and sVinNo != ""'>
+                                            <if test='sFullVinNo != null and sFullVinNo != ""'>
+                                                 AND VIN_NO = #{sFullVinNo}
+                                            </if>
+                                            <if test='sVinNo2 != null and sVinNo2 != ""'>
+                                                 AND VIN_NO2 = #{sVinNo2}
+                                            </if>
+                                        </when>
+                                     </choose>
+                                      <if test='sCarNo != null and sCarNo != ""'>
+                                       AND CAR_REG_NO LIKE '%${sCarNo}%'
+                                      </if>
+                                      <if test='sCarlineCd != null and sCarlineCd != ""'>
+                                       AND CARLINE_CD = #{sCarlineCd}
+                                      </if>
+                                   )VN LEFT OUTER JOIN (
+                                    SELECT B.DLR_CD
+                                          ,A.VIN_NO
+                                          ,B.CUST_NO
+                                          ,B.CUST_NO AS CAR_OWNER_ID
+                                          ,B.CUST_NM AS CAR_OWNER_NM
+                                          ,B.TEL_NO  AS CAR_OWNER_TEL_NO
+                                          ,B.HP_NO   AS CAR_OWNER_HP_NO
+                                          ,B.BHMC_YN
+                                      FROM SA_0123T A, CR_0101T B
+                                     WHERE A.DLR_CD = B.DLR_CD
+                                       AND A.BP_CD = B.CUST_NO
+                                       AND A.USE_YN = 'Y'
+                                       AND B.DEL_YN = 'N'
+                                       AND B.DLR_CD = #{sDlrCd}
+                                       <if test='sBhmcYn != null and sBhmcYn != "" '>
+                                       AND B.BHMC_YN = #{sBhmcYn}
+                                      </if>
+                                      <if test='sTelNo != null and sTelNo != "" '>
+                                       AND B.TEL_NO LIKE '%' ||  #{sTelNo} || '%'
+                                      </if>
+                                      <if test='sVinNo != null and sVinNo != ""'>
+                                         AND A.VIN_NO LIKE '%${sVinNo}%'
+                                     </if>
+                                      <choose>
+                                        <when test='sVinNo != null and sVinNo != ""'>
+                                            <if test='sFullVinNo != null and sFullVinNo != ""'>
+                                                 AND A.VIN_NO = #{sFullVinNo}
+                                            </if>
+                                        </when>
+                                     </choose>
+                                      <if test='sCustNm != null and sCustNm != ""'>
+                                       AND B.CUST_NM LIKE '%${sCustNm}%'
+                                      </if>
+                                      <if test='sHpNo != null and sHpNo != ""'>
+                                       AND B.HP_NO LIKE '%${sHpNo}%'
+                                      </if>
+                                   )CU
+                                  ON VN.VIN_NO = CU.VIN_NO
+                                 AND VN.DLR_CD = CU.DLR_CD
+                     )T1
+                    <where>
+                      <if test='firstIndex != -1 and lastIndex != -1'>
+                       AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                      </if>
+                      <if test='sBhmcYn != null and sBhmcYn != "" '>
+                       AND T1.BHMC_YN IS NOT NULL
+                      </if>
+                      <if test='sTelNo != null and sTelNo != "" '>
+                       AND T1.CAR_OWNER_TEL_NO IS NOT NULL
+                      </if>
+                      <if test='sCustNm != null and sCustNm != ""'>
+                       AND T1.CAR_OWNER_NM  IS NOT NULL
+                      </if>
+                      <if test='sHpNo != null and sHpNo != ""'>
+                       AND T1.CAR_OWNER_HP_NO  IS NOT NULL
+                      </if>
+                 </where>
+                  ORDER BY T1.VIN_NO
+             )
+           <where>
+               <if test='firstIndex != -1 and lastIndex != -1'>
+                 RNUM > #{firstIndex}
+               </if>
+           </where>
+
+    </select>
+
+    <!-- 차량정보 목록수를 조회. -->
+    <select id="selectVehOfCustInfoByConditionCnt" parameterType="VehOfCustInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.cmm.service.dao.VehOfCustInfoDAO.selectVehOfCustInfoByConditionCnt] */
+
+               SELECT COUNT(T1.VIN_NO) AS VALUE FROM(
+                 SELECT VN.VIN_NO
+                       ,CU.CUST_NO
+                       ,CU.CUST_NM
+                       ,VN.DLR_CD
+                       ,CU.BHMC_YN
+                       ,CU.TEL_NO
+                       ,CU.HP_NO
+                   FROM (
+                      SELECT VIN_NO , DLR_CD                  --차대번호
+                        FROM SA_0121T
+                        WHERE DEL_YN ='N'
+                          AND DLR_CD = #{sDlrCd}
+                          AND CAR_STAT_CD >= '50' -- 임시로 딜러 입고 상태부터 조회 ( 50 : 딜러입고 , 60 : 계약 ,70 : 출고)
+                          <if test='sVinNo != null and sVinNo != ""'>
+                          AND VIN_NO LIKE '%${sVinNo}%'
+                          </if>
+                          <choose>
+                            <when test='sVinNo != null and sVinNo != ""'>
+                                <if test='sFullVinNo != null and sFullVinNo != ""'>
+                                     AND VIN_NO = #{sFullVinNo}
+                                </if>
+                                <if test='sVinNo2 != null and sVinNo2 != ""'>
+                                     AND VIN_NO2 = #{sVinNo2}
+                                </if>
+                            </when>
+                         </choose>
+                          <if test='sCarNo != null and sCarNo != ""'>
+                           AND CAR_REG_NO LIKE '%${sCarNo}%'
+                          </if>
+                          <if test='sCarlineCd != null and sCarlineCd != ""'>
+                           AND CARLINE_CD = #{sCarlineCd}
+                          </if>
+                       )VN LEFT OUTER JOIN (
+                        SELECT A.VIN_NO
+                              ,B.DLR_CD
+                              ,B.BHMC_YN
+                              ,B.TEL_NO
+                              ,B.CUST_NO
+                              ,B.CUST_NM
+                              ,B.HP_NO
+                          FROM SA_0123T A, CR_0101T B
+                         WHERE A.DLR_CD = B.DLR_CD
+                           AND A.BP_CD = B.CUST_NO
+                           AND A.USE_YN = 'Y'
+                           AND B.DEL_YN ='N'
+                           AND B.DLR_CD = #{sDlrCd}
+                           <if test='sBhmcYn != null and sBhmcYn != "" '>
+                           AND B.BHMC_YN = #{sBhmcYn}
+                          </if>
+                          <if test='sTelNo != null and sTelNo != "" '>
+                           AND B.TEL_NO LIKE '%' ||  #{sTelNo} || '%'
+                          </if>
+                          <if test='sVinNo != null and sVinNo != ""'>
+                           AND A.VIN_NO LIKE '%${sVinNo}%'
+                         </if>
+                          <choose>
+                            <when test='sVinNo != null and sVinNo != ""'>
+                                <if test='sFullVinNo != null and sFullVinNo != ""'>
+                                     AND A.VIN_NO = #{sFullVinNo}
+                                </if>
+                            </when>
+                         </choose>
+                          <if test='sCustNm != null and sCustNm != ""'>
+                           AND B.CUST_NM LIKE '%${sCustNm}%'
+                          </if>
+                          <if test='sHpNo != null and sHpNo != ""'>
+                           AND B.HP_NO LIKE '%${sHpNo}%'
+                          </if>
+                   )CU
+                  ON VN.VIN_NO = CU.VIN_NO
+                 AND VN.DLR_CD = CU.DLR_CD
+               )T1
+               <where>
+                   <if test='sBhmcYn != null and sBhmcYn != "" '>
+                       AND T1.BHMC_YN IS NOT NULL
+                   </if>
+                   <if test='sTelNo != null and sTelNo != "" '>
+                    AND T1.TEL_NO IS NOT NULL
+                   </if>
+                   <if test='sCustNm != null and sCustNm != ""'>
+                    AND T1.CUST_NM  IS NOT NULL
+                   </if>
+                   <if test='sHpNo != null and sHpNo != ""'>
+                    AND T1.HP_NO  IS NOT NULL
+                   </if>
+               </where>
+    </select>
+
+    <!-- 조회. -->
+    <select id="selectVehOfCustInfoByCondition_20160905" parameterType="VehOfCustInfoSearchVO" resultType="VehOfCustInfoVO">
+            /* [chn.bhmc.dms.ser.cmm.service.dao.VehOfCustInfoDAO.selectVehOfCustInfoByCondition] */
+            SELECT *
+                FROM (
+                SELECT ROWNUM AS RNUM , T1.*
+                  FROM (
+                 SELECT
+                         VN.CAR_ID                     --CAR ID
+                        ,VN.VIN_NO                     --차대번호
+                        ,VN.VIN_NO1                    --차대번호1
+                        ,VN.VIN_NO2                    --차대번호2
+                        ,VN.CAR_DSTIN_CD               --차량구분코드
+                        ,VN.CAR_REG_NO                 --차량등록번호
+                        ,VN.ENGIN_MODEL_CD||VN.ENGIN_SERIAL_NO AS ENGIN_NO -- 엔진번호
+                        ,VN.SIGNOFF_DT                 --생산일자
+                        ,VN.GRTE_START_DT              --보증시작일자.
+                        ,NVL(CAR_RUN_DIST_VAL,0)CAR_RUN_DIST_VAL --차량주행거리값
+                        ,VN.CARLINE_CD                 --차종코드
+                        ,FN_GET_CARLINE_NM_NC(VN.CARLINE_CD) AS CARLINE_NM
+                        ,VN.DLR_CD
+                        ,CU.CUST_NO
+                        ,CU.CUST_NO AS CAR_OWNER_ID
+                        ,CU.CUST_NM AS CAR_OWNER_NM
+                        ,CU.TEL_NO  AS CAR_OWNER_TEL_NO
+                        ,CU.HP_NO   AS CAR_OWNER_HP_NO
+                        ,CU.BHMC_YN
+                    FROM SA_0121T VN , (
+                       SELECT A.DLR_CD
+                             ,A.VIN_NO
+                             ,B.CUST_NO
+                             ,B.CUST_NM
+                             ,B.TEL_NO
+                             ,B.HP_NO
+                             ,B.BHMC_YN
+                          FROM SA_0123T A, CR_0101T B
+                        WHERE A.DLR_CD = B.DLR_CD
+                          AND A.BP_CD = B.CUST_NO
+                          AND A.USE_YN = 'Y'
+                          AND B.DEL_YN ='N'
+                          AND A.DLR_CD = #{sDlrCd}
+                          <if test='sBhmcYn != null and sBhmcYn != "" '>
+                          AND B.BHMC_YN = #{sBhmcYn}
+                          </if>
+                          <if test='sTelNo != null and sTelNo != "" '>
+                          AND B.TEL_NO LIKE '%' ||  #{sTelNo} || '%'
+                          </if>
+                          <if test='sVinNo != null and sVinNo != ""'>
+                              AND A.VIN_NO LIKE '%${sVinNo}%'
+                          </if>
+                          <if test='sCustNm != null and sCustNm != ""'>
+                              AND B.CUST_NM LIKE '%${sCustNm}%'
+                          </if>
+                          <if test='sHpNo != null and sHpNo != ""'>
+                              AND B.HP_NO LIKE '%${sHpNo}%'
+                          </if>
+                    )CU
+                   WHERE VN.DEL_YN ='N'
+                     AND VN.DLR_CD = #{sDlrCd}
+                     AND VN.CAR_STAT_CD >= '50' -- 임시로 딜러 입고 상태부터 조회 ( 50 : 딜러입고 , 60 : 계약 ,70 : 출고)
+                     <if test='sVinNo != null and sVinNo != ""'>
+                         AND VN.VIN_NO LIKE '%${sVinNo}%'
+                     </if>
+                     <if test='sCarNo != null and sCarNo != ""'>
+                         AND VN.CAR_REG_NO LIKE '%${sCarNo}%'
+                     </if>
+                     <if test='sCarlineCd != null and sCarlineCd != ""'>
+                         AND VN.CARLINE_CD = #{sCarlineCd}
+                     </if>
+                     AND CU.VIN_NO = VN.VIN_NO
+                  )T1
+                  <where>
+                      <if test='firstIndex != -1 and lastIndex != -1'>
+                       AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                      </if>
+                 </where>
+                  ORDER BY T1.VIN_NO
+             )
+           <where>
+               <if test='firstIndex != -1 and lastIndex != -1'>
+                 RNUM > #{firstIndex}
+               </if>
+           </where>
+
+    </select>
+
+    <!-- 차량정보 목록수를 조회. -->
+    <select id="selectVehOfCustInfoByConditionCnt_20160905" parameterType="VehOfCustInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.cmm.service.dao.VehOfCustInfoDAO.selectVehOfCustInfoByConditionCnt] */
+
+             SELECT
+                 COUNT(VN.VIN_NO) AS VALUE
+            FROM SA_0121T VN , (
+               SELECT A.DLR_CD , A.VIN_NO , B.CUST_NO , B.CUST_NM , B.TEL_NO , B.HP_NO
+                  FROM SA_0123T A, CR_0101T B
+                WHERE A.DLR_CD = B.DLR_CD
+                  AND A.BP_CD = B.CUST_NO
+                  AND A.USE_YN = 'Y'
+                  AND B.DEL_YN ='N'
+                  AND A.DLR_CD = #{sDlrCd}
+                  <if test='sBhmcYn != null and sBhmcYn != "" '>
+                  AND B.BHMC_YN = #{sBhmcYn}
+                  </if>
+                  <if test='sTelNo != null and sTelNo != "" '>
+                  AND B.TEL_NO LIKE '%' ||  #{sTelNo} || '%'
+                  </if>
+                  <if test='sVinNo != null and sVinNo != ""'>
+                  AND A.VIN_NO LIKE '%${sVinNo}%'
+                  </if>
+                  <if test='sCustNm != null and sCustNm != ""'>
+                  AND B.CUST_NM LIKE '%${sCustNm}%'
+                  </if>
+                  <if test='sHpNo != null and sHpNo != ""'>
+                  AND B.HP_NO LIKE '%${sHpNo}%'
+                  </if>
+            )CU
+           WHERE VN.DEL_YN ='N'
+             AND VN.CAR_STAT_CD <![CDATA[>=]]> '50' -- 임시로 딜러 입고 상태부터 조회 ( 50 : 딜러입고 , 60 : 계약 ,70 : 출고)
+             <if test='sVinNo != null and sVinNo != ""'>
+                 AND VN.VIN_NO LIKE '%${sVinNo}%'
+             </if>
+             <if test='sCarNo != null and sCarNo != ""'>
+                 AND VN.CAR_REG_NO LIKE '%${sCarNo}%'
+             </if>
+             <if test='sCarlineCd != null and sCarlineCd != ""'>
+                 AND VN.CARLINE_CD = #{sCarlineCd}
+             </if>
+
+             AND CU.VIN_NO = VN.VIN_NO
+    </select>
+
+    <!-- 조회. -->
+    <select id="selectVehInfoByCondition" parameterType="VehOfCustInfoSearchVO" resultType="VehOfCustInfoVO">
+        /* [chn.bhmc.dms.ser.cmm.service.dao.VehOfCustInfoDAO.selectVehInfoByCondition] */
+            SELECT * FROM (
+                SELECT ROWNUM AS RNUM , T1.*
+                  FROM (
+                    SELECT VN.*
+                          ,CU.CUST_NO
+                          ,CU.CUST_NO AS CAR_OWNER_ID
+                          ,CU.CUST_NM AS CAR_OWNER_NM
+                          ,CU.TEL_NO  AS CAR_OWNER_TEL_NO
+                          ,CU.HP_NO   AS CAR_OWNER_HP_NO
+                      FROM (
+                     SELECT
+                             CAR_ID                     --CAR ID
+                            ,VIN_NO                     --차대번호
+                            ,VIN_NO1                    --차대번호1
+                            ,VIN_NO2                    --차대번호2
+                            ,CAR_DSTIN_CD               --차량구분코드
+                            ,CAR_REG_NO                 --차량등록번호
+                            ,ENGIN_MODEL_CD||ENGIN_SERIAL_NO AS ENGIN_NO -- 엔진번호
+                            ,SIGNOFF_DT                 --생산일자
+                            ,GRTE_START_DT              --보증시작일자.
+                            ,NVL(CAR_RUN_DIST_VAL,0)CAR_RUN_DIST_VAL --차량주행거리값
+                            ,CARLINE_CD                 --차종코드
+                            ,DLR_CD
+                        FROM SA_0121T
+                        WHERE DEL_YN ='N'
+                          AND CAR_STAT_CD <![CDATA[>=]]> '50' -- 임시로 딜러 입고 상태부터 조회 ( 50 : 딜러입고 , 60 : 계약 ,70 : 출고)
+                         <if test='sVinNo != null and sVinNo != ""'>
+                             AND VIN_NO LIKE '%${sVinNo}%'
+                         </if>
+                         <if test='sCarNo != null and sCarNo != ""'>
+                             AND CAR_REG_NO LIKE '%${sCarNo}%'
+                         </if>
+                      ) VN  LEFT OUTER JOIN (
+                       SELECT A.DLR_CD , A.VIN_NO , B.CUST_NO , B.CUST_NM , B.TEL_NO , B.HP_NO
+                          FROM SA_0123T A, CR_0101T B
+                        WHERE A.DLR_CD = B.DLR_CD
+                          AND A.BP_CD = B.CUST_NO
+                          AND A.USE_YN = 'Y'
+                          AND B.DEL_YN ='N'
+                          AND A.DLR_CD = #{sDlrCd}
+                          <if test='sVinNo != null and sVinNo != ""'>
+                              AND A.VIN_NO LIKE '%${sVinNo}%'
+                          </if>
+                          <if test='sCustNm != null and sCustNm != ""'>
+                              AND B.CUST_NM LIKE '%${sCustNm}%'
+                          </if>
+                    )CU
+                     ON CU.VIN_NO = VN.VIN_NO
+                  )T1
+                   <where>
+                      <if test='firstIndex != -1 and lastIndex != -1'>
+                       AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                      </if>
+                   </where>
+                  ORDER BY T1.VIN_NO
+             )
+           <where>
+               <if test='firstIndex != -1 and lastIndex != -1'>
+                 RNUM > #{firstIndex}
+               </if>
+           </where>
+
+    </select>
+
+    <!-- 차량정보 목록수를 조회. -->
+    <select id="selectVehInfoByConditionCnt" parameterType="VehOfCustInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.cmm.service.dao.VehOfCustInfoDAO.selectVehInfoByConditionCnt] */
+
+                SELECT COUNT(VN.VIN_NO) VALUE
+                  FROM (
+                 SELECT VIN_NO                     --차대번호
+                    FROM SA_0121T
+                    WHERE DEL_YN ='N'
+                      AND CAR_STAT_CD <![CDATA[>=]]> '50' -- 임시로 딜러 입고 상태부터 조회 ( 50 : 딜러입고 , 60 : 계약 ,70 : 출고)
+                     <if test='sVinNo != null and sVinNo != ""'>
+                         AND VIN_NO LIKE '%${sVinNo}%'
+                     </if>
+                     <if test='sCarNo != null and sCarNo != ""'>
+                         AND CAR_REG_NO LIKE '%${sCarNo}%'
+                     </if>
+                  ) VN  LEFT OUTER JOIN (
+                   SELECT A.DLR_CD , A.VIN_NO , B.CUST_NO , B.CUST_NM , B.TEL_NO , B.HP_NO
+                      FROM SA_0123T A, CR_0101T B
+                    WHERE A.DLR_CD = B.DLR_CD
+                      AND A.BP_CD = B.CUST_NO
+                      AND A.USE_YN = 'Y'
+                      AND B.DEL_YN ='N'
+                      AND A.DLR_CD = #{sDlrCd}
+                      <if test='sVinNo != null and sVinNo != ""'>
+                          AND A.VIN_NO LIKE '%${sVinNo}%'
+                      </if>
+                      <if test='sCustNm != null and sCustNm != ""'>
+                          AND B.CUST_NM LIKE '%${sCustNm}%'
+                      </if>
+                )CU
+                 ON CU.VIN_NO = VN.VIN_NO
+    </select>
+
+    <!-- 삼포대상 차량정보 -->
+    <select id="selectSanbaoVehOfCustInfoByCondition" parameterType="VehOfCustInfoSearchVO" resultType="VehOfCustInfoVO">
+        /* [chn.bhmc.dms.ser.cmm.service.dao.VehOfCustInfoDAO.selectSanbaoVehOfCustInfoByCondition] */
+
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM , T1.*
+              FROM (
+             SELECT
+                     VN.CAR_ID                                         --CAR ID
+                    ,VN.VIN_NO                                         --차대번호
+                    ,VN.VIN_NO1                                        --차대번호1
+                    ,VN.VIN_NO2                                        --차대번호2
+                    ,VN.CAR_DSTIN_CD                                   --차량구분코드
+                    ,VN.CAR_REG_NO                                     --차량등록번호
+                    ,VN.ENGIN_MODEL_CD||VN.ENGIN_SERIAL_NO AS ENGIN_NO -- 엔진번호
+                    ,VN.SIGNOFF_DT                                     --생산일자
+                    ,VN.GRTE_START_DT                                  --보증시작일자.
+                    ,NVL(CAR_RUN_DIST_VAL,0)CAR_RUN_DIST_VAL           --차량주행거리값
+                    ,VN.CARLINE_CD                                     --차종코드
+                    ,VN.DLR_CD
+                    ,CU.CUST_NO
+                    ,CU.CUST_NO AS CAR_OWNER_ID
+                    ,CU.CUST_NM AS CAR_OWNER_NM
+                    ,CU.TEL_NO  AS CAR_OWNER_TEL_NO
+                    ,CU.HP_NO AS CAR_OWNER_HP_NO
+                FROM SA_0121T VN , SE_1082T ST
+                , (
+                   SELECT A.DLR_CD , A.VIN_NO , B.CUST_NO , B.CUST_NM , B.TEL_NO , B.HP_NO
+                      FROM SA_0123T A, CR_0101T B
+                    WHERE A.DLR_CD = B.DLR_CD
+                      AND A.BP_CD = B.CUST_NO
+                      AND A.USE_YN = 'Y'
+                      AND B.DEL_YN = 'N'
+                      AND A.DLR_CD = #{sDlrCd}
+                )CU
+               WHERE VN.VIN_NO = ST.VIN_NO
+                 AND VN.VIN_NO1 = ST.VIN_NO1
+                 AND VN.VIN_NO2 = ST.VIN_NO2
+                 AND VN.CAR_ID = ST.CAR_ID
+                 AND VN.DEL_YN ='N'
+                 AND VN.CAR_STAT_CD <![CDATA[>=]]> '50' -- 임시로 딜러 입고 상태부터 조회 ( 50 : 딜러입고 , 60 : 계약 ,70 : 출고)
+                 <if test='sVinNo != null and sVinNo != ""'>
+                     AND VN.VIN_NO LIKE '%${sVinNo}%'
+                 </if>
+                 <if test='sCarNo != null and sCarNo != ""'>
+                     AND VN.CAR_REG_NO LIKE '%${sCarNo}%'
+                 </if>
+                 <if test='sCustNm != null and sCustNm != ""'>
+                      AND CU.CUST_NM LIKE '%${sCustNm}%'
+                  </if>
+                 AND CU.VIN_NO = VN.VIN_NO
+              )T1
+              <where>
+                  <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                  </if>
+             </where>
+              ORDER BY T1.VIN_NO
+            )
+       <where>
+           <if test='firstIndex != -1 and lastIndex != -1'>
+             RNUM > #{firstIndex}
+           </if>
+       </where>
+
+    </select>
+
+    <!-- 삼보 대상 차량정보 목록수를 조회. -->
+    <select id="selectSanbaoVehOfCustInfoByConditionCnt" parameterType="VehOfCustInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.cmm.service.dao.VehOfCustInfoDAO.selectSanbaoVehOfCustInfoByConditionCnt] */
+
+               SELECT COUNT(VN.VIN_NO) AS VALUE
+                FROM SA_0121T VN , SE_1082T ST
+                , (
+                   SELECT A.DLR_CD , A.VIN_NO , B.CUST_NO , B.CUST_NM , B.TEL_NO , B.HP_NO
+                      FROM SA_0123T A, CR_0101T B
+                    WHERE A.DLR_CD = B.DLR_CD
+                      AND A.BP_CD = B.CUST_NO
+                      AND A.USE_YN = 'Y'
+                      AND B.DEL_YN = 'N'
+                      AND A.DLR_CD = #{sDlrCd}
+                )CU
+               WHERE VN.VIN_NO = ST.VIN_NO
+                 AND VN.VIN_NO1 = ST.VIN_NO1
+                 AND VN.VIN_NO2 = ST.VIN_NO2
+                 AND VN.CAR_ID = ST.CAR_ID
+                 AND VN.DEL_YN ='N'
+                 AND VN.CAR_STAT_CD <![CDATA[>=]]> '50' -- 임시로 딜러 입고 상태부터 조회 ( 50 : 딜러입고 , 60 : 계약 ,70 : 출고)
+                 <if test='sVinNo != null and sVinNo != ""'>
+                     AND VN.VIN_NO LIKE '%${sVinNo}%'
+                 </if>
+                 <if test='sCarNo != null and sCarNo != ""'>
+                     AND VN.CAR_REG_NO LIKE '%${sCarNo}%'
+                 </if>
+                 <if test='sCustNm != null and sCustNm != ""'>
+                      AND CU.CUST_NM LIKE '%${sCustNm}%'
+                  </if>
+                 AND CU.VIN_NO = VN.VIN_NO
+
+    </select>
+
+    <!-- 차량정보 고객 정보 조회. -->
+    <select id="selectVehOfCustInfoByKey" parameterType="VehOfCustInfoSearchVO" resultType="VehOfCustInfoVO">
+        /* [chn.bhmc.dms.ser.cmm.service.dao.VehOfCustInfoDAO.selectVehOfCustInfoByKey] */
+
+            SELECT VIN.*
+                  ,FN_SER_LTS_MODEL_NM(VIN.LTS_MODEL_CD, #{sLangCd}) AS LTS_MODEL_NM --모델명
+                  ,CUST.DLR_CD
+                  ,CUST.CAR_OWNER_ID
+                  ,CUST.CUST_NO    --소유자ID (CRM 사용)
+                  ,CUST.CAR_OWNER_SEQ
+                  ,CUST.CAR_OWNER_NM
+                  ,CUST.CAR_OWNER_TEL_NO
+                  ,CUST.CAR_OWNER_HP_NO
+                  ,CUST.CAR_OWNER_MAIL_NM
+                  ,CUST.CAR_OWNER_ADDR_SEQ
+                  ,CUST.CAR_OWNER_ZIP_CD
+                  ,CUST.CAR_OWNER_ADDR
+                  ,CUST.CAR_OWNER_SUNG_CD
+                  ,CUST.CAR_OWNER_SUNG_NM
+                  ,CUST.CAR_OWNER_CITY_CD
+                  ,CUST.CAR_OWNER_CITY_NM
+                  ,CUST.CAR_OWNER_DIST_CD
+                  ,CUST.CAR_OWNER_DIST_NM
+                  ,CUST.CAR_OWNER_ADDR_DETL_CONT
+                  ,CUST.CAR_OWNER_PREF_CONTACT_MTH_CD
+                  ,CUST.CAR_OWNER_PREF_CONTACT_TIME_CD
+                  ,CUST.CAR_OWNER_SSN_CRN_NO
+                  ,CUST.CAR_OWNER_MATH_DOC_TP
+                  ,CUST.CAR_OWNER_OFFICE_TEL_NO
+                  ,CUST.CAR_OWNER_PREF_COMM_MTH_CD
+                  ,CUST.CAR_OWNER_PREF_COMM_NO
+                  ,CUST.CAR_OWNER_CUST_TP
+                  ,CUST.CAR_OWNER_CUST_CD
+                  ,CUST.CAR_OWNER_BIRTH_DT
+                  ,CUST.CAR_OWNER_BIRTH_REMAIN_DAY
+                  ,CUST.INC_NO
+                  ,CUST.BEF_INC_NO
+                  ,CUST.INC_CORP_CD
+                  ,CUST.CAR_NO
+                  ,CUST.CAR_NO_REG_DT
+                  ,CUST.INC_END_DT
+                  ,CUST.INC_END_REMAIN_DAY
+                  ,CUST.DRIVER_ID
+                  ,CUST.DRIVER_NM
+                  ,CUST.DRIVER_SSN_CRN_NO
+                  ,CUST.DRIVER_MATH_DOC_TP
+                  ,CUST.DRIVER_TEL_NO
+                  ,CUST.DRIVER_HP_NO
+                  ,CUST.DRIVER_ADDR_SEQ
+                  ,CUST.DRIVER_ZIP_CD
+                  ,CUST.DRIVER_ADDR
+                  ,CUST.DRIVER_SUNG_CD
+                  ,CUST.DRIVER_SUNG_NM
+                  ,CUST.DRIVER_CITY_CD
+                  ,CUST.DRIVER_CITY_NM
+                  ,CUST.DRIVER_DIST_CD
+                  ,CUST.DRIVER_DIST_NM
+                  ,CUST.DRIVER_ADDR_DETL_CONT
+                  ,CUST.DRIVER_MAIL_NM
+                  ,CUST.DRIVER_PREF_CONTACT_MTH_CD
+                  ,CUST.DRIVER_PREF_CONTACT_TIME_CD
+                  ,CUST.DRIVER_OFFICE_TEL_NO
+                  ,CUST.DRIVER_PREF_COMM_MTH_CD
+                  ,CUST.DRIVER_PREF_COMM_NO
+                  ,CUST.DRIVER_CUST_TP
+                  ,CUST.DRIVER_CUST_CD
+                  ,CUST.DRIVER_BIRTH_DT
+                  ,CUST.DRIVER_BIRTH_REMAIN_DAY
+                  ,CUST.MDRIVER_YN
+                  ,CUST.DRIVER_SEQ
+                  ,CUST.SEX_CD
+             FROM (
+                SELECT *
+                 FROM (
+                  SELECT CAR_ID                     --CAR ID
+                        ,VIN_NO                     --차대번호
+                        ,VIN_NO1                    --차대번호1
+                        ,VIN_NO2                    --차대번호2
+                        ,FN_SER_LTS_MODEL_CD(VIN_NO) AS LTS_MODEL_CD
+                        ,CARLINE_CD                 --차종코드
+                        ,FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_NM
+                        ,MODEL_CD                   --모델코드
+                        ,FN_GET_MODEL_NM(MODEL_CD) AS MODEL_NM
+                        ,OCN_CD                     --OCN CODE
+                        ,EXT_COLOR_CD               --외장
+                        ,FN_GET_EXT_COLOR_NM(EXT_COLOR_CD) AS EXT_COLOR_NM
+                        ,INT_COLOR_CD               --내장
+                        ,CAR_STAT_CD                --VEHICLE STATUS CODE
+                        ,CAR_DSTIN_CD               --차량구분코드
+                        ,DLR_CD                     --딜러코드
+                        ,CONTRACT_NO                --계약번호
+                        ,GR_DT                      --입고일자
+                        ,CAR_REG_NO                 --차량등록번호
+                        ,GRTE_START_DT              --보증시작일자
+                        ,ADD_MONTHS(GRTE_START_DT , (SELECT APPLY_PRID * 12
+                                                        FROM SE_1080T
+                                                       WHERE APPLY_DSTIN_CD ='01') )AS GRTE_END_DT                --보증종료일자
+                        ,'' AS GRTE_END_REMAIN_DAY
+                        ,DEL_YN                     --삭제여부
+                        ,CAR_REG_DT                 --차량등록일자
+                        ,CORP_CAR_DSTIN_CD          --법인차량구분코드
+                        ,MAKER_CD                   --메이커코드
+                        ,ENGIN_MODEL_CD||ENGIN_SERIAL_NO AS ENGIN_NO -- 엔진번호
+                        ,SIGNOFF_DT                 --생산일자
+                        ,DIST_CD                    --지역코드
+                        ,CUST_SALE_DT               --고객판매일자
+                        ,CUST_SALE_CANC_DT          --고객판매취소일자
+                        ,VINM_CMIV                  --직판영업사원ID
+                        ,STAT_CD                    --상태코드
+                        ,CAR_NM                     --차량명
+                        ,CAR_DISP_QTY               --차량배기량
+                        ,NVL(CAR_RUN_DIST_VAL,0)CAR_RUN_DIST_VAL  --차량주행거리값
+                        ,CAR_BRAND_CD               --차량브랜드코드
+                        ,PRE_GI_YN                  --선출고여부
+                        ,ROUND( (SYSDATE - GRTE_START_DT)/ 12 ,0) AS DRIVE_MONTH
+                    FROM SA_0121T
+                   WHERE DEL_YN ='N'
+                     AND CAR_STAT_CD <![CDATA[>=]]> '50' -- 임시로 딜러 입고 상태부터 조회 ( 50 : 딜러입고 , 60 : 계약 ,70 : 출고)
+                     AND VIN_NO = #{sVinNo}
+                 ) A  LEFT OUTER JOIN (SELECT B.USR_NM ,A.CONTRACT_NO ,A.DLR_CD
+                                         FROM SA_0201T A , CM_0801T B --SA_0201T 계약테이블 , CM_0801T : 사용자정보
+                                       WHERE A.SALE_EMP_NO = B.USR_ID
+                                         AND A.DLR_CD = B.DLR_CD
+                                         AND A.DLR_CD = #{sDlrCd}
+                                         ) B
+                   ON A.CONTRACT_NO = B.CONTRACT_NO
+                   AND A.DLR_CD = B.DLR_CD
+             )VIN LEFT OUTER JOIN (
+                              SELECT *
+                               FROM (
+                                  SELECT D.*
+                                   FROM (
+                                   SELECT
+                                           OW.DLR_CD
+                                          ,OW.CAR_OWNER_ID
+                                          ,OW.CAR_OWNER_ID AS CUST_NO    --소유자ID (CRM 사용)
+                                          ,OW.CAR_ID
+                                          ,OW.VIN_NO
+                                          ,OW.CAR_OWNER_SEQ
+                                          ,OW.CAR_OWNER_NM
+                                          ,OW.CAR_OWNER_TEL_NO
+                                          ,OW.CAR_OWNER_HP_NO
+                                          ,OW.CAR_OWNER_MAIL_NM
+                                          ,OW.CAR_OWNER_ADDR_SEQ
+                                          ,OW.CAR_OWNER_ZIP_CD
+                                          ,OW.CAR_OWNER_SUNG_CD
+                                          ,OW.CAR_OWNER_SUNG_NM
+                                          ,OW.CAR_OWNER_CITY_CD
+                                          ,OW.CAR_OWNER_CITY_NM
+                                          ,OW.CAR_OWNER_DIST_CD
+                                          ,OW.CAR_OWNER_DIST_NM
+                                          ,OW.CAR_OWNER_ADDR_DETL_CONT
+                                          ,OW.CAR_OWNER_ADDR
+                                          ,OW.CAR_OWNER_SSN_CRN_NO
+                                          ,OW.CAR_OWNER_PREF_CONTACT_MTH_CD
+                                          ,OW.CAR_OWNER_PREF_CONTACT_TIME_CD
+                                          ,OW.CAR_OWNER_MATH_DOC_TP
+                                          ,OW.CAR_OWNER_CUST_TP
+                                          ,OW.CAR_OWNER_CUST_CD
+                                          ,OW.CAR_OWNER_OFFICE_TEL_NO
+                                          ,OW.CAR_OWNER_PREF_COMM_MTH_CD
+                                          ,OW.CAR_OWNER_PREF_COMM_NO
+                                          ,OW.CAR_OWNER_BIRTH_DT
+                                          ,OW.CAR_OWNER_BIRTH_REMAIN_DAY
+                                          ,OW.INC_NO
+                                          ,OW.BEF_INC_NO
+                                          ,OW.INC_CORP_CD
+                                          ,OW.CAR_NO
+                                          ,OW.CAR_NO_REG_DT
+                                          ,OW.INC_END_DT
+                                          ,'' AS INC_END_REMAIN_DAY
+                                          ,DR.DRIVER_ID
+                                          ,DR.DRIVER_NM
+                                          ,DR.DRIVER_SSN_CRN_NO
+                                          ,DR.DRIVER_MATH_DOC_TP
+                                          ,DR.DRIVER_TEL_NO
+                                          ,DR.DRIVER_HP_NO
+                                          ,DR.DRIVER_ADDR_SEQ
+                                          ,DR.DRIVER_ZIP_CD
+                                          ,DR.DRIVER_ADDR
+                                          ,DR.DRIVER_SUNG_CD
+                                          ,DR.DRIVER_SUNG_NM
+                                          ,DR.DRIVER_CITY_CD
+                                          ,DR.DRIVER_CITY_NM
+                                          ,DR.DRIVER_DIST_CD
+                                          ,DR.DRIVER_DIST_NM
+                                          ,DR.DRIVER_ADDR_DETL_CONT
+                                          ,DR.DRIVER_MAIL_NM
+                                          ,DR.DRIVER_PREF_CONTACT_MTH_CD
+                                          ,DR.DRIVER_PREF_CONTACT_TIME_CD
+                                          ,DR.DRIVER_CUST_TP
+                                          ,DR.DRIVER_CUST_CD
+                                          ,DR.DRIVER_OFFICE_TEL_NO
+                                          ,DR.DRIVER_PREF_COMM_MTH_CD
+                                          ,DR.DRIVER_PREF_COMM_NO
+                                          ,DR.MDRIVER_YN
+                                          ,DR.DRIVER_SEQ
+                                          ,DR.DRIVER_BIRTH_DT
+                                          ,DR.DRIVER_BIRTH_REMAIN_DAY
+                                          ,DR.SEX_CD
+                                     FROM (
+                                    SELECT A.DLR_CD , A.BP_CD AS CAR_OWNER_ID , A.CAR_ID , A.VIN_NO ,A.SEQ AS CAR_OWNER_SEQ
+                                          ,B.CAR_OWNER_NM ,B.CAR_OWNER_TEL_NO ,B.CAR_OWNER_HP_NO
+                                          ,B.CAR_OWNER_MAIL_NM, B.CAR_OWNER_CUST_TP, B.CAR_OWNER_CUST_CD
+                                          ,B.CAR_OWNER_ZIP_CD ,B.CAR_OWNER_ADDR
+                                          ,B.SEQ AS CAR_OWNER_ADDR_SEQ
+                                          ,B.CAR_OWNER_BIRTH_DT ,B.CAR_OWNER_BIRTH_REMAIN_DAY
+                                          ,B.SUNG_CD AS CAR_OWNER_SUNG_CD
+                                          ,B.SUNG_NM AS CAR_OWNER_SUNG_NM
+                                          ,B.CITY_CD AS CAR_OWNER_CITY_CD
+                                          ,B.CITY_NM AS CAR_OWNER_CITY_NM
+                                          ,B.DIST_CD AS CAR_OWNER_DIST_CD
+                                          ,B.DIST_NM AS CAR_OWNER_DIST_NM
+                                          ,B.ADDR_DETL_CONT AS CAR_OWNER_ADDR_DETL_CONT
+                                          ,B.CAR_OWNER_OFFICE_TEL_NO
+                                          ,B.CAR_OWNER_PREF_COMM_MTH_CD
+                                          ,B.CAR_OWNER_PREF_COMM_NO
+                                          ,B.INC_NO,B.BEF_INC_NO,B.INC_CORP_CD,B.CAR_NO,B.CAR_NO_REG_DT,B.INC_END_DT
+                                          ,B.CAR_OWNER_PREF_CONTACT_MTH_CD, B.CAR_OWNER_PREF_CONTACT_TIME_CD
+                                          ,B.CAR_OWNER_SSN_CRN_NO, B.CAR_OWNER_MATH_DOC_TP
+                                      FROM SA_0123T  A , (
+                                                           SELECT CU.DLR_CD,CU.CUST_NO
+                                                                 ,CU.CUST_NM AS CAR_OWNER_NM
+                                                                 ,CU.TEL_NO  AS CAR_OWNER_TEL_NO
+                                                                 ,CU.HP_NO   AS CAR_OWNER_HP_NO
+                                                                 ,CU.EMAIL_NM AS CAR_OWNER_MAIL_NM
+                                                                 ,CU.CUST_TP AS CAR_OWNER_CUST_TP
+                                                                 ,CU.CUST_CD AS CAR_OWNER_CUST_CD
+                                                                 ,AD.SEQ, AD.CAR_OWNER_ZIP_CD ,AD.CAR_OWNER_ADDR
+                                                                 ,AD.SUNG_CD ,AD.SUNG_NM ,AD.CITY_CD ,AD.CITY_NM ,AD.DIST_CD ,AD.DIST_NM, AD.ADDR_DETL_CONT
+                                                                 ,INS.INC_NO,INS.BEF_INC_NO,INS.INC_CORP_CD,INS.CAR_NO,INS.CAR_NO_REG_DT,INS.INC_END_DT
+                                                                 ,CU.PREF_CONTACT_MTH_CD AS CAR_OWNER_PREF_CONTACT_MTH_CD, CU.PREF_CONTACT_TIME_CD AS CAR_OWNER_PREF_CONTACT_TIME_CD
+                                                                 ,CU.SSN_CRN_NO AS CAR_OWNER_SSN_CRN_NO, CU.MATH_DOC_TP AS CAR_OWNER_MATH_DOC_TP
+                                                                 ,CU.OFFICE_TEL_NO AS CAR_OWNER_OFFICE_TEL_NO
+                                                                 ,CU.PREF_COMM_MTH_CD AS CAR_OWNER_PREF_COMM_MTH_CD
+                                                                 ,CU.PREF_COMM_NO AS CAR_OWNER_PREF_COMM_NO
+                                                                 ,CU.BIRTH_DT AS CAR_OWNER_BIRTH_DT
+                                                                 ,'' AS CAR_OWNER_BIRTH_REMAIN_DAY
+                                                            FROM CR_0101T CU LEFT OUTER JOIN (
+                                                             SELECT SEQ, REF_KEY_NM , DLR_CD, ZIP_CD AS CAR_OWNER_ZIP_CD
+                                                                   ,SUNG_NM || CITY_NM || DIST_NM || ADDR_DETL_CONT AS CAR_OWNER_ADDR
+                                                                   ,SUNG_CD ,SUNG_NM ,CITY_CD ,CITY_NM ,DIST_NM ,DIST_CD, ADDR_DETL_CONT
+                                                              FROM CR_0116T
+                                                             WHERE REF_TABLE_NM = 'CR_0101T'
+                                                               AND FLAG_YN = 'Y'
+                                                               AND DLR_CD  = 'A07AA'
+                                                          ) AD ON CU.CUST_NO = AD.REF_KEY_NM
+                                                              AND CU.DLR_CD = AD.DLR_CD
+                                                            LEFT OUTER JOIN SA_0163T INS
+                                                             ON CU.CUST_NO = INS.CUST_NO
+                                                             AND CU.DLR_CD = INS.DLR_CD
+                                                       ) B -- SA_0123T : 차량마스터_차량소유자
+                                     WHERE A.USE_YN = 'Y'
+                                       AND A.DLR_CD = #{sDlrCd}
+                                       AND A.VIN_NO = #{sVinNo}
+                                       AND A.DLR_CD = B.DLR_CD
+                                       AND A.BP_CD = B.CUST_NO
+                                    )OW LEFT OUTER JOIN (
+                                                    SELECT * FROM (
+                                                         SELECT A.DLR_CD ,A.CAR_ID ,A.VIN_NO ,A.BP_CD AS DRIVER_ID , B.DRIVER_NM, B.CUST_TP AS DRIVER_CUST_TP, B.CUST_CD AS DRIVER_CUST_CD
+                                                               ,B.SSN_CRN_NO AS DRIVER_SSN_CRN_NO, B.MATH_DOC_TP AS DRIVER_MATH_DOC_TP , B.DRIVER_TEL_NO, B.DRIVER_HP_NO
+                                                               ,B.DRIVER_MAIL_NM ,B.PREF_CONTACT_MTH_CD AS DRIVER_PREF_CONTACT_MTH_CD
+                                                               ,B.PREF_CONTACT_TIME_CD AS DRIVER_PREF_CONTACT_TIME_CD, A.MDRIVER_YN ,A.SEQ AS DRIVER_SEQ
+                                                               ,B.DRIVER_OFFICE_TEL_NO ,B.DRIVER_PREF_COMM_MTH_CD ,B.DRIVER_PREF_COMM_NO
+                                                               ,B.SEX_CD, B.SEQ AS DRIVER_ADDR_SEQ, B.DRIVER_ZIP_CD, B.DRIVER_ADDR
+                                                               ,B.DRIVER_BIRTH_DT ,B.DRIVER_BIRTH_REMAIN_DAY
+                                                               ,B.SUNG_CD AS DRIVER_SUNG_CD
+                                                               ,B.SUNG_NM AS DRIVER_SUNG_NM
+                                                               ,B.CITY_CD AS DRIVER_CITY_CD
+                                                               ,B.CITY_NM AS DRIVER_CITY_NM
+                                                               ,B.DIST_CD AS DRIVER_DIST_CD
+                                                               ,B.DIST_NM AS DRIVER_DIST_NM
+                                                               ,B.ADDR_DETL_CONT AS DRIVER_ADDR_DETL_CONT
+                                                               ,ROW_NUMBER() OVER(PARTITION BY A.DLR_CD , A.VIN_NO, A.REG_DT ORDER BY A.UPDT_DT DESC , A.REG_DT DESC) AS RN
+                                                           FROM SA_0122T A , (
+                                                                             SELECT CU.DLR_CD, CU.CUST_NO ,CU.CUST_NM AS DRIVER_NM
+                                                                                    ,CU.CUST_TP, CU.CUST_CD, CU.SSN_CRN_NO , CU.MATH_DOC_TP
+                                                                                    ,CU.TEL_NO AS DRIVER_TEL_NO ,CU.HP_NO AS DRIVER_HP_NO
+                                                                                    ,AD.SEQ, AD.DRIVER_ZIP_CD, AD.SUNG_CD, AD.CITY_CD, AD.DIST_CD
+                                                                                    ,AD.DRIVER_ADDR, AD.SUNG_NM, AD.CITY_NM, AD.DIST_NM, AD.ADDR_DETL_CONT
+                                                                                    ,CU.EMAIL_NM AS DRIVER_MAIL_NM
+                                                                                    ,CU.PREF_CONTACT_MTH_CD ,CU.PREF_CONTACT_TIME_CD
+                                                                                    ,CU.OFFICE_TEL_NO AS DRIVER_OFFICE_TEL_NO
+                                                                                    ,CU.PREF_COMM_MTH_CD AS DRIVER_PREF_COMM_MTH_CD
+                                                                                    ,CU.PREF_COMM_NO AS DRIVER_PREF_COMM_NO
+                                                                                    ,CU.SEX_CD
+                                                                                    ,CU.BIRTH_DT AS DRIVER_BIRTH_DT
+                                                                                    ,'' AS DRIVER_BIRTH_REMAIN_DAY
+                                                                              FROM CR_0101T CU LEFT OUTER JOIN (
+                                                                               SELECT SEQ, REF_KEY_NM , DLR_CD, ZIP_CD AS DRIVER_ZIP_CD
+                                                                                     ,SUNG_NM || CITY_NM || DIST_NM || ADDR_DETL_CONT AS DRIVER_ADDR
+                                                                                     ,SUNG_CD ,CITY_CD ,DIST_CD ,SUNG_NM ,CITY_NM ,DIST_NM, ADDR_DETL_CONT
+                                                                                FROM CR_0116T
+                                                                               WHERE REF_TABLE_NM = 'CR_0101T'
+                                                                                 AND FLAG_YN = 'Y'
+                                                                                 AND DLR_CD  = #{sDlrCd}
+                                                                            ) AD ON CU.CUST_NO = AD.REF_KEY_NM
+                                                                                AND CU.DLR_CD = AD.DLR_CD
+                                                                       )B
+                                                          WHERE A.DLR_CD = #{sDlrCd}
+                                                            AND A.VIN_NO = #{sVinNo}
+                                                            AND A.USE_YN = 'Y'
+                                                            AND A.MDRIVER_YN = 'Y'
+                                                            AND B.DLR_CD = A.DLR_CD
+                                                            AND B.CUST_NO = A.BP_CD
+                                                       )WHERE RN = 1
+                                                   ) DR
+                                    ON OW.DLR_CD = DR.DLR_CD
+                                   AND OW.VIN_NO = DR.VIN_NO
+                                  )D
+                               ) E
+               ) CUST
+               ON VIN.VIN_NO = CUST.VIN_NO
+    </select>
+
+    <!-- 차량정보 고객 정보 조회. -->
+    <select id="selectVehOfCustInfoByKey_BAK" parameterType="VehOfCustInfoSearchVO" resultType="VehOfCustInfoVO">
+        /* [chn.bhmc.dms.ser.cmm.service.dao.VehOfCustInfoDAO.selectVehOfCustInfoByKey] */
+
+            SELECT VIN.*
+                  ,FN_SER_LTS_MODEL_NM(VIN.LTS_MODEL_CD, #{sLangCd}) AS LTS_MODEL_NM --모델명
+                  ,CUST.DLR_CD
+                  ,CUST.CAR_OWNER_ID
+                  ,CUST.CUST_NO    --소유자ID (CRM 사용)
+                  ,CUST.CAR_OWNER_SEQ
+                  ,CUST.CAR_OWNER_NM
+                  ,CUST.CAR_OWNER_TEL_NO
+                  ,CUST.CAR_OWNER_HP_NO
+                  ,CUST.CAR_OWNER_MAIL_NM
+                  ,CUST.CAR_OWNER_ADDR_SEQ
+                  ,CUST.CAR_OWNER_ZIP_CD
+                  ,CUST.CAR_OWNER_ADDR
+                  ,CUST.CAR_OWNER_SUNG_CD
+                  ,CUST.CAR_OWNER_SUNG_NM
+                  ,CUST.CAR_OWNER_CITY_CD
+                  ,CUST.CAR_OWNER_CITY_NM
+                  ,CUST.CAR_OWNER_DIST_CD
+                  ,CUST.CAR_OWNER_DIST_NM
+                  ,CUST.CAR_OWNER_ADDR_DETL_CONT
+                  ,CUST.CAR_OWNER_PREF_CONTACT_MTH_CD
+                  ,CUST.CAR_OWNER_PREF_CONTACT_TIME_CD
+                  ,CUST.CAR_OWNER_SSN_CRN_NO
+                  ,CUST.CAR_OWNER_MATH_DOC_TP
+                  ,CUST.CAR_OWNER_OFFICE_TEL_NO
+                  ,CUST.CAR_OWNER_PREF_COMM_MTH_CD
+                  ,CUST.CAR_OWNER_PREF_COMM_NO
+                  ,CUST.CAR_OWNER_CUST_TP
+                  ,CUST.CAR_OWNER_CUST_CD
+                  ,CUST.CAR_OWNER_BIRTH_DT
+                  ,CUST.CAR_OWNER_BIRTH_REMAIN_DAY
+                  ,CUST.INC_NO
+                  ,CUST.BEF_INC_NO
+                  ,CUST.INC_CORP_CD
+                  ,CUST.CAR_NO
+                  ,CUST.CAR_NO_REG_DT
+                  ,CUST.INC_END_DT
+                  ,CUST.INC_END_REMAIN_DAY
+                  ,CUST.DRIVER_ID
+                  ,CUST.DRIVER_NM
+                  ,CUST.DRIVER_SSN_CRN_NO
+                  ,CUST.DRIVER_MATH_DOC_TP
+                  ,CUST.DRIVER_TEL_NO
+                  ,CUST.DRIVER_HP_NO
+                  ,CUST.DRIVER_ADDR_SEQ
+                  ,CUST.DRIVER_ZIP_CD
+                  ,CUST.DRIVER_ADDR
+                  ,CUST.DRIVER_SUNG_CD
+                  ,CUST.DRIVER_SUNG_NM
+                  ,CUST.DRIVER_CITY_CD
+                  ,CUST.DRIVER_CITY_NM
+                  ,CUST.DRIVER_DIST_CD
+                  ,CUST.DRIVER_DIST_NM
+                  ,CUST.DRIVER_ADDR_DETL_CONT
+                  ,CUST.DRIVER_MAIL_NM
+                  ,CUST.DRIVER_PREF_CONTACT_MTH_CD
+                  ,CUST.DRIVER_PREF_CONTACT_TIME_CD
+                  ,CUST.DRIVER_OFFICE_TEL_NO
+                  ,CUST.DRIVER_PREF_COMM_MTH_CD
+                  ,CUST.DRIVER_PREF_COMM_NO
+                  ,CUST.DRIVER_CUST_TP
+                  ,CUST.DRIVER_CUST_CD
+                  ,CUST.DRIVER_BIRTH_DT
+                  ,CUST.DRIVER_BIRTH_REMAIN_DAY
+                  ,CUST.MDRIVER_YN
+                  ,CUST.DRIVER_SEQ
+                  ,CUST.SEX_CD
+             FROM (
+                SELECT *
+                 FROM (
+                  SELECT CAR_ID                     --CAR ID
+                        ,VIN_NO                     --차대번호
+                        ,VIN_NO1                    --차대번호1
+                        ,VIN_NO2                    --차대번호2
+                        ,FN_SER_LTS_MODEL_CD(VIN_NO) AS LTS_MODEL_CD
+                        ,CARLINE_CD                 --차종코드
+                        ,FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_NM
+                        ,MODEL_CD                   --모델코드
+                        ,FN_GET_MODEL_NM(MODEL_CD) AS MODEL_NM
+                        ,OCN_CD                     --OCN CODE
+                        ,EXT_COLOR_CD               --외장
+                        ,FN_GET_EXT_COLOR_NM(EXT_COLOR_CD) AS EXT_COLOR_NM
+                        ,INT_COLOR_CD               --내장
+                        ,CAR_STAT_CD                --VEHICLE STATUS CODE
+                        ,CAR_DSTIN_CD               --차량구분코드
+                        ,DLR_CD                     --딜러코드
+                        ,CONTRACT_NO                --계약번호
+                        ,GR_DT                      --입고일자
+                        ,CAR_REG_NO                 --차량등록번호
+                        ,GRTE_START_DT              --보증시작일자
+                        ,GRTE_END_DT                --보증종료일자
+                        ,TO_DATE(TO_CHAR(GRTE_END_DT,'YYYYMMDD'),'YYYYMMDD') - TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') AS GRTE_END_REMAIN_DAY
+                        ,DEL_YN                     --삭제여부
+                        ,CAR_REG_DT                 --차량등록일자
+                        ,CORP_CAR_DSTIN_CD          --법인차량구분코드
+                        ,MAKER_CD                   --메이커코드
+                        ,ENGIN_MODEL_CD||ENGIN_SERIAL_NO AS ENGIN_NO -- 엔진번호
+                        ,SIGNOFF_DT                 --생산일자
+                        ,DIST_CD                    --지역코드
+                        ,CUST_SALE_DT               --고객판매일자
+                        ,CUST_SALE_CANC_DT          --고객판매취소일자
+                        ,VINM_CMIV                  --직판영업사원ID
+                        ,STAT_CD                    --상태코드
+                        ,CAR_NM                     --차량명
+                        ,CAR_DISP_QTY               --차량배기량
+                        ,NVL(CAR_RUN_DIST_VAL,0)CAR_RUN_DIST_VAL  --차량주행거리값
+                        ,CAR_BRAND_CD               --차량브랜드코드
+                        ,PRE_GI_YN                  --선출고여부
+                    FROM SA_0121T
+                   WHERE DEL_YN ='N'
+                     AND CAR_STAT_CD <![CDATA[>=]]> '50' -- 임시로 딜러 입고 상태부터 조회 ( 50 : 딜러입고 , 60 : 계약 ,70 : 출고)
+                     AND VIN_NO = #{sVinNo}
+                 ) A  LEFT OUTER JOIN (SELECT B.USR_NM ,A.CONTRACT_NO ,A.DLR_CD
+                                         FROM SA_0201T A , CM_0801T B --SA_0201T 계약테이블 , CM_0801T : 사용자정보
+                                       WHERE A.SALE_EMP_NO = B.USR_ID
+                                         AND A.DLR_CD = B.DLR_CD
+                                         AND A.DLR_CD = #{sDlrCd}
+                                         ) B
+                   ON A.CONTRACT_NO = B.CONTRACT_NO
+                   AND A.DLR_CD = B.DLR_CD
+             )VIN LEFT OUTER JOIN (
+                              SELECT *
+                               FROM (
+                                  SELECT D.*
+                                   FROM (
+                                   SELECT
+                                           OW.DLR_CD
+                                          ,OW.CAR_OWNER_ID
+                                          ,OW.CAR_OWNER_ID AS CUST_NO    --소유자ID (CRM 사용)
+                                          ,OW.CAR_ID
+                                          ,OW.VIN_NO
+                                          ,OW.CAR_OWNER_SEQ
+                                          ,OW.CAR_OWNER_NM
+                                          ,OW.CAR_OWNER_TEL_NO
+                                          ,OW.CAR_OWNER_HP_NO
+                                          ,OW.CAR_OWNER_MAIL_NM
+                                          ,OW.CAR_OWNER_ADDR_SEQ
+                                          ,OW.CAR_OWNER_ZIP_CD
+                                          ,OW.CAR_OWNER_SUNG_CD
+                                          ,OW.CAR_OWNER_SUNG_NM
+                                          ,OW.CAR_OWNER_CITY_CD
+                                          ,OW.CAR_OWNER_CITY_NM
+                                          ,OW.CAR_OWNER_DIST_CD
+                                          ,OW.CAR_OWNER_DIST_NM
+                                          ,OW.CAR_OWNER_ADDR_DETL_CONT
+                                          ,OW.CAR_OWNER_ADDR
+                                          ,OW.CAR_OWNER_SSN_CRN_NO
+                                          ,OW.CAR_OWNER_PREF_CONTACT_MTH_CD
+                                          ,OW.CAR_OWNER_PREF_CONTACT_TIME_CD
+                                          ,OW.CAR_OWNER_MATH_DOC_TP
+                                          ,OW.CAR_OWNER_CUST_TP
+                                          ,OW.CAR_OWNER_CUST_CD
+                                          ,OW.CAR_OWNER_OFFICE_TEL_NO
+                                          ,OW.CAR_OWNER_PREF_COMM_MTH_CD
+                                          ,OW.CAR_OWNER_PREF_COMM_NO
+                                          ,OW.CAR_OWNER_BIRTH_DT
+                                          ,OW.CAR_OWNER_BIRTH_REMAIN_DAY
+                                          ,OW.INC_NO
+                                          ,OW.BEF_INC_NO
+                                          ,OW.INC_CORP_CD
+                                          ,OW.CAR_NO
+                                          ,OW.CAR_NO_REG_DT
+                                          ,OW.INC_END_DT
+                                          ,TO_DATE(TO_CHAR(OW.INC_END_DT,'YYYYMMDD'),'YYYYMMDD') - TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') AS INC_END_REMAIN_DAY
+                                          ,DR.DRIVER_ID
+                                          ,DR.DRIVER_NM
+                                          ,DR.DRIVER_SSN_CRN_NO
+                                          ,DR.DRIVER_MATH_DOC_TP
+                                          ,DR.DRIVER_TEL_NO
+                                          ,DR.DRIVER_HP_NO
+                                          ,DR.DRIVER_ADDR_SEQ
+                                          ,DR.DRIVER_ZIP_CD
+                                          ,DR.DRIVER_ADDR
+                                          ,DR.DRIVER_SUNG_CD
+                                          ,DR.DRIVER_SUNG_NM
+                                          ,DR.DRIVER_CITY_CD
+                                          ,DR.DRIVER_CITY_NM
+                                          ,DR.DRIVER_DIST_CD
+                                          ,DR.DRIVER_DIST_NM
+                                          ,DR.DRIVER_ADDR_DETL_CONT
+                                          ,DR.DRIVER_MAIL_NM
+                                          ,DR.DRIVER_PREF_CONTACT_MTH_CD
+                                          ,DR.DRIVER_PREF_CONTACT_TIME_CD
+                                          ,DR.DRIVER_CUST_TP
+                                          ,DR.DRIVER_CUST_CD
+                                          ,DR.DRIVER_OFFICE_TEL_NO
+                                          ,DR.DRIVER_PREF_COMM_MTH_CD
+                                          ,DR.DRIVER_PREF_COMM_NO
+                                          ,DR.MDRIVER_YN
+                                          ,DR.DRIVER_SEQ
+                                          ,DR.DRIVER_BIRTH_DT
+                                          ,DR.DRIVER_BIRTH_REMAIN_DAY
+                                          ,DR.SEX_CD
+                                     FROM (
+                                    SELECT A.DLR_CD , A.BP_CD AS CAR_OWNER_ID , A.CAR_ID , A.VIN_NO ,A.SEQ AS CAR_OWNER_SEQ
+                                          ,B.CAR_OWNER_NM ,B.CAR_OWNER_TEL_NO ,B.CAR_OWNER_HP_NO
+                                          ,B.CAR_OWNER_MAIL_NM, B.CAR_OWNER_CUST_TP, B.CAR_OWNER_CUST_CD
+                                          ,B.CAR_OWNER_ZIP_CD ,B.CAR_OWNER_ADDR
+                                          ,B.SEQ AS CAR_OWNER_ADDR_SEQ
+                                          ,B.CAR_OWNER_BIRTH_DT ,B.CAR_OWNER_BIRTH_REMAIN_DAY
+                                          ,B.SUNG_CD AS CAR_OWNER_SUNG_CD
+                                          ,B.SUNG_NM AS CAR_OWNER_SUNG_NM
+                                          ,B.CITY_CD AS CAR_OWNER_CITY_CD
+                                          ,B.CITY_NM AS CAR_OWNER_CITY_NM
+                                          ,B.DIST_CD AS CAR_OWNER_DIST_CD
+                                          ,B.DIST_NM AS CAR_OWNER_DIST_NM
+                                          ,B.ADDR_DETL_CONT AS CAR_OWNER_ADDR_DETL_CONT
+                                          ,B.CAR_OWNER_OFFICE_TEL_NO
+                                          ,B.CAR_OWNER_PREF_COMM_MTH_CD
+                                          ,B.CAR_OWNER_PREF_COMM_NO
+                                          ,B.INC_NO,B.BEF_INC_NO,B.INC_CORP_CD,B.CAR_NO,B.CAR_NO_REG_DT,B.INC_END_DT
+                                          ,B.CAR_OWNER_PREF_CONTACT_MTH_CD, B.CAR_OWNER_PREF_CONTACT_TIME_CD
+                                          ,B.CAR_OWNER_SSN_CRN_NO, B.CAR_OWNER_MATH_DOC_TP
+                                      FROM SA_0123T  A , (
+                                                           SELECT CU.DLR_CD,CU.CUST_NO
+                                                                 ,CU.CUST_NM AS CAR_OWNER_NM
+                                                                 ,CU.TEL_NO  AS CAR_OWNER_TEL_NO
+                                                                 ,CU.HP_NO   AS CAR_OWNER_HP_NO
+                                                                 ,CU.EMAIL_NM AS CAR_OWNER_MAIL_NM
+                                                                 ,CU.CUST_TP AS CAR_OWNER_CUST_TP
+                                                                 ,CU.CUST_CD AS CAR_OWNER_CUST_CD
+                                                                 ,AD.SEQ, AD.CAR_OWNER_ZIP_CD ,AD.CAR_OWNER_ADDR
+                                                                 ,AD.SUNG_CD ,AD.SUNG_NM ,AD.CITY_CD ,AD.CITY_NM ,AD.DIST_CD ,AD.DIST_NM, AD.ADDR_DETL_CONT
+                                                                 ,INS.INC_NO,INS.BEF_INC_NO,INS.INC_CORP_CD,INS.CAR_NO,INS.CAR_NO_REG_DT,INS.INC_END_DT
+                                                                 ,CU.PREF_CONTACT_MTH_CD AS CAR_OWNER_PREF_CONTACT_MTH_CD, CU.PREF_CONTACT_TIME_CD AS CAR_OWNER_PREF_CONTACT_TIME_CD
+                                                                 ,CU.SSN_CRN_NO AS CAR_OWNER_SSN_CRN_NO, CU.MATH_DOC_TP AS CAR_OWNER_MATH_DOC_TP
+                                                                 ,CU.OFFICE_TEL_NO AS CAR_OWNER_OFFICE_TEL_NO
+                                                                 ,CU.PREF_COMM_MTH_CD AS CAR_OWNER_PREF_COMM_MTH_CD
+                                                                 ,CU.PREF_COMM_NO AS CAR_OWNER_PREF_COMM_NO
+                                                                 ,CU.BIRTH_DT AS CAR_OWNER_BIRTH_DT
+                                                                 ,TO_DATE(CU.BIRTH_DT, 'YYYYMMDD') - TO_DATE(TO_CHAR(SYSDATE, 'YYYYMMDD'), 'YYYYMMDD') AS CAR_OWNER_BIRTH_REMAIN_DAY
+                                                            FROM CR_0101T CU LEFT OUTER JOIN (
+                                                             SELECT SEQ, REF_KEY_NM , DLR_CD, ZIP_CD AS CAR_OWNER_ZIP_CD
+                                                                   ,SUNG_NM || CITY_NM || DIST_NM || ADDR_DETL_CONT AS CAR_OWNER_ADDR
+                                                                   ,SUNG_CD ,SUNG_NM ,CITY_CD ,CITY_NM ,DIST_NM ,DIST_CD, ADDR_DETL_CONT
+                                                              FROM CR_0116T
+                                                             WHERE REF_TABLE_NM = 'CR_0101T'
+                                                               AND FLAG_YN = 'Y'
+                                                               AND DLR_CD  = 'A07AA'
+                                                          ) AD ON CU.CUST_NO = AD.REF_KEY_NM
+                                                              AND CU.DLR_CD = AD.DLR_CD
+                                                            LEFT OUTER JOIN SA_0163T INS
+                                                             ON CU.CUST_NO = INS.CUST_NO
+                                                             AND CU.DLR_CD = INS.DLR_CD
+                                                       ) B -- SA_0123T : 차량마스터_차량소유자
+                                     WHERE A.USE_YN = 'Y'
+                                       AND A.DLR_CD = #{sDlrCd}
+                                       AND A.VIN_NO = #{sVinNo}
+                                       AND A.DLR_CD = B.DLR_CD
+                                       AND A.BP_CD = B.CUST_NO
+                                    )OW LEFT OUTER JOIN (
+                                                    SELECT * FROM (
+                                                         SELECT A.DLR_CD ,A.CAR_ID ,A.VIN_NO ,A.BP_CD AS DRIVER_ID , B.DRIVER_NM, B.CUST_TP AS DRIVER_CUST_TP, B.CUST_CD AS DRIVER_CUST_CD
+                                                               ,B.SSN_CRN_NO AS DRIVER_SSN_CRN_NO, B.MATH_DOC_TP AS DRIVER_MATH_DOC_TP , B.DRIVER_TEL_NO, B.DRIVER_HP_NO
+                                                               ,B.DRIVER_MAIL_NM ,B.PREF_CONTACT_MTH_CD AS DRIVER_PREF_CONTACT_MTH_CD
+                                                               ,B.PREF_CONTACT_TIME_CD AS DRIVER_PREF_CONTACT_TIME_CD, A.MDRIVER_YN ,A.SEQ AS DRIVER_SEQ
+                                                               ,B.DRIVER_OFFICE_TEL_NO ,B.DRIVER_PREF_COMM_MTH_CD ,B.DRIVER_PREF_COMM_NO
+                                                               ,B.SEX_CD, B.SEQ AS DRIVER_ADDR_SEQ, B.DRIVER_ZIP_CD, B.DRIVER_ADDR
+                                                               ,B.DRIVER_BIRTH_DT ,B.DRIVER_BIRTH_REMAIN_DAY
+                                                               ,B.SUNG_CD AS DRIVER_SUNG_CD
+                                                               ,B.SUNG_NM AS DRIVER_SUNG_NM
+                                                               ,B.CITY_CD AS DRIVER_CITY_CD
+                                                               ,B.CITY_NM AS DRIVER_CITY_NM
+                                                               ,B.DIST_CD AS DRIVER_DIST_CD
+                                                               ,B.DIST_NM AS DRIVER_DIST_NM
+                                                               ,B.ADDR_DETL_CONT AS DRIVER_ADDR_DETL_CONT
+                                                               ,ROW_NUMBER() OVER(PARTITION BY A.DLR_CD , A.VIN_NO, A.REG_DT ORDER BY A.UPDT_DT DESC , A.REG_DT DESC) AS RN
+                                                           FROM SA_0122T A , (
+                                                                             SELECT CU.DLR_CD, CU.CUST_NO ,CU.CUST_NM AS DRIVER_NM
+                                                                                    ,CU.CUST_TP, CU.CUST_CD, CU.SSN_CRN_NO , CU.MATH_DOC_TP
+                                                                                    ,CU.TEL_NO AS DRIVER_TEL_NO ,CU.HP_NO AS DRIVER_HP_NO
+                                                                                    ,AD.SEQ, AD.DRIVER_ZIP_CD, AD.SUNG_CD, AD.CITY_CD, AD.DIST_CD
+                                                                                    ,AD.DRIVER_ADDR, AD.SUNG_NM, AD.CITY_NM, AD.DIST_NM, AD.ADDR_DETL_CONT
+                                                                                    ,CU.EMAIL_NM AS DRIVER_MAIL_NM
+                                                                                    ,CU.PREF_CONTACT_MTH_CD ,CU.PREF_CONTACT_TIME_CD
+                                                                                    ,CU.OFFICE_TEL_NO AS DRIVER_OFFICE_TEL_NO
+                                                                                    ,CU.PREF_COMM_MTH_CD AS DRIVER_PREF_COMM_MTH_CD
+                                                                                    ,CU.PREF_COMM_NO AS DRIVER_PREF_COMM_NO
+                                                                                    ,CU.SEX_CD
+                                                                                    ,CU.BIRTH_DT AS DRIVER_BIRTH_DT
+                                                                                    ,TO_DATE(CU.BIRTH_DT, 'YYYYMMDD') - TO_DATE(TO_CHAR(SYSDATE, 'YYYYMMDD'), 'YYYYMMDD') AS DRIVER_BIRTH_REMAIN_DAY
+                                                                              FROM CR_0101T CU LEFT OUTER JOIN (
+                                                                               SELECT SEQ, REF_KEY_NM , DLR_CD, ZIP_CD AS DRIVER_ZIP_CD
+                                                                                     ,SUNG_NM || CITY_NM || DIST_NM || ADDR_DETL_CONT AS DRIVER_ADDR
+                                                                                     ,SUNG_CD ,CITY_CD ,DIST_CD ,SUNG_NM ,CITY_NM ,DIST_NM, ADDR_DETL_CONT
+                                                                                FROM CR_0116T
+                                                                               WHERE REF_TABLE_NM = 'CR_0101T'
+                                                                                 AND FLAG_YN = 'Y'
+                                                                                 AND DLR_CD  = #{sDlrCd}
+                                                                            ) AD ON CU.CUST_NO = AD.REF_KEY_NM
+                                                                                AND CU.DLR_CD = AD.DLR_CD
+                                                                       )B
+                                                          WHERE A.DLR_CD = #{sDlrCd}
+                                                            AND A.VIN_NO = #{sVinNo}
+                                                            AND A.USE_YN = 'Y'
+                                                            AND A.MDRIVER_YN = 'Y'
+                                                            AND B.DLR_CD = A.DLR_CD
+                                                            AND B.CUST_NO = A.BP_CD
+                                                       )WHERE RN = 1
+                                                   ) DR
+                                    ON OW.DLR_CD = DR.DLR_CD
+                                   AND OW.VIN_NO = DR.VIN_NO
+                                  )D
+                               ) E
+               ) CUST
+               ON VIN.VIN_NO = CUST.VIN_NO
+    </select>
+
+    <!-- 삼포 차량정보 고객 정보 조회. -->
+    <select id="selectSanbaoVehOfCustInfoByKey" parameterType="VehOfCustInfoSearchVO" resultType="VehOfCustInfoVO">
+        /* [chn.bhmc.dms.ser.cmm.service.dao.VehOfCustInfoDAO.selectVehOfCustInfoByKey] */
+
+        <![CDATA[
+                SELECT ROWNUM AS RNUM , T1.*
+                      ,FN_SER_LTS_MODEL_NM(T1.LTS_MODEL_CD, #{sLangCd}) AS LTS_MODEL_NM --모델명
+                  FROM (
+                 SELECT
+                         VN.CAR_ID                                         --CAR ID
+                        ,VN.VIN_NO                                         --차대번호
+                        ,VN.VIN_NO1                                        --차대번호1
+                        ,VN.VIN_NO2                                        --차대번호2
+                        ,VN.CAR_DSTIN_CD                                   --차량구분코드
+                        ,VN.CAR_REG_NO                                     --차량등록번호
+                        ,VN.ENGIN_MODEL_CD||VN.ENGIN_SERIAL_NO AS ENGIN_NO -- 엔진번호
+                        ,FN_SER_LTS_MODEL_CD(VN.VIN_NO) AS LTS_MODEL_CD
+                        ,VN.SIGNOFF_DT                                     --생산일자
+                        ,VN.GRTE_START_DT                                  --보증시작일자
+                        ,VN.CUST_SALE_DT                                   --판매일자
+                        ,NVL(CAR_RUN_DIST_VAL,0)CAR_RUN_DIST_VAL           --차량주행거리값
+                        ,VN.CARLINE_CD                                     --차종코드
+                        ,VN.DLR_CD
+                        ,CU.CUST_NO
+                        ,CU.CUST_NO AS CAR_OWNER_ID                        --소유자 id
+                        ,CU.CUST_NM AS CAR_OWNER_NM                        --소유자 명
+                        ,CU.TEL_NO  AS CAR_OWNER_TEL_NO                    --소유자 전화번호
+                        ,CU.HP_NO AS CAR_OWNER_HP_NO                       --소유자 핸드폰번호
+                        ,CU.MATH_DOC_TP AS CAR_OWNER_MATH_DOC_TP           --증서유형
+                        ,CU.SSN_CRN_NO  AS CAR_OWNER_SSN_CRN_NO            --증서번호
+                        ,ST.SANBAO_RM_MONTH                                -- 삼포 잔여기간
+                        ,ST.SANBAO_RM_RUN_DIST_VAL                         --삼포잔여 주행거리
+                        ,ST.TOT_WORK_DAY                                   -- 작업 총일수
+                        ,ST.RUN_DIST_VAL                                   --주행거리
+                        ,ST.RETURN_RATE                                    -- 비율
+                        ,CU.EMAIL_NM AS CAR_OWNER_MAIL_NM
+                    FROM SA_0121T VN , (
+                        SELECT * FROM (
+                             SELECT VIN_NO , VIN_NO1 , VIN_NO2 , CAR_ID
+                                   ,(B.SANBAO_WART_PRID * 12 ) - CEIL(TO_CHAR(MONTHS_BETWEEN(SYSDATE, A.WART_DT)))  AS SANBAO_RM_MONTH  --삼보 잔여 월
+                                   ,(B.SANBAO_WART_RUN_DIST_VAL - A.RUN_DIST_VAL ) AS SANBAO_RM_RUN_DIST_VAL                     -- 삼보잔여 주행거리
+                                   ,NVL(
+                                          (SELECT SUM( CASE WHEN ( (RO_END_DT - RO_START_DT ) = 0 ) OR ((RO_END_DT - RO_START_DT ) < 24 ) THEN 1
+                                                             ELSE CEIL((RO_END_DT - RO_START_DT )) END ) RO_WORK_HM
+                                             FROM SE_0710T C
+                                            WHERE C.VIN_NO = A.VIN_NO
+                                              AND C.CLAIM_STAT_CD = 'A'
+                                              AND C.CLAIM_TP IN ('W','S','P')
+                                              AND C.VIN_NO = #{sVinNo}
+                                           )
+                                       ,0) AS TOT_WORK_DAY -- 총작업 일수
+                                    ,A.RUN_DIST_VAL
+                                    ,B.RATE AS RETURN_RATE
+                               FROM SE_1082T A, ( SELECT SUM(CASE WHEN APPLY_DSTIN_CD = '02' THEN APPLY_PRID ELSE 0 END)          AS SANBAO_WART_PRID          --삼보보증기간
+                                                        ,SUM(CASE WHEN APPLY_DSTIN_CD = '02' THEN RUN_DIST_VAL ELSE 0 END)        AS SANBAO_WART_RUN_DIST_VAL  --삼보보증기간 주행거리
+                                                        ,SUM(CASE WHEN APPLY_DSTIN_CD = '02' THEN ALRT_START_TERM_VAL ELSE 0 END) AS SANBAO_WART_ALARM_TERM    --삼보보증기간 알람조건
+                                                        ,SUM(CASE WHEN APPLY_DSTIN_CD = '04' THEN APPLY_PRID ELSE 0 END)          AS WORK_OVER_PRID            --작업일수 초과 적용 일
+                                                        ,SUM(CASE WHEN APPLY_DSTIN_CD = '04' THEN ALRT_START_TERM_VAL ELSE 0 END) AS WORK_OVER_ALARM_TERM      --작업일수 초과 알람조건
+                                                        ,SUM(CASE WHEN APPLY_DSTIN_CD = '05' THEN RATE ELSE 0 END )               AS RATE                      --작업시간제한
+                                                        ,SUM(CASE WHEN APPLY_DSTIN_CD = '06' THEN APPLY_PRID ELSE 0 END)          AS LMT_RO_HM                 --감가상각률
+                                                     FROM SE_1080T
+                                                    WHERE WART_APPLY_START_DT <= SYSDATE-1
+                                                      AND WART_APPLY_END_DT >  SYSDATE +1 ) B
+                            WHERE A.VIN_NO = #{sVinNo}
+                         )
+                    ) ST
+                    , (
+                       SELECT A.DLR_CD , A.VIN_NO , B.CUST_NO , B.CUST_NM , B.TEL_NO , B.HP_NO
+                             ,B.MATH_DOC_TP, B.SSN_CRN_NO , B.EMAIL_NM
+                          FROM SA_0123T A, CR_0101T B
+                        WHERE A.DLR_CD = B.DLR_CD
+                          AND A.BP_CD = B.CUST_NO
+                          AND A.USE_YN = 'Y'
+                          AND B.DEL_YN = 'N'
+                          AND A.DLR_CD = #{sDlrCd}
+                          AND A.VIN_NO = #{sVinNo}
+                    )CU
+                   WHERE VN.VIN_NO = ST.VIN_NO
+                     AND VN.VIN_NO1 = ST.VIN_NO1
+                     AND VN.VIN_NO2 = ST.VIN_NO2
+                     AND VN.CAR_ID = ST.CAR_ID
+                     AND VN.DEL_YN = 'N'
+                     AND VN.CAR_STAT_CD >= '50' -- 임시로 딜러 입고 상태부터 조회 ( 50 : 딜러입고 , 60 : 계약 ,70 : 출고)
+                     AND CU.VIN_NO = VN.VIN_NO
+                     AND VN.VIN_NO = #{sVinNo}
+              )T1
+              ]]>
+    </select>
+
+    <!-- 당일 다건 예약 차량정보  조회. -->
+    <select id="selectVehOfReseveInfoByCondition" parameterType="VehOfReseveInfoSearchVO" resultType="VehOfReseveInfoVO">
+        /* [chn.bhmc.dms.ser.cmm.service.dao.VehOfCustInfoDAO.selectVehOfReseveInfoByCondition] */
+        SELECT ROWNUM AS RNUM , T1.*
+        FROM (
+            SELECT C.* , D.RO_DOC_NO , D.RO_STAT_CD , D.RO_TP
+            FROM (
+                SELECT A.* , B.DIAG_DOC_NO
+                FROM (
+                    SELECT *
+                    FROM SE_0100T A   --예약접수
+                    WHERE 1=1
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND DLR_CD = #{sDlrCd}
+                    </if>
+                    <if test='sResvDocNo != null and sResvDocNo != ""'>
+                        AND RESV_DOC_NO = #{sResvDocNo}
+                    </if>
+                    <if test='sVinNo != null and sVinNo != ""'>
+                        AND VIN_NO = #{sVinNo}
+                    </if>
+                    <choose>
+                        <when test='sPreFixId != null and sPreFixId != ""'>
+                            <if test=' sPreFixId == "RE" '>
+                               AND RESV_STAT_CD != 'C'
+                            </if>
+                            <if test=' sPreFixId == "PC" '>
+                               AND RESV_TP != '04'
+                            </if>
+                        </when>
+                    </choose>
+                    <if test='sSerResvStartDt != null'>
+                        AND SER_RESV_START_DT <![CDATA[>=]]> #{sSerResvStartDt}
+                        <!-- AND SER_RESV_START_DT <![CDATA[<]]> #{sSerResvStartDt} + 1 -->
+                    </if>
+                )A LEFT OUTER JOIN SE_0200T B
+                ON A.DLR_CD = B.DLR_CD
+                AND A.VIN_NO = B.VIN_NO
+                AND A.RESV_DOC_NO = B.RESV_DOC_NO
+                AND A.RO_GRP_NO = B.RO_GRP_NO
+            ) C LEFT OUTER JOIN SE_0300T D
+            ON D.DLR_CD = C.DLR_CD
+            AND D.VIN_NO = C.VIN_NO
+            AND D.RESV_DOC_NO = C.RESV_DOC_NO
+            AND D.RO_GRP_NO = C.RO_GRP_NO
+            AND D.RO_STAT_CD != '06'
+            ORDER BY C.RESV_DOC_NO DESC
+        )T1
+        <where>
+            <if test='sRoStatCd != null and sRoStatCd != "" '>
+                RO_STAT_CD = #{sRoStatCd}
+            </if>
+        </where>
+    </select>
+</mapper>

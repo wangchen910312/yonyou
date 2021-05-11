@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : TargetReferSameBsnsDAO_SqlMap.xml
+    Description : [제조사] 동종업계 참조
+    author chibeom.song
+    since 2016. 7. 21.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 7. 21.   chibeom.song     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mis.tmp.service.dao.TargetReferSameBsnsDAO">
+
+    <!-- [제조사] 동종업계 참조 목록수를 조회한다. -->
+    <select id="selectTargetReferSameBsnsMainSearchCnt" parameterType="TargetReferSameBsnsSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetReferSameBsnsDAO.selectTargetReferSameBsnsMainSearchCnt] */
+        SELECT COUNT(*) AS VALUE FROM MS_0106T
+        WHERE REF_YY_MM_DD = '99999999'
+    </select>
+
+    <!-- [제조사] 동종업계 참조 목록을 조회한다. -->
+    <select id="selectTargetReferSameBsnsMainSearch" parameterType="TargetReferSameBsnsSearchVO" resultType="TargetReferSameBsnsVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetReferSameBsnsDAO.selectTargetReferSameBsnsMainSearch] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+
+                    SELECT
+                         SUBSTR(REF_YY_MM_DD, 1, 4) ||'-'|| SUBSTR(REF_YY_MM_DD, 5, 2) ||'-'|| SUBSTR(REF_YY_MM_DD, 7, 2)                       AS referDt
+                        ,SUBSTR(REF_YY_MM_DD, 1, 4)           AS referYearDt
+                        ,SUBSTR(REF_YY_MM_DD, 5, 2)           AS referMonthDt
+                        ,SUBSTR(REF_YY_MM_DD, 7, 2)           AS referDayDt
+                        ,VSIT_REQ_RATE                        AS visitReqVal
+                        ,VSIT_DEAL_RATE                       AS visitDealVal
+                        ,TOT_DEAL_RATE                        AS totDealVal
+                        ,PRSN_INFO_OFFER_RATE                 AS perOfterVal
+                        ,SUCC_RATE                            AS successVal
+                        ,GOAL_ACHV_RATE                       AS targetAchVal
+                        ,GOODS_CAR_QTY                        AS goodsCarQty
+                        ,INS_APPLY_RATE                       AS insApplyRate
+                        ,FINC_APPLY_RATE                      AS fincApplyRate
+                    FROM MS_0106T
+                    WHERE REF_YY_MM_DD = '99999999'
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- Key에 해당하는 [제조사] 동종업계 참조 정보를 조회한다. -->
+    <select id="selectReferSameBsnsByKey" parameterType="map" resultType="TargetReferSameBsnsVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetReferSameBsnsDAO.selectReferSameBsnsByKey] */
+        SELECT * FROM MS_0106T
+        WHERE REF_YY_MM_DD = '99999999'
+    </select>
+
+    <!-- [제조사] 동종업계 참조 목록 정보를 등록한다. -->
+    <insert id="insertReferSameBsns" parameterType="TargetReferSameBsnsVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetReferSameBsnsDAO.insertReferSameBsns] */
+        INSERT INTO MS_0106T(
+             REF_YY_MM_DD
+            ,VSIT_REQ_RATE
+            ,VSIT_DEAL_RATE
+            ,TOT_DEAL_RATE
+            ,PRSN_INFO_OFFER_RATE
+            ,SUCC_RATE
+            ,GOAL_ACHV_RATE
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+            ,GOODS_CAR_QTY
+            ,INS_APPLY_RATE
+            ,FINC_APPLY_RATE
+        )VALUES(
+              #{referDt}
+            , #{visitReqVal}
+            , #{visitDealVal}
+            , #{totDealVal}
+            , #{perOfterVal}
+            , #{successVal}
+            , #{targetAchVal}
+            , #{regUsrId}
+            , SYSDATE
+            , #{regUsrId}
+            , SYSDATE
+            , #{goodsCarQty}
+            , #{insApplyRate}
+            , #{fincApplyRate}
+        )
+    </insert>
+
+    <!-- [제조사] 동종업계 참조 목록 정보를 수정한다. -->
+    <update id="updateReferSameBsns" parameterType="TargetReferSameBsnsVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetReferSameBsnsDAO.updateReferSameBsns] */
+        UPDATE MS_0106T SET
+            VSIT_REQ_RATE           = #{visitReqVal}
+            , VSIT_DEAL_RATE        = #{visitDealVal}
+            , TOT_DEAL_RATE         = #{totDealVal}
+            , PRSN_INFO_OFFER_RATE  = #{perOfterVal}
+            , SUCC_RATE             = #{successVal}
+            , GOAL_ACHV_RATE        = #{targetAchVal}
+            , UPDT_USR_ID           = #{updtUsrId}
+            , UPDT_DT               = SYSDATE
+            , GOODS_CAR_QTY         = #{goodsCarQty}
+            , INS_APPLY_RATE        = #{insApplyRate}
+            , FINC_APPLY_RATE       = #{fincApplyRate}
+        WHERE REF_YY_MM_DD  = '99999999'
+    </update>
+
+    <!-- [제조사] 동종업계 참조 목록 정보를 삭제한다. -->
+    <delete id="deleteReferSameBsns" parameterType="TargetReferSameBsnsVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetReferSameBsnsDAO.deleteReferSameBsns] */
+        DELETE FROM MS_0106T
+        WHERE REF_YY_MM_DD  = '99999999'
+    </delete>
+
+
+    <!--  I 테이블 전용  -->
+
+
+    <!-- [제조사] 동종업계 참조 목록 정보를 등록한다. -->
+    <insert id="insertReferSameBsnsI" parameterType="TargetReferSameBsnsVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetReferSameBsnsDAO.insertReferSameBsnsI] */
+        INSERT INTO MS_0106I(
+             REF_YY_MM_DD
+            ,VSIT_REQ_RATE
+            ,VSIT_DEAL_RATE
+            ,TOT_DEAL_RATE
+            ,PRSN_INFO_OFFER_RATE
+            ,SUCC_RATE
+            ,GOAL_ACHV_RATE
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+            ,GOODS_CAR_QTY
+            ,INS_APPLY_RATE
+            ,FINC_APPLY_RATE
+        )VALUES(
+              #{referDt}
+            , #{visitReqVal}
+            , #{visitDealVal}
+            , #{totDealVal}
+            , #{perOfterVal}
+            , #{successVal}
+            , #{targetAchVal}
+            , #{regUsrId}
+            , SYSDATE
+            , #{regUsrId}
+            , SYSDATE
+            , #{goodsCarQty}
+            , #{insApplyRate}
+            , #{fincApplyRate}
+        )
+    </insert>
+
+    <!-- [제조사] 동종업계 참조 목록 정보를 수정한다. -->
+    <update id="updateReferSameBsnsI" parameterType="TargetReferSameBsnsVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetReferSameBsnsDAO.updateReferSameBsnsI] */
+        UPDATE MS_0106I SET
+            VSIT_REQ_RATE           = #{visitReqVal}
+            , VSIT_DEAL_RATE        = #{visitDealVal}
+            , TOT_DEAL_RATE         = #{totDealVal}
+            , PRSN_INFO_OFFER_RATE  = #{perOfterVal}
+            , SUCC_RATE             = #{successVal}
+            , GOAL_ACHV_RATE        = #{targetAchVal}
+            , UPDT_USR_ID           = #{updtUsrId}
+            , UPDT_DT               = SYSDATE
+            , GOODS_CAR_QTY         = #{goodsCarQty}
+            , INS_APPLY_RATE        = #{insApplyRate}
+            , FINC_APPLY_RATE       = #{fincApplyRate}
+        WHERE REF_YY_MM_DD  = '99999999'
+    </update>
+
+    <!-- [제조사] 동종업계 참조 목록 정보를 삭제한다. -->
+    <delete id="deleteReferSameBsnsI" parameterType="TargetReferSameBsnsVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetReferSameBsnsDAO.deleteReferSameBsnsI] */
+        DELETE FROM MS_0106I
+        WHERE REF_YY_MM_DD  = '99999999'
+    </delete>
+
+
+
+</mapper>

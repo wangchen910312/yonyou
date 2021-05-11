@@ -1,0 +1,687 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="PT_0622T" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRegUsrNm"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sEtcGrDocNo"/>
+<O>
+<![CDATA[ER2017063000002]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT 
+        T1.DLR_CD
+	   ,T1.ETC_GR_DOC_NO
+	   ,T1.ETC_GR_DOC_LINE_NO
+	   ,T1.ITEM_CD
+	   ,T1.ITEM_NM
+	   ,T1.QTY
+	   ,T1.PRC
+	   ,T1.AMT
+	   ,T1.LOC_CD || ' / ' || T1.LOC_CD_MIG
+	   ,T1.UNIT_CD
+	   ,T1.STRGE_CD
+	   ,CASE WHEN LENGTH(T1.STRGE_NM) > 15 THEN SUBSTR(T1.STRGE_NM,0,14)||'...' ELSE T1.STRGE_NM END STRGE_NM
+	   ,T1.ITEM_DSTIN_CD
+	   ,T1.AVLB_STOCK_QTY
+	   ,T1.STD_STRGE_CD
+	   ,T1.GR_STRGE_CD
+	   ,T1.REF_DOC_NO
+	   ,T1.REF_DOC_LINE_NO
+	   ,T1.GR_REASON_CD
+	   ,T1.CANC_QTY
+	   ,T1.RECEIVE_USR_ID
+	   ,T1.RECEIVE_USR_NM
+	   ,T1.GR_DT
+	   ,T1.GR_TIME
+	   ,T1.CANC_ID
+	   ,T1.CANC_USR_NM
+	   ,T1.CANC_DT
+	   ,T1.CANC_TIME
+	   ,T1.TAX_DDCT_PRC
+	   ,T1.TAX_DDCT_AMT
+	   ,T1.TAX_AMT
+	   ,T1.DC_RATE
+	   ,T1.MVT_DOC_YY_MM
+	   ,T1.MVT_DOC_NO
+	   ,T1.MVT_DOC_LINE_NO
+	   ,T1.GR_STAT_CD
+	   ,T1.STOCK_QTY
+	   ,T1.BORROW_QTY
+	   ,T1.RESV_STOCK_QTY
+	   ,T1.MOVING_AVG_PRC
+	   ,T1.UPDT_DT_STR
+	   ,T1.USR_NM
+	   ,T1.REG_DT
+FROM (
+		SELECT
+                A.DLR_CD                      --딜러코드
+               ,A.ETC_GR_DOC_NO               --기타입고번호
+               ,A.ETC_GR_DOC_LINE_NO          --기타입고라인번호
+               ,A.ITEM_CD                     --품목코드
+               ,CASE WHEN LENGTH(C.ITEM_NM) > 10 THEN SUBSTR(C.ITEM_NM,0,9)||'...' ELSE C.ITEM_NM END ITEM_NM
+               ,A.QTY
+               ,A.PRC
+               ,A.AMT
+               ,CASE WHEN LENGTH(A.LOC_CD) > 8 THEN SUBSTR(A.LOC_CD,0,7)||'...' ELSE A.LOC_CD END LOC_CD
+               ,CASE WHEN LENGTH(H.LOC_CD_MIG) > 8 THEN SUBSTR(H.LOC_CD_MIG,0,7)||'...' ELSE H.LOC_CD_MIG END LOC_CD_MIG
+               ,A.UNIT_CD
+               ,NVL(A.STRGE_CD, C.GR_STRGE_CD) AS STRGE_CD       --입고창고
+               ,(SELECT STRGE_NM FROM CM_0104T WHERE STRGE_CD = NVL(A.STRGE_CD, C.GR_STRGE_CD)) AS STRGE_NM
+               ,C.ITEM_DSTIN_CD
+               ,D.AVLB_STOCK_QTY                --가용수량
+               ,C.GR_STRGE_CD AS STD_STRGE_CD   --기준창고
+               ,C.GR_STRGE_CD
+               ,A.REF_DOC_NO
+               ,A.REF_DOC_LINE_NO
+               ,A.GR_REASON_CD
+               ,CASE WHEN NVL(A.CANC_ID,'-999') = '-999' THEN 0 ELSE A.QTY END CANC_QTY
+               ,A.RECEIVE_USR_ID
+               ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.RECEIVE_USR_ID) AS RECEIVE_USR_NM   --등록자명
+               ,A.REG_DT AS GR_DT
+               ,TO_CHAR(A.REG_DT, 'HH24:MI:SS') AS GR_TIME
+               ,A.CANC_ID
+               ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.CANC_ID) AS CANC_USR_NM   --취소자명
+               ,A.CANC_DT
+               ,TO_CHAR(A.CANC_DT, 'HH24:MI:SS') AS CANC_TIME
+               ,A.TAX_DDCT_PRC
+               ,A.TAX_DDCT_AMT
+               ,A.TAX_AMT
+               ,A.DC_RATE
+               ,A.MVT_DOC_YY_MM
+               ,A.MVT_DOC_NO
+               ,A.MVT_DOC_LINE_NO
+               ,NVL(E.QTY, 0) AS RENT_QTY
+               ,NVL(F.QTY, 0) AS RETURN_QTY
+               ,A.GR_STAT_CD
+               ,NVL(D.AVLB_STOCK_QTY,0) + NVL(D.RESV_STOCK_QTY,0) - NVL(D.BORROW_QTY,0) + NVL(D.RENT_QTY,0) AS STOCK_QTY
+               ,NVL(D.BORROW_QTY,0) AS BORROW_QTY
+               ,NVL(D.RENT_QTY,0) AS RENT_QTY
+               ,NVL(D.RESV_STOCK_QTY,0) AS RESV_STOCK_QTY
+               ,NVL(G.MOVING_AVG_PRC,0) AS MOVING_AVG_PRC
+               ,TO_CHAR(NVL(A.UPDT_DT,A.REG_DT), 'YYYYMMDDHH24MISS') AS UPDT_DT_STR
+               ,'${sRegUsrNm}' AS USR_NM
+               ,B.REG_DT
+           FROM DMSDB.PT_0622T A    --기타입고품목정보
+                INNER JOIN  DMSDB.PT_0621T B
+                   ON A.DLR_CD        = B.DLR_CD
+                  AND A.ETC_GR_DOC_NO = B.ETC_GR_DOC_NO
+                INNER JOIN  DMSDB.PT_0201T C    --품목정보
+                   ON A.DLR_CD  = C.DLR_CD
+                  AND A.ITEM_CD = C.ITEM_CD
+                LEFT OUTER JOIN  DMSDB.PT_0301T D    --재고정보
+                   ON A.DLR_CD      = D.DLR_CD
+                  AND A.STRGE_CD    = D.STRGE_CD
+                  AND A.ITEM_CD     = D.ITEM_CD
+                LEFT OUTER JOIN  DMSDB.PT_0612T E
+                  ON A.DLR_CD              = E.DLR_CD
+                 AND A.REF_DOC_NO          = E.ETC_GI_DOC_NO
+                 AND A.REF_DOC_LINE_NO     = E.ETC_GI_DOC_LINE_NO
+                LEFT OUTER JOIN
+                                (
+                                  SELECT   A.DLR_CD
+                                          ,A.REF_DOC_NO
+                                          ,A.REF_DOC_LINE_NO
+                                          ,SUM(A.QTY) AS QTY
+                                    FROM PT_0622T A
+                                   WHERE A.DLR_CD = '${sDlrCd}'
+                                     AND A.REF_DOC_NO IS NOT NULL
+                                  GROUP BY A.DLR_CD, A.REF_DOC_NO, A.REF_DOC_LINE_NO
+                                ) F
+                  ON A.DLR_CD = C.DLR_CD
+                 AND A.ETC_GR_DOC_NO = F.REF_DOC_NO
+                 AND A.ETC_GR_DOC_LINE_NO = F.REF_DOC_LINE_NO
+                LEFT OUTER JOIN  DMSDB.PT_0312T G
+                  ON A.DLR_CD              = G.DLR_CD
+                 AND A.ETC_GR_DOC_NO       = G.REF_DOC_NO
+                 AND A.ETC_GR_DOC_LINE_NO  = G.REF_DOC_LINE_NO
+                LEFT JOIN PT_0224T H ON A.DLR_CD = H.DLR_CD AND A.STRGE_CD = H.STRGE_CD AND A.LOC_CD = H.LOC_CD AND A.ITEM_CD = H.ITEM_CD
+          WHERE A.DLR_CD            = '${sDlrCd}'
+            AND A.ETC_GR_DOC_NO     = '${sEtcGrDocNo}'
+            ORDER BY A.DLR_CD                      --딜러코드
+                    ,A.ETC_GR_DOC_NO DESC               --기타입고번호
+                    ,A.ETC_GR_DOC_LINE_NO          --기타입고라인번호
+) T1]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="0" T="4"/>
+<FR F="6" T="7"/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[723900,723900,723900,1141920,723900,722880,723900,722880,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[3888000,648000,4176000,2592000,2016000,1440000,1440000,3168000,2016000,576000,1440000,2016000,1296000,720000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1" cs="14" rs="2" s="1">
+<O>
+<![CDATA[配件报溢单]]></O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="3" cs="2" s="2">
+<O>
+<![CDATA[报溢单号 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="3" cs="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="PT_0622T" columnName="ETC_GR_DOC_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="3" cs="2" s="4">
+<O>
+<![CDATA[盈亏单号 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="3" cs="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="3" cs="2" s="4">
+<O>
+<![CDATA[报溢日期 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="3" cs="4" s="5">
+<O t="DSColumn">
+<Attributes dsName="PT_0622T" columnName="REG_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="4" s="6">
+<O>
+<![CDATA[仓库]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="4" cs="2" s="6">
+<O>
+<![CDATA[配件编号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="4" cs="2" s="6">
+<O>
+<![CDATA[配件名称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="4" s="6">
+<O>
+<![CDATA[单位]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="4" cs="2" s="6">
+<O>
+<![CDATA[仓位]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="4" s="6">
+<O>
+<![CDATA[数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="4" cs="2" s="6">
+<O>
+<![CDATA[单价]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="4" s="6">
+<O>
+<![CDATA[金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="4" cs="2" s="6">
+<O>
+<![CDATA[库存]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="5" s="7">
+<O t="DSColumn">
+<Attributes dsName="PT_0622T" columnName="STRGE_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<CellPageAttr/>
+<Expand dir="0" multiNumber="46"/>
+</C>
+<C c="1" r="5" cs="2" s="7">
+<O t="DSColumn">
+<Attributes dsName="PT_0622T" columnName="ITEM_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="5" cs="2" s="7">
+<O t="DSColumn">
+<Attributes dsName="PT_0622T" columnName="ITEM_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="5" s="6">
+<O t="DSColumn">
+<Attributes dsName="PT_0622T" columnName="UNIT_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="5" cs="2" s="8">
+<O t="DSColumn">
+<Attributes dsName="PT_0622T" columnName="T1.LOC_CD||&apos;/&apos;||T1.LOC_CD_MIG"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="5" s="9">
+<O t="DSColumn">
+<Attributes dsName="PT_0622T" columnName="QTY"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="5" cs="2" s="9">
+<O t="DSColumn">
+<Attributes dsName="PT_0622T" columnName="PRC"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="5" s="9">
+<O t="DSColumn">
+<Attributes dsName="PT_0622T" columnName="AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="12" r="5" cs="2" s="9">
+<O t="DSColumn">
+<Attributes dsName="PT_0622T" columnName="STOCK_QTY"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="6" cs="2" s="10">
+<O>
+<![CDATA[合        计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="6" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="6" cs="2" s="11">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="6" s="12">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="6" s="12">
+<O>
+<![CDATA[数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="6" cs="2" s="13">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM({I6})]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="6" cs="2" s="12">
+<O>
+<![CDATA[金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="6" cs="3" s="14">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM({L6})]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="7" cs="2" s="3">
+<O>
+<![CDATA[打印时间 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="7" cs="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=NOW()]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="7" s="5">
+<O>
+<![CDATA[操作员 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="7" cs="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="PT_0622T" columnName="USR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="7" s="5">
+<O>
+<![CDATA[发料人 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="7" cs="2" s="5">
+<O>
+<![CDATA[核对员 :]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="7" s="15">
+<O>
+<![CDATA[第]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="7" s="15">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=$$page_number]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="7" s="15">
+<O>
+<![CDATA[页]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting>
+<Margin top="720000" left="2016000" bottom="720000" right="720000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[参数]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="1" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<Format class="com.fr.base.TextFormat"/>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<FRFont name="Dialog" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID/>
+</WorkBook>

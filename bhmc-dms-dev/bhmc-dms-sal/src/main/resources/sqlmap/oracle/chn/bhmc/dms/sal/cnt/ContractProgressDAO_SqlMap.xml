@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.cnt.service.dao.ContractProgressDAO">
+
+    <!-- 계약종합화면 목록 갯수 조회 -->
+    <select id="selectContractProgressByConditionCnt" parameterType="ContractReSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0201T A                     /* 계약헤더 */
+          LEFT OUTER JOIN SA_0202T B1         /* 계약고객 */
+            ON A.DLR_CD = B1.DLR_CD
+           AND A.CONTRACT_NO = B1.CONTRACT_NO
+           AND B1.PARTNER_TP = 'C'   -- 계약자   : SAL028
+          WHERE 1 = 1
+            AND A.CONTRACT_STAT_CD NOT IN ('10')      -- 저장 상태 제외
+            <if test='sDlrCd != null and sDlrCd != ""'>
+              AND A.DLR_CD = #{sDlrCd}                       -- 딜러코드
+            </if>
+            <if test='sContractStatCd != null and sContractStatCd != ""'>
+              <if test='sContractStatCd == "91"'>
+                  AND A.CONTRACT_STAT_CD in ('90', '91')
+              </if>
+              <if test='sContractStatCd != "91"'>
+                  AND A.CONTRACT_STAT_CD = #{sContractStatCd}      -- 계약상태
+              </if>
+            </if>
+            <if test='sComboDt != null and sComboDt == "01"' >
+                <if test='sStartDt != null'>
+                  AND NVL(A.CONTRACT_DT, SYSDATE-1) <![CDATA[ >= ]]> TRUNC(#{sStartDt},'DD')
+                </if>
+                <if test='sEndDt != null'>
+                  AND NVL(A.CONTRACT_DT, SYSDATE-1) <![CDATA[ < ]]> TRUNC(#{sEndDt},'DD')+1
+                </if>
+            </if>
+            <if test='sComboDt != null and sComboDt == "02"' >
+                <if test='sStartDt != null'>
+                  AND A.REAL_DL_DT <![CDATA[ >= ]]> TRUNC(#{sStartDt},'DD')
+                </if>
+                <if test='sEndDt != null'>
+                  AND A.REAL_DL_DT <![CDATA[ < ]]> TRUNC(#{sEndDt},'DD')+1
+                </if>
+            </if>
+            <if test='sComboDt != null and sComboDt == "03"' >
+                <if test='sStartDt != null'>
+                  AND A.CANC_DT <![CDATA[ >= ]]> TRUNC(#{sStartDt},'DD')
+                </if>
+                <if test='sEndDt != null'>
+                  AND A.CANC_DT <![CDATA[ < ]]> TRUNC(#{sEndDt},'DD')+1
+                </if>
+            </if>
+            <if test='sSaleEmpNo != null and sSaleEmpNo != ""'>
+              AND A.SALE_EMP_NO = #{sSaleEmpNo}     -- 판매사원번호
+            </if>
+            <if test='sContractCustNo != null and sContractCustNo != ""'>
+              AND B1.CUST_CD = #{sContractCustNo}   -- 고객코드
+            </if>
+            <if test='sContractCustNm != null and sContractCustNm != ""'>
+              AND B1.CUST_NM LIKE '%'||#{sContractCustNm}||'%'    -- 고객명
+            </if>
+            <if test='sVinNo != null and sVinNo != ""'>
+              AND A.VIN_NO LIKE '%'|| UPPER(#{sVinNo}) ||'%'
+            </if>
+            <if test='sContractNo != null and sContractNo != ""'>
+            <choose>
+              <when test='@org.apache.commons.lang3.StringUtils@contains(sContractNo,"*")'>
+                <bind name='sContractNo' value='@org.apache.commons.lang3.StringUtils@replace(sContractNo, "*", "%")' />
+                  AND A.CONTRACT_NO LIKE #{sContractNo}       -- 계약번호
+              </when>
+              <otherwise>
+                  AND A.CONTRACT_NO = #{sContractNo}          -- 계약번호
+              </otherwise>
+            </choose>
+            </if>
+            <if test='savedContractNo != null and savedContractNo != ""'>
+              AND A.CONTRACT_NO = #{savedContractNo}        -- 계약번호
+            </if>
+            <if test='sContractStatCd != null and sContractStatCd != ""'>
+              AND A.CONTRACT_STAT_CD = #{sContractStatCd}      -- 계약상태
+            </if>
+            <if test='sDstbChnCd != null and sDstbChnCd != ""'>
+              AND NVL(A.DSTB_CHN_CD, '01') = #{sDstbChnCd}       -- 채널유형
+            </if>
+            <if test='sLv2DlrOrgCd != null and sLv2DlrOrgCd != ""'>
+              AND A.LV2_DLR_ORG_CD = #{sLv2DlrOrgCd}       -- 2급딜러
+            </if>
+    </select>
+
+    <!-- 계약종합화면 조회 -->
+    <select id="selectContractProgressByCondition" parameterType="ContractReSearchVO" resultType="ContractReVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_CARLINE_NM_NC(T1.CARLINE_CD) AS CARLINE_NM
+                 , FN_GET_MODEL_TP_CD(T1.MODEL_CD, T1.OCN_CD) AS FSC_CD
+                 , FN_GET_MODEL_TP_NM(T1.MODEL_CD, T1.OCN_CD) AS FSC_NM
+                 , FN_GET_OCN_NM_NC(T1.MODEL_CD, T1.OCN_CD) AS OCN_NM
+                 , FN_GET_EXT_COLOR_NM_NC(T1.EXT_COLOR_CD) AS EXT_COLOR_NM
+                 , FN_GET_INT_COLOR_NM_NC(T1.INT_COLOR_CD) AS INT_COLOR_NM
+                 , T1.*
+              FROM (
+                    SELECT A.DLR_CD                    --딜러코드
+                         , A.CONTRACT_NO               --계약번호
+                         , A.CONTRACT_DT               --계약일자
+                         , A.REAL_DL_DT
+                         , A.CONTRACT_STAT_CD          --계약상태코드
+                         , ( SELECT Z1.CMM_CD_NM
+                               FROM (SELECT A.CMM_CD
+                                          , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                      FROM CM_0303T A
+                                      LEFT OUTER JOIN CM_0304T B
+                                            ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                           AND A.CMM_CD = B.CMM_CD
+                                           AND B.LANG_CD = #{sLangCd}
+                                     WHERE A.CMM_GRP_CD = 'SAL002'   /*계약상태*/
+                                       AND A.USE_YN = 'Y'
+                                     ) Z1
+                             WHERE A.CONTRACT_STAT_CD = Z1.CMM_CD
+                           ) AS CONTRACT_STAT_NM
+                         , A.CONTRACT_CUST_NO          --계약고객번호
+                         , B1.CUST_NM                  --고객명
+                         , A.VIN_NO
+                         , A.CARLINE_CD                --차종코드
+                         , A.MODEL_CD                  --모델코드
+                         , A.OCN_CD                    --OCN코드
+                         , A.EXT_COLOR_CD              --외장색상코드
+                         , A.INT_COLOR_CD              --내장색상코드
+                         , A.CNCL_DT                   --계약해약일자
+                         , A.SALE_EMP_NO               --판매사원번호
+                         , T.USR_NM AS SALE_EMP_NM
+                         , T.USR_PW AS SALE_EMP_PW
+                         , NVL(A.DSTB_CHN_CD, '01') AS DSTB_CHN_CD
+                         , ( SELECT Z1.CMM_CD_NM
+                               FROM (SELECT A.CMM_CD
+                                          , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                      FROM CM_0303T A
+                                      LEFT OUTER JOIN CM_0304T B
+                                            ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                           AND A.CMM_CD = B.CMM_CD
+                                           AND B.LANG_CD = #{sLangCd}
+                                     WHERE A.CMM_GRP_CD = 'COM072'   /*채널유형*/
+                                       AND A.USE_YN = 'Y'
+                                     ) Z1
+                             WHERE NVL(A.DSTB_CHN_CD, '01') = Z1.CMM_CD
+                           ) AS DSTB_CHN_NM
+                         , A.LV2_DLR_YN
+                         , FN_CMM_CD_NM('COM020',A.LV2_DLR_YN,#{sLangCd},'N') AS LV2_DLR_YN_NM
+                         , A.LV2_DLR_ORG_CD
+                      <!-- , (SELECT LV2_DLR_NM FROM SA_0132T WHERE LV2_DLR_CD = A.LV2_DLR_ORG_CD) AS LV2_DLR_ORG_NM -->
+                         , ( SELECT Z1.CMM_CD_NM
+                               FROM ( SELECT T.SDLR_CD
+                                           , T.SDLR_NM
+                                           , '['||T.SDLR_CD||']' || T.SDLR_NM AS CMM_CD_NM
+                                        FROM CM_0101T S
+                                           , SA_0504T T
+                                       WHERE S.DLR_CD = T.DLR_CD
+                                         AND T.DLR_CD = #{sDlrCd}
+                                         AND T.SDLR_TP IN ('EW', 'WX')
+                                     ) Z1
+                             WHERE Z1.SDLR_CD = A.LV2_DLR_ORG_CD
+                           ) AS LV2_DLR_ORG_NM
+                         , A.GRP_CONTRACT_NO           --그룹계약번호
+                         , A.CONTRACT_TP               --계약유형
+                         , ( SELECT Z1.CMM_CD_NM
+                               FROM (SELECT A.CMM_CD
+                                          , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                      FROM CM_0303T A
+                                      LEFT OUTER JOIN CM_0304T B
+                                            ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                           AND A.CMM_CD = B.CMM_CD
+                                           AND B.LANG_CD = #{sLangCd}
+                                     WHERE A.CMM_GRP_CD = 'SAL003'   /*계약유형*/
+                                       AND A.USE_YN = 'Y'
+                                     ) Z1
+                             WHERE A.CONTRACT_TP = Z1.CMM_CD
+                           ) AS CONTRACT_TP_NM
+                         , A.REAL_CAR_AMT              -- 순차량금액
+                         , A.REAL_PAY_AMT              --실제지불금액
+                         , A.DC_LVL_CD                 --할인레벨코드
+                         ,FN_CMM_CD_NM('SAL156',A.DC_LVL_CD,#{sLangCd},'N') AS DC_LVL_CD_NM
+                         , A.DC_APPROVE_YN             --할인승인여부
+                         , FN_CMM_CD_NM('COM020',A.DC_APPROVE_YN,#{sLangCd},'N') AS DC_APPROVE_YN_NM
+                         , A.DC_APPROVE_DT             --할인승인일자
+                         , A.RETL_AMT
+                      FROM SA_0201T A                     /* 계약헤더 */
+                      LEFT OUTER JOIN SA_0202T B1         /* 계약고객 */
+                        ON A.DLR_CD = B1.DLR_CD
+                       and A.CONTRACT_NO = B1.CONTRACT_NO
+                       and B1.PARTNER_TP = 'C'   -- 계약자   : SAL028
+                      LEFT OUTER JOIN CM_0801T T
+                        ON T.DLR_CD = A.DLR_CD
+                       AND T.USR_ID = A.SALE_EMP_NO
+                      WHERE 1 = 1
+                        AND A.CONTRACT_STAT_CD NOT IN ('10')      -- 저장상태 제외
+                        <if test='sDlrCd != null and sDlrCd != ""'>
+                          AND A.DLR_CD = #{sDlrCd}                       -- 딜러코드
+                        </if>
+                        <if test='sContractStatCd != null and sContractStatCd != ""'>
+                          <if test='sContractStatCd == "91"'>
+                              AND A.CONTRACT_STAT_CD in ('90', '91')
+                          </if>
+                          <if test='sContractStatCd != "91"'>
+                              AND A.CONTRACT_STAT_CD = #{sContractStatCd}      -- 계약상태
+                          </if>
+                        </if>
+                        <if test='sComboDt != null and sComboDt == "01"' >
+                            <if test='sStartDt != null'>
+                              AND NVL(A.CONTRACT_DT, SYSDATE-1) <![CDATA[ >= ]]> TRUNC(#{sStartDt},'DD')
+                            </if>
+                            <if test='sEndDt != null'>
+                              AND NVL(A.CONTRACT_DT, SYSDATE-1) <![CDATA[ < ]]> TRUNC(#{sEndDt},'DD')+1
+                            </if>
+                        </if>
+                        <if test='sComboDt != null and sComboDt == "02"' >
+                            <if test='sStartDt != null'>
+                              AND A.REAL_DL_DT <![CDATA[ >= ]]> TRUNC(#{sStartDt},'DD')
+                            </if>
+                            <if test='sEndDt != null'>
+                              AND A.REAL_DL_DT <![CDATA[ < ]]> TRUNC(#{sEndDt},'DD')+1
+                            </if>
+                        </if>
+                        <if test='sComboDt != null and sComboDt == "03"' >
+                            <if test='sStartDt != null'>
+                              AND A.CANC_DT <![CDATA[ >= ]]> TRUNC(#{sStartDt},'DD')
+                            </if>
+                            <if test='sEndDt != null'>
+                              AND A.CANC_DT <![CDATA[ < ]]> TRUNC(#{sEndDt},'DD')+1
+                            </if>
+                        </if>
+                        <if test='sSaleEmpNo != null and sSaleEmpNo != ""'>
+                          AND A.SALE_EMP_NO = #{sSaleEmpNo}     -- 판매사원번호
+                        </if>
+                        <if test='sContractCustNo != null and sContractCustNo != ""'>
+                          AND B1.CUST_CD = #{sContractCustNo}   -- 고객코드
+                        </if>
+                        <if test='sContractCustNm != null and sContractCustNm != ""'>
+                          AND B1.CUST_NM LIKE '%'||#{sContractCustNm}||'%'    -- 고객명
+                        </if>
+                        <if test='sVinNo != null and sVinNo != ""'>
+                          AND A.VIN_NO LIKE '%'|| UPPER(#{sVinNo}) ||'%'
+                        </if>
+                        <if test='sContractNo != null and sContractNo != ""'>
+                        <choose>
+                          <when test='@org.apache.commons.lang3.StringUtils@contains(sContractNo,"*")'>
+                            <bind name='sContractNo' value='@org.apache.commons.lang3.StringUtils@replace(sContractNo, "*", "%")' />
+                              AND A.CONTRACT_NO LIKE #{sContractNo}       -- 계약번호
+                          </when>
+                          <otherwise>
+                              AND A.CONTRACT_NO = #{sContractNo}          -- 계약번호
+                          </otherwise>
+                        </choose>
+                        </if>
+                        <if test='savedContractNo != null and savedContractNo != ""'>
+                          AND A.CONTRACT_NO = #{savedContractNo}        -- 계약번호
+                        </if>
+                        <if test='sContractStatCd != null and sContractStatCd != ""'>
+                          AND A.CONTRACT_STAT_CD = #{sContractStatCd}      -- 계약상태
+                        </if>
+                        <if test='sDstbChnCd != null and sDstbChnCd != ""'>
+                          AND NVL(A.DSTB_CHN_CD, '01') = #{sDstbChnCd}       -- 채널유형
+                        </if>
+                        <if test='sLv2DlrOrgCd != null and sLv2DlrOrgCd != ""'>
+                          AND A.LV2_DLR_ORG_CD = #{sLv2DlrOrgCd}       -- 2급딜러
+                        </if>
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "contractNo"'>A.CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "contractDt"'>A.CONTRACT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "contractStatNm"'>CONTRACT_STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "contractCustNo"'>A.CONTRACT_CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "vinNo"'>A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "custNm"'>B1.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "carlineCd"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "carlineNm"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "modelCd"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "modelNm"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "ocnCd"'>A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "ocnNm"'>A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "extColorCd"'>A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "extColorNm"'>A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "intColorCd"'>A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "intColorNm"'>A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cnclDt"'>A.CNCL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "saleEmpNo"'>A.SALE_EMP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "saleEmpNm"'>SALE_EMP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "lv2DlrYn"'>A.LV2_DLR_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "lv2DlrYnNm"'>LV2_DLR_YN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "lv2DlrOrgNm"'>LV2_DLR_ORG_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "realCarAmt"'>A.REAL_CAR_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "realPayAmt"'>A.REAL_PAY_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "dcApproveYnNm "'>DC_APPROVE_YN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "dcLvlCdNm "'>DC_LVL_CD_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "dstbChnNm"'>DSTB_CHN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        A.CONTRACT_DT DESC NULLS LAST, A.CONTRACT_NO DESC, A.CONTRACT_STAT_CD ASC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            A.CONTRACT_DT DESC NULLS LAST, A.CONTRACT_NO DESC, A.CONTRACT_STAT_CD ASC
+                        </otherwise>
+                    </choose>
+                ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+</mapper>

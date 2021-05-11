@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : SmsMessageIfDAO_SqlMap.xml
+    Description : DMS에서 DCS로 SMS 전송을 위한 인터페이스 내역을 저장
+    author Choi Kyung Yong
+    since 2016. 9. 5.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+   2016. 9. 5.    Choi Kyung Yong           최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.sms.service.dao.SmsMessageIfDAO">
+
+    <!-- 달력 정보 목록을 조회한다. -->
+    <select id="selectSmsMessageSeq" parameterType="SmsMessageIfVO" resultType="String">
+        /* [chn.bhmc.dms.cmm.sms.service.dao.SmsMessageIfDAO.selectSmsMessageSeq] */
+        SELECT SEQ_CM_3101T.nextval AS seq
+          FROM DUAL
+    </select>
+
+    <insert id="insertSmsMessageIF" parameterType="SmsMessageIfVO">
+        /* [chn.bhmc.dms.cmm.sms.service.dao.SmsMessageIfDAO.insertSmsMessageIF] */
+        INSERT INTO CM_3101T(
+               DLR_CD
+             , SEQ
+             , SMS_SEND_DSTIN_CD
+             , TEL_NO
+             , SMS_CONT
+             , RESV_DT
+             , SMS_SEND_YN
+             , SEND_MESG_ID
+             , APP_DSTIN_CD
+             , APP_SEQ
+             , RECEIVE_RSLT_CD
+             , CUST_NO
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+        ) VALUES (
+               #{dlrCd}
+             , #{seq}
+             , #{smsSendDstinCd}
+             , #{telNo}
+             , #{smsCont}
+             , #{resvDt}
+             , CASE WHEN #{smsSendDstinCd} = '1' THEN 'N' WHEN #{smsSendDstinCd} = '2' THEN 'R' ELSE '' END
+             , NULL
+             , #{appDstinCd}
+             , #{appSeq}
+             , #{receiveRsltCd}
+             , #{custNo}
+             , #{regUsrId}
+             , SYSDATE
+             , #{regUsrId}
+             , SYSDATE
+        )
+    </insert>
+
+    <insert id="insertSmsMessageEaiIF">
+        /* [chn.bhmc.dms.cmm.sms.service.dao.SendSmsMessageDAO.insertSmsMessageEaiIF] */
+        INSERT INTO CM_3103IS(
+               DLR_CD
+             , SEQ
+             , SMS_SEND_DSTIN_CD
+             , TEL_NO
+             , SMS_CONT
+             , RESV_DT
+             , SMS_SEND_YN
+             , SEND_MESG_ID
+             , APP_DSTIN_CD
+             , APP_SEQ
+             , CUST_NO
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+             , IFRESULT
+        )
+        SELECT A.DLR_CD
+             , A.SEQ
+             , A.SMS_SEND_DSTIN_CD
+             , A.TEL_NO
+             , A.SMS_CONT
+             , A.RESV_DT
+             , A.SMS_SEND_YN
+             , A.SEND_MESG_ID
+             , A.APP_DSTIN_CD
+             , A.APP_SEQ
+             , A.CUST_NO
+             , A.REG_USR_ID
+             , A.REG_DT
+             , A.UPDT_USR_ID
+             , A.UPDT_DT
+             , 'N'
+          FROM CM_3101T A, CM_3103IS B
+         WHERE A.SMS_SEND_YN = 'N'
+           AND A.DLR_CD = B.DLR_CD(+)
+           AND A.SEQ = B.SEQ(+)
+           AND B.DLR_CD IS NULL
+
+    </insert>
+
+    <!-- SMS 전송여부 업데이트(DMS)한다. -->
+    <update id="updateSmsMessageIfSuccess" parameterType="SmsMessageIfVO" >
+        /* [chn.bhmc.dms.cmm.sms.service.dao.SendSmsMessageDAO.updateSmsMessageIfSuccess] */
+        UPDATE CM_3101T
+           SET SMS_SEND_YN = 'Y'
+             , RECEIVE_RSLT_CD = '98'
+         WHERE DLR_CD = #{dlrCd}
+           AND SEQ = #{seq}
+           AND SMS_SEND_YN = 'N'
+    </update>
+
+    <!-- SMS 전송여부 업데이트(EAI)한다. -->
+    <update id="updateSmsMessageEaiIfSuccess" parameterType="SmsMessageIfVO" >
+        /* [chn.bhmc.dms.cmm.sms.service.dao.SendSmsMessageDAO.updateSmsMessageEaiIfSuccess] */
+        UPDATE CM_3103IS
+           SET SMS_SEND_YN = 'Y'
+             , RECEIVE_RSLT_CD = '98'
+         WHERE DLR_CD = #{dlrCd}
+           AND SEQ = #{seq}
+           AND SMS_SEND_YN = 'N'
+    </update>
+
+    <!-- SMS 예약 취소를 위한 업데이트 한다. -->
+    <update id="updateSmsMessageCancIF" parameterType="SmsMessageIfVO" >
+        /* [chn.bhmc.dms.cmm.sms.service.dao.SendSmsMessageDAO.updateSmsMessageCancIF] */
+        UPDATE CM_3101T
+           SET SMS_SEND_YN = 'C'
+             , UPDT_USR_ID = #{regUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE DLR_CD = #{dlrCd}
+           AND APP_DSTIN_CD = #{appDstinCd}
+           AND APP_SEQ = #{appSeq}
+           AND SMS_SEND_YN = 'R'
+    </update>
+</mapper>

@@ -1,0 +1,772 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="selectSerTotFosterTpDs" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sStartYyMmDd"/>
+<O>
+<![CDATA[20170501]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCarlineCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sEndYyMmDd"/>
+<O>
+<![CDATA[20170530]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sFosterTp"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrRoTp"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[-- 서비스종합리포트 : 시간 조회
+SELECT COLUMN_SEQ
+       ,COLUMN_NM
+       ,NVL(RO01, 0) AS RO01
+       ,NVL(RO02, 0) AS RO02
+       ,NVL(RO03, 0) AS RO03
+       ,NVL(RO04, 0) AS RO04
+       ,NVL(RO05, 0) AS RO05
+FROM (
+    SELECT RO_TP, COLUMN_SEQ, COLUMN_NM, TYPE, COLUMN_VAL
+    FROM (
+            WITH T1 AS (
+                SELECT * FROM (
+                    SELECT RO.DLR_CD
+                          ,RO.DIAG_DOC_NO
+                          ,RO.VIN_NO
+                          ,RO.RO_DOC_NO
+                          ,RO.RO_STAT_CD
+                          ,RO.DL_STAT_CD
+                          ,RO.WRK_STAT_CD
+                          ,FN_SER_LTS_MODEL_CD(RO.VIN_NO) AS LTS_MODEL_CD
+                          ,(SELECT CARLINE_CD FROM SA_0121T WHERE VIN_NO = RO.VIN_NO AND ROWNUM = 1) AS CARLINE_CD
+                          ,RO.RO_TP
+                          ,RO.RO_DT
+                          ,RO.DL_CHK_DT
+                          ,RO.QT_TEST_START_DT
+                          ,RO.QT_TEST_END_DT
+                          ,RO.CAR_WASH_START_DT
+                          ,RO.CAR_WASH_END_DT
+                          ,RO.EXPC_DL_DT
+                          ,TO_CHAR(RO.RO_DT,'MM') AS PRE_MM
+                      FROM SE_0300T RO
+                     WHERE RO.DLR_CD = '${sDlrCd}'
+                       AND TO_CHAR(RO.RO_DT,'YYYYMMDD') BETWEEN '${sStartYyMmDd}' AND '${sEndYyMmDd}'
+                       AND RO.RO_STAT_CD != '06'
+                       ${IF(LEN(sFosterTp) <= 0,""," AND NVL(RO.RO_TP, 'NONE')='" + sFosterTp + "'")}   --위탁유형
+                       ${IF(LEN(sDlrRoTp) <= 0,""," AND NVL(RO.DLR_RO_TP, 'NONE')='" + sDlrRoTp + "'")} --자체정의위탁유형
+                )
+                WHERE 1=1
+                ${IF(LEN(sCarlineCd) <= 0,""," AND NVL(CARLINE_CD, 'NONE')='" + sCarlineCd + "'")}   --차종
+            )
+            SELECT 1 AS COLUMN_SEQ, '服务接车时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE
+            FROM (
+                SELECT DLR_CD
+                       ,PRE_CHK_DT - REG_DT AS TERM
+                       ,TO_CHAR(PRE_CHK_DT,'MM') AS PRE_MM
+                       ,'01' AS RO_TP
+                FROM SE_0200T
+                WHERE DLR_CD = '${sDlrCd}'
+                 AND TO_CHAR(PRE_CHK_DT,'YYYYMMDD') BETWEEN '${sStartYyMmDd}' AND '${sEndYyMmDd}'
+                 AND DIAG_STAT_CD != 'C'
+                 ${IF(LEN(sCarlineCd) <= 0,""," AND NVL((SELECT A.CARLINE_CD FROM SA_0121T A WHERE A.VIN_NO = VIN_NO AND ROWNUM = 1), 'NONE')='" + sCarlineCd + "'")}   --차종
+                 ${IF(LEN(sFosterTp) <= 0,""," AND NVL('01', 'NONE')='" + sFosterTp + "'")}   --위탁유형
+                 ${IF(LEN(sDlrRoTp) <= 0,""," AND NVL('01', 'NONE')='" + sDlrRoTp + "'")}   --자체정의위탁유형
+            )
+            GROUP BY RO_TP      -- 사전점검시간(차량 딜러도착 인식시간에서 사전점검 확인시간까지의 시간산출(단위:시간))
+            UNION ALL
+            SELECT 1 AS COLUMN_SEQ, '服务接车时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 2 AS COLUMN_SEQ, '维修委托时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE FROM (      -- 정비위탁시간(사전점검 확인시간에서 RO 확인시간까지의 시간산출(단위:시간))
+                SELECT RO.DLR_CD
+                       ,RO.RO_DT - PRE.PRE_CHK_DT AS TERM
+                       ,RO.PRE_MM
+                       ,RO.RO_TP
+                FROM T1 RO
+                INNER JOIN SE_0200T PRE
+                  ON RO.DLR_CD = PRE.DLR_CD
+                 AND RO.DIAG_DOC_NO = PRE.DIAG_DOC_NO
+               WHERE PRE.DIAG_STAT_CD != 'C'
+            ) GROUP BY RO_TP
+            UNION ALL
+            SELECT 2 AS COLUMN_SEQ, '维修委托时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 3 AS COLUMN_SEQ, '派工等待时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,((SELECT MAX(REG_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) - RO.RO_DT) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.RO_TP
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY RO_TP      -- 배정대기시간(RO 확인시간에서 수리배정 시작시간까지의 시간산출(단위:시간))
+            UNION ALL
+            SELECT 3 AS COLUMN_SEQ, '派工等待时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 4 AS COLUMN_SEQ, '维修派工时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,((SELECT MAX(REG_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) - RO.RO_DT) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.RO_TP
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY RO_TP     -- 수리배정시간(RO 확인시간에서 수리배정 완료시간까지의 시간산출(단위:시간))
+            UNION ALL
+            SELECT 4 AS COLUMN_SEQ, '维修派工时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS PRE_MM, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 5 AS COLUMN_SEQ, '维修服务时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,(RO.DL_CHK_DT - (SELECT MAX(REG_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.RO_TP
+                FROM T1 RO
+                WHERE DL_STAT_CD IS NOT NULL
+                AND RO_STAT_CD != '01'
+            )
+            GROUP BY RO_TP      -- 수리서비스시간(수리배정 완료시간에서 인도체크 확인시간까지의 시간산출(단위:시간))
+            UNION ALL
+            SELECT 5 AS COLUMN_SEQ, '维修服务时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 6 AS COLUMN_SEQ, '    维修服务时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,((SELECT MIN(WRK_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) - (SELECT MIN(REG_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.RO_TP
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY RO_TP      -- 수리대기시간(수리시작시간 - 배정시간(단위:시간))
+            UNION ALL
+            SELECT 6 AS COLUMN_SEQ, '    维修服务时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 7 AS COLUMN_SEQ, '    维修操作时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,((SELECT MAX(WRK_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) - (SELECT MIN(WRK_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.RO_TP
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY RO_TP      -- 수리조작시간(수리시작시간에서 수리완료까지 과정에서 조작 시간 산출(단위:시간))
+            UNION ALL
+            SELECT 7 AS COLUMN_SEQ, '    维修操作时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 8 AS COLUMN_SEQ, '    维修中断时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,0 AS TERM
+                       ,RO.PRE_MM
+                       ,RO.RO_TP
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY RO_TP      -- 수리중단시간(수리시작시간에서 수리완료까지 과정에서 중단 시간 산출(단위:시간)) OTL ;;
+            UNION ALL
+            SELECT 8 AS COLUMN_SEQ, '    维修中断时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 9 AS COLUMN_SEQ, '    质量检验时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,QT_TEST_END_DT - QT_TEST_START_DT AS TERM
+                       ,RO.PRE_MM
+                       ,RO.RO_TP
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY RO_TP      -- 품질점검시간(품검시작시간에서 품검완료시간까지 시간 산출(단위:시간))
+            UNION ALL
+            SELECT 9 AS COLUMN_SEQ, '    质量检验时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 10 AS COLUMN_SEQ, '    清洗车辆时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,CAR_WASH_END_DT - CAR_WASH_START_DT AS TERM
+                       ,RO.PRE_MM
+                       ,RO.RO_TP
+                FROM T1 RO
+                WHERE RO_STAT_CD != '01'
+            )
+            GROUP BY RO_TP      -- 세차시간(세차시작시간에서 세차완료시간까지 시간 산출(단위:시간))
+            UNION ALL
+            SELECT 10 AS COLUMN_SEQ, '    清洗车辆时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 11 AS COLUMN_SEQ, '交车检查时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       --,(CA.CALC_DT - RO.DL_CHK_DT) AS TERM1
+                       --,((SELECT MAX(RCPT_DT) FROM SE_0560T WHERE DLR_CD = RCV.DLR_CD AND RCV_DOC_NO = RCV.RCV_DOC_NO) - CA.CALC_DT) AS TERM2
+                       ,RO.DL_CHK_DT - NVL(RO.QT_TEST_END_DT, (SELECT MAX(WRK_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.RO_TP
+                FROM T1 RO
+                INNER JOIN SE_0500T CA
+                ON RO.DLR_CD = CA.DLR_CD
+                AND RO.RO_DOC_NO = CA.RO_DOC_NO
+                INNER JOIN SE_0550T RCV
+                ON RO.DLR_CD = RCV.DLR_CD
+                AND RO.RO_DOC_NO = RCV.RO_DOC_NO
+                WHERE CA.CALC_STAT_CD = '00'
+                AND RCV.RCV_STAT_CD = 'F'
+                AND CA.SER_PAR_DSTIN_CD = 'SER'
+                AND CA.CALC_CANC_YN = 'N'
+            )
+            GROUP BY RO_TP      -- 정비인도시간(인도체크 확인시간에서 수납등록 완료시간까지 시간 산출(단위:시간))
+            UNION ALL
+            SELECT 11 AS COLUMN_SEQ, '交车检查时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 12 AS COLUMN_SEQ, '服务结算时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,(CA.CALC_DT - RO.DL_CHK_DT) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.RO_TP
+                FROM T1 RO
+                INNER JOIN SE_0500T CA
+                ON RO.DLR_CD = CA.DLR_CD
+                AND RO.RO_DOC_NO = CA.RO_DOC_NO
+                INNER JOIN SE_0550T RCV
+                ON RO.DLR_CD = RCV.DLR_CD
+                AND RO.RO_DOC_NO = RCV.RO_DOC_NO
+                WHERE CA.CALC_STAT_CD = '00'
+                AND RCV.RCV_STAT_CD = 'F'
+                AND CA.SER_PAR_DSTIN_CD = 'SER'
+                AND CA.CALC_CANC_YN = 'N'
+            )
+            GROUP BY RO_TP     -- 정비정산시간(인도체크 확인시간에서 정산완료시간까지 시간 산출(단위:시간))
+            UNION ALL
+            SELECT 12 AS COLUMN_SEQ, '服务结算时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 13 AS COLUMN_SEQ, '服务收款时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE
+            FROM (
+                SELECT CA.DLR_CD
+                       ,((SELECT MAX(RCPT_DT) FROM SE_0560T WHERE DLR_CD = RCV.DLR_CD AND RCV_DOC_NO = RCV.RCV_DOC_NO) - CA.CALC_DT) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.RO_TP
+                FROM T1 RO
+                INNER JOIN SE_0500T CA
+                ON RO.DLR_CD = CA.DLR_CD
+                AND RO.RO_DOC_NO = CA.RO_DOC_NO
+                INNER JOIN SE_0550T RCV
+                ON RO.DLR_CD = RCV.DLR_CD
+                AND RO.RO_DOC_NO = RCV.RO_DOC_NO
+                WHERE CA.CALC_STAT_CD = '00'
+                AND RCV.RCV_STAT_CD = 'F'
+                AND CA.SER_PAR_DSTIN_CD = 'SER'
+                AND CA.CALC_CANC_YN = 'N'
+            )
+            GROUP BY RO_TP      -- 정비수납시간(정산완료시간에서 수납등록완료시간까지 시간 산출(단위:시간))
+            UNION ALL
+            SELECT 13 AS COLUMN_SEQ, '服务收款时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 14 AS COLUMN_SEQ, '客户等候时间' AS COLUMN_NM, ROUND(SUM(TERM) * 24 / COUNT(1), 2) AS COLUMN_VAL, RO_TP, 'TIME' AS TYPE
+            FROM (
+                SELECT RO.DLR_CD
+                       ,(CA.CALC_DT - RO.RO_DT) AS TERM
+                       ,RO.PRE_MM
+                       ,RO.RO_TP
+                FROM T1 RO
+                INNER JOIN SE_0500T CA
+                ON RO.DLR_CD = CA.DLR_CD
+                AND RO.RO_DOC_NO = CA.RO_DOC_NO
+                WHERE CA.CALC_STAT_CD = '00'
+                AND CA.SER_PAR_DSTIN_CD = 'SER'
+                AND CA.CALC_CANC_YN = 'N'
+            )
+            GROUP BY RO_TP      -- 고객대기시간(RO 확인시간에서 정산완료시간까지 시간 산출(단위:시간))
+            UNION ALL
+            SELECT 14 AS COLUMN_SEQ, '客户等候时间' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'TIME' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 15 AS COLUMN_SEQ, '准时交车台次' AS COLUMN_NM, COUNT(RO.RO_DOC_NO) AS COLUMN_VAL, RO.RO_TP, 'CNT' AS TYPE
+            FROM T1 RO
+            INNER JOIN SE_0500T CA
+            ON RO.DLR_CD = CA.DLR_CD
+            AND RO.RO_DOC_NO = CA.RO_DOC_NO
+            INNER JOIN SE_0550T RCV
+            ON RO.DLR_CD = RCV.DLR_CD
+            AND RO.RO_DOC_NO = RCV.RO_DOC_NO
+            WHERE CA.CALC_STAT_CD = '00'
+            AND RCV.RCV_STAT_CD = 'F'
+            AND CA.SER_PAR_DSTIN_CD = 'SER'
+            AND CA.CALC_CANC_YN = 'N'
+            AND DL_CHK_DT <= CA.CALC_DT
+            GROUP BY RO.RO_TP      -- on time인도대차(인도확인시간이 예상인도시간보다 작거나 같은 RO대차) -> 인도확인시간이 정산완료시간보다 작거나 같은 RO수량
+            UNION ALL
+            SELECT 15 AS COLUMN_SEQ, '准时交车台次' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'CNT' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 16 AS COLUMN_SEQ, '准时交车率' AS COLUMN_NM, ROUND((COUNT(DL_RO_DOC_NO)/COUNT(RO_DOC_NO)), 2) AS COLUMN_VAL, RO_TP, 'CNT' AS TYPE
+            FROM(
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS DL_RO_DOC_NO, RO_TP
+                FROM T1
+                WHERE DL_CHK_DT <= EXPC_DL_DT
+                UNION ALL
+                SELECT RO_DOC_NO, '' AS DL_RO_DOC_NO, RO_TP
+                FROM T1
+            )
+            GROUP BY RO_TP      -- on time인도율(on time인도대차/RO대차)
+            UNION ALL
+            SELECT 16 AS COLUMN_SEQ, '准时交车率' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'CNT' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 17 AS COLUMN_SEQ, '准时开工台次' AS COLUMN_NM, COUNT(ON_RO_DOC_NO) AS COLUMN_VAL, RO_TP, 'CNT' AS TYPE
+            FROM (
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS ON_RO_DOC_NO, RO_TP
+                FROM T1 RO
+                WHERE (SELECT MIN(WRK_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) <= (SELECT MIN(ALLOC_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+                UNION ALL
+                SELECT '' AS RO_DOC_NO, '' AS DL_RO_DOC_NO, '' AS RO_TP
+                FROM DUAL
+            )
+            GROUP BY RO_TP     -- on time작업시작대차(수리시작시간이 예상시작시간보다 작거나 같은 RO 수량)
+
+            UNION ALL
+
+            SELECT 18 AS COLUMN_SEQ, '准时开工率' AS COLUMN_NM, ROUND((COUNT(ON_RO_DOC_NO)/COUNT(RO_DOC_NO)), 2) AS COLUMN_VAL, RO_TP, 'CNT' AS TYPE
+            FROM(
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS ON_RO_DOC_NO, RO_TP
+                FROM T1 RO
+                WHERE (SELECT MIN(WRK_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) <= (SELECT MIN(ALLOC_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+                UNION ALL
+                SELECT RO_DOC_NO, '' AS DL_RO_DOC_NO, RO_TP
+                FROM T1 RO
+            )
+            GROUP BY RO_TP      -- on time작업시작율(on time작업시작대차/RO대차)
+            UNION ALL
+            SELECT 18 AS COLUMN_SEQ, '准时开工率' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'CNT' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 19 AS COLUMN_SEQ, '准时完工台次' AS COLUMN_NM, COUNT(ON_RO_DOC_NO) AS COLUMN_VAL, RO_TP, 'CNT' AS TYPE
+            FROM (
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS ON_RO_DOC_NO, RO_TP
+                FROM T1 RO
+                WHERE (SELECT MAX(WRK_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) <= (SELECT MAX(ALLOC_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+                UNION ALL
+                SELECT '' AS RO_DOC_NO, '' AS DL_RO_DOC_NO, '' AS RO_TP
+                FROM DUAL
+            )
+            GROUP BY RO_TP      -- on time작업완료대차(수리완료시간이 예상완료시간보다 작거나 같은 RO 수량)
+
+            UNION ALL
+
+            SELECT 20 AS COLUMN_SEQ, '准时完工率' AS COLUMN_NM, ROUND((COUNT(ON_RO_DOC_NO)/COUNT(RO_DOC_NO)), 2) AS COLUMN_VAL, RO_TP, 'CNT' AS TYPE
+            FROM(
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS ON_RO_DOC_NO, RO_TP
+                FROM T1 RO
+                WHERE (SELECT MAX(WRK_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) <= (SELECT MAX(ALLOC_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+                UNION ALL
+                SELECT RO_DOC_NO, '' AS DL_RO_DOC_NO, RO_TP
+                FROM T1 RO
+            )
+            GROUP BY RO_TP     -- on time작업완료율(on time작업완료대차/RO대차)
+            UNION ALL
+            SELECT 20 AS COLUMN_SEQ, '准时完工率' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'CNT' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 21 AS COLUMN_SEQ, '延迟开工台次' AS COLUMN_NM, COUNT(RO_DOC_NO) AS COLUMN_VAL, RO_TP, 'CNT' AS TYPE
+            FROM T1 RO
+            WHERE (SELECT MIN(WRK_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) > (SELECT MIN(ALLOC_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+            GROUP BY RO_TP     -- 지연작업시작대차(수리시작시간이 예상시작시간보다 큰 RO 수량)
+            UNION ALL
+            SELECT 21 AS COLUMN_SEQ, '延迟开工台次' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'CNT' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 22 AS COLUMN_SEQ, '延迟开工率' AS COLUMN_NM, ROUND((COUNT(ON_RO_DOC_NO)/COUNT(RO_DOC_NO)), 2) AS COLUMN_VAL, RO_TP, 'CNT' AS TYPE
+            FROM(
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS ON_RO_DOC_NO, RO_TP
+                FROM T1 RO
+                WHERE (SELECT MIN(WRK_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) > (SELECT MIN(ALLOC_START_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+                UNION ALL
+                SELECT RO_DOC_NO, '' AS DL_RO_DOC_NO, RO_TP
+                FROM T1 RO
+            )
+            GROUP BY RO_TP      -- 지연작업시작율(지연작업시작대차/RO대차)
+            UNION ALL
+            SELECT 22 AS COLUMN_SEQ, '延迟开工率' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'CNT' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 23 AS COLUMN_SEQ, '延迟完工台次' AS COLUMN_NM, COUNT(RO_DOC_NO) AS COLUMN_VAL, RO_TP, 'CNT' AS TYPE
+            FROM T1 RO
+            WHERE (SELECT MAX(WRK_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) > (SELECT MAX(ALLOC_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+            GROUP BY RO_TP     -- 지연작업완료대차(수리완료시간이 예상완료시간보다 큰 RO 수량)
+            UNION ALL
+            SELECT 23 AS COLUMN_SEQ, '延迟完工台次' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'CNT' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 24 AS COLUMN_SEQ, '延迟完工率' AS COLUMN_NM, ROUND((COUNT(ON_RO_DOC_NO)/COUNT(RO_DOC_NO)), 2) AS COLUMN_VAL, RO_TP, 'CNT' AS TYPE
+            FROM(
+                SELECT '' AS RO_DOC_NO, RO_DOC_NO AS ON_RO_DOC_NO, RO_TP
+                FROM T1 RO
+                WHERE (SELECT MAX(WRK_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO) > (SELECT MAX(ALLOC_END_DT) FROM SE_0330T WHERE DLR_CD = RO.DLR_CD AND RO_DOC_NO = RO.RO_DOC_NO)
+                UNION ALL
+                SELECT RO_DOC_NO, '' AS DL_RO_DOC_NO, RO_TP
+                FROM T1 RO
+            )
+            GROUP BY RO_TP      -- 지연작업완료율(지연작업완료대차/RO대차)
+            UNION ALL
+            SELECT 24 AS COLUMN_SEQ, '延迟完工率' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'CNT' AS TYPE FROM DUAL
+           
+            /**服务时间报表 委托类型页卡 中 维修中断台次、维修中断率不展示 贾明 2018-12-18 start
+            UNION ALL
+
+            SELECT 25 AS COLUMN_SEQ, '维修中断台次' AS COLUMN_NM, COUNT(T1.RO_DOC_NO) COLUMN_VAL, RO_TP, 'CNT' AS TYPE
+            FROM T1
+            INNER JOIN ( SELECT DLR_CD, RO_DOC_NO
+                         FROM SE_0330HT
+                         WHERE 1=1
+                         AND WRK_STAT_CD = '03'
+                         GROUP BY DLR_CD, RO_DOC_NO ) HT
+            ON T1.DLR_CD = HT.DLR_CD
+            AND T1.RO_DOC_NO = HT.RO_DOC_NO
+            GROUP BY RO_TP      -- 수리중단대차(수리중단 발생 RO 수량)
+            UNION ALL
+            SELECT 25 AS COLUMN_SEQ, '维修中断台次' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'CNT' AS TYPE FROM DUAL
+
+            UNION ALL
+
+            SELECT 26 AS COLUMN_SEQ, '维修中断率' AS COLUMN_NM, ROUND((COUNT(ST_RO_DOC_NO)/COUNT(RO_DOC_NO)), 1) AS COLUMN_VAL, RO_TP, 'CNT' AS TYPE
+            FROM(
+                SELECT '' AS RO_DOC_NO, T1.RO_DOC_NO AS ST_RO_DOC_NO, RO_TP
+                FROM T1
+                INNER JOIN ( SELECT DLR_CD, RO_DOC_NO
+                             FROM SE_0330HT
+                             WHERE 1=1
+                             AND WRK_STAT_CD = '03'
+                             GROUP BY DLR_CD, RO_DOC_NO ) HT
+                ON T1.DLR_CD = HT.DLR_CD
+                AND T1.RO_DOC_NO = HT.RO_DOC_NO
+                UNION ALL
+                SELECT RO_DOC_NO, '' AS DL_RO_DOC_NO, RO_TP
+                FROM T1
+            )
+            GROUP BY RO_TP      -- 수리중단율(수리중단대차/RO대차)
+            UNION ALL
+            SELECT 26 AS COLUMN_SEQ, '维修中断率' AS COLUMN_NM, 0 AS COLUMN_VAL, '00' AS RO_TP, 'CNT' AS TYPE FROM DUAL
+                                      服务时间报表 委托类型页卡 中 维修中断台次、维修中断率不展示 贾明 2018-12-18 end
+            **/
+    )
+)PIVOT(
+        SUM(COLUMN_VAL)
+        FOR RO_TP IN(
+             '01' AS "RO01"
+            ,'02' AS "RO02"
+            ,'03' AS "RO03"
+            ,'04' AS "RO04"
+            ,'05' AS "RO05"
+        )
+)
+ORDER BY COLUMN_SEQ;]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="0" T="0"/>
+<FR/>
+<HC/>
+<FC/>
+<UPFCR COLUMN="false" ROW="true"/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1152000,1152000,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,722880,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[0,5760000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,2743200,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="0">
+<O>
+<![CDATA[数据名称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0" s="1">
+<O>
+<![CDATA[合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="1">
+<O>
+<![CDATA[平均]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0" s="0">
+<O>
+<![CDATA[普通维修]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="0">
+<O>
+<![CDATA[保修索赔]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="0" s="0">
+<O>
+<![CDATA[保险理赔]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="0" s="0">
+<O>
+<![CDATA[返工维修]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="0" s="0">
+<O>
+<![CDATA[内部维修]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotFosterTpDs" columnName="COLUMN_SEQ"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotFosterTpDs" columnName="COLUMN_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Scope val="1"/>
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="2" r="1" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=if(OR(A2=16,A2=18,A2=20,A2=22,A2=24,A2=26), "", SUM(D2:I2))]]></Attributes>
+</O>
+<PrivilegeControl/>
+<CellPageAttr/>
+<CellInsertPolicy>
+<InsertPolicy>
+<![CDATA[default]]></InsertPolicy>
+<O>
+<![CDATA[]]></O>
+</CellInsertPolicy>
+<Expand/>
+</C>
+<C c="3" r="1" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(E2:I2), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotFosterTpDs" columnName="RO01"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotFosterTpDs" columnName="RO02"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotFosterTpDs" columnName="RO03"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotFosterTpDs" columnName="RO04"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerTotFosterTpDs" columnName="RO05"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting>
+<PaperSize width="38880000" height="36000000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="1" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID/>
+</WorkBook>

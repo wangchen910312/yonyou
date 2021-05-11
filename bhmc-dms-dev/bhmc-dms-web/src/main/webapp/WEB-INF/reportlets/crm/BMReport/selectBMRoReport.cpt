@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="ds1" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sRoEndDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDateFormat"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRegEndDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRoStartDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRegStartDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[ SELECT CMD.CMM_CD,
+        MAX(CMD.CMM_CD_TXT) AS BLUE_GRADE_NM,
+        COUNT(CUST_NO) AS BLUE_CUST_CNT,
+        NVL(SUM(OCCR_POINT_VAL), 0) AS OCCR_POINT_VAL
+   FROM ( SELECT C.CUST_NO,
+                 MAX(C.BLUE_MEMBERSHIP_NO) AS BLUE_MEMBERSHIP_NO,
+                 MAX(C.BLUE_GRADE_NM) AS BLUE_GRADE_CD,
+                 SUM(ROBP.OCCR_POINT_VAL) AS OCCR_POINT_VAL
+            FROM CR_0101T C 
+${IF(LEN(sRoStartDt) == 0, " LEFT OUTER JOIN (  SELECT RO.RO_DOC_NO,  "," INNER JOIN ( SELECT RO.RO_DOC_NO, ")}
+  					RO.VIN_NO,
+                    BP.OCCR_POINT_VAL,
+                    BP.OCCR_DT,
+                    BP.CUST_NO,
+                    BP.DLR_CD
+               FROM CR_0808T BP,
+                    SE_0300T RO
+              WHERE BP.DLR_CD = RO.DLR_CD
+                AND BP.RO_DOC_NO = RO.RO_DOC_NO
+                AND BP.RO_DOC_NO IS NOT NULL
+                AND RO.RO_STAT_CD = '05'
+${IF(LEN(sRoStartDt) == 0, ""," AND RO.RO_DT BETWEEN TO_DATE('"+sRoStartDt+"', '"+sDateFormat+"') AND TO_DATE('"+sRoEndDt+"', '"+sDateFormat+"') + 1 ")}
+               ) ROBP ON ROBP.DLR_CD = C.DLR_CD
+             AND ROBP.CUST_NO = C.CUST_NO
+           WHERE C.DLR_CD = '${sDlrCd}'
+             AND C.BLUE_MEMBERSHIP_NO IS NOT NULL
+${IF(LEN(sRegStartDt) == 0, ""," AND C.BLUE_MEMBERSHIP_JOIN_DT BETWEEN TO_DATE('"+sRegStartDt+"', '"+sDateFormat+"') AND TO_DATE('"+sRegEndDt+"', '"+sDateFormat+"') + 1 ")}
+           GROUP BY C.CUST_NO)
+  RIGHT OUTER JOIN (  SELECT T1.CMM_CD,
+                             NVL(T2.CMM_CD_TXT,
+                             T1.CMM_CD_NM) AS CMM_CD_TXT,
+                             SORT_ORDER
+                        FROM CM_0303T T1 LEFT JOIN CM_0304T T2 ON T1.CMM_GRP_CD = T2.CMM_GRP_CD
+                         AND T1.CMM_CD = T2.CMM_CD
+                         AND T2.LANG_CD = 'zh'
+                       WHERE T1.CMM_GRP_CD = 'CRM806') CMD ON CMD.CMM_CD = BLUE_GRADE_CD
+  GROUP BY CMD.CMM_CD
+  ORDER BY MAX(CMD.SORT_ORDER)]]></Query>
+</TableData>
+<TableData name="ds2" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sRoEndDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDateFormat"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRegEndDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRoStartDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRegStartDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[ SELECT 'BM' AS AA,
+        CMD.CMM_CD AS CD,
+        CMD.CMM_CD_TXT AS NM,
+        NVL(RO_CNT, 0) AS RO_CNT,
+        CMD.SORT_ORDER AS SORT_ORDER
+   FROM ( SELECT C.BLUE_GRADE_NM AS BLUE_GRADE_CD,
+                 COUNT(RO_DOC_NO) AS RO_CNT
+            FROM CR_0101T C 
+           INNER JOIN (  SELECT RO.RO_DOC_NO,
+                                RO.VIN_NO,
+                                BP.OCCR_POINT_VAL,
+                                BP.OCCR_DT,
+                                BP.CUST_NO,
+                                BP.DLR_CD
+                           FROM CR_0808T BP,
+                                SE_0300T RO
+                          WHERE BP.DLR_CD = RO.DLR_CD
+                            AND BP.RO_DOC_NO = RO.RO_DOC_NO
+                            AND BP.RO_DOC_NO IS NOT NULL
+                            AND RO.RO_STAT_CD = '05'
+${IF(LEN(sRoStartDt) == 0, ""," AND RO.RO_DT BETWEEN TO_DATE('"+sRoStartDt+"', '"+sDateFormat+"') AND TO_DATE('"+sRoEndDt+"', '"+sDateFormat+"') + 1 ")}
+                             ) ROBP ON ROBP.DLR_CD = C.DLR_CD AND ROBP.CUST_NO = C.CUST_NO
+           WHERE C.DLR_CD = '${sDlrCd}'
+             AND C.BLUE_MEMBERSHIP_NO IS NOT NULL
+${IF(LEN(sRegStartDt) == 0, ""," AND C.BLUE_MEMBERSHIP_JOIN_DT BETWEEN TO_DATE('"+sRegStartDt+"', '"+sDateFormat+"') AND TO_DATE('"+sRegEndDt+"', '"+sDateFormat+"') + 1 ")}
+           GROUP BY C.BLUE_GRADE_NM) 
+   RIGHT OUTER JOIN (   SELECT T1.CMM_CD,
+	                           NVL(T2.CMM_CD_TXT,
+	                           T1.CMM_CD_NM) AS CMM_CD_TXT,
+	                           SORT_ORDER
+	                      FROM CM_0303T T1 LEFT JOIN CM_0304T T2 ON T1.CMM_GRP_CD = T2.CMM_GRP_CD
+	                       AND T1.CMM_CD = T2.CMM_CD
+	                       AND T2.LANG_CD = 'zh'
+	                     WHERE T1.CMM_GRP_CD = 'CRM806') CMD ON CMD.CMM_CD = BLUE_GRADE_CD 
+UNION ALL
+ SELECT 'CAR' AS AA,
+        V.CARLINE_CD AS CD,
+        FN_GET_CARLINE_NM_NC(V.CARLINE_CD) AS NM,
+        COUNT(RO_DOC_NO) AS RO_CNT,
+        0 AS SORT_ORDER
+   FROM CR_0101T C
+  INNER JOIN (  SELECT RO.RO_DOC_NO,
+                       RO.VIN_NO,
+                       BP.OCCR_POINT_VAL,
+                       BP.OCCR_DT,
+                       BP.CUST_NO,
+                       BP.DLR_CD
+                  FROM CR_0808T BP,
+                       SE_0300T RO
+                 WHERE BP.DLR_CD = RO.DLR_CD
+                   AND BP.RO_DOC_NO = RO.RO_DOC_NO
+                   AND BP.RO_DOC_NO IS NOT NULL
+                   AND RO.RO_STAT_CD = '05'
+${IF(LEN(sRoStartDt) == 0, ""," AND RO.RO_DT BETWEEN TO_DATE('"+sRoStartDt+"', '"+sDateFormat+"') AND TO_DATE('"+sRoEndDt+"', '"+sDateFormat+"') + 1 ")}
+                 ) ROBP ON ROBP.DLR_CD = C.DLR_CD AND ROBP.CUST_NO = C.CUST_NO
+  INNER JOIN SA_0121T V ON ROBP.VIN_NO = V.VIN_NO
+  WHERE C.DLR_CD = '${sDlrCd}'
+    AND C.BLUE_MEMBERSHIP_NO IS NOT NULL
+${IF(LEN(sRegStartDt) == 0, ""," AND C.BLUE_MEMBERSHIP_JOIN_DT BETWEEN TO_DATE('"+sRegStartDt+"', '"+sDateFormat+"') AND TO_DATE('"+sRegEndDt+"', '"+sDateFormat+"') + 1 ")}
+  GROUP BY V.CARLINE_CD
+  ORDER BY AA, SORT_ORDER]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[381000,1152000,1152000,1152000,723900,1371600,1152000,1152000,1152000,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[533400,3600000,3600000,3600000,3600000,2743200,2743200,2743200,2743200,2743200,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="1" cs="4" s="0">
+<O>
+<![CDATA[蓝缤会员返厂消费报表]]></O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="1" r="2" s="1">
+<O>
+<![CDATA[总计会员数\t]]></O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="2" r="2" s="1">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="BLUE_GRADE_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[CONCATENATE($$$,"会员数")]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="1" leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="3" r="2" s="1">
+<O>
+<![CDATA[积分消费总数]]></O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="4" r="2" s="1">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="BLUE_GRADE_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[CONCATENATE($$$,"会员积分消费数")]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="1" leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="1" r="3" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(C4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="2" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="BLUE_CUST_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="1" leftParentDefault="false" upParentDefault="false" up="C3"/>
+</C>
+<C c="3" r="3" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(E4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="4" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="OCCR_POINT_VAL"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="1" leftParentDefault="false" upParentDefault="false" up="E3"/>
+</C>
+<C c="1" r="5" cs="4" s="0">
+<O>
+<![CDATA[蓝缤会员返厂频次报表]]></O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="1" r="6" cs="2" s="1">
+<O>
+<![CDATA[蓝缤会员等级\t]]></O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="3" r="6" cs="2" s="1">
+<O>
+<![CDATA[车种]]></O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="1" r="7" s="1">
+<O>
+<![CDATA[总计次数\t]]></O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="2" r="7" s="1">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="NM"/>
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[AA]]></CNAME>
+<Compare op="0">
+<O>
+<![CDATA[BM]]></O>
+</Compare>
+</Condition>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[CONCATENATE($$$,"返厂次数")]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="1"/>
+</C>
+<C c="3" r="7" s="1">
+<O>
+<![CDATA[悦动]]></O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="4" r="7" s="1">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="NM"/>
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[AA]]></CNAME>
+<Compare op="0">
+<O>
+<![CDATA[CAR]]></O>
+</Compare>
+</Condition>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="1"/>
+</C>
+<C c="1" r="8" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(C9)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="2" r="8" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="RO_CNT"/>
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[AA]]></CNAME>
+<Compare op="0">
+<O>
+<![CDATA[BM]]></O>
+</Compare>
+</Condition>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="1" leftParentDefault="false" upParentDefault="false" up="C8"/>
+</C>
+<C c="3" r="8" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(E9)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="4" r="8" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds2" columnName="RO_CNT"/>
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[AA]]></CNAME>
+<Compare op="0">
+<O>
+<![CDATA[CAR]]></O>
+</Compare>
+</Condition>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="1" leftParentDefault="false" upParentDefault="false" up="E8"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="1440000" footerHeight="1440000">
+<PaperSetting orientation="1">
+<PaperSize width="46368000" height="64080000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList>
+<HFElement className="com.fr.base.headerfooter.PageNumberHFElement">
+<FRFont name="SimSun" style="0" size="72"/>
+<![CDATA[1]]></HFElement>
+</RightList>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="1" size="96"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID/>
+</WorkBook>

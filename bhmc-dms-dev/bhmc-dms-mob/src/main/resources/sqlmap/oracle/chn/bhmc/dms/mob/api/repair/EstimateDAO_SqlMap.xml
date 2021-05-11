@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : EstimateDAO_SqlMap.xml
+    Description : 견적에 관한 데이터처리
+    author Kwon Ki Hyun
+    since 2016. 04. 20.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 04. 20.  Kwon Ki Hyun     최초 생성
+-->
+<mapper namespace="chn.bhmc.dms.mob.api.repair.dao.RepairEstimateDAO">
+
+    <select id="selectEstimateManageByKey" parameterType="EstimateSearchVO" resultType="chn.bhmc.dms.mob.api.repair.vo.EstimateVO">
+        /* [chn.bhmc.dms.mob.api.repair.dao.EstimateAppDAO.selectEstimateManageByKey] */
+        SELECT A.DLR_CD
+            ,A.EST_DOC_NO
+            ,A.RO_TP
+            ,A.RO_DOC_NO
+            ,A.RO_GRP_NO
+            ,A.RESV_DOC_NO
+            ,A.DIAG_DOC_NO
+            ,A.PRE_CHK_DT
+            ,A.BASE_RO_NO
+            ,A.INC_REQ_NO
+            ,A.VIN_NO
+            ,FN_SER_LTS_MODEL_CD(A.VIN_NO) AS LTS_MODEL_CD
+            ,A.CAR_REG_NO
+            ,A.ENGIN_NO
+            ,A.CAR_OWNER_ID
+            ,A.CAR_OWNER_NM
+            ,A.DRIVER_ID
+            ,A.DRIVER_NM
+            ,A.RUN_DIST_VAL
+            ,A.LBR_CALC_AMT
+            ,A.LBR_DC_RATE
+            ,A.LBR_DC_AMT
+            ,A.LBR_BM_POINT_USE_AMT
+            ,A.LBR_POINT_USE_AMT
+            ,A.LBR_ETC_DC_AMT
+            ,A.LBR_CALC_SUM_AMT
+            ,A.PAR_CALC_AMT
+            ,A.PAR_DC_RATE
+            ,A.PAR_DC_AMT
+            ,A.PAR_BM_POINT_USE_AMT
+            ,A.PAR_POINT_USE_AMT
+            ,A.PAR_ETC_DC_AMT
+            ,A.PAR_CALC_SUM_AMT
+            ,A.ETC_CALC_AMT
+            ,A.ETC_DC_RATE
+            ,A.ETC_DC_AMT
+            ,A.ETC_BM_POINT_USE_AMT
+            ,A.ETC_POINT_USE_AMT
+            ,A.ETC_OTHER_DC_AMT
+            ,A.ETC_CALC_SUM_AMT
+            ,A.CALC_TOT_AMT
+            ,A.DC_TOT_RATE
+            ,A.DC_TOT_AMT
+            ,A.BM_POINT_TOT_AMT
+            ,A.POINT_TOT_AMT
+            ,A.ETC_TOT_AMT
+            ,A.LAST_CALC_TOT_AMT
+            ,A.EST_DT
+            ,A.EST_STAT_CD
+            ,A.EST_REMARK
+            ,A.EXPC_CHK_DT
+            ,A.EXPC_CHK_RUN_DIST_VAL
+            ,A.MAIN_CTNO_TP
+            ,A.MAIN_CTNO_DT_TP
+            ,A.SA_ID
+            ,A.SA_NM
+            ,A.SER_PAR_DSTIN_CD
+            ,A.CUST_TP
+            ,A.ETC_DC_CD
+            ,A.ETC_DC_SEQ
+            ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.REG_USR_ID AND DLR_CD = A.DLR_CD) AS REG_USR_NM
+            ,A.REG_DT
+            ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = B.REG_USR_ID AND DLR_CD = B.DLR_CD) AS RO_USR_NM
+            ,B.RO_DT
+            ,A.LBR_BM_CUPN_USE_AMT
+            ,A.PAR_BM_CUPN_USE_AMT
+            ,A.ETC_BM_CUPN_USE_AMT
+            ,A.BM_CUPN_TOT_AMT
+        FROM SE_0450T A
+        LEFT OUTER JOIN SE_0300T B
+        ON A.DLR_CD = B.DLR_CD
+        AND A.RO_DOC_NO = B.RO_DOC_NO
+        WHERE A.DLR_CD = #{sDlrCd}
+        <if test='sEstDocNo != null and sEstDocNo != "" '>
+        AND A.EST_DOC_NO = #{sEstDocNo}
+        </if>
+    </select>
+
+    <!-- 견적서 목록수 -->
+    <select id="selectEstimateListByConditionCnt"   parameterType="EstimateSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mob.api.repair.dao.EstimateAppDAO.selectEstimateListByConditionCnt] */
+
+           SELECT COUNT(EST_DOC_NO) AS VALUE
+             FROM (
+            SELECT EST_DOC_NO
+                  ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.REG_USR_ID AND DLR_CD = A.DLR_CD) AS REG_USR_NM
+              FROM SE_0450T A
+            LEFT OUTER JOIN SE_0300T B
+            ON A.RO_DOC_NO = B.RO_DOC_NO
+            AND A.DLR_CD   = B.DLR_CD
+            WHERE A.DLR_CD = #{sDlrCd}
+            <if test='sEstDocNo != null and sEstDocNo != ""'>
+                AND A.EST_DOC_NO = #{sEstDocNo}
+            </if>
+            <if test='sRoDocNo != null and sRoDocNo != ""'>
+                AND A.RO_DOC_NO = #{sRoDocNo}
+            </if>
+            <if test='sCarRegNo != null and sCarRegNo != ""'>
+                AND A.CAR_REG_NO = #{sCarRegNo}
+            </if>
+            <if test='sVinNo != null and sVinNo != ""'>
+                AND A.VIN_NO = #{sVinNo}
+            </if>
+            <if test='sEstStatCd != null and sEstStatCd != ""'>
+                AND A.EST_STAT_CD = #{sEstStatCd}
+            </if>
+            <if test='sEstFromDt != null'>
+                AND A.EST_DT <![CDATA[>=]]> #{sEstFromDt}
+            </if>
+            <if test='sEstToDt != null'>
+                AND A.EST_DT <![CDATA[<=]]> #{sEstToDt} + 1
+            </if>
+            <if test='sRoTp != null and sRoTp != ""'>
+                AND A.RO_TP = #{sRoTp}
+            </if>
+            <if test='sRoFromDt != null'>
+                AND B.RO_DT <![CDATA[>=]]> #{sRoFromDt}
+            </if>
+            <if test='sRoToDt != null'>
+                AND B.RO_DT <![CDATA[<=]]> #{sRoToDt} + 1
+            </if>
+           )
+           <where>
+               <if test='sRegUsrNm != null and sRegUsrNm != ""'>
+                 REG_USR_NM  =  #{sRegUsrNm}
+               </if>
+           </where>
+    </select>
+
+    <!-- 견적서정보조회 -->
+    <select id="selectEstimateListByCondition" parameterType="EstimateSearchVO" resultType="chn.bhmc.dms.mob.api.repair.vo.EstimateVO">
+        /* [chn.bhmc.dms.mob.api.repair.dao.EstimateAppDAO.selectEstimateListByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                  ,T1.*
+             FROM (
+                SELECT A.*
+                      ,B.RO_DT
+                      ,B.RO_STAT_CD
+                      ,(SELECT CAR_ID
+                          FROM SA_0121T
+                         WHERE VIN_NO = A.VIN_NO
+                          AND ROWNUM = 1
+                       ) AS CAR_ID
+                       ,FN_CMM_CD_NM('SER401', A.EST_CANC_REASON_CD, #{sLangCd} , 'N') AS EST_CANC_REASON_NM
+                       ,FN_CMM_CD_NM('SER400', A.EST_STAT_CD, #{sLangCd} , 'N') AS EST_STAT_NM
+                       ,FN_CMM_CD_NM('SER031', B.RO_TP, #{sLangCd} , 'N') AS RO_TP_NM
+                       ,NVL((SELECT SUM(NVL(WON_UNIT_CUT_AMT,0))
+                          FROM SE_0460T
+                         WHERE DLR_CD     = A.DLR_CD
+                           AND EST_DOC_NO = A.EST_DOC_NO
+                           AND ROWNUM = 1 ),0)                      AS WON_UNIT_CUT_AMT
+                       ,NVL((SELECT SUM(NVL(DEMIC_POINT_CUT_AMT,0))
+                           FROM SE_0460T
+                          WHERE DLR_CD     = A.DLR_CD
+                            AND EST_DOC_NO = A.EST_DOC_NO
+                            AND ROWNUM = 1 ),0)                     AS DEMIC_POINT_CUT_AMT
+                       ,NVL((SELECT SUM(NVL(PAYM_AMT,0))
+                           FROM SE_0460T
+                          WHERE DLR_CD = A.DLR_CD
+                            AND EST_DOC_NO = A.EST_DOC_NO
+                            AND ROWNUM = 1 ),0)                    AS PAYM_AMT
+                       ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = B.REG_USR_ID AND DLR_CD = A.DLR_CD) AS RO_USR_NM
+                       ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.EST_CANC_ID AND DLR_CD = A.DLR_CD) AS EST_CANC_NM
+                       ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.REG_USR_ID AND DLR_CD = A.DLR_CD) AS REG_USR_NM
+                       ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.UPDT_USR_ID AND DLR_CD = A.DLR_CD) AS UPDT_USR_NM
+                       ,(SELECT CAR_RUN_DIST_VAL FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS CAR_RUN_DIST_VAL
+                       ,(SELECT FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_NM FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS CARLINE_NM
+                       ,(SELECT FN_GET_MODEL_NM(MODEL_CD) AS MODEL_NM FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS MODEL_NM
+                       ,FN_SER_LTS_MODEL_CD(A.VIN_NO) AS LTS_MODEL_CD
+                       ,FN_CMM_CD_NM('SER030', B.RO_STAT_CD, #{sLangCd} , 'N') AS RO_STAT_NM
+                  FROM SE_0450T A
+                LEFT OUTER JOIN SE_0300T B
+                  ON A.RO_DOC_NO = B.RO_DOC_NO
+                 AND A.DLR_CD    = B.DLR_CD
+                WHERE A.DLR_CD = #{sDlrCd}
+                <if test='sEstDocNo != null and sEstDocNo != ""'>
+                    AND A.EST_DOC_NO = #{sEstDocNo}
+                </if>
+                <if test='sRoDocNo != null and sRoDocNo != ""'>
+                    AND A.RO_DOC_NO = #{sRoDocNo}
+                </if>
+                <if test='sCarRegNo != null and sCarRegNo != ""'>
+                    AND A.CAR_REG_NO = #{sCarRegNo}
+                </if>
+                <if test='sVinNo != null and sVinNo != ""'>
+                    AND A.VIN_NO = #{sVinNo}
+                </if>
+                <if test='sEstStatCd != null and sEstStatCd != ""'>
+                    AND A.EST_STAT_CD = #{sEstStatCd}
+                </if>
+                <if test='sEstFromDt != null'>
+                    AND A.EST_DT <![CDATA[>=]]> #{sEstFromDt}
+                </if>
+                <if test='sEstToDt != null'>
+                    AND A.EST_DT <![CDATA[<=]]> #{sEstToDt} + 1
+                </if>
+                <if test='sRoTp != null and sRoTp != ""'>
+                    AND A.RO_TP = #{sRoTp}
+                </if>
+                <if test='sRoFromDt != null'>
+                    AND B.RO_DT <![CDATA[>=]]> #{sRoFromDt}
+                </if>
+                <if test='sRoToDt != null'>
+                    AND B.RO_DT <![CDATA[<=]]> #{sRoToDt} + 1
+                </if>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "carRegNo"'>                   A.CAR_REG_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                                <when test='item.field == "vinNo"'>                      A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                     </when>
+                                <when test='item.field == "carOwnerNm"'>                 A.CAR_OWNER_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                                <when test='item.field == "driverNm"'>                   A.DRIVER_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "carlineNm"'>                  CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                   </when>
+                                <when test='item.field == "modelNm"'>                    MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                     </when>
+                                <when test='item.field == "runDistVal"'>                 A.RUN_DIST_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                                <when test='item.field == "carRunDistVal"'>              CAR_RUN_DIST_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                <when test='item.field == "estStatNm"'>                  EST_STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "estDocNo"'>                   EST_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                   </when>
+                                <when test='item.field == "estDtFormat"'>                A.EST_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                     </when>
+                                <when test='item.field == "regUsrNm"'>                   REG_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                   </when>
+                                <when test='item.field == "estPrintDtFormat"'>           A.EST_PRINT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                                <when test='item.field == "estCancDtFormat"'>            A.EST_CANC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                                <when test='item.field == "estCancNm"'>                  EST_CANC_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "estCancReasonNm"'>            EST_CANC_REASON_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "updtDtFormat"'>               A.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                    </when>
+                                <when test='item.field == "updtUsrNm"'>                  UPDT_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "roStatNm"'>                   RO_STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                   </when>
+                                <when test='item.field == "roDocNo"'>                    A.RO_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "roTpNm"'>                     RO_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                     </when>
+                                <when test='item.field == "roDtFormat"'>                 B.RO_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                      </when>
+                                <when test='item.field == "roUsrNm"'>                    RO_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                    </when>
+                                <when test='item.field == "estRemark"'>                  A.EST_REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                                <when test='item.field == "lbrCalcSumAmt"'>              A.LBR_CALC_SUM_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "parCalcSumAmt"'>              A.PAR_CALC_SUM_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "etcCalcAmt"'>                 A.ETC_CALC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                                <when test='item.field == "lbrDcAmt"'>                   A.LBR_DC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                                <when test='item.field == "parDcAmt"'>                   A.PAR_DC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                                <when test='item.field == "pointTotAmt"'>                A.POINT_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                                <when test='item.field == "bmPointTotAmt"'>              A.BM_POINT_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "etcTotAmt"'>                  A.ETC_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                                <when test='item.field == "calcTotAmt"'>                 A.CALC_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                                <when test='item.field == "wonUnitCutAmt"'>              WON_UNIT_CUT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                <when test='item.field == "demicPointCutAmt"'>           DEMIC_POINT_CUT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                <when test='item.field == "paymAmt"'>                    PAYM_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                     </when>
+                                <otherwise>
+                                A.EST_DOC_NO DESC
+                                ,A.DLR_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                    A.EST_DOC_NO DESC
+                    ,A.DLR_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='sRegUsrNm != null and sRegUsrNm != ""'>
+                    REG_USR_NM  LIKE '%'||#{sRegUsrNm}||'%'
+                </if>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+</mapper>

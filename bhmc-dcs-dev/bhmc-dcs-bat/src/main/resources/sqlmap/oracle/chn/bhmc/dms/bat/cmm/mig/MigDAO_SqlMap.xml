@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : MigDAO_SqlMap.xml
+    Description : DCS Migration을 위한 배치 DAO
+    author Choi KyungYong
+    since 2017. 07. 10.
+    version 1.0
+    Modification Information
+       since            author              description
+    ===========    ================    ========================
+    2017. 07. 10.   Choi KyungYong            최초 생성
+-->
+
+
+<mapper namespace="chn.bhmc.dms.bat.cmm.mig.service.dao.MigDAO">
+    <!-- GDMS RAW DATA 이행을 위한 기존 Master Data 삭제(GDMS -> DCS.GDMS) -->
+    <update id="deleteMigGdms" statementType="CALLABLE" >
+         {call GDMS.MIG_GDMS_DELETE()}
+    </update>
+
+    <!-- GDMS RAW DATA 이행을 위한 기존 Master Data 적재(GDMS -> DCS.GDMS) -->
+    <update id="insertMigGdms" statementType="CALLABLE" >
+         {call GDMS.MIG_GDMS_INSERT()}
+    </update>
+
+    <!-- GDMS RAW DATA 이행을 위한 기존 딜러별 Data 삭제(GDMS -> DCS.GDMS) -->
+    <update id="deleteMigGdmsDlr" parameterType="String" statementType="CALLABLE" >
+         {call GDMS.MIG_GDMS_DELETE_DLR(
+            #{value, mode=IN, jdbcType=VARCHAR}
+         )}
+    </update>
+
+    <!-- GDMS RAW DATA 이행을 위한 기존 딜러별 Data 적재(GDMS -> DCS.GDMS) -->
+    <update id="insertMigGdmsDlr" parameterType="String" statementType="CALLABLE" >
+         {call GDMS.MIG_GDMS_INSERT_DLR(
+            #{value, mode=IN, jdbcType=VARCHAR}
+         )}
+    </update>
+
+    <!-- SIEBEL RAW DATA 이행을 위한 기존 딜러별 Data 삭제/적재(SIEBEL -> DCS.GDMS) -->
+    <update id="insertMigSiebel" parameterType="String" statementType="CALLABLE" >
+         {call GDMS.MIG_SIEBEL(
+            #{value, mode=IN, jdbcType=VARCHAR}
+         )}
+    </update>
+
+    <!-- GDMS Raw 데이터를 기준으로  MDMS 스키마에 이행 데이터 삭제/적재 -->
+    <update id="insertMigProcMain" parameterType="String" statementType="CALLABLE" >
+         {call MIG.MIG_PROC_MAIN_DLR_CD(
+            #{value, mode=IN, jdbcType=VARCHAR}
+         )}
+    </update>
+
+    <!-- GDMS Raw 데이터를 기준으로  MDMS 스키마에 이행 데이터 삭제/적재(마스터) -->
+    <update id="insertProcMainAll" parameterType="String" statementType="CALLABLE" >
+         {call MIG.MIG_PROC_MAIN_ALL()}
+    </update>
+
+</mapper>

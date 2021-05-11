@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : ServicePartDAO_SqlMap.xml
+    Description : 공통부품에 관한 데이터처리
+    author KyungMok Kim
+    since 2016. 08. 23.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 08. 23.  KyungMok Kim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.repair.dao.RepairServicePartDAO">
+
+    <!-- 부품 목록 조회. -->
+    <select id="selectServicePartsByCondition" parameterType="TabInfoSearchVO" resultType="chn.bhmc.dms.mob.api.repair.vo.ServicePartVO">
+        /* [chn.bhmc.dms.mob.api.repair.dao.ServicePartAppDAO.selectServicePartsByCondition] */
+        SELECT
+            A.DLR_CD                                 --딜러코드
+           ,A.PREFIX_ID                              --PREFIX ID
+           ,A.DOC_NO                                 --문서번호
+           ,A.LINE_NO                                --라인번호
+           ,A.RO_TP                                  --RO유형
+           ,A.ITEM_CD                                --품목코드
+           ,A.ITEM_NM                                --품목명
+           ,A.PKG_ITEM_CD                            --패키지품목코드
+           ,B.PKG_DOC_NO                             --패키지문서번호
+           ,A.GI_TP                                  --출고유형
+           ,NVL(A.ITEM_PRC,0) AS ITEM_PRC            --품목단가
+           ,NVL(A.ITEM_QTY,0 )AS ITEM_QTY            --품목수량
+           ,NVL(A.ITEM_PRC,0) AS ITEM_AMT            --품목금액
+           ,NVL(A.ITEM_SALE_PRC,0)AS ITEM_SALE_PRC   --품목판매단가
+           ,NVL(A.ITEM_SALE_AMT,0) AS ITEM_SALE_AMT  --품목판매금액
+           ,NVL(A.CALC_UNIT_CD,'EA')AS CALC_UNIT_CD  --계산단위코드
+           ,'EA' AS SALE_UNIT_CD
+           ,A.CALC_UNIT_NM                           --계산단위명
+           ,NVL(A.REQ_QTY, 0)AS REQ_QTY              --요청수량
+           ,NVL(A.GI_QTY, 0) AS GI_QTY               --출고수량
+           ,CASE WHEN NVL(GI_QTY, 0) = 0 THEN '01'                                         --등록
+                 WHEN (NVL(GI_QTY, 0) != 0 AND NVL(GI_QTY, 0) = NVL(REQ_QTY, 0)) THEN '02' --완성
+                 WHEN NVL(GI_QTY, 0) <![CDATA[<]]> NVL(REQ_QTY, 0) THEN '03'               --부분완성
+            END ITEM_REQ_STAT_CD                     --부품요청상태
+           ,NVL(A.DC_AMT,0)  AS DC_AMT               --할인금액
+           ,NVL(A.DC_RATE,0) AS DC_RATE              --할인율
+           ,NVL(A.ITEM_TOT_AMT,0) AS ITEM_TOT_AMT    --품목합계금액
+           ,A.COM_ITEM_CD                            --공용품목코드
+           ,A.COM_ITEM_NM                            --공용픔목명
+           ,A.COM_ITEM_PRC                           --공용품목단가
+           ,A.ATQ_ITEM_NO                            --고품품목번호
+           ,A.CR_NO                                  --캠페인리콜번호
+           ,A.CR_NM                                  --캠페인리콜명
+           ,A.CR_TP                                  --캠페인리콜유형
+           ,A.FMS_CUPN_ITEM_CD                       --FMS쿠폰품목코드
+           ,A.FMS_ITEM_CD                            --FMS품목코드
+           ,A.STRGE_CD                               --창고코드
+           ,A.LOC_CD                                 --위치코드
+           ,A.SUB_BP_CD                              --외주거래처코드
+           ,A.SUB_BP_NM                              --외주거래처명
+           ,A.REQ_STRGE_CD                           --요청창고코드
+           ,A.GR_STRGE_CD                            --입고창고코드
+           ,A.GI_STRGE_CD                            --출고창고코드
+           ,A.READY_STAT_CD                          --준비상태코드
+           ,A.PAYM_CD                                --결제자번호
+           ,A.PAY_CMP_NM                             --지불회사명
+           ,A.PAYM_TP                                --결제자유형
+           ,A.PAYM_USR_NM                            --결제자명
+           ,A.REMARK                                 --비고
+           ,A.CAU_CD                                 --원인코드
+           ,A.CAU_NM                                 --원인명
+           ,A.PHEN_CD                                --현상코드
+           ,A.PHEN_NM                                --현상명
+           ,A.PURC_ORD_NO                            --구매오더번호
+           ,A.REG_USR_ID                             --등록자ID
+           ,A.REG_DT                                 --등록일자
+           ,A.UPDT_USR_ID                            --수정자ID
+           ,A.UPDT_DT                                --수정일자
+           ,'N' AS CAU_ITEM_YN
+           ,A.PARTS_PRC_TP                           --부품가격유형
+           ,A.MOVING_AVG_PRC          --이동평균단가(부품원가격)
+           ,A.MOVING_AVG_AMT          --이동평균단가(부품원금액)
+           ,CASE WHEN #{sPreFixId} = 'RE'
+                 THEN (SELECT READY_STAT_CD FROM PT_0502T WHERE DLR_CD = A.DLR_CD AND RESV_DOC_NO = A.DOC_NO AND ITEM_CD = A.ITEM_CD AND PAR_GI_TP = 'SR')
+                 WHEN #{sPreFixId} = 'PRE'
+                 THEN (SELECT READY_STAT_CD FROM PT_0502T WHERE DLR_CD = A.DLR_CD AND RESV_DOC_NO = A.DOC_NO AND ITEM_CD = A.ITEM_CD AND PAR_GI_TP = 'SP')
+                 END AS PAR_RESV_STAT_CD
+           ,CASE WHEN #{sPreFixId} = 'RE'
+                 THEN FN_CMM_CD_NM('PAR304', (SELECT READY_STAT_CD FROM PT_0502T WHERE DLR_CD = A.DLR_CD AND RESV_DOC_NO = A.DOC_NO AND ITEM_CD = A.ITEM_CD AND PAR_GI_TP = 'SR'), #{sLangCd} , 'N')
+                 WHEN #{sPreFixId} = 'PRE'
+                 THEN FN_CMM_CD_NM('PAR304', (SELECT READY_STAT_CD FROM PT_0502T WHERE DLR_CD = A.DLR_CD AND RESV_DOC_NO = A.DOC_NO AND ITEM_CD = A.ITEM_CD AND PAR_GI_TP = 'SP'), #{sLangCd} , 'N')
+                 END AS PAR_RESV_STAT_NM --부품예약상태명
+        FROM SE_0160T A
+        LEFT JOIN PT_0230T B ON A.DLR_CD = B.DLR_CD AND A.PKG_DOC_NO = B.PKG_DOC_NO AND A.PKG_ITEM_CD = B.PKG_ITEM_CD
+        WHERE A.DLR_CD = #{sDlrCd}
+        AND A.PREFIX_ID = #{sPreFixId}
+        AND A.DOC_NO = #{sDocNo}
+        <if test='sGiQtyExist != null and sGiQtyExist != ""'>
+            AND A.GI_QTY > 0
+        </if>
+        <if test='sItemCd != null and sItemCd != ""'>
+            AND A.ITEM_CD = #{sItemCd}
+        </if>
+        <if test='sLineNo != null and sLineNo != 0'>
+            AND A.LINE_NO = #{sLineNo}
+        </if>
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "dlrCd"'>           A.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                        <when test='item.field == "preFixId"'>        A.PREFIX_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                        <when test='item.field == "docNo"'>           A.DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                        <when test='item.field == "roTp"'>            A.RO_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                        <when test='item.field == "itemCd"'>          A.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                        <when test='item.field == "pkgItemCd"'>       A.PKG_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "itemPrc"'>         A.ITEM_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                        <when test='item.field == "itemQty"'>         A.ITEM_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                        <when test='item.field == "itemSalePrc"'>     A.ITEM_SALE_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                        <when test='item.field == "itemSaleAmt"'>     A.ITEM_SALE_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                        <when test='item.field == "calcUnitCd"'>      A.CALC_UNIT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                        <when test='item.field == "calcUnitNm"'>      A.CALC_UNIT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                        <when test='item.field == "reqQty"'>          A.REQ_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                        <when test='item.field == "giQty"'>           A.GI_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                        <when test='item.field == "dcAmt"'>           A.DC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                        <when test='item.field == "dcRate"'>          A.DC_RATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                        <when test='item.field == "itemTotAmt"'>      A.ITEM_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                        <when test='item.field == "comItemCd"'>       A.COM_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "comItemPrc"'>      A.COM_ITEM_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                        <when test='item.field == "atqItemNo"'>       A.ATQ_ITEM_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "crNo"'>            A.CR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                        <when test='item.field == "crNm"'>            A.CR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                        <when test='item.field == "crTp"'>            A.CR_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                        <when test='item.field == "fmsCupnItemCd"'>   A.FMS_CUPN_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "fmsItemCd"'>       A.FMS_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "readyStatCd"'>     A.READY_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                        <when test='item.field == "payCmpNm"'>        A.PAY_CMP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                        <when test='item.field == "paymTp"'>          A.PAYM_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                        <when test='item.field == "paymUsrNm"'>       A.PAYM_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <otherwise>
+                            A.DLR_CD ASC
+                            ,A.DOC_NO DESC
+                            ,A.LINE_NO ASC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                A.DLR_CD ASC
+                ,A.DOC_NO DESC
+                ,A.LINE_NO ASC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 부품 목록수를 조회. -->
+    <select id="selectServicePartsByConditionCnt" parameterType="TabInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mob.api.repair.dao.ServicePartAppDAO.selectServicePartsByConditionCnt] */
+        SELECT COUNT(DOC_NO)
+        FROM SE_0160T
+        WHERE DLR_CD = #{sDlrCd}
+        AND PREFIX_ID = #{sPreFixId}
+        AND DOC_NO = #{sDocNo}
+        <if test='sGiQtyExist != null and sGiQtyExist != ""'>
+            AND GI_QTY > 0
+        </if>
+        <if test='sItemCd != null and sItemCd != ""'>
+            AND ITEM_CD = #{sItemCd}
+        </if>
+        <if test='sLineNo != null and sLineNo != 0'>
+            AND LINE_NO = #{sLineNo}
+        </if>
+    </select>
+</mapper>

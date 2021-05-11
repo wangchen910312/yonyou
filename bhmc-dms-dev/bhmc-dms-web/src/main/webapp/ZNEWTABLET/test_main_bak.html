@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+    <title></title>
+    <link rel="stylesheet" href="../resources/css/kendo/kendo.common.min.css" />
+    <link rel="stylesheet" href="../resources/css/kendo/kendo.default.min.css" />
+    <link rel="stylesheet" href="../resources/css/mob/kendo.mobile.all.min.css" />
+    <!-- <link rel="stylesheet" type="text/css" href="../resources/css/common.css">
+    <link rel="stylesheet" type="text/css" href="../resources/css/tablet.css"> -->
+
+    <script src="../resources/js/jquery-2.1.4.min.js"></script>
+    <script src="../resources/js/kendo/kendo.all.min.js"></script>
+</head>
+<body>
+<div style="overflow: hidden; padding: 50px;">
+<div id="gridHeader"></div>
+</div>
+</body>
+<script>
+$(document).ready(function () {
+    $("#gridHeader").kendoGrid({
+        dataSource:{
+            transport:{
+                read:{
+                    url:"/bhmc-dms-web/ser/rev/reservationReceipt/selectReservationReceiptsList.do"
+                    ,dataType:"json"
+                    ,type:"POST"
+                    ,contentType: "application/json; charset=utf-8",
+                }
+                ,parameterMap:function(options, operation) {
+                    if (operation === "read") {
+
+                        var params = {};
+
+                        params["recordCountPerPage"] = 10;
+                        params["pageIndex"] = 1;
+                        params["firstIndex"] = 0;
+                        params["lastIndex"] = 10;
+                        params["sort"] = options.sort;
+
+                        params["sDlrCd"]       = $("sDlrCd").val();
+                        params["sListType"]    = "01";
+                        params["sCarRegNo"]    = "";
+                        params["sResvTp"]      = "";
+                        params["sVinNo"]       = "";
+                        params["sResvDocNo"]   = "";
+                        params["sResvStatCd"]  = "";
+                        params["sResvFromDt"]  = null;
+                        params["sResvToDt"]    = null;
+                        params["sSerResvStartFromDt"]    = null;
+                        params["sSerResvStartToDt"]  = null;
+                        params["sRegUsrNm"]    = "";
+                        params["sPreFixId"]    = "RE";
+
+                        return kendo.stringify(params);
+
+                    }else if (operation !== "read" && options.models) {
+                        return kendo.stringify(options.models);
+                    }
+                }
+            }
+            ,schema:{
+                /* model:{
+                    id:"rnum"
+                    ,fields:{
+                        rnum:{type:"number", editable:false}
+                        ,dlrCd:{type:"string", editable:false}
+                        ,resvDocNo:{type:"string", editable:false}
+                        ,regDt:{type:"date"}
+                        ,updtDt:{type:"date"}
+                        ,hopeResvDt:{type:"date"}
+                        ,serResvStartDt:{type:"date"}
+                        ,serResvEndDt:{type:"date"}
+                        ,cancResvDt:{type:"date"}
+                        ,confirmDt:{type:"date"}
+                        ,resvPrintDt:{type:"date"}
+                        ,resvDt:{type:"date"}
+                    }
+                }
+                ,type: 'json' */
+                data: "data",
+                total: "total"
+            }
+        }
+        //,height:450
+        ,editable:false
+        ,autoBind:true
+        ,enableTooltip:true               //Tooltip 적용, default:false
+        ,multiSelectWithCheckbox:true     //멀티선택 적용. default:false
+        ,filterable:false                 // 필터링 기능 사용안함
+        ,selectable:"row"
+        ,dataBound:function(e) {
+            /* var rows = e.sender.tbody.children();
+
+            $.each(rows, function(idx, row){
+                var row = $(rows[idx]);
+                var dataItem = e.sender.dataItem(row);
+
+                if(dataItem.resvStatCd == "C" || dataItem.resvStatCd == "F"){
+                    e.sender.tbody.find("input[data-uid='" + dataItem.uid + "']").attr("disabled",true);
+                }
+            }); */
+        }
+        ,dataBinding:function (e){
+            alert(e);
+        }
+        ,columns:[
+             {field:"carRegNo", title:"차량번호", width:100}                                // 차량번호
+            ,{field:"vinNo", title:"VIN", width:150 ,attributes:{"class":"ac"}}        //VIN
+            ,{field:"carOwnerNm", title:"소유자", width:100}                           //소유자
+            ,{field:"driverNm", title:"방문자", width:100}                               //방문자
+            ,{field:"carlineNm", title:"차종명칭", width:100}                           //차종명칭
+            ,{field:"modelNm", title:"모델명칭", width:100}                               //모델명칭
+            ,{field:"carRunDistVal", title:"누적주행거리", attributes :{"class":"ar"}, width:100 , format:"{0:n0}"}    // 누적주행거리
+            ,{field:"resvStatCd", title:"예약상태", width:100                            //예약상태
+
+            }
+            ,{field:"resvDocNo", title:"예약번호", width:120                            //예약번호
+
+            }
+            ,{field:"resvTp", title:"예약채널", width:100                            //예약채널
+
+            }
+            ,{field:"resvDt", title:"수리예약시간", width:130, attributes:{"class":"ac"}        //수리예약시간
+                //, format:"{0:yyyy-mm-dd HH:mm}"
+            }
+            ,{field:"regUsrNm", title:"예약접수자", width:100}                          // 예약접수자
+            ,{field:"resvPrintDt", title:"예약프린트시간", width:130, attributes:{"class":"ac"}    // 예약프린트시간
+                //, format:"{0:yyyy-mm-dd HH:mm}"
+            }
+            ,{field:"updtDt", title:"예약변경시간", width:130, attributes:{"class":"ac"}      // 예약변경시간
+                //,format:"{0:yyyy-mm-dd HH:mm}"
+            }
+            ,{field:"updtUsrNm", title:"예약변경자", width:100}                           // 예약변경자
+            ,{field:"cancResvDt", title:"예약취소시간", width:130, attributes:{"class":"ac"}// 예약취소시간
+                //,format:"{0:yyyy-mm-dd HH:mm}"
+            }
+            ,{field:"cancUsrNm", title:"예약취소자", width:100}                        //예약취소자
+            ,{field:"cancReasonCont", title:"취소원인", width:100}                      //취소원인
+            ,{field:"hopeResvDt", title:"예약희망일자", width:130, attributes:{"class":"ac"} // 예약희망일자
+                //,format:"{0:yyyy-mm-dd HH:mm}"
+            }
+            ,{field:"serResvStartDt", title:"예약시간", width:130, attributes:{"class":"ac"}        // 예약시간
+                //,format:"{0:yyyy-mm-dd HH:mm}"
+            }
+            ,{field:"confirmDt", title:"예약완료시간", width:130, attributes:{"class":"ac"}//예약완료시간
+                //,format:"{0:yyyy-mm-dd HH:mm}"
+            }
+            ,{field:"confirmUsrNm", title:"예약완료자", width:100}                   //예약완료자
+            ,{field:"resvRemark", title:"예약비고", width:100}               // 예약비고
+            ,{field:"saNm", title:"SA", width:100}                                             // SA
+            ,{field:"tecNm", title:"테크니션", width:100, attributes:{"class":"al"} }               // 테크니션
+            ,{field:"lbrAmt", title:"예정공임비", width:100, attributes:{"class":"ar"} ,format:"{0:n2}"}    // 예정공임비
+            ,{field:"parAmt", title:"예정부품비", width:100, attributes:{"class":"ar"} ,format:"{0:n2}"}    // 예정부품비
+            ,{field:"etcAmt", title:"에정기타비", width:100, attributes:{"class":"ar"} ,format:"{0:n2}"}    // 에정기타비
+            ,{field:"sumAmt", title:"예정총금액", width:100, attributes:{"class":"ar"} ,format:"{0:n2}"}       // 예정총금액
+            ,{field:"resvAlramDt", title:"수리예약알람시간", width:130, attributes:{"class":"ac"}  //수리예약알람시간
+                //, format:"{0:yyyy-mm-dd HH:mm}"
+            }
+            ,{field:"resvAlramUsrNm", title:"수리예약알람자", width:100}                   //수리예약알람자
+        ]
+    });
+
+});
+</script>
+</html>

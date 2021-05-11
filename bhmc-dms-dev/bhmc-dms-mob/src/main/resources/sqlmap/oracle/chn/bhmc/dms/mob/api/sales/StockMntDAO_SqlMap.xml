@@ -1,0 +1,690 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.mob.api.sales.dao.SalesStockMntDAO">
+
+    <!--  재고관리 조회 목록 갯수  -->
+    <select id="selectStockMntsByConditionCnt" parameterType="StockMntSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.inv.service.dao.StockMntDAO.selectStockMntsByConditionCnt] */
+      SELECT COUNT(1)
+          FROM (
+          		SELECT X1.*
+                      FROM (
+                            SELECT A.CAR_ID
+                                 , A.STOCK_TP           -- 재고유형
+                                 , ( SELECT Z4.CMM_CD_NM
+                                       FROM (SELECT A.CMM_CD
+                                                  , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                              FROM CM_0303T A
+                                              LEFT OUTER JOIN CM_0304T B
+                                                    ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                                   AND A.CMM_CD = B.CMM_CD
+                                                   AND B.LANG_CD = #{sLangCd}
+                                             WHERE A.CMM_GRP_CD = 'SAL001'   /*차량상태코드*/
+                                               AND A.USE_YN = 'Y'
+                                             ) Z4
+                                     WHERE A.CAR_STAT_CD = Z4.CMM_CD
+                                   ) AS CAR_STAT_NM     -- 차량상태(재고유형)
+                                 , A.VIN_NO             -- 차대번호
+                                 , A.NCAR_DSTIN_CD      -- 신차량구분코드
+                                 , A.CARLINE_CD
+                                 , A.MODEL_CD
+                                 , A.OCN_CD
+                                 , A.EXT_COLOR_CD
+                                 , A.INT_COLOR_CD
+                                 , A.ORD_TP
+                                 , ( SELECT Z1.CMM_CD_NM
+                                       FROM (SELECT A.CMM_CD
+                                                  , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                              FROM CM_0303T A
+                                              LEFT OUTER JOIN CM_0304T B
+                                                    ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                                   AND A.CMM_CD = B.CMM_CD
+                                                   AND B.LANG_CD = #{sLangCd}
+                                             WHERE A.CMM_GRP_CD = 'SAL138'   /*오더유형*/
+                                               AND A.USE_YN = 'Y'
+                                             ) Z1
+                                     WHERE A.ORD_TP = Z1.CMM_CD
+                                   ) AS ORD_TP_NM             -- 주문유형
+                                 , A.STR_YN                   -- 전략여부
+                                 , A.STR_NO                   -- 전략신청번호
+                                 , (
+                                    SELECT CASE WHEN MAX(Z1.STR_STAT) = 'A' THEN 'A'
+                                                WHEN MAX(Z1.STR_STAT) = 'B' THEN 'Y'
+                                           ELSE 'N'
+                                       END AS STR_STAT_CD
+                                      FROM SA_0256T Z1    --전략출고
+                                     INNER JOIN (
+                                                   SELECT DLR_CD
+                                                        , CAR_ID
+                                                        , MAX(CAST(NVL(STR_NO,0) AS INTEGER)) AS STR_NO
+                                                     FROM SA_0256T
+                                                    GROUP BY DLR_CD, CAR_ID
+                                                 ) Z2
+                                        ON Z1.DLR_CD = Z2.DLR_CD
+                                       AND Z1.CAR_ID = Z2.CAR_ID
+                                       AND Z1.STR_NO = Z2.STR_NO
+                                     WHERE Z1.DLR_CD = A.ORD_DLR_CD
+                                       AND Z1.CAR_ID = A.CAR_ID
+                                       AND Z1.STR_STAT <![CDATA[<>]]>  'X'
+                                 ) AS STR_STAT_CD
+                                 , NVL(A.DAMAGE_CD, '02') AS DAMAGE_CD     -- 손상여부 : SAL049
+                                 , CASE WHEN A.BLOCK_SALE_ADV_NO IS NOT NULL THEN 'Y'
+                                        WHEN NVL(A.OWN_STAT_CD, 'O') = 'A' THEN 'Y'
+                                        WHEN NVL(A.DAMAGE_CD, '02') = '01' THEN 'Y'
+                                     /* ELSE NVL(A.BLOCK_YN, 'N')  */
+                                        ELSE 'N'
+                                     END AS BLOCK_YN
+                                 , NVL(A.BLOCK_SALE_ADV_NO, ' ') AS BLOCK_SALE_ADV_NO
+                                 , NVL(A.STRGE_CD, ' ') AS STRGE_CD           -- 창고
+                                 , NVL(A.LOC_CD, ' ') AS LOC_CD               -- 위치
+                                 , (
+                                     SELECT NVL(Z3.LOC_NM, ' ') AS LOC_NM
+                                       FROM (
+                                             SELECT DLR_CD
+                                                  , STRGE_CD
+                                                  , LOC_CD
+                                                  , LOC_NM
+                                               FROM PT_0222T
+                                              GROUP BY DLR_CD, STRGE_CD, LOC_CD, LOC_NM
+                                            ) Z3
+                                     WHERE Z3.DLR_CD = A.ORD_DLR_CD
+                                       AND Z3.STRGE_CD = A.STRGE_CD
+                                       AND Z3.LOC_CD = A.LOC_CD
+                                   ) AS LOC_NM
+                                 , NVL(A.CMP_CAR_YN, 'N') AS CMP_CAR_YN                -- 회사차여부
+                                 , NVL(A.CMP_CAR_DSTIN_CD, ' ') AS CMP_CAR_DSTIN_CD    -- 회사차구분
+
+                                 , NVL(A.DAMAGE_CD, '02') AS BF_DAMAGE_CD
+                                 , NVL(A.BLOCK_YN, 'N')   AS BF_BLOCK_YN
+                                 , A.BLOCK_SALE_ADV_NO    AS BF_BLOCK_SALE_ADV_NO
+                                 , A.STRGE_CD             AS BF_STRGE_CD
+                                 , A.LOC_CD               AS BF_LOC_CD
+                                 , A.CMP_CAR_YN           AS BF_CMP_CAR_YN
+                                 , A.CMP_CAR_DSTIN_CD     AS BF_CMP_CAR_DSTIN_CD
+                                 , A.OPEN_YN         -- 공개여부
+                                 , X.WH_PRC  AS RETL_PRC        -- 사용자금
+                                 , DECODE(A.CERT_SECU_CD, NULL, 'N', A.CERT_SECU_CD) AS USED_AMT_TP
+                                 , ( SELECT Z1.CMM_CD_NM
+                                       FROM (SELECT A.CMM_CD
+                                                  , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                              FROM CM_0303T A
+                                              LEFT OUTER JOIN CM_0304T B
+                                                    ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                                   AND A.CMM_CD = B.CMM_CD
+                                                   AND B.LANG_CD = #{sLangCd}
+                                             WHERE A.CMM_GRP_CD = 'SAL191'   /*자금유형구분*/
+                                               AND A.USE_YN = 'Y'
+                                             ) Z1
+                                     WHERE Z1.CMM_CD = DECODE(A.CERT_SECU_CD, NULL, 'N', A.CERT_SECU_CD)
+                                   ) AS USED_AMT_TP_NM
+                                 , CASE WHEN A.CERT_SECU_CD = 'L' THEN NVL(A.VINM_BKTX, (SELECT BANK_NM
+                                                                                          FROM CM_0101T Z2
+                                                                                         WHERE Z2.DLR_CD = A.ORD_DLR_CD)) 
+                                        ELSE ' '
+                                     END AS BANK_NM      -- 은행
+                                 , A.SIGNOFF_DT      -- 생산일자
+                                 , A.PLT_GI_DT       -- 출고일자
+                                 , A.DLR_GR_DT       -- 입고일자
+                                 , TO_CHAR(A.PLT_GI_DT, 'YYYY-MM-DD') As PLT_GI_DT_STR
+                                 , TO_CHAR(A.DLR_GR_DT, 'YYYY-MM-DD') As DLR_GR_DT_STR
+                                 , A.ENGIN_MODEL_CD || ENGIN_SERIAL_NO AS ENGIN_MODEL_CD -- 엔진번호
+                                 , A.CERT_NO         -- 합격증번호
+                                 , A.CAR_STAT_CD     -- 차량상태
+                                 , NVL(A.OWN_STAT_CD, 'O') AS OWN_STAT_CD      -- 보유상태
+                                 , NVL( TRUNC(MONTHS_BETWEEN(SYSDATE, A.PLT_GI_DT)+1, 0), 0) AS MM_CNT
+                                 , CASE WHEN NVL( TRUNC(MONTHS_BETWEEN(SYSDATE, A.PLT_GI_DT)+1, 0) , 0) <![CDATA[<=]]> 2 then '#ffe0d9'
+                                        WHEN NVL( TRUNC(MONTHS_BETWEEN(SYSDATE, A.PLT_GI_DT)+1, 0) , 0) <![CDATA[<=]]> 3 then '#fff4c9'
+                                        ELSE '#e5f5fa'
+                                   END AS MM_CNT_COLOR
+                                , TRUNC(SYSDATE+1 - TO_DATE(nvl(A.PLT_GI_DT,SYSDATE+1), 'YYYY-MM-DD' )) AS GI_DD_CNT     --재고일령(공장출고)
+                                , TRUNC(SYSDATE+1 - TO_DATE(A.DLR_GR_DT, 'YYYY-MM-DD' )) AS GR_DD_CNT     --재고일령(입고일자)
+                                , X.MS_PRC AS WHSL_PRC  -- 지도가격
+                                , A.ORD_DLR_CD AS DLR_CD
+                                , (SELECT DLR_NM FROM CM_0101T WHERE DLR_CD = A.ORD_DLR_CD) AS DLR_NM
+                                , A.VINM_F20010
+                                , A.TEMP2       -- 창고비고
+                                , (SELECT CONTRACT_NO FROM SA_0201T WHERE DLR_CD = A.ORD_DLR_CD AND VIN_NO = A.VIN_NO AND CONTRACT_STAT_CD IN ('10','20') AND ROWNUM = 1) AS CONTRACT_NO
+                                , SA0421.REQ_STAT_CD
+                                
+                             FROM SA_0121T A
+                                , (
+                                   SELECT A.*
+                                     FROM SA_0421T A
+                                        , (
+                                            SELECT DLR_CD, VIN_NO1, VIN_NO2, MAX(SEQ) AS SEQ
+                                              FROM SA_0421T
+                                             GROUP BY DLR_CD, VIN_NO1, VIN_NO2
+                                          )B
+                                    WHERE A.DLR_CD = B.DLR_CD
+                                      AND A.VIN_NO1 = B.VIN_NO1
+                                      AND A.VIN_NO2 = B.VIN_NO2
+                                      AND A.SEQ = B.SEQ
+                                      AND A.CONTRACT_NO IS NOT NULL
+                                ) SA0421
+                                , (
+                                   SELECT MODEL_CD
+                                        , OCN_CD
+                                        , MAX(WH_PRC) AS WH_PRC
+                                        , MAX(MS_PRC) AS MS_PRC
+                                     FROM SA_0110T
+                                    where USE_YN = 'Y'
+                                      AND START_DT <![CDATA[<=]]> SYSDATE   -- 시작일
+                                      AND END_DT   <![CDATA[>=]]> SYSDATE   -- 종료일
+                                    GROUP BY MODEL_CD, OCN_CD
+                                ) X
+                             WHERE A.ORD_DLR_CD = SA0421.DLR_CD(+)
+                               AND A.VIN_NO1 = SA0421.VIN_NO1(+)
+                               AND A.VIN_NO2 = SA0421.VIN_NO2(+)
+                               AND A.MODEL_CD = X.MODEL_CD(+)
+                               AND A.OCN_CD   = X.OCN_CD(+)
+                               AND A.NCAR_DSTIN_CD = 'N'          -- 신차
+                               <if test='sDlrCd != null and sDlrCd != ""'>
+                                 AND A.ORD_DLR_CD =  #{sDlrCd}        -- 딜러코드
+                               </if>
+                               <if test='sStartPrice != null and sStartPrice != ""'>
+                                 AND X.MS_PRC <![CDATA[ >= ]]>  #{sStartPrice}        -- 딜러코드
+                               </if>
+                               <if test='sEndPrice != null and sEndPrice != ""'>
+                                 AND X.MS_PRC <![CDATA[ <= ]]>  #{sEndPrice}        -- 딜러코드
+                               </if>
+                               <if test='sCarId != null and sCarId != ""'>
+                                 AND A.CAR_ID =  #{sCarId}        -- CAR ID
+                               </if>
+                               <if test='sStrgeCd != null and sStrgeCd != ""'>
+                                 AND A.STRGE_CD = #{sStrgeCd}         -- 창고
+                               </if>
+                               <if test='sLocCd != null and sLocCd != ""'>
+                                 AND A.LOC_CD =  #{sLocCd}            -- 위치
+                               </if>
+                               <if test='sCarlineCd != null and sCarlineCd != ""'>
+                                 AND A.CARLINE_CD =  #{sCarlineCd}
+                               </if>
+                               <if test='sModelCd != null and sModelCd != ""'>
+                                 AND A.MODEL_CD =  #{sModelCd}
+                               </if>
+                               <if test='sOcnCd != null and sOcnCd != ""'>
+                                 AND A.OCN_CD like '%'||upper(#{sOcnCd})||'%'  
+                               </if>
+                               <if test='sExtColorCd != null and sExtColorCd != ""'>
+                                 AND A.EXT_COLOR_CD =  #{sExtColorCd}
+                               </if>
+                               <if test='sIntColorCd != null and sIntColorCd != ""'>
+                                 AND A.INT_COLOR_CD =   #{sIntColorCd}
+                               </if>
+                               <if test='sVinNo != null and sVinNo != ""'>
+                                 AND A.VIN_NO like '%'||#{sVinNo}||'%'
+                               </if>
+                               <if test='sEnginNo != null and sEnginNo != ""'>
+                                 AND A.ENGIN_MODEL_CD like '%'||#{sEnginNo}||'%'
+                               </if>
+                               <if test='sEnginNo != null and sEnginNo != ""'>
+                                 AND A.ENGIN_MODEL_CD like '%'||#{sEnginNo}||'%'
+                               </if>
+                               <if test='sStartGrDt != null'>
+                                 AND A.DLR_GR_DT <![CDATA[ >= ]]> #{sStartGrDt}
+                               </if>
+                               <if test='sEndGrDt != null'>
+                                 AND A.DLR_GR_DT <![CDATA[ <= ]]> #{sEndGrDt}+1
+                               </if>
+                               <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                                 AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD)  = #{sFscCd}
+                               </if>
+                               <if test='sFscCd == "None"'>
+                                 AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+                               </if>
+                               <choose>
+                                  <when test='sStockDate == "A" '>
+                                      AND TRUNC(SYSDATE+1 - TO_DATE(nvl(A.PLT_GI_DT,SYSDATE+1), 'YYYY-MM-DD' )) <![CDATA[ < ]]> 30
+                                  </when>
+                                  <when test='sStockDate == "B" '>
+                                      AND TRUNC(SYSDATE+1 - TO_DATE(nvl(A.PLT_GI_DT,SYSDATE+1), 'YYYY-MM-DD' )) <![CDATA[ >= ]]> 30
+                                      AND TRUNC(SYSDATE+1 - TO_DATE(nvl(A.PLT_GI_DT,SYSDATE+1), 'YYYY-MM-DD' )) <![CDATA[ <= ]]> 60
+                                  </when>
+                                  <when test='sStockDate == "C" '>
+                                      AND TRUNC(SYSDATE+1 - TO_DATE(nvl(A.PLT_GI_DT,SYSDATE+1), 'YYYY-MM-DD' )) <![CDATA[ > ]]> 60
+                                  </when>
+                               </choose>
+                               <choose>
+                                  <when test='tStockTp == "1" '>
+                                      AND A.CAR_STAT_CD = '60'
+                                  </when>
+                                  <when test='tStockTp == "2" '>
+                                      AND A.CAR_STAT_CD = '50'
+                                  </when>
+                                  <otherwise>
+                                      AND A.CAR_STAT_CD in ('50', '60')
+                                  </otherwise>
+                                </choose>
+                        ) X1
+                  WHERE 1 = 1
+                 <if test='sBlockYn != null and sBlockYn != ""'>
+                    AND NVL(X1.BLOCK_YN, 'N') = #{sBlockYn}
+                 </if>
+               )
+    </select>
+	<!-- 재고관리 조회 목록  -->
+	<select id="selectStockMntsByCondition" parameterType="StockMntSearchVO" resultType="chn.bhmc.dms.mob.api.sales.vo.StockMntVO">
+    /* [chn.bhmc.dms.sal.inv.service.dao.StockMntDAO.selectStockMntsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_CARLINE_NM_NC(T1.CARLINE_CD) AS CARLINE_NM
+                 , FN_GET_MODEL_TP_NM(T1.MODEL_CD, T1.OCN_CD) AS MODEL_NM
+                 , FN_GET_OCN_NM_NC(T1.MODEL_CD, T1.OCN_CD) AS OCN_NM
+                 , FN_GET_EXT_COLOR_NM_NC(T1.EXT_COLOR_CD) AS EXT_COLOR_NM
+                 , FN_GET_INT_COLOR_NM_NC(T1.INT_COLOR_CD) AS INT_COLOR_NM
+                 , T1.*
+              FROM (
+                    SELECT X1.*
+                      FROM (
+                            SELECT A.CAR_ID
+                                 , A.STOCK_TP           -- 재고유형
+                                 , ( SELECT Z4.CMM_CD_NM
+                                       FROM (SELECT A.CMM_CD
+                                                  , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                              FROM CM_0303T A
+                                              LEFT OUTER JOIN CM_0304T B
+                                                    ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                                   AND A.CMM_CD = B.CMM_CD
+                                                   AND B.LANG_CD = #{sLangCd}
+                                             WHERE A.CMM_GRP_CD = 'SAL001'   /*차량상태코드*/
+                                               AND A.USE_YN = 'Y'
+                                             ) Z4
+                                     WHERE A.CAR_STAT_CD = Z4.CMM_CD
+                                   ) AS CAR_STAT_NM     -- 차량상태(재고유형)
+                                 , A.VIN_NO             -- 차대번호
+                                 , A.NCAR_DSTIN_CD      -- 신차량구분코드
+                                 , A.CARLINE_CD
+                                 , A.MODEL_CD
+                                 , A.OCN_CD
+                                 , A.EXT_COLOR_CD
+                                 , A.INT_COLOR_CD
+                                 , A.ORD_TP
+                                 , ( SELECT Z1.CMM_CD_NM
+                                       FROM (SELECT A.CMM_CD
+                                                  , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                              FROM CM_0303T A
+                                              LEFT OUTER JOIN CM_0304T B
+                                                    ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                                   AND A.CMM_CD = B.CMM_CD
+                                                   AND B.LANG_CD = #{sLangCd}
+                                             WHERE A.CMM_GRP_CD = 'SAL138'   /*오더유형*/
+                                               AND A.USE_YN = 'Y'
+                                             ) Z1
+                                     WHERE A.ORD_TP = Z1.CMM_CD
+                                   ) AS ORD_TP_NM             -- 주문유형
+                                 , A.STR_YN                   -- 전략여부
+                                 , A.STR_NO                   -- 전략신청번호
+                                 , (
+                                    SELECT CASE WHEN MAX(Z1.STR_STAT) = 'A' THEN 'A'
+                                                WHEN MAX(Z1.STR_STAT) = 'B' THEN 'Y'
+                                           ELSE 'N'
+                                       END AS STR_STAT_CD
+                                      FROM SA_0256T Z1    --전략출고
+                                     INNER JOIN (
+                                                   SELECT DLR_CD
+                                                        , CAR_ID
+                                                        , MAX(CAST(NVL(STR_NO,0) AS INTEGER)) AS STR_NO
+                                                     FROM SA_0256T
+                                                    GROUP BY DLR_CD, CAR_ID
+                                                 ) Z2
+                                        ON Z1.DLR_CD = Z2.DLR_CD
+                                       AND Z1.CAR_ID = Z2.CAR_ID
+                                       AND Z1.STR_NO = Z2.STR_NO
+                                     WHERE Z1.DLR_CD = A.ORD_DLR_CD
+                                       AND Z1.CAR_ID = A.CAR_ID
+                                       AND Z1.STR_STAT <![CDATA[<>]]>  'X'
+                                 ) AS STR_STAT_CD
+                                 , NVL(A.DAMAGE_CD, '02') AS DAMAGE_CD     -- 손상여부 : SAL049
+                                 , CASE WHEN A.BLOCK_SALE_ADV_NO IS NOT NULL THEN 'Y'
+                                        WHEN NVL(A.OWN_STAT_CD, 'O') = 'A' THEN 'Y'
+                                        WHEN NVL(A.DAMAGE_CD, '02') = '01' THEN 'Y'
+                                     /* ELSE NVL(A.BLOCK_YN, 'N')  */
+                                        ELSE 'N'
+                                     END AS BLOCK_YN
+                                 , NVL(A.BLOCK_SALE_ADV_NO, ' ') AS BLOCK_SALE_ADV_NO
+                                 , NVL(A.STRGE_CD, ' ') AS STRGE_CD           -- 창고
+                                 , NVL(A.LOC_CD, ' ') AS LOC_CD               -- 위치
+                                 , (
+                                     SELECT NVL(Z3.LOC_NM, ' ') AS LOC_NM
+                                       FROM (
+                                             SELECT DLR_CD
+                                                  , STRGE_CD
+                                                  , LOC_CD
+                                                  , LOC_NM
+                                               FROM PT_0222T
+                                              GROUP BY DLR_CD, STRGE_CD, LOC_CD, LOC_NM
+                                            ) Z3
+                                     WHERE Z3.DLR_CD = A.ORD_DLR_CD
+                                       AND Z3.STRGE_CD = A.STRGE_CD
+                                       AND Z3.LOC_CD = A.LOC_CD
+                                   ) AS LOC_NM
+                                 , NVL(A.CMP_CAR_YN, 'N') AS CMP_CAR_YN                -- 회사차여부
+                                 , NVL(A.CMP_CAR_DSTIN_CD, ' ') AS CMP_CAR_DSTIN_CD    -- 회사차구분
+
+                                 , NVL(A.DAMAGE_CD, '02') AS BF_DAMAGE_CD
+                                 , NVL(A.BLOCK_YN, 'N')   AS BF_BLOCK_YN
+                                 , A.BLOCK_SALE_ADV_NO    AS BF_BLOCK_SALE_ADV_NO
+                                 , A.STRGE_CD             AS BF_STRGE_CD
+                                 , A.LOC_CD               AS BF_LOC_CD
+                                 , A.CMP_CAR_YN           AS BF_CMP_CAR_YN
+                                 , A.CMP_CAR_DSTIN_CD     AS BF_CMP_CAR_DSTIN_CD
+                                 , A.OPEN_YN         -- 공개여부
+                                 , X.WH_PRC  AS RETL_PRC        -- 사용자금
+                                 , DECODE(A.CERT_SECU_CD, NULL, 'N', A.CERT_SECU_CD) AS USED_AMT_TP
+                                 , ( SELECT Z1.CMM_CD_NM
+                                       FROM (SELECT A.CMM_CD
+                                                  , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                              FROM CM_0303T A
+                                              LEFT OUTER JOIN CM_0304T B
+                                                    ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                                   AND A.CMM_CD = B.CMM_CD
+                                                   AND B.LANG_CD = #{sLangCd}
+                                             WHERE A.CMM_GRP_CD = 'SAL191'   /*자금유형구분*/
+                                               AND A.USE_YN = 'Y'
+                                             ) Z1
+                                     WHERE Z1.CMM_CD = DECODE(A.CERT_SECU_CD, NULL, 'N', A.CERT_SECU_CD)
+                                   ) AS USED_AMT_TP_NM
+                                 , CASE WHEN A.CERT_SECU_CD = 'L' THEN NVL(A.VINM_BKTX, (SELECT BANK_NM
+                                                                                          FROM CM_0101T Z2
+                                                                                         WHERE Z2.DLR_CD = A.ORD_DLR_CD)) 
+                                        ELSE ' '
+                                     END AS BANK_NM      -- 은행
+                                 , A.SIGNOFF_DT      -- 생산일자
+                                 , A.PLT_GI_DT       -- 출고일자
+                                 , A.DLR_GR_DT       -- 입고일자
+                                 , TO_CHAR(A.PLT_GI_DT, 'YYYY-MM-DD') As PLT_GI_DT_STR
+                                 , TO_CHAR(A.DLR_GR_DT, 'YYYY-MM-DD') As DLR_GR_DT_STR
+                                 , A.ENGIN_MODEL_CD || ENGIN_SERIAL_NO AS ENGIN_MODEL_CD -- 엔진번호
+                                 , A.CERT_NO         -- 합격증번호
+                                 , A.CAR_STAT_CD     -- 차량상태
+                                 , NVL(A.OWN_STAT_CD, 'O') AS OWN_STAT_CD      -- 보유상태
+                                 , NVL( TRUNC(MONTHS_BETWEEN(SYSDATE, A.PLT_GI_DT)+1, 0), 0) AS MM_CNT
+                                 , CASE WHEN NVL( TRUNC(MONTHS_BETWEEN(SYSDATE, A.PLT_GI_DT)+1, 0) , 0) <![CDATA[<=]]> 2 then '#ffe0d9'
+                                        WHEN NVL( TRUNC(MONTHS_BETWEEN(SYSDATE, A.PLT_GI_DT)+1, 0) , 0) <![CDATA[<=]]> 3 then '#fff4c9'
+                                        ELSE '#e5f5fa'
+                                   END AS MM_CNT_COLOR
+                                , TRUNC(SYSDATE+1 - TO_DATE(nvl(A.PLT_GI_DT,SYSDATE+1), 'YYYY-MM-DD' )) AS GI_DD_CNT     --재고일령(공장출고)
+                                , TRUNC(SYSDATE+1 - TO_DATE(A.DLR_GR_DT, 'YYYY-MM-DD' )) AS GR_DD_CNT     --재고일령(입고일자)
+                                , X.MS_PRC AS WHSL_PRC  -- 지도가격
+                                , A.ORD_DLR_CD AS DLR_CD
+                                , (SELECT DLR_NM FROM CM_0101T WHERE DLR_CD = A.ORD_DLR_CD) AS DLR_NM
+                                , A.VINM_F20010
+                                , A.TEMP2       -- 창고비고
+                                , (SELECT CONTRACT_NO FROM SA_0201T WHERE DLR_CD = A.ORD_DLR_CD AND VIN_NO = A.VIN_NO AND CONTRACT_STAT_CD IN ('10','20') AND ROWNUM = 1) AS CONTRACT_NO
+                                , SA0421.REQ_STAT_CD
+                                
+                             FROM SA_0121T A
+                                , (
+                                   SELECT A.*
+                                     FROM SA_0421T A
+                                        , (
+                                            SELECT DLR_CD, VIN_NO1, VIN_NO2, MAX(SEQ) AS SEQ
+                                              FROM SA_0421T
+                                             GROUP BY DLR_CD, VIN_NO1, VIN_NO2
+                                          )B
+                                    WHERE A.DLR_CD = B.DLR_CD
+                                      AND A.VIN_NO1 = B.VIN_NO1
+                                      AND A.VIN_NO2 = B.VIN_NO2
+                                      AND A.SEQ = B.SEQ
+                                      AND A.CONTRACT_NO IS NOT NULL
+                                ) SA0421
+                                , (
+                                   SELECT MODEL_CD
+                                        , OCN_CD
+                                        , MAX(WH_PRC) AS WH_PRC
+                                        , MAX(MS_PRC) AS MS_PRC
+                                     FROM SA_0110T
+                                    where USE_YN = 'Y'
+                                      AND START_DT <![CDATA[<=]]> SYSDATE   -- 시작일
+                                      AND END_DT   <![CDATA[>=]]> SYSDATE   -- 종료일
+                                    GROUP BY MODEL_CD, OCN_CD
+                                ) X
+                             WHERE A.ORD_DLR_CD = SA0421.DLR_CD(+)
+                               AND A.VIN_NO1 = SA0421.VIN_NO1(+)
+                               AND A.VIN_NO2 = SA0421.VIN_NO2(+)
+                               AND A.MODEL_CD = X.MODEL_CD(+)
+                               AND A.OCN_CD   = X.OCN_CD(+)
+                               AND A.NCAR_DSTIN_CD = 'N'          -- 신차
+                               <if test='sDlrCd != null and sDlrCd != ""'>
+                                 AND A.ORD_DLR_CD =  #{sDlrCd}        -- 딜러코드
+                               </if>
+                               <if test='sStartPrice != null and sStartPrice != ""'>
+                                 AND X.MS_PRC <![CDATA[ >= ]]>  #{sStartPrice}        -- 딜러코드
+                               </if>
+                               <if test='sEndPrice != null and sEndPrice != ""'>
+                                 AND X.MS_PRC <![CDATA[ <= ]]>  #{sEndPrice}        -- 딜러코드
+                               </if>
+                               <if test='sCarId != null and sCarId != ""'>
+                                 AND A.CAR_ID =  #{sCarId}        -- CAR ID
+                               </if>
+                               <if test='sStrgeCd != null and sStrgeCd != ""'>
+                                 AND A.STRGE_CD = #{sStrgeCd}         -- 창고
+                               </if>
+                               <if test='sLocCd != null and sLocCd != ""'>
+                                 AND A.LOC_CD =  #{sLocCd}            -- 위치
+                               </if>
+                               <if test='sCarlineCd != null and sCarlineCd != ""'>
+                                 AND A.CARLINE_CD =  #{sCarlineCd}
+                               </if>
+                               <if test='sModelCd != null and sModelCd != ""'>
+                                 AND A.MODEL_CD =  #{sModelCd}
+                               </if>
+                               <if test='sOcnCd != null and sOcnCd != ""'>
+                                 AND A.OCN_CD like '%'||upper(#{sOcnCd})||'%'  
+                               </if>
+                               <if test='sExtColorCd != null and sExtColorCd != ""'>
+                                 AND A.EXT_COLOR_CD =  #{sExtColorCd}
+                               </if>
+                               <if test='sIntColorCd != null and sIntColorCd != ""'>
+                                 AND A.INT_COLOR_CD =   #{sIntColorCd}
+                               </if>
+                               <if test='sVinNo != null and sVinNo != ""'>
+                                 AND A.VIN_NO like '%'||#{sVinNo}||'%'
+                               </if>
+                               <if test='sEnginNo != null and sEnginNo != ""'>
+                                 AND A.ENGIN_MODEL_CD like '%'||#{sEnginNo}||'%'
+                               </if>
+                               <if test='sEnginNo != null and sEnginNo != ""'>
+                                 AND A.ENGIN_MODEL_CD like '%'||#{sEnginNo}||'%'
+                               </if>
+                               <if test='sStartGrDt != null'>
+                                 AND A.DLR_GR_DT <![CDATA[ >= ]]> #{sStartGrDt}
+                               </if>
+                               <if test='sEndGrDt != null'>
+                                 AND A.DLR_GR_DT <![CDATA[ <= ]]> #{sEndGrDt}+1
+                               </if>
+                               <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                                 AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD)  = #{sFscCd}
+                               </if>
+                               <if test='sFscCd == "None"'>
+                                 AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+                               </if>
+                               <choose>
+                                  <when test='sStockDate == "A" '>
+                                      AND TRUNC(SYSDATE+1 - TO_DATE(nvl(A.PLT_GI_DT,SYSDATE+1), 'YYYY-MM-DD' )) <![CDATA[ < ]]> 30
+                                  </when>
+                                  <when test='sStockDate == "B" '>
+                                      AND TRUNC(SYSDATE+1 - TO_DATE(nvl(A.PLT_GI_DT,SYSDATE+1), 'YYYY-MM-DD' )) <![CDATA[ >= ]]> 30
+                                      AND TRUNC(SYSDATE+1 - TO_DATE(nvl(A.PLT_GI_DT,SYSDATE+1), 'YYYY-MM-DD' )) <![CDATA[ <= ]]> 60
+                                  </when>
+                                  <when test='sStockDate == "C" '>
+                                      AND TRUNC(SYSDATE+1 - TO_DATE(nvl(A.PLT_GI_DT,SYSDATE+1), 'YYYY-MM-DD' )) <![CDATA[ > ]]> 60
+                                  </when>
+                               </choose>
+                               <choose>
+                                  <when test='tStockTp == "1" '>
+                                      AND A.CAR_STAT_CD = '60'
+                                  </when>
+                                  <when test='tStockTp == "2" '>
+                                      AND A.CAR_STAT_CD = '50'
+                                  </when>
+                                  <otherwise>
+                                      AND A.CAR_STAT_CD in ('50', '60')
+                                  </otherwise>
+                                </choose>
+                        ) X1
+                  WHERE 1 = 1
+                 <if test='sBlockYn != null and sBlockYn != ""'>
+                    AND NVL(X1.BLOCK_YN, 'N') = #{sBlockYn}
+                 </if>
+
+                  ORDER BY 
+                  <choose>
+                     <when test='sort != null'>
+                         <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                             <choose>
+                                 <when test='item.field == "stockTp"'>X1.STOCK_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "carStatNm"'>X1.CAR_STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "vinNo"'>X1.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "carlineCd"'>X1.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "carlineNm"'>X1.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "modelCd"'>X1.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "modelNm"'>X1.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "ocnCd"'>X1.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "ocnNm"'>X1.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "extColorCd"'>X1.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "extColorNm"'>X1.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "intColorCd"'>X1.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "intColorNm"'>X1.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "ordTp"'>X1.ORD_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "ordTpNm"'>X1.ORD_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "strYn"'>X1.STR_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "damageCd"'>X1.DAMAGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "blockYn"'>X1.BLOCK_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "blockSaleAdvNo"'>X1.BLOCK_SALE_ADV_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "strgeCd"'>X1.STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "locCd"'>X1.LOC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "locNm"'>X1.LOC_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "cmpCarYn"'>X1.CMP_CAR_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "cmpCarDstinCd"'>X1.CMP_CAR_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "openYn"'>X1.OPEN_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "retlPrc"'>X1.RETL_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "bankNm"'>X1.BANK_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "signoffDtFormat"'>X1.SIGNOFF_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "grDt"'>X1.DLR_GR_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "enginModelCd"'>X1.ENGIN_MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "certNo"'>X1.CERT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "carStatCd"'>X1.CAR_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "ownStatCd"'>X1.OWN_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "ordTp"'>X1.ORD_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "mmCnt"'>X1.MM_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "whslPrc"'>X1.WHSL_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "pltGiDt"'>X1.PLT_GI_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "dlrGrDt"'>X1.DLR_GR_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "pltGiDtFormat"'>X1.PLT_GI_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "dlrGrDtFormat"'>X1.DLR_GR_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "contractNo"'>X1.CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "vinmF20010"'>X1.VINM_F20010 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "strStatCd"'>X1.STR_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "usedAmtTpNm"'>X1.USED_AMT_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "giDdCnt"'>X1.GI_DD_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when> 
+                                 <when test='item.field == "grDdCnt"'>X1.GR_DD_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <otherwise>
+                                 X1.GI_DD_CNT DESC,X1.CARLINE_CD ASC, X1.MODEL_CD ASC, X1.OCN_CD ASC, X1.EXT_COLOR_CD ASC, X1.INT_COLOR_CD ASC
+                                 </otherwise>
+                             </choose>
+                          </foreach>
+                     </when>
+                     <otherwise>
+                         X1.GI_DD_CNT DESC,X1.CARLINE_CD ASC, X1.MODEL_CD ASC, X1.OCN_CD ASC, X1.EXT_COLOR_CD ASC, X1.INT_COLOR_CD ASC
+                     </otherwise>
+                 </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+
+   
+    <!-- APP 그룹 재고관리 목록 조회 -->
+    <select id="selectAppStockMntGroupsByCondition" parameterType="StockMntSearchVO" resultType="chn.bhmc.dms.mob.api.sales.vo.StockMntVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_CARLINE_NM_NC(T1.CARLINE_CD) AS CARLINE_NM
+                 , T1.*
+              FROM (
+                   SELECT A.CARLINE_CD
+                        , SUM(1) AS CNT
+                     FROM SA_0121T A
+                     WHERE A.NCAR_DSTIN_CD = 'N'          -- 신차
+                         AND A.ORD_DLR_CD =  #{sDlrCd}        -- 딜러코드
+                       <if test='sCarlineCd != null and sCarlineCd != ""'>
+                         AND A.CARLINE_CD =  #{sCarlineCd}
+                       </if>
+                       <if test='sModelCd != null and sModelCd != ""'>
+                         AND A.MODEL_CD =  #{sModelCd}
+                       </if>
+                       <if test='sVinNo != null and sVinNo != ""'>
+                         AND A.VIN_NO like '%'||#{sVinNo}||'%'
+                       </if>
+                       <choose>
+                          <when test='tStockTp == "1" '>
+                              AND A.CAR_STAT_CD = '60'
+                          </when>
+                          <when test='tStockTp == "2" '>
+                              AND A.CAR_STAT_CD = '50'
+                          </when>
+                          <otherwise>
+                              AND A.CAR_STAT_CD in ('50', '60')
+                          </otherwise>
+                       </choose>
+                    GROUP BY A.CARLINE_CD
+                    ORDER BY A.CARLINE_CD ASC
+                ) T1
+                    <where>
+                        <if test='firstIndex != -1 and lastIndex != -1'>
+                            ROWNUM <![CDATA[<=]]> #{lastIndex}
+                        </if>
+                    </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+    <select id="selectAppStockMntGroupsByConditionCnt" parameterType="StockMntSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM (
+                   SELECT A.CARLINE_CD
+                        , SUM(1) AS CNT
+                     FROM SA_0121T A
+                     WHERE A.NCAR_DSTIN_CD = 'N'          -- 신차
+                         AND A.ORD_DLR_CD =  #{sDlrCd}        -- 딜러코드
+                       <if test='sCarlineCd != null and sCarlineCd != ""'>
+                         AND A.CARLINE_CD =  #{sCarlineCd}
+                       </if>
+                       <if test='sModelCd != null and sModelCd != ""'>
+                         AND A.MODEL_CD =  #{sModelCd}
+                       </if>
+                       <if test='sVinNo != null and sVinNo != ""'>
+                         AND A.VIN_NO like '%'||#{sVinNo}||'%'
+                       </if>
+                       <choose>
+                          <when test='tStockTp == "1" '>
+                              AND A.CAR_STAT_CD = '60'
+                          </when>
+                          <when test='tStockTp == "2" '>
+                              AND A.CAR_STAT_CD = '50'
+                          </when>
+                          <otherwise>
+                              AND A.CAR_STAT_CD in ('50', '60')
+                          </otherwise>
+                       </choose>
+                    GROUP BY A.CARLINE_CD
+                    /* GROUP BY A.CAR_STAT_CD, A.CARLINE_CD, A.MODEL_CD, A.OCN_CD, A.EXT_COLOR_CD, A.INT_COLOR_CD */
+                )
+    </select>
+
+</mapper>

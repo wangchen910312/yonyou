@@ -1,0 +1,1030 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.orc.service.dao.SumOrderCntDAO">
+
+    <!--  목록 갯수  -->
+    <select id="selectSumOrderCntDlrsByConditionCnt" parameterType="SumOrderCntSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE FROM
+               ( SELECT A.DLR_CD      --딜러코드
+                        FROM SA_0417T A, SA_0416T B
+                       WHERE A.DLR_CD = B.DLR_CD(+)
+                         AND A.ORD_TP = B.SORD(+)
+                         AND A.ORD_YY_MM_DT = B.ORD_YYMM(+)
+                         AND A.ORD_PRID = B.ORD_WEEK(+)
+                         AND TO_NUMBER(A.ORD_NO) = B.ORD_SEQ(+)
+                         AND NOT A.ORD_STAT_CD = '1A'
+                         AND NOT A.IFRESULT_RTN = 'E'
+                         AND (A.SCRN_ID IS NULL OR A.SCRN_ID = 'N')
+                       <if test='sOrdsTp != null and strOrdTp != "" and sOrdsTp == "Y"'>
+                         AND A.ORD_TP = 'N1'
+                       </if>
+                       <if test='strOrdTp != null and strOrdTp != "" and sOrdsTp == "N" and strOrdTp != null and strOrdTp != ""'>
+                         AND A.ORD_TP = #{strOrdTp}   -- 주문유형
+                       </if>
+                       <if test='strOrdTp != null and strOrdTp != "" and sOrdsTp == "N" and strOrdTp == null or strOrdTp == ""'>
+                         AND NOT A.ORD_TP = 'N1'
+                       </if>
+                       <if test='sOrdStartDt != null' >
+                         AND A.ORD_DT <![CDATA[>=]]> TRUNC(#{sOrdStartDt},'DD')
+                       </if>
+                       <if test='sOrdEndDt != null' >
+                         AND A.ORD_DT <![CDATA[<]]> TRUNC(#{sOrdEndDt},'DD')+1
+                       </if>
+                       <if test='sDlrCd != null and sDlrCd != ""'>
+                         AND A.DLR_CD = #{sDlrCd}
+                       </if>
+                       <if test='sOrdPrid != null and sOrdPrid != ""'>
+                         AND A.ORD_YY_MM_DT = SUBSTR(#{sOrdPrid}, 1, 6)
+                         AND A.ORD_PRID = SUBSTR(#{sOrdPrid}, 7, 2)
+                       </if>
+                       <if test='sCarlineCd != null and sCarlineCd != ""'>
+                         AND A.CARLINE_CD   = #{sCarlineCd}
+                       </if>
+                       <if test='sModelCd != null and sModelCd != ""'>
+                         AND A.MODEL_CD     = #{sModelCd}
+                       </if>
+                       <if test='sOcnCd != null and sOcnCd != ""'>
+                         AND A.OCN_CD       = #{sOcnCd}
+                       </if>
+                       <if test='sExtColorCd != null and sExtColorCd != ""'>
+                         AND A.EXT_COLOR_CD = #{sExtColorCd}
+                       </if>
+                       <if test='sIntColorCd != null and sIntColorCd != ""'>
+                         AND A.INT_COLOR_CD = #{sIntColorCd}
+                       </if>
+                       <if test='sOrdStatCd != null and sOrdStatCd != ""'>
+                         AND A.ORD_STAT_CD       = #{sOrdStatCd}
+                       </if>
+                       <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                         AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) = #{sFscCd}
+                       </if>
+                       <if test='sFscCd == "None"'>
+                         AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+                       </if>
+                   )
+    </select>
+    
+    <!-- 新增订单综合查询统计修改统计逻辑 -->
+	<select id="selectSumOrderCntDlrsByConditionForNew" parameterType="SumOrderCntSearchVO" resultType="SumOrderCntVO">
+		SELECT * FROM
+		( SELECT ROWNUM AS RNUM
+			,DECODE(SIGN(WT_ORD_QTY_CAL),-1,0,WT_ORD_QTY_CAL) AS WT_ORD_QTY
+			,NON_ALOC_QTY+PDI_QTY+VIN_QTY+GATE_OUT_QTY+DLR_IN_QTY+DLR_OUT_QTY AS SUM_TOTAL_QTY
+			,SCND_CONFIRM_QTY - DLR_CNCL_QTY AS FINAL_CONF_QTY
+			,T1.* FROM
+				(
+					SELECT B.ORD_YY_MM_DT,
+					B.WEEK,
+					B.YY_MM,
+					B.DLR_CD,
+					B.CARLINE_CD,
+					B.CARLINE_NM,
+					B.MODEL_CD,
+					B.MODEL_NM,
+					B.OCN_CD,
+					B.OCN_NM,
+					B.EXT_COLOR_CD,
+					B.EXT_COLOR_NM,
+					B.INT_COLOR_CD,
+					B.INT_COLOR_NM,
+					B.ORD_TP,
+					B.ORD_TP_NM ,
+					
+					A.ORD_QTY,
+					A.FST_CONFIRM_QTY,
+					A.SCND_CONFIRM_QTY,
+					A.SCND_PAR_ISFF_ADJ_QTY,
+					A.FINAL_QTY,
+					A.WT_ORD_QTY_CAL,
+					
+					B.WT_ORD_QTY,
+					B.DLR_CNCL_QTY,
+					B.NON_ALOC_QTY,
+					B.PDI_QTY,
+					B.MISS_SET_QTY,
+					B.TRAN_MISS_QTY,
+					B.VIN_QTY,
+					B.GATE_OUT_QTY,
+					B.DLR_IN_QTY,
+					B.DLR_OUT_QTY,
+					B.ORD_GRADE_CD,
+					B.Reg_USR_ID
+					FROM
+					(SELECT
+											A.ORD_YY_MM_DT,max(A.ORD_NO) as ORD_NO,
+											A.ORD_PRID AS WEEK,
+											SUBSTR (A .ORD_YY_MM_DT, 3, 6) AS YY_MM,
+											A.DLR_CD,
+											A.CARLINE_CD,
+											FN_GET_CARLINE_NM_NC (A .CARLINE_CD) AS CARLINE_NM,
+											A.MODEL_CD,
+											FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD) AS MODEL_NM,
+											A.OCN_CD,
+											FN_GET_OCN_NM_NC (A .MODEL_CD, A .OCN_CD) AS OCN_NM,
+											A.EXT_COLOR_CD,
+											FN_GET_EXT_COLOR_NM_NC (A .EXT_COLOR_CD) AS EXT_COLOR_NM,
+											A .INT_COLOR_CD,
+											FN_GET_INT_COLOR_NM_NC (A .INT_COLOR_CD) AS INT_COLOR_NM,
+											A.ORD_TP,
+											--20181024 订单综合查询 一次审批时,sap只回传一次审批数量 不更改订单状态,统计逻辑修正 update by sunzq start
+											/**
+											0 AS ORD_QTY,
+											A.FST_CONFIRM_QTY,
+											A.SCND_CONFIRM_QTY,
+											(CASE WHEN A.ORD_STAT_CD = '1K' THEN 1 ELSE 0 END ) AS SCND_PAR_ISFF_ADJ_QTY,
+											**/
+											SUM(A.ORD_QTY) ORD_QTY,
+											SUM(A.FST_CONFIRM_QTY) AS FST_CONFIRM_QTY,
+											SUM(DECODE(A.ORD_STAT_CD,'1D',0,'1K',0, A.SCND_CONFIRM_QTY)) AS SCND_CONFIRM_QTY,
+											SUM((CASE WHEN A .ORD_QTY > 1 THEN A.SCND_PAR_ISFF_ADJ_QTY ELSE DECODE(A.ORD_STAT_CD,'1K',1,0) END )) AS SCND_PAR_ISFF_ADJ_QTY,
+											SUM(DECODE(A.ORD_STAT_CD,'1D',0,'1K',0, A.SCND_CONFIRM_QTY)) FINAL_QTY,
+											(SUM(A.ORD_QTY) - SUM(DECODE(A.ORD_STAT_CD,'1D',0,'1K',0, A.SCND_CONFIRM_QTY)) - SUM((CASE WHEN A .ORD_QTY > 1 THEN A.SCND_PAR_ISFF_ADJ_QTY ELSE DECODE(A.ORD_STAT_CD,'1K',1,0) END ))) WT_ORD_QTY_CAL,
+											ORD_GRADE_CD,
+											A.Reg_USR_ID
+											FROM SA_0417T A--,SA_0416T B
+											WHERE 1=1
+											AND NOT A.ORD_STAT_CD = '1A'
+											AND	NOT A.IFRESULT_RTN = 'E'
+											AND A.ORD_STAT_CD in ('1D','1G','1K')
+											AND (A.SCRN_ID IS NULL	OR A .SCRN_ID = 'N')
+											
+											<if test='sOrdsTp != null and strOrdTp != "" and sOrdsTp == "Y"'>
+												AND A.ORD_TP = 'N1'
+											</if>
+											<if
+												test='strOrdTp != null and strOrdTp != "" and sOrdsTp == "N" and strOrdTp != null and strOrdTp != ""'>
+												AND A.ORD_TP = #{strOrdTp} -- 주문유형
+											</if>
+											<if
+												test='strOrdTp != null and strOrdTp != "" and sOrdsTp == "N" and strOrdTp == null or strOrdTp == ""'>
+												AND NOT A.ORD_TP = 'N1'
+											</if>
+											<if test='sOrdStartDt != null'>
+												AND A.ORD_DT <![CDATA[>=]]>
+												TRUNC(#{sOrdStartDt},'DD')
+											</if>
+											<if
+												test='sOrdStartDtstrTmp != null and sOrdStartDtstrTmp != "" and sOrdEndDtstrTmp != null and sOrdEndDtstrTmp != ""'>
+												AND TO_CHAR(A.ORD_DT,'YYYYMMDD') BETWEEN #{sOrdStartDtstrTmp} AND
+												#{sOrdEndDtstrTmp}
+											</if>
+											<if test='sOrdEndDt != null'>
+												AND A.ORD_DT <![CDATA[<]]>
+												TRUNC(#{sOrdEndDt},'DD')+1
+											</if>
+											<if test='sDlrCd != null and sDlrCd != ""'>
+												AND A.DLR_CD = #{sDlrCd}
+											</if>
+											<if test='sOrdPrid != null and sOrdPrid != ""'>
+												AND A.ORD_YY_MM_DT = SUBSTR(#{sOrdPrid}, 1, 6)
+												AND A.ORD_PRID = SUBSTR(#{sOrdPrid}, 7, 2)
+											</if>
+											<if test='sCarlineCd != null and sCarlineCd != ""'>
+												AND A.CARLINE_CD = #{sCarlineCd}
+											</if>
+											<if test='sModelCd != null and sModelCd != ""'>
+												AND A.MODEL_CD = #{sModelCd}
+											</if>
+											<if test='sOcnCd != null and sOcnCd != ""'>
+												AND A.OCN_CD = #{sOcnCd}
+											</if>
+											<if test='sExtColorCd != null and sExtColorCd != ""'>
+												AND A.EXT_COLOR_CD = #{sExtColorCd}
+											</if>
+											<if test='sIntColorCd != null and sIntColorCd != ""'>
+												AND A.INT_COLOR_CD = #{sIntColorCd}
+											</if>
+											<if test='sOrdStatCd != null and sOrdStatCd != ""'>
+												AND A.ORD_STAT_CD = #{sOrdStatCd}
+											</if>
+											<if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+												AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD =
+												A.MODEL_CD AND X.OCN_CD = A.OCN_CD) = #{sFscCd}
+											</if>
+											<if test='sFscCd == "None"'>
+												AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD =
+												A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+											</if>
+											  
+									        <!-- 2018-12-28 add byfengdequan  明细显示根据下单人ID start -->
+									         <if test='sregUsrId != null and sregUsrId != ""'>
+									          AND A.Reg_USR_ID = #{sregUsrId}
+									        </if>
+									        <!-- 2018-12-28 add byfengdequan  明细显示根据下单人ID end -->
+											
+											GROUP BY A.ORD_YY_MM_DT,
+											A.ORD_PRID,
+											SUBSTR (A .ORD_YY_MM_DT, 3, 6),
+											A.DLR_CD,
+											A.CARLINE_CD,
+											A.MODEL_CD,
+											A.OCN_CD,
+											FN_GET_OCN_NM_NC (A .MODEL_CD, A .OCN_CD),
+											A.EXT_COLOR_CD,
+											A .INT_COLOR_CD,
+											A.ORD_TP,
+											ORD_GRADE_CD,
+											A.Reg_USR_ID
+					) A,
+					
+					(
+						SELECT
+										C.ORD_YY_MM_DT,max(C.ORD_NO) as ORD_NO,
+										C.WEEK,
+										C.YY_MM,
+										C.DLR_CD,
+										C.CARLINE_CD,
+										C.CARLINE_NM,
+										C.MODEL_CD,
+										C.MODEL_NM,
+										C.OCN_CD,
+										C.OCN_NM,
+										C.EXT_COLOR_CD,
+										C.EXT_COLOR_NM,
+										C.INT_COLOR_CD,
+										C.INT_COLOR_NM,
+										C.ORD_TP,
+										FN_CMM_CD_NM('SAL138',C.ORD_TP,'','Y') AS ORD_TP_NM ,
+										SUM (C.WT_ORD_QTY) WT_ORD_QTY,
+										SUM (C.DLR_CNCL_QTY) DLR_CNCL_QTY,
+										SUM (C.NON_ALOC_QTY) NON_ALOC_QTY,
+										SUM (C.PDI_QTY) PDI_QTY,
+										SUM (C.MISS_SET_QTY) MISS_SET_QTY,
+										SUM (C.TRAN_MISS_QTY) TRAN_MISS_QTY,
+										SUM (C.VIN_QTY) VIN_QTY,
+										SUM (C.GATE_OUT_QTY) GATE_OUT_QTY,
+										SUM (C.DLR_IN_QTY) DLR_IN_QTY,
+										SUM (C.DLR_OUT_QTY) DLR_OUT_QTY,
+										C.ORD_GRADE_CD,
+										C.Reg_USR_ID
+										FROM
+											(
+												--统计已审批数量，提报数量不从这取
+											SELECT
+											A.ORD_YY_MM_DT,A.ORD_NO,
+											A.ORD_PRID AS WEEK,
+											SUBSTR (A .ORD_YY_MM_DT, 3, 6) AS YY_MM,
+											A.DLR_CD,
+											A.CARLINE_CD,
+											FN_GET_CARLINE_NM_NC (A .CARLINE_CD) AS CARLINE_NM,
+											A.MODEL_CD,
+											FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD) AS MODEL_NM,
+											A.OCN_CD,
+											FN_GET_OCN_NM_NC (A .MODEL_CD, A .OCN_CD) AS OCN_NM,
+											A.EXT_COLOR_CD,
+											FN_GET_EXT_COLOR_NM_NC (A .EXT_COLOR_CD) AS EXT_COLOR_NM,
+											A .INT_COLOR_CD,
+											FN_GET_INT_COLOR_NM_NC (A .INT_COLOR_CD) AS INT_COLOR_NM,
+											A.ORD_TP,
+											--20181024 订单综合查询 一次审批时,sap只回传一次审批数量 不更改订单状态,统计逻辑修正 update by sunzq start
+											/**
+											0 AS ORD_QTY,
+											A.FST_CONFIRM_QTY,
+											A.SCND_CONFIRM_QTY,
+											(CASE WHEN A.ORD_STAT_CD = '1K' THEN 1 ELSE 0 END ) AS SCND_PAR_ISFF_ADJ_QTY,
+											**/
+											(CASE WHEN B.PRTY IS NULL THEN 1 ELSE 0	END	) AS WT_ORD_QTY,
+											(CASE WHEN B.PRTY = 'B' THEN 1 ELSE 0 END ) AS DLR_CNCL_QTY,
+											(CASE WHEN B.PRTY = 'A' THEN 1 ELSE 0 END ) AS NON_ALOC_QTY,
+											(CASE WHEN B.PRTY = 'P' THEN 1 ELSE 0 END ) AS PDI_QTY,
+											(CASE WHEN B.PRTY = 'M' THEN 1 ELSE	0 END ) AS MISS_SET_QTY,
+											(CASE WHEN B.PRTY = 'N' THEN 1 ELSE	0 END ) AS TRAN_MISS_QTY,
+											(CASE WHEN B.PRTY = 'C' THEN 1 ELSE	0 END ) AS VIN_QTY,
+											(CASE WHEN B.PRTY = 'F' THEN 1 ELSE	0 END ) AS GATE_OUT_QTY,
+											(CASE WHEN B.PRTY = 'D' THEN 1 ELSE	0 END ) AS DLR_IN_QTY,
+											(CASE WHEN B.PRTY = 'E' THEN 1 ELSE 0 END ) AS DLR_OUT_QTY,
+											ORD_GRADE_CD,
+											A.Reg_USR_ID
+											FROM SA_0417T A,SA_0416T B
+											WHERE A.DLR_CD = B.DLR_CD (+)
+											AND A.ORD_TP = B.SORD (+)
+											AND A.ORD_YY_MM_DT = B.ORD_YYMM (+)
+											AND A.ORD_PRID = B.ORD_WEEK (+)
+											AND TO_NUMBER (A.ORD_NO) = B.ORD_SEQ (+)
+											AND NOT A.ORD_STAT_CD = '1A'
+											AND	NOT A.IFRESULT_RTN = 'E'
+											--AND A.ORD_STAT_CD = '1G'
+											AND A.ORD_STAT_CD in ('1D','1G','1K')
+											AND (A.SCRN_ID IS NULL	OR A .SCRN_ID = 'N')
+											
+											<if test='sOrdsTp != null and strOrdTp != "" and sOrdsTp == "Y"'>
+												AND A.ORD_TP = 'N1'
+											</if>
+											<if
+												test='strOrdTp != null and strOrdTp != "" and sOrdsTp == "N" and strOrdTp != null and strOrdTp != ""'>
+												AND A.ORD_TP = #{strOrdTp} -- 주문유형
+											</if>
+											<if
+												test='strOrdTp != null and strOrdTp != "" and sOrdsTp == "N" and strOrdTp == null or strOrdTp == ""'>
+												AND NOT A.ORD_TP = 'N1'
+											</if>
+											<if test='sOrdStartDt != null'>
+												AND A.ORD_DT <![CDATA[>=]]>
+												TRUNC(#{sOrdStartDt},'DD')
+											</if>
+											<if
+												test='sOrdStartDtstrTmp != null and sOrdStartDtstrTmp != "" and sOrdEndDtstrTmp != null and sOrdEndDtstrTmp != ""'>
+												AND TO_CHAR(A.ORD_DT,'YYYYMMDD') BETWEEN #{sOrdStartDtstrTmp} AND
+												#{sOrdEndDtstrTmp}
+											</if>
+											<if test='sOrdEndDt != null'>
+												AND A.ORD_DT <![CDATA[<]]>
+												TRUNC(#{sOrdEndDt},'DD')+1
+											</if>
+											<if test='sDlrCd != null and sDlrCd != ""'>
+												AND A.DLR_CD = #{sDlrCd}
+											</if>
+											<if test='sOrdPrid != null and sOrdPrid != ""'>
+												AND A.ORD_YY_MM_DT = SUBSTR(#{sOrdPrid}, 1, 6)
+												AND A.ORD_PRID = SUBSTR(#{sOrdPrid}, 7, 2)
+											</if>
+											<if test='sCarlineCd != null and sCarlineCd != ""'>
+												AND A.CARLINE_CD = #{sCarlineCd}
+											</if>
+											<if test='sModelCd != null and sModelCd != ""'>
+												AND A.MODEL_CD = #{sModelCd}
+											</if>
+											<if test='sOcnCd != null and sOcnCd != ""'>
+												AND A.OCN_CD = #{sOcnCd}
+											</if>
+											<if test='sExtColorCd != null and sExtColorCd != ""'>
+												AND A.EXT_COLOR_CD = #{sExtColorCd}
+											</if>
+											<if test='sIntColorCd != null and sIntColorCd != ""'>
+												AND A.INT_COLOR_CD = #{sIntColorCd}
+											</if>
+											<if test='sOrdStatCd != null and sOrdStatCd != ""'>
+												AND A.ORD_STAT_CD = #{sOrdStatCd}
+											</if>
+											
+											 <!-- 2018-12-28 add byfengdequan  明细显示根据下单人ID start -->
+									         <if test='sregUsrId != null and sregUsrId != ""'>
+									          AND A.Reg_USR_ID = #{sregUsrId}
+									        </if>
+									        <!-- 2018-12-28 add byfengdequan  明细显示根据下单人ID end -->
+											<if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+												AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD =
+												A.MODEL_CD AND X.OCN_CD = A.OCN_CD) = #{sFscCd}
+											</if>
+											<if test='sFscCd == "None"'>
+												AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD =
+												A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+											</if>
+										 
+									) C
+									GROUP BY
+									C.ORD_YY_MM_DT,
+									C.WEEK,
+									C.YY_MM,
+									C.DLR_CD,
+									C.CARLINE_CD,
+									C.CARLINE_NM,
+									C.MODEL_CD,
+									C.MODEL_NM,
+									C.OCN_CD,
+									C.OCN_NM,
+									C.EXT_COLOR_CD,
+									C.EXT_COLOR_NM,
+									C.INT_COLOR_CD,
+									C.INT_COLOR_NM,
+									C.ORD_TP,
+									C.ORD_GRADE_CD,
+									C.Reg_USR_ID
+					) B							
+					WHERE A.ORD_YY_MM_DT = B.ORD_YY_MM_DT
+					AND A.WEEK = B.WEEK
+					AND A.YY_MM = B.YY_MM
+					AND A.DLR_CD = B.DLR_CD
+					AND A.CARLINE_CD = B.CARLINE_CD
+					AND A.MODEL_CD = B.MODEL_CD
+					AND A.OCN_CD = B.OCN_CD
+					AND A.EXT_COLOR_CD = B.EXT_COLOR_CD
+					AND A.INT_COLOR_CD = B.INT_COLOR_CD
+					AND A.ORD_TP = B.ORD_TP
+					--2018-12-28 update by fengdequan 查询列表显示不全
+					--AND A.ORD_GRADE_CD = B.ORD_GRADE_CD
+					AND A.Reg_USR_ID = B.Reg_USR_ID
+					AND A.ORD_NO = B.ORD_NO
+		
+					ORDER BY ORD_YY_MM_DT DESC, WEEK DESC, YY_MM DESC, CARLINE_CD ASC, MODEL_CD ASC, OCN_CD ASC, EXT_COLOR_CD ASC, INT_COLOR_CD ASC
+				) T1
+				<where>
+					<if test='firstIndex != -1 and lastIndex != -1'>
+						ROWNUM <![CDATA[<=]]>
+						#{lastIndex}
+					</if>
+				</where>
+				)
+				<where>
+					<if test='firstIndex != -1 and lastIndex != -1'>
+						RNUM > #{firstIndex}
+					</if>
+				</where>
+	</select>
+
+	<!-- 종합오더현황-딜러 조회 목록  -->
+	<select id="selectSumOrderCntDlrsByCondition" parameterType="SumOrderCntSearchVO" resultType="SumOrderCntVO">
+        SELECT * FROM
+        ( SELECT ROWNUM AS RNUM
+                ,DECODE(SIGN(WT_ORD_QTY_CAL),-1,0,WT_ORD_QTY_CAL) AS WT_ORD_QTY
+                ,NON_ALOC_QTY+PDI_QTY+VIN_QTY+GATE_OUT_QTY+DLR_IN_QTY+DLR_OUT_QTY AS SUM_TOTAL_QTY
+                ,SCND_CONFIRM_QTY - DLR_CNCL_QTY  AS FINAL_CONF_QTY
+                ,T1.* FROM
+               (
+                SELECT ORD_YY_MM_DT  --오더년월
+                      ,WEEK          --오더주차
+                      ,YY_MM         --오더년YYMM
+                      ,DLR_CD        --딜러
+                      ,ORD_TP        --오더타입
+                      ,CARLINE_CD    --차종코드
+                      ,CARLINE_NM    --차종명
+                      ,MODEL_CD      --모델코드
+                      ,FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD) AS MODEL_NM
+                      ,FN_CMM_CD_NM('SAL138',ORD_TP,#{sLangCd},'Y') AS ORD_TP_NM
+                      ,OCN_CD        --OCN코드
+                      ,OCN_NM        --OCN명
+                      ,EXT_COLOR_CD  --외장색상코드
+                      ,EXT_COLOR_NM  --외장색상명
+                      ,INT_COLOR_CD  --내장색상코드
+                      ,INT_COLOR_NM  --내장색상명
+                      ,SUM(DECODE(ORD_QTY,0,NULL,ORD_QTY)) AS ORD_QTY                             --요청수량
+                      ,SUM(DECODE(FST_CONFIRM_QTY,0,NULL,FST_CONFIRM_QTY)) AS FST_CONFIRM_QTY     --1차확정수량
+                      ,SUM(DECODE(SCND_CONFIRM_QTY,0,NULL,SCND_CONFIRM_QTY)) AS SCND_CONFIRM_QTY  --2차확정수량
+                      ,SUM(DECODE(SCND_CONFIRM_QTY,0,NULL,SCND_CONFIRM_QTY)) AS FINAL_QTY         --심사통과수량
+                      ,SUM(DECODE(ORD_QTY,0,NULL,ORD_QTY)) - COUNT(DECODE(SCND_CONFIRM_QTY,0,NULL,SCND_CONFIRM_QTY)) - SUM(SCND_PAR_ISFF_ADJ_QTY) AS WT_ORD_QTY_CAL  --승인대기수량
+                      ,SUM(DLR_CNCL_QTY) AS DLR_CNCL_QTY                                            --승인후취소수량
+                      ,SUM(NON_ALOC_QTY) AS NON_ALOC_QTY                                            --미배정수량
+                      ,SUM(PDI_QTY) AS PDI_QTY                                                      --PDI배정수량
+                      ,SUM(MISS_SET_QTY) AS MISS_SET_QTY                                            --임무배정수량
+                      ,SUM(TRAN_MISS_QTY) AS TRAN_MISS_QTY                                          --배송임무배정수량
+                      ,SUM(VIN_QTY) AS VIN_QTY                                                      --VIN배정
+                      ,SUM(GATE_OUT_QTY) AS GATE_OUT_QTY                                            --법인출고수량
+                      ,SUM(DLR_IN_QTY) AS DLR_IN_QTY                                                --딜러입고수량
+                      ,SUM(DLR_OUT_QTY) AS DLR_OUT_QTY                                              --딜러출고수량
+                      ,SUM(SCND_PAR_ISFF_ADJ_QTY) AS SCND_PAR_ISFF_ADJ_QTY                          --심사미통과수량
+                      ,ORD_GRADE_CD
+                  FROM(SELECT A.ORD_YY_MM_DT  --오더년월
+                             ,A.ORD_PRID AS WEEK --오더주차
+                             ,SUBSTR(A.ORD_YY_MM_DT, 3, 6) AS YY_MM --오더년YYMM
+                             ,A.DLR_CD      --딜러코드
+                             ,A.CARLINE_CD
+                             ,FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM
+                             ,A.MODEL_CD
+                             ,FN_GET_MODEL_NM_NC(A.MODEL_CD) AS MODEL_NM
+                             ,A.OCN_CD
+                             ,FN_GET_OCN_NM_NC(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+                             ,A.EXT_COLOR_CD
+                             ,FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+                             ,A.INT_COLOR_CD
+                             ,FN_GET_INT_COLOR_NM_NC(A.INT_COLOR_CD) AS INT_COLOR_NM
+                             ,A.ORD_TP
+                             ,NVL(A.ORD_QTY,0) AS ORD_QTY                                                   --요청수량 O
+                             ,NVL(A.FST_CONFIRM_QTY, 0) AS FST_CONFIRM_QTY                                  --1차확정수량합 O
+                             ,NVL(A.SCND_CONFIRM_QTY, 0) AS SCND_CONFIRM_QTY                                --2차확정수량합 O
+                             ,(CASE WHEN A.ORD_STAT_CD = '1K' THEN 1 ELSE 0 END) AS SCND_PAR_ISFF_ADJ_QTY   --미통과수량
+                             ,(CASE WHEN B.PRTY IS NULL THEN 1 ELSE 0  END) AS WT_ORD_QTY                   --승인대기 O
+                             ,(CASE WHEN B.PRTY = 'B' THEN 1 ELSE 0 END) AS DLR_CNCL_QTY                    --승인후취소수량 O
+                             ,(CASE WHEN B.PRTY = 'A' THEN 1 ELSE 0 END) AS NON_ALOC_QTY                    --미배정수량 O
+                             ,(CASE WHEN B.PRTY = 'P' THEN 1 ELSE 0 END) AS PDI_QTY                         --PDI배정 O
+                             ,(CASE WHEN B.PRTY = 'M' THEN 1 ELSE 0 END) AS MISS_SET_QTY                    --임무배정 O
+                             ,(CASE WHEN B.PRTY = 'N' THEN 1 ELSE 0 END) AS TRAN_MISS_QTY                   --운송배정 O
+                             ,(CASE WHEN B.PRTY = 'C' THEN 1 ELSE 0 END) AS VIN_QTY                         --VIN배정 O
+                             ,(CASE WHEN B.PRTY = 'F' THEN 1 ELSE 0 END) AS GATE_OUT_QTY                    --법인출고수량O
+                             ,(CASE WHEN B.PRTY = 'D' THEN 1 ELSE 0 END) AS DLR_IN_QTY                      --딜러입고수량O
+                             ,(CASE WHEN B.PRTY = 'E' THEN 1 ELSE 0 END) AS DLR_OUT_QTY                     --딜러출고수량O
+                             ,ORD_GRADE_CD
+                        FROM SA_0417T A, SA_0416T B
+                       WHERE A.DLR_CD = B.DLR_CD(+)
+                         AND A.ORD_TP = B.SORD(+)
+                         AND A.ORD_YY_MM_DT = B.ORD_YYMM(+)
+                         AND A.ORD_PRID = B.ORD_WEEK(+)
+                         AND TO_NUMBER(A.ORD_NO) = B.ORD_SEQ(+)
+                         AND NOT A.ORD_STAT_CD = '1A'
+                         AND NOT A.IFRESULT_RTN = 'E'
+                         AND (A.SCRN_ID IS NULL OR A.SCRN_ID = 'N')
+                       <if test='sOrdsTp != null and strOrdTp != "" and sOrdsTp == "Y"'>
+                         AND A.ORD_TP = 'N1'
+                       </if>
+                       <if test='strOrdTp != null and strOrdTp != "" and sOrdsTp == "N" and strOrdTp != null and strOrdTp != ""'>
+                         AND A.ORD_TP = #{strOrdTp}   -- 주문유형
+                       </if>
+                       <if test='strOrdTp != null and strOrdTp != "" and sOrdsTp == "N" and strOrdTp == null or strOrdTp == ""'>
+                         AND NOT A.ORD_TP = 'N1'
+                       </if>
+                       <if test='sOrdStartDt != null' >
+                         AND A.ORD_DT <![CDATA[>=]]> TRUNC(#{sOrdStartDt},'DD')
+                       </if>
+                       <if test='sOrdStartDtstrTmp != null and sOrdStartDtstrTmp != "" and sOrdEndDtstrTmp != null and sOrdEndDtstrTmp != ""' >
+                         AND TO_CHAR(A.ORD_DT,'YYYYMMDD') BETWEEN #{sOrdStartDtstrTmp} AND #{sOrdEndDtstrTmp}
+                        </if>
+                       <if test='sOrdEndDt != null' >
+                         AND A.ORD_DT <![CDATA[<]]> TRUNC(#{sOrdEndDt},'DD')+1
+                       </if>
+                       <if test='sDlrCd != null and sDlrCd != ""'>
+                         AND A.DLR_CD = #{sDlrCd}
+                       </if>
+                       <if test='sOrdPrid != null and sOrdPrid != ""'>
+                         AND A.ORD_YY_MM_DT = SUBSTR(#{sOrdPrid}, 1, 6)
+                         AND A.ORD_PRID = SUBSTR(#{sOrdPrid}, 7, 2)
+                       </if>
+                       <if test='sCarlineCd != null and sCarlineCd != ""'>
+                         AND A.CARLINE_CD   = #{sCarlineCd}
+                       </if>
+                       <if test='sModelCd != null and sModelCd != ""'>
+                         AND A.MODEL_CD     = #{sModelCd}
+                       </if>
+                       <if test='sOcnCd != null and sOcnCd != ""'>
+                         AND A.OCN_CD       = #{sOcnCd}
+                       </if>
+                       <if test='sExtColorCd != null and sExtColorCd != ""'>
+                         AND A.EXT_COLOR_CD = #{sExtColorCd}
+                       </if>
+                       <if test='sIntColorCd != null and sIntColorCd != ""'>
+                         AND A.INT_COLOR_CD = #{sIntColorCd}
+                       </if>
+                       <if test='sOrdStatCd != null and sOrdStatCd != ""'>
+                         AND A.ORD_STAT_CD       = #{sOrdStatCd}
+                       </if>
+                       <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                         AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) = #{sFscCd}
+                       </if>
+                       <if test='sFscCd == "None"'>
+                         AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+                       </if>
+                   ) A GROUP BY ORD_YY_MM_DT
+                              ,WEEK, YY_MM
+                              ,DLR_CD
+                              ,ORD_TP
+                              ,CARLINE_CD
+                              ,CARLINE_NM
+                              ,MODEL_CD
+                              ,MODEL_NM
+                              ,OCN_CD
+                              ,OCN_NM
+                              ,EXT_COLOR_CD
+                              ,EXT_COLOR_NM
+                              ,INT_COLOR_CD
+                              ,INT_COLOR_NM
+                              ,ORD_GRADE_CD
+                 ORDER BY ORD_YY_MM_DT DESC, WEEK DESC, YY_MM DESC, CARLINE_CD ASC, MODEL_CD ASC, OCN_CD ASC, EXT_COLOR_CD ASC, INT_COLOR_CD ASC
+                ) T1
+                <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+                </where>
+         )
+         <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+    <select id="selectSumOrderCntDlrsAsByConditionCnt" parameterType="SumOrderCntSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0417T A, SA_0416T B
+         WHERE A.DLR_CD = B.DLR_CD(+)
+           AND A.ORD_TP = B.SORD(+)
+           AND A.ORD_YY_MM_DT = B.ORD_YYMM(+)
+           AND A.ORD_PRID = B.ORD_WEEK(+)
+           AND TO_NUMBER(A.ORD_NO) = B.ORD_SEQ(+)
+           AND NOT A.ORD_STAT_CD = '1A'
+           AND NOT A.IFRESULT_RTN = 'E'
+           AND (A.SCRN_ID IS NULL OR A.SCRN_ID = 'N')
+         <if test='sOrdsTp != null and strOrdTp != "" and sOrdsTp == "Y"'>
+           AND A.ORD_TP = 'N1'
+         </if>
+         <if test='strOrdTp != null and strOrdTp != "" and sOrdsTp == "N" and strOrdTp != null and strOrdTp != ""'>
+           AND A.ORD_TP = #{strOrdTp}   -- 주문유형
+         </if>
+         <if test='strOrdTp != null and strOrdTp != "" and sOrdsTp == "N" and strOrdTp == null or strOrdTp == ""'>
+           AND NOT A.ORD_TP = 'N1'
+         </if>
+         <if test='sOrdStartDt != null' >
+           AND A.ORD_DT <![CDATA[>=]]> TRUNC(#{sOrdStartDt},'DD')
+         </if>
+         <if test='sOrdEndDt != null' >
+           AND A.ORD_DT <![CDATA[<]]> TRUNC(#{sOrdEndDt},'DD')+1
+         </if>
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND A.DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sOrdPrid != null and sOrdPrid != ""'>
+           AND A.ORD_YY_MM_DT = SUBSTR(#{sOrdPrid}, 1, 6)
+           AND A.ORD_PRID = SUBSTR(#{sOrdPrid}, 7, 2)
+         </if>
+         <if test='sCarlineCd != null and sCarlineCd != ""'>
+           AND A.CARLINE_CD   = #{sCarlineCd}
+         </if>
+         <if test='sModelCd != null and sModelCd != ""'>
+           AND A.MODEL_CD     = #{sModelCd}
+         </if>
+         <if test='sOcnCd != null and sOcnCd != ""'>
+           AND A.OCN_CD       = #{sOcnCd}
+         </if>
+         <if test='sExtColorCd != null and sExtColorCd != ""'>
+           AND A.EXT_COLOR_CD = #{sExtColorCd}
+         </if>
+         <if test='sIntColorCd != null and sIntColorCd != ""'>
+            AND A.INT_COLOR_CD = #{sIntColorCd}
+         </if>
+         <if test='sOrdStatCd != null and sOrdStatCd != ""'>
+           AND A.ORD_STAT_CD       = #{sOrdStatCd}
+         </if>
+         <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) = #{sFscCd}
+         </if>
+         <if test='sFscCd == "None"'>
+           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+         </if>
+    </select>
+
+    <select id="selectSumOrderCntDlrsAsByCondition" parameterType="SumOrderCntSearchVO" resultType="SumOrderCntVO">
+        SELECT * FROM
+        ( SELECT ROWNUM AS RNUM
+                ,Q1.* FROM
+               (SELECT ORD_YY_MM_DT,
+                       WEEK,
+                       YY_MM,
+                       DLR_CD,
+                       ORD_TP,
+                       CARLINE_CD,
+                       CARLINE_NM,
+                       MODEL_CD,
+                       MODEL_NM,
+                       OCN_CD,
+                       OCN_NM,
+                       EXT_COLOR_CD,
+                       EXT_COLOR_NM,
+                       INT_COLOR_CD,
+                       INT_COLOR_NM,
+                       ORD_GRADE_CD,
+                       ORD_TP_NM,
+                       MAX(ORD_QTY) AS ORD_QTY,
+                       MAX(WT_ORD_QTY) AS WT_ORD_QTY,
+                       MAX(SUM_TOTAL_QTY) AS SUM_TOTAL_QTY,
+                       MAX(FINAL_CONF_QTY) AS FINAL_CONF_QTY,
+                       MAX(FST_CONFIRM_QTY) AS FST_CONFIRM_QTY,
+                       MAX(SCND_CONFIRM_QTY) AS SCND_CONFIRM_QTY,
+                       MAX(FINAL_QTY) AS FINAL_QTY,
+                       MAX(WT_ORD_QTY_CAL) AS WT_ORD_QTY_CAL,
+                       MAX(DLR_CNCL_QTY) AS DLR_CNCL_QTY,
+                       NVL(MAX(SCND_PAR_ISFF_ADJ_QTY_AS),0) AS SCND_PAR_ISFF_ADJ_QTY,
+                       MAX(NON_ALOC_QTY) AS NON_ALOC_QTY,
+                       MAX(PDI_QTY) AS PDI_QTY,
+                       MAX(MISS_SET_QTY) AS MISS_SET_QTY,
+                       MAX(TRAN_MISS_QTY) AS TRAN_MISS_QTY,
+                       MAX(VIN_QTY) AS VIN_QTY,
+                       MAX(GATE_OUT_QTY) AS GATE_OUT_QTY,
+                       MAX(DLR_IN_QTY) AS DLR_IN_QTY,
+                       MAX(DLR_OUT_QTY) AS DLR_OUT_QTY,
+                       ORD_NO
+                  FROM ( SELECT NVL(SCND_PAR_ISFF_ADJ_QTY_AS,0) AS SCND_PAR_ISFF_ADJ_QTY
+                                ,NVL(ORD_QTY,0)-NVL(SCND_CONFIRM_QTY,0)-NVL(SCND_PAR_ISFF_ADJ_QTY_AS,0) AS WT_ORD_QTY
+                                ,NON_ALOC_QTY+PDI_QTY+VIN_QTY+GATE_OUT_QTY+DLR_IN_QTY+DLR_OUT_QTY AS SUM_TOTAL_QTY
+                                ,SCND_CONFIRM_QTY - DLR_CNCL_QTY  AS FINAL_CONF_QTY
+                                ,T1.* FROM
+                               (
+                                SELECT ORD_YY_MM_DT  --오더년월
+                                      ,WEEK          --오더주차
+                                      ,YY_MM         --오더년YYMM
+                                      ,DLR_CD        --딜러
+                                      ,ORD_TP        --오더타입
+                                      ,CARLINE_CD    --차종코드
+                                      ,CARLINE_NM    --차종명
+                                      ,MODEL_CD      --모델코드
+                                      ,FN_GET_MODEL_TP_NM(MODEL_CD, OCN_CD) AS MODEL_NM
+                                      ,OCN_CD        --OCN코드
+                                      ,OCN_NM        --OCN명
+                                      ,EXT_COLOR_CD  --외장색상코드
+                                      ,EXT_COLOR_NM  --외장색상명
+                                      ,INT_COLOR_CD  --내장색상코드
+                                      ,INT_COLOR_NM  --내장색상명
+                                      ,DECODE(ORD_QTY,0,NULL,ORD_QTY) AS ORD_QTY                             --요청수량
+                                      ,DECODE(FST_CONFIRM_QTY,0,NULL,FST_CONFIRM_QTY) AS FST_CONFIRM_QTY     --1차확정수량
+                                      ,DECODE(SCND_CONFIRM_QTY,0,NULL,SCND_CONFIRM_QTY) AS SCND_CONFIRM_QTY  --2차확정수량
+                                      ,DECODE(SCND_CONFIRM_QTY,0,NULL,SCND_CONFIRM_QTY) AS FINAL_QTY         --심사통과수량
+                                      ,DECODE(ORD_QTY,0,NULL,ORD_QTY) - DECODE(SCND_CONFIRM_QTY,0,NULL,SCND_CONFIRM_QTY) - SCND_PAR_ISFF_ADJ_QTY AS WT_ORD_QTY_CAL  --승인대기수량
+                                      ,SUM(DLR_CNCL_QTY) AS DLR_CNCL_QTY                                            --승인후취소수량
+                                      ,DECODE(SCND_PAR_ISFF_ADJ_QTY_AS,0,NULL,SCND_PAR_ISFF_ADJ_QTY_AS) AS SCND_PAR_ISFF_ADJ_QTY_AS  --조정수량 AS
+                                      ,SUM(NON_ALOC_QTY) AS NON_ALOC_QTY                                            --미배정수량
+                                      ,SUM(PDI_QTY) AS PDI_QTY                                                      --PDI배정수량
+                                      ,SUM(MISS_SET_QTY) AS MISS_SET_QTY                                            --임무배정수량
+                                      ,SUM(TRAN_MISS_QTY) AS TRAN_MISS_QTY                                          --배송임무배정수량
+                                      ,SUM(VIN_QTY) AS VIN_QTY                                                      --VIN배정
+                                      ,SUM(GATE_OUT_QTY) AS GATE_OUT_QTY                                            --법인출고수량
+                                      ,SUM(DLR_IN_QTY) AS DLR_IN_QTY                                                --딜러입고수량
+                                      ,SUM(DLR_OUT_QTY) AS DLR_OUT_QTY                                              --딜러출고수량
+                                      ,SUM(SCND_PAR_ISFF_ADJ_QTY) AS SCND_PAR_ISFF_ADJ_QTY                          --심사미통과수량
+                                      ,FN_CMM_CD_NM('SAL138',ORD_TP,#{sLangCd},'Y') AS ORD_TP_NM  -- 주문유형 이름값
+                                      ,ORD_GRADE_CD
+                                      ,ORD_NO
+                                  FROM(SELECT A.ORD_YY_MM_DT  --오더년월
+                                             ,A.ORD_PRID AS WEEK --오더주차
+                                             ,SUBSTR(A.ORD_YY_MM_DT, 3, 6) AS YY_MM --오더년YYMM
+                                             ,A.DLR_CD      --딜러코드
+                                             ,A.CARLINE_CD
+                                             ,FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM
+                                             ,A.MODEL_CD
+                                             ,A.OCN_CD
+                                             ,FN_GET_OCN_NM_NC(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+                                             ,A.EXT_COLOR_CD
+                                             ,FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+                                             ,A.INT_COLOR_CD
+                                             ,FN_GET_INT_COLOR_NM_NC(A.INT_COLOR_CD) AS INT_COLOR_NM
+                                             ,A.ORD_TP
+                                             ,NVL(A.ORD_QTY,0) AS ORD_QTY                                                   --요청수량 O
+                                             ,NVL(A.FST_CONFIRM_QTY, 0) AS FST_CONFIRM_QTY                                  --1차확정수량합 O
+                                             ,NVL(A.SCND_CONFIRM_QTY, 0) AS SCND_CONFIRM_QTY                                --2차확정수량합 O
+                                             ,NVL(A.SCND_PAR_ISFF_ADJ_QTY, 0) AS SCND_PAR_ISFF_ADJ_QTY_AS                    --조정수량forAS
+                                             ,(CASE WHEN A.ORD_STAT_CD = '1K' THEN 1 ELSE 0 END) AS SCND_PAR_ISFF_ADJ_QTY   --미통과수량
+                                             ,(CASE WHEN B.PRTY IS NULL THEN 1 ELSE 0  END) AS WT_ORD_QTY                   --승인대기 O
+                                             ,(CASE WHEN B.PRTY = 'B' THEN 1 ELSE 0 END) AS DLR_CNCL_QTY                    --승인후취소수량 O
+                                             ,(CASE WHEN B.PRTY = 'A' THEN 1 ELSE 0 END) AS NON_ALOC_QTY                    --미배정수량 O
+                                             ,(CASE WHEN B.PRTY = 'P' THEN 1 ELSE 0 END) AS PDI_QTY                         --PDI배정 O
+                                             ,(CASE WHEN B.PRTY = 'M' THEN 1 ELSE 0 END) AS MISS_SET_QTY                    --임무배정 O
+                                             ,(CASE WHEN B.PRTY = 'N' THEN 1 ELSE 0 END) AS TRAN_MISS_QTY                   --운송배정 O
+                                             ,(CASE WHEN B.PRTY = 'C' THEN 1 ELSE 0 END) AS VIN_QTY                         --VIN배정 O
+                                             ,(CASE WHEN B.PRTY = 'F' THEN 1 ELSE 0 END) AS GATE_OUT_QTY                    --법인출고수량O
+                                             ,(CASE WHEN B.PRTY = 'D' THEN 1 ELSE 0 END) AS DLR_IN_QTY                      --딜러입고수량O
+                                             ,(CASE WHEN B.PRTY = 'E' THEN 1 ELSE 0 END) AS DLR_OUT_QTY                     --딜러출고수량O
+                                             ,ORD_GRADE_CD
+                                             ,FN_CMM_CD_NM('SAL138',A.ORD_TP,#{sLangCd},'Y') AS ORD_TP_NM  -- 주문유형 이름값
+                                             ,ORD_NO
+                                        FROM SA_0417T A, SA_0416T B
+                                       WHERE A.DLR_CD = B.DLR_CD(+)
+                                         AND A.ORD_TP = B.SORD(+)
+                                         AND A.ORD_YY_MM_DT = B.ORD_YYMM(+)
+                                         AND A.ORD_PRID = B.ORD_WEEK(+)
+                                         AND TO_NUMBER(A.ORD_NO) = B.ORD_SEQ(+)
+                                         AND NOT A.ORD_STAT_CD = '1A'
+                                         AND NOT A.IFRESULT_RTN = 'E'
+                                         AND (A.SCRN_ID IS NULL OR A.SCRN_ID = 'N')
+                                       <if test='sOrdsTp != null and strOrdTp != "" and sOrdsTp == "Y"'>
+                                         AND A.ORD_TP = 'N1'
+                                       </if>
+                                       <if test='strOrdTp != null and strOrdTp != "" and sOrdsTp == "N" and strOrdTp != null and strOrdTp != ""'>
+                                         AND A.ORD_TP = #{strOrdTp}   -- 주문유형
+                                       </if>
+                                       <if test='strOrdTp != null and strOrdTp != "" and sOrdsTp == "N" and strOrdTp == null or strOrdTp == ""'>
+                                         AND NOT A.ORD_TP = 'N1'
+                                       </if>
+                                       <if test='sOrdStartDtstrTmp != null and sOrdStartDtstrTmp != "" and sOrdEndDtstrTmp != null and sOrdEndDtstrTmp != ""' >
+                                        AND TO_CHAR(A.ORD_DT,'YYYYMMDD') BETWEEN #{sOrdStartDtstrTmp} AND #{sOrdEndDtstrTmp}
+                                        </if>
+                                       <if test='sOrdStartDt != null' >
+                                         AND A.ORD_DT <![CDATA[>=]]> TRUNC(#{sOrdStartDt},'DD')
+                                       </if>
+                                       <if test='sOrdEndDt != null' >
+                                         AND A.ORD_DT <![CDATA[<]]> TRUNC(#{sOrdEndDt},'DD')+1
+                                       </if>
+                                       <if test='sDlrCd != null and sDlrCd != ""'>
+                                         AND A.DLR_CD = #{sDlrCd}
+                                       </if>
+                                       <if test='sOrdPrid != null and sOrdPrid != ""'>
+                                         AND A.ORD_YY_MM_DT = SUBSTR(#{sOrdPrid}, 1, 6)
+                                         AND A.ORD_PRID = SUBSTR(#{sOrdPrid}, 7, 2)
+                                       </if>
+                                       <if test='sCarlineCd != null and sCarlineCd != ""'>
+                                         AND A.CARLINE_CD   = #{sCarlineCd}
+                                       </if>
+                                       <if test='sModelCd != null and sModelCd != ""'>
+                                         AND A.MODEL_CD     = #{sModelCd}
+                                       </if>
+                                       <if test='sOcnCd != null and sOcnCd != ""'>
+                                         AND A.OCN_CD       = #{sOcnCd}
+                                       </if>
+                                       <if test='sExtColorCd != null and sExtColorCd != ""'>
+                                         AND A.EXT_COLOR_CD = #{sExtColorCd}
+                                       </if>
+                                       <if test='sIntColorCd != null and sIntColorCd != ""'>
+                                         AND A.INT_COLOR_CD = #{sIntColorCd}
+                                       </if>
+                                       <if test='sOrdStatCd != null and sOrdStatCd != ""'>
+                                         AND A.ORD_STAT_CD       = #{sOrdStatCd}
+                                       </if>
+                                       <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                                         AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) = #{sFscCd}
+                                       </if>
+                                       <if test='sFscCd == "None"'>
+                                         AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+                                       </if>
+                                   ) A GROUP BY ORD_YY_MM_DT
+                                              ,WEEK, YY_MM
+                                              ,DLR_CD
+                                              ,ORD_TP
+                                              ,CARLINE_CD
+                                              ,CARLINE_NM
+                                              ,MODEL_CD
+                                              ,OCN_CD
+                                              ,OCN_NM
+                                              ,EXT_COLOR_CD
+                                              ,EXT_COLOR_NM
+                                              ,INT_COLOR_CD
+                                              ,INT_COLOR_NM
+                                              ,ORD_GRADE_CD
+                                              ,ORD_QTY
+                                              ,ORD_TP_NM
+                                              ,FST_CONFIRM_QTY
+                                              ,SCND_CONFIRM_QTY
+                                              <!--,DLR_CNCL_QTY            2017.08.07 승인후취소 수량 변경요청(구상우C) -->
+                                              ,SCND_PAR_ISFF_ADJ_QTY
+                                              ,SCND_PAR_ISFF_ADJ_QTY_AS
+                                              ,ORD_NO
+                                 ORDER BY ORD_YY_MM_DT DESC, WEEK DESC, YY_MM DESC, CARLINE_CD ASC, MODEL_CD ASC, OCN_CD ASC, EXT_COLOR_CD ASC, INT_COLOR_CD ASC
+                                ) T1
+                         ) GROUP BY  ORD_YY_MM_DT
+                                    ,WEEK
+                                    ,YY_MM
+                                    ,DLR_CD
+                                    ,ORD_TP
+                                    ,CARLINE_CD
+                                    ,CARLINE_NM
+                                    ,MODEL_CD
+                                    ,MODEL_NM
+                                    ,OCN_CD
+                                    ,OCN_NM
+                                    ,ORD_TP_NM
+                                    ,EXT_COLOR_CD
+                                    ,EXT_COLOR_NM
+                                    ,INT_COLOR_CD
+                                    ,INT_COLOR_NM
+                                    ,ORD_GRADE_CD
+                                    ,ORD_NO
+               ) Q1
+                <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+                </where>
+         )
+         <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+   <!-- 종합오더현황-딜러 세부 목록 갯수조회 -->
+   <select id="selectSumOrderCntDlrSubsByConditionCnt" parameterType="SumOrderCntSearchVO" resultType="int">
+        SELECT COUNT(*) ROWCNT
+          FROM SA_0416T A, SA_0417T B, SA_0121T C
+         WHERE A.DLR_CD = B.DLR_CD
+           AND A.ORD_YYMM = B.ORD_YY_MM_DT
+           AND A.ORD_WEEK = B.ORD_PRID
+           AND A.CARLINE_CD = B.CARLINE_CD
+           AND A.VIN_NO1 = C.VIN_NO1(+)
+           AND A.VIN_NO2 = C.VIN_NO2(+)
+           AND A.ORD_SEQ = TO_NUMBER(B.ORD_NO)
+           AND A.SORD = B.ORD_TP
+           AND (B.SCRN_ID IS NULL OR B.SCRN_ID = 'N')
+        <if test='sDlrCd != null and sDlrCd != ""'>
+          AND A.DLR_CD       = #{sDlrCd}
+        </if>
+       <!-- R19092902175 详单综合现况 详细信息查询 SQL 更改 贾明 2019-10-9 start -->
+        <if test='sOrdStartDt != null'>
+		  AND B.ORD_DT <![CDATA[>=]]>
+		  TRUNC(#{sOrdStartDt},'DD')
+		</if>
+		<if test='sOrdEndDt != null'>
+		  AND B.ORD_DT <![CDATA[<]]>
+		  TRUNC(#{sOrdEndDt},'DD')+1
+		</if>
+       <!-- R19092902175 详单综合现况 详细信息查询 SQL 更改 贾明 2019-10-9 end -->
+        <if test='sOrdYyMmDt != null and sOrdYyMmDt != ""'>
+              AND A.ORD_YYMM = #{sOrdYyMmDt} 
+        </if>
+        <if test='sOrdPrid != null and sOrdPrid != ""'>
+          AND A.ORD_WEEK     = #{sOrdPrid}
+        </if>
+        <if test='sOrdsTp != null and sOrdsTp != ""'>
+          AND B.ORD_TP = #{sOrdsTp}
+        </if>
+        <if test='sCarlineCd != null and sCarlineCd != ""'>
+          AND A.CARLINE_CD   = #{sCarlineCd}
+        </if>
+        <if test='sModelCd != null and sModelCd != ""'>
+          AND A.MODEL_CD     = #{sModelCd}
+        </if>
+        <if test='sOcnCd != null and sOcnCd != ""'>
+          AND A.OCN_CD       = #{sOcnCd}
+        </if>
+        <if test='sExtColorCd != null and sExtColorCd != ""'>
+          AND A.EXT_COLOR_CD = #{sExtColorCd}
+        </if>
+        <if test='sIntColorCd != null and sIntColorCd != ""'>
+          AND A.INT_COLOR_CD = #{sIntColorCd}
+        </if>
+        <if test='sOrdNo != null and sOrdNo != ""'>
+          AND B.ORD_NO = #{sOrdNo}
+        </if>
+        
+        <!-- 2018-12-28 add byfengdequan  明细显示根据下单人ID start -->
+         <if test='sregUsrId != null and sregUsrId != ""'>
+          AND B.REG_USR_ID = #{sregUsrId}
+        </if>
+        
+          AND B.ORD_GRADE_CD = #{sordGradeCd}
+        <!-- 2018-12-28 add byfengdequan  明细显示根据下单人ID end -->
+   </select>
+
+   <!-- 종합오더현황-딜러 세부조회 -->
+   <select id="selectSumOrderCntDlrSubsByCondition" parameterType="SumOrderCntSearchVO" resultType="SumOrderCntSubVO">
+        SELECT COUNT(1) OVER() AS TOT_CNT
+             , A.SORD AS ORD_TP                -- 주문유형(공통코드SAL137)
+             , FN_CMM_CD_NM('SAL137',A.SORD,#{sLangCd},'Y') AS ORD_TP_NM   -- 주문유형 이름 (화면에 보여지는 값 )
+             , A.PRTY AS ORD_STAT_CD           --오더상태명(공통코드SAL150)
+             , FN_CMM_CD_NM('SAL150',A.PRTY,#{sLangCd},'N') AS ORD_STAT_CD_NM   -- 오더상태 이름 (화면에 보여지는 값 )
+             , A.CNDY AS ORD_DATE              --주문등록일자
+             , B.SALE_RGST_ID AS CHRG_CD                       --주문자
+             , A.SALES_NO AS ORD_SEQ                       --오더번호
+             , A.SALES_NO                      --영업번호
+             , A.ALOC AS VINM_VLOC --하치장명(공통코드SAL211)
+             , FN_CMM_CD_NM('SAL211',A.ALOC,#{sLangCd},'N') AS VINM_VLOC_NM   -- 하치장명 이름 (화면에 보여지는 값 )
+             , SUBSTR(A.INNO,1,4)||'-'||SUBSTR(A.INNO,5,2)||'-'||SUBSTR(A.INNO,7) AS INNO
+             , A.CARLINE_CD
+             , FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM
+             , A.MODEL_CD
+             , FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD) AS MODEL_NM
+             , A.OCN_CD
+             , FN_GET_OCN_NM_NC(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+             , A.EXT_COLOR_CD
+             , FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+             , A.INT_COLOR_CD
+             , FN_GET_INT_COLOR_NM_NC(A.INT_COLOR_CD) AS INT_COLOR_NM
+             , CASE WHEN A.ALDY = '00000000' THEN NULL
+                    ELSE TO_DATE(A.ALDY, 'YYYYMMDD')
+                END  AS PDI_DT     --PDI배정일
+             , C.CAR_VIN_ALLOC_DT AS VIN_DT     --VIN배정일
+             , C.PLT_GI_DT AS RETAIL_DT
+             , TO_CHAR(C.PLT_GI_DT, 'YYYY-MM-DD') AS RETAIL_DT_STR
+             , A.VIN_NO1 || A.VIN_NO2 AS VIN_NO --VIN NO
+             , C.DLR_GR_DT                      --딜러입고일
+             , TO_CHAR(C.DLR_GR_DT, 'YYYY-MM-DD') AS DLR_GR_DT_STR                      --딜러입고일
+             , C.CUST_SALE_DT                   --딜러출고일
+             , TO_CHAR(C.CUST_SALE_DT, 'YYYY-MM-DD') AS CUST_SALE_DT_STR
+             , B.REG_USR_ID
+             , TO_CHAR(B.ORD_DT,'YYYY-MM-DD') AS ORD_DT
+          FROM SA_0416T A, SA_0417T B, SA_0121T C
+         WHERE A.DLR_CD = B.DLR_CD
+           AND A.ORD_YYMM = B.ORD_YY_MM_DT
+           AND A.ORD_WEEK = B.ORD_PRID
+           AND A.SORD     = B.ORD_TP
+           AND A.CARLINE_CD = B.CARLINE_CD
+           AND A.ORD_SEQ = TO_NUMBER(B.ORD_NO)
+           AND A.SORD = B.ORD_TP
+           AND A.VIN_NO1 = C.VIN_NO1(+)
+           AND A.VIN_NO2 = C.VIN_NO2(+)
+           AND (B.SCRN_ID IS NULL OR B.SCRN_ID = 'N')
+        <if test='sDlrCd != null and sDlrCd != ""'>
+          AND A.DLR_CD       = #{sDlrCd}
+        </if>
+        <!-- R19092902175 详单综合现况 详细信息查询 SQL 更改 贾明 2019-10-9 start -->
+       <if test='sOrdStartDt != null'>
+		  AND B.ORD_DT <![CDATA[>=]]>
+		  TRUNC(#{sOrdStartDt},'DD')
+		</if>
+		<if test='sOrdEndDt != null'>
+		  AND B.ORD_DT <![CDATA[<]]>
+		  TRUNC(#{sOrdEndDt},'DD')+1
+		</if>
+       <!-- R19092902175 详单综合现况 详细信息查询 SQL 更改 贾明 2019-10-9 end -->
+        <if test='sOrdYyMmDt != null and sOrdYyMmDt != ""'>
+              AND A.ORD_YYMM = #{sOrdYyMmDt}
+        </if>
+        <if test='sOrdPrid != null and sOrdPrid != ""'>
+          AND A.ORD_WEEK     = #{sOrdPrid}
+        </if>
+        <if test='sOrdsTp != null and sOrdsTp != ""'>
+          AND B.ORD_TP = #{sOrdsTp}
+        </if>
+        <if test='sCarlineCd != null and sCarlineCd != ""'>
+          AND A.CARLINE_CD   = #{sCarlineCd}
+        </if>
+        <if test='sModelCd != null and sModelCd != ""'>
+          AND A.MODEL_CD     = #{sModelCd}
+        </if>
+        <if test='sOcnCd != null and sOcnCd != ""'>
+          AND A.OCN_CD       = #{sOcnCd}
+        </if>
+        <if test='sExtColorCd != null and sExtColorCd != ""'>
+          AND A.EXT_COLOR_CD = #{sExtColorCd}
+        </if>
+        <if test='sIntColorCd != null and sIntColorCd != ""'>
+          AND A.INT_COLOR_CD = #{sIntColorCd}
+        </if>
+        <if test='sOrdNo != null and sOrdNo != ""'>
+          AND B.ORD_NO = #{sOrdNo}
+        </if>
+        <!-- 2018-12-28 add byfengdequan  明细显示根据下单人ID start -->
+         <if test='sregUsrId != null and sregUsrId != ""'>
+          AND B.REG_USR_ID = #{sregUsrId}
+        </if>
+          AND B.ORD_GRADE_CD = #{sordGradeCd}
+        <!-- 2018-12-28 add byfengdequan  明细显示根据下单人ID end -->
+        ORDER BY DECODE(ORD_STAT_CD,'B',1,'R',2,'O',3,'S',4,'A',5,'R',6,'P',7,'C',8,'F',9,'D',10,'E',11)
+   </select>
+</mapper>

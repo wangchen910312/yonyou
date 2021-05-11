@@ -1,0 +1,528 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="SA_0001" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sEndYyMmDd"/>
+<O>
+<![CDATA[20170308]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sSrartYyMmDd"/>
+<O>
+<![CDATA[20170208]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[	SELECT X.* FROM (
+	SELECT
+		 A.REAL_DL_DT AS CUST_SALE_DT
+		,TO_CHAR(A.CONTRACT_RCPT_DT, 'YYYY-MM-DD') AS CONTRACT_RCPT_DT
+		,TO_CHAR(A.CONTRACT_DT, 'YYYY-MM-DD') AS CONTRACT_DT
+		,A.CARLINE_CD
+		,FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+		,A.MODEL_CD
+		,FN_GET_MODEL_NM(A.MODEL_CD) AS MODEL_NM
+		,A.EXT_COLOR_CD
+		,FN_GET_EXT_COLOR_NM(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+		,A.INT_COLOR_CD
+		,FN_GET_INT_COLOR_NM(A.INT_COLOR_CD) AS INT_COLOR_NM
+		,A.PAY_TP
+		,( SELECT Z1.CMM_CD_NM
+	           FROM (SELECT A.CMM_CD
+	                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+	                  FROM CM_0303T A
+	                  LEFT OUTER JOIN CM_0304T B
+	                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+	                       AND A.CMM_CD = B.CMM_CD
+	                       AND B.LANG_CD = 'cn'
+	                 WHERE A.CMM_GRP_CD = 'SAL071'   
+	                   AND A.USE_YN = 'Y'
+	                 ) Z1
+	         WHERE A.PAY_TP = Z1.CMM_CD
+	       ) AS PAY_TP_NM
+	     ,NVL(A.REAL_CAR_AMT, 0) AS REAL_CAR_AMT
+	     ,NVL(A.GOODS_AMT, 0) AS GOODS_AMT
+	     ,NVL(A.INC_AMT, 0) AS INC_AMT
+	     ,NVL(A.FINC_FEE_AMT, 0) AS FINC_FEE_AMT  -- 금융 금액
+	     ,NVL(A.SBST_AMT, 0) AS USEDCAR_AMT -- 중고차 금액
+	     ,NVL(A.AAP_AMT, 0) AS AAP_AMT  -- 대행금액
+	     ,NVL(A.POINT_AMT, 0) AS POINT_AMT
+	     ,NVL(A.VAT_AMT, 0) AS VAT_AMT
+	     ,NVL(A.REAL_PAY_AMT, 0) AS REAL_PAY_AMT
+	     ,A.VIN_NO
+	     ,A.SALE_EMP_NO
+	     ,(SELECT Z.USR_NM FROM CM_0801T Z WHERE Z.USR_ID = A.SALE_EMP_NO) AS SALE_EMP_NM
+	     ,B.CUST_NM
+	     ,(SELECT MAX(CUST_NM) FROM CR_0101T WHERE CUST_NO = (SELECT MAX(Z.PCON_CUST_NO) FROM CR_0111T Z WHERE Z.UPPER_CUST_NO = A.CONTRACT_CUST_NO)) AS RLS_CUST_NM
+	     ,B.TEL_NO2 AS HP_NO
+	     ,B.ADDR_NM AS ADDR_NM 
+	FROM SA_0201T A, SA_0202T B
+	WHERE A.CONTRACT_CUST_NO = B.CUST_CD(+)
+	AND   A.DLR_CD = '${sDlrCd}'
+	AND   A.DLR_CD = B.DLR_CD
+	AND   A.CONTRACT_NO = B.CONTRACT_NO
+	AND   B.PARTNER_TP = 'C'
+	AND   A.CONTRACT_STAT_CD in ('50')) X
+	WHERE TO_CHAR(X.CUST_SALE_DT, 'YYYYMMDD') BETWEEN '${sSrartYyMmDd}' AND '${sEndYyMmDd}']]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="车辆销售明细表_차량판매명세">
+<ReportPageAttr>
+<HR F="0" T="0"/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1152000,1152000,723900,723900,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[3771900,3600000,10800000,5181600,4914900,2880000,2880000,2880000,2592000,2592000,2592000,2592000,2592000,3009900,2667000,2438400,6972300,2743200,2880000,3024000,3888000,6858000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" s="0">
+<O>
+<![CDATA[出库日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="0">
+<O>
+<![CDATA[车种]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0" s="0">
+<O>
+<![CDATA[车款]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="0">
+<O>
+<![CDATA[外色]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0" s="0">
+<O>
+<![CDATA[内色]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="0">
+<O>
+<![CDATA[支付方式]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="0" s="0">
+<O>
+<![CDATA[销售总额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="0" s="0">
+<O>
+<![CDATA[车辆价格]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="0" s="0">
+<O>
+<![CDATA[精品]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="0" s="0">
+<O>
+<![CDATA[保险]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="0" s="0">
+<O>
+<![CDATA[金融]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="0" s="0">
+<O>
+<![CDATA[二手车]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="0" s="0">
+<O>
+<![CDATA[代办]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="0" s="0">
+<O>
+<![CDATA[蓝缤会员费]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="0" s="0">
+<O>
+<![CDATA[购置税]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="0" s="0">
+<O>
+<![CDATA[验车费]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="0" s="0">
+<O>
+<![CDATA[VIN]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="0" s="0">
+<O>
+<![CDATA[销售顾问]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="0" s="0">
+<O>
+<![CDATA[客户]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="0" s="0">
+<O>
+<![CDATA[客户联系人]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="0" s="0">
+<O>
+<![CDATA[手机]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="0" s="0">
+<O>
+<![CDATA[地址]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="CUST_SALE_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Scope val="1"/>
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="1" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="CARLINE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="MODEL_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="EXT_COLOR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="INT_COLOR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="PAY_TP_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="REAL_PAY_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="REAL_CAR_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="GOODS_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="INC_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="10" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="FINC_FEE_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="USEDCAR_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="AAP_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="POINT_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="VAT_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="15" r="1" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="VIN_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="17" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="SALE_EMP_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="18" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="CUST_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="19" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="RLS_CUST_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="20" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="HP_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="21" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="SA_0001" columnName="ADDR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="144000" footerHeight="144000">
+<PaperSetting orientation="1">
+<PaperSize width="60480000" height="85536000"/>
+<Margin top="144000" left="144000" bottom="144000" right="144000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

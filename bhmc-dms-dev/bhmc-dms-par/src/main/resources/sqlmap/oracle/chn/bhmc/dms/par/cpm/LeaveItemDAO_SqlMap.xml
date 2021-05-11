@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : LeaveItemDAO_SqlMap.xml
+    Description : 방치품 선정.
+    author In Bo Shim
+    since 2016. 5. 24.
+    version 1.0
+    Modification Information
+       since          author    selectLeavItemsByCondition          description
+    ===========    =============    ===========================
+    2016. 05. 24.     In Bo Shim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.par.cpm.service.dao.LeaveItemDAO">
+
+    <!-- 방치품 정보를 수정한다. -->
+    <update id="updateLeaveItem" parameterType="LeaveItemVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.LeaveItemDAO.updateLeaveItem] */
+        UPDATE PT_0201T SET
+            UPDT_USR_ID = #{ updtUsrId }
+            ,UPDT_DT = SYSDATE
+            <if test='nonMovingFlg != null and nonMovingFlg != ""'>
+                ,NON_MOVING_FLG = #{ nonMovingFlg }
+            </if>
+        WHERE DLR_CD = #{ dlrCd }
+        AND ITEM_CD = #{itemCd }
+    </update>
+
+    <!-- 방치품 정보를 삭제한다. -->
+    <delete id="deleteLeaveItem" parameterType="LeaveItemVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.LeaveItemDAO.deleteLeaveItem] */
+        UPDATE PT_0201T SET
+            UPDT_USR_ID = #{ updtUsrId }
+            ,UPDT_DT = SYSDATE
+            ,NON_MOVING_FLG = 'N'
+        WHERE DLR_CD = #{ dlrCd }
+        AND ITEM_CD = #{itemCd }
+    </delete>
+
+    <!-- 방치품 정보를 전체 수정한다. -->
+    <update id="updateLeaveItemAll" parameterType="LeaveItemVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.LeaveItemDAO.updateLeaveItemAll] */
+        UPDATE PT_0201T SET
+            UPDT_USR_ID = #{ updtUsrId }
+            ,UPDT_DT = SYSDATE
+            <if test='nonMovingFlg != null and nonMovingFlg != ""'>
+                ,NON_MOVING_FLG = #{ nonMovingFlg }
+            </if>
+        WHERE DLR_CD = #{ dlrCd }
+        AND ITEM_CD IN (
+            SELECT
+                ITEM_CD
+            FROM (
+                SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT
+                        A.ITEM_CD
+                        ,A.ITEM_NM
+                        ,A.ITEM_DSTIN_CD
+                        ,A.ITEM_CD AS NON_MOVING_ITEM_CD
+                        ,A.NON_MOVING_FLG
+                        ,A.CARLINE_CD
+                        ,A.BP_CD
+                        ,B.BP_NM
+                        ,NVL(E.MOVING_AVG_PRC, 0) AS STOCK_GI_PRC                --이동평균가격
+                        ,C.SALE_PRC_AMT AS PURC_PRC
+                        ,SYSDATE AS STAY_DT
+                        ,CASE WHEN A.LAST_GR_DT <![CDATA[>]]> A.LAST_GI_DT THEN TRUNC(SYSDATE - TO_DATE(A.LAST_GR_DT))
+                        ELSE TRUNC(SYSDATE - TO_DATE(A.LAST_GI_DT))
+                        END AS STAY_DAY
+                        ,A.LAST_GR_DT
+                        ,A.LAST_GI_DT
+                        ,NVL(F.AVLB_STOCK_QTY,0) AS AVLB_STOCK_QTY
+                        ,NVL(F.STOCK_AMT,0) AS STOCK_AMT
+                    FROM PT_0201T A
+                    INNER JOIN (
+                        SELECT DISTINCT A.DLR_CD ,A.ITEM_CD FROM PT_0301T A
+                    ) D ON A.DLR_CD = D.DLR_CD AND A.ITEM_CD = D.ITEM_CD
+                    INNER JOIN PT_0211T B ON A.BP_CD = B.BP_CD AND A.DLR_CD = B.DLR_CD
+                    LEFT JOIN (
+                        SELECT
+                            DLR_CD
+                            ,ITEM_CD
+                            ,MAX(PRC_TP) AS PRC_TP
+                            ,MAX(LINE_NO) AS LINE_NO
+                            ,MAX(NVL(RETL_PRC,0)) AS RETL_PRC
+                            ,MAX(NVL(WHSL_PRC,0)) AS WHSL_PRC
+                            ,MAX(NVL(SALE_PRC_AMT,0)) AS SALE_PRC_AMT
+                        FROM PT_0214T
+                        WHERE DLR_CD = #{ dlrCd }
+                        AND DEL_YN != 'Y'
+                        GROUP BY DLR_CD, ITEM_CD
+                    ) C ON A.ITEM_CD = C.ITEM_CD AND A.DLR_CD = C.DLR_CD
+                    INNER JOIN PT_0301T F ON A.DLR_CD = F.DLR_CD AND A.ITEM_CD = F.ITEM_CD AND A.GR_STRGE_CD = F.STRGE_CD
+                    LEFT OUTER JOIN PT_0208T E ON A.DLR_CD = E.DLR_CD AND A.GR_STRGE_CD = E.STRGE_CD AND A.ITEM_CD = E.ITEM_CD
+                    WHERE A.DLR_CD = #{ dlrCd }
+                    AND F.AVLB_STOCK_QTY <![CDATA[>]]> 0
+                ) T1
+                WHERE T1.STAY_DAY <![CDATA[>]]> 0
+            )
+        )
+    </update>
+
+
+    <!-- 방치품 정보를 조회한다. -->
+    <select id="selectLeaveItemByKey" parameterType="map" resultType="LeaveItemVO">
+        /* [chn.bhmc.dms.par.cpm.service.dao.LeavItemDAO.selectLeavItemByKey] */
+        SELECT * FROM PT_0701T
+        WHERE DLR_CD = #{dlrCd}
+        AND ITEM_CD = #{itemCd}
+        AND NON_MOVING_FLG = 'Y'
+    </select>
+
+    <!-- 방치품 정보 목록을 조회한다. -->
+    <select id="selectLeaveItemsByCondition" parameterType="LeaveItemSearchVO" resultType="LeaveItemVO">
+        /* [chn.bhmc.dms.par.cpm.service.dao.LeavItemDAO.selectLeavItemsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    A.DLR_CD
+                    ,A.ITEM_CD
+                    ,A.ITEM_NM
+                    ,A.ITEM_DSTIN_CD
+                    ,A.ITEM_CD AS NON_MOVING_ITEM_CD
+                    ,A.NON_MOVING_FLG
+                    ,A.CARLINE_CD
+                    ,A.BP_CD
+                    ,B.BP_NM
+                    ,NVL(E.MOVING_AVG_PRC, 0) AS STOCK_GI_PRC                --이동평균가격
+                    ,C.SALE_PRC_AMT AS PURC_PRC
+                    ,SYSDATE AS STAY_DT
+                    ,CASE WHEN A.LAST_GR_DT <![CDATA[>]]> A.LAST_GI_DT THEN TRUNC(SYSDATE - TO_DATE(A.LAST_GR_DT))
+                    ELSE TRUNC(SYSDATE - TO_DATE(A.LAST_GI_DT))
+                    END AS STAY_DAY
+                    ,A.LAST_GR_DT
+                    ,A.LAST_GI_DT
+                    ,NVL(F.AVLB_STOCK_QTY,0) AS AVLB_STOCK_QTY
+                    ,NVL(C.RETL_PRC,0) AS STOCK_AMT
+                    ,A.GR_STRGE_CD AS STRGE_CD
+                    ,A.FILE_DOC_NO
+                    ,F.STRGE_CD_LIST
+                FROM PT_0201T A
+                LEFT OUTER JOIN PT_0211T B ON A.BP_CD = B.BP_CD AND A.DLR_CD = B.DLR_CD
+                LEFT JOIN (
+                    SELECT
+                        DLR_CD
+                        ,STRGE_CD
+                        ,ITEM_CD
+                        ,MAX(PRC_TP) AS PRC_TP
+                        ,MAX(LINE_NO) AS LINE_NO
+                        ,MAX(NVL(RETL_PRC,0)) AS RETL_PRC
+                        ,MAX(NVL(WHSL_PRC,0)) AS WHSL_PRC
+                        ,MAX(NVL(SALE_PRC_AMT,0)) AS SALE_PRC_AMT
+                    FROM PT_0214T
+                    WHERE DLR_CD = #{sDlrCd}
+                    AND DEL_YN != 'Y'
+                    GROUP BY DLR_CD, STRGE_CD, ITEM_CD
+                ) C ON A.DLR_CD = C.DLR_CD AND A.GR_STRGE_CD = C.STRGE_CD AND A.ITEM_CD = C.ITEM_CD
+                INNER JOIN (
+                    SELECT
+                         A.DLR_CD
+                        ,A.ITEM_CD
+                        ,SUBSTR(xmlagg(xmlelement(a,','||B.STRGE_NM) ORDER BY A.ITEM_CD,A.STRGE_CD).extract('//text()'),2) AS STRGE_CD_LIST
+                        ,SUM(A.AVLB_STOCK_QTY) AS AVLB_STOCK_QTY
+                        ,SUM(A.RESV_STOCK_QTY) AS RESV_STOCK_QTY
+                        ,SUM(A.BORROW_QTY) AS BORROW_QTY
+                        ,SUM(A.RENT_QTY) AS RENT_QTY
+                    FROM PT_0301T A
+                         LEFT OUTER JOIN CM_0104T B
+                                ON A.DLR_CD    = B.DLR_CD
+                               AND A.STRGE_CD  = B.STRGE_CD
+                    WHERE A.DLR_CD = #{sDlrCd}
+                    GROUP BY A.DLR_CD,A.ITEM_CD) F ON A.DLR_CD = F.DLR_CD AND A.ITEM_CD = F.ITEM_CD
+                LEFT JOIN PT_0208T E ON A.DLR_CD = E.DLR_CD AND A.GR_STRGE_CD = E.STRGE_CD AND A.ITEM_CD = E.ITEM_CD
+                WHERE A.DLR_CD = #{sDlrCd}
+                    <if test='sItemCd != null and sItemCd != ""'>
+                        AND A.ITEM_CD LIKE '%'||#{ sItemCd }||'%'
+                    </if>
+                    <if test='sItemDstinCd != null and sItemDstinCd != ""'>
+                        AND A.ITEM_DSTIN_CD = #{ sItemDstinCd }
+                    </if>
+                    <if test='sCarlineCd != null and sCarlineCd != ""'>
+                        AND A.CARLINE_CD = #{ sCarlineCd }
+                    </if>
+                    <if test='sBpCd != null and sBpCd != ""'>
+                        AND A.BP_CD = #{ sBpCd }
+                    </if>
+                    <if test='sBpNm != null and sBpNm != ""'>
+                        AND B.BP_NM = #{ sBpNm }
+                    </if>
+                    <if test='sNonMovingFlg != null and sNonMovingFlg != ""'>
+                        AND A.NON_MOVING_FLG = #{ sNonMovingFlg }
+                    </if>
+                    <if test='sPurcPrcStart != null and sPurcPrcStart != 0'>
+                        AND C.RETL_PRC <![CDATA[>=]]> #{ sPurcPrcStart }
+                    </if>
+                    <if test='sPurcPrcEnd != null and sPurcPrcEnd != 0'>
+                        AND C.RETL_PRC <![CDATA[<=]]> #{ sPurcPrcEnd }
+                    </if>
+                    AND F.AVLB_STOCK_QTY <![CDATA[>]]> 0
+                    AND A.ITEM_DSTIN_CD != '20'
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "itemCd"'>A.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.DLR_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.DLR_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                T1.DLR_CD = #{ sDlrCd }
+                <if test='sStayDayStart != null and sStayDayStart != 0'>
+                    AND NVL(T1.STAY_DAY,0) <![CDATA[>=]]> #{sStayDayStart}
+                </if>
+                <if test='sStayDayEnd != null and sStayDayEnd != 0'>
+                    AND NVL(T1.STAY_DAY,0) <![CDATA[<=]]> #{sStayDayEnd}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                ROWNUM <![CDATA[<=]]> #{recordCountPerPage}
+            AND RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 방치품 정보 카운트를 조회한다. -->
+    <select id="selectLeaveItemsByConditionCnt" parameterType="LeaveItemSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.cpm.service.dao.LeavItemDAO.selectLeaveItemsByConditionCnt] */
+        SELECT
+            COUNT(0)
+        FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    A.DLR_CD
+                    ,A.ITEM_CD
+                    ,A.ITEM_NM
+                    ,A.ITEM_DSTIN_CD
+                    ,A.ITEM_CD AS NON_MOVING_ITEM_CD
+                    ,A.NON_MOVING_FLG
+                    ,A.CARLINE_CD
+                    ,A.BP_CD
+                    ,B.BP_NM
+                    ,NVL(E.MOVING_AVG_PRC, 0) AS STOCK_GI_PRC
+                    ,C.SALE_PRC_AMT AS PURC_PRC
+                    ,SYSDATE AS STAY_DT
+                    ,CASE WHEN A.LAST_GR_DT <![CDATA[>]]> A.LAST_GI_DT THEN TRUNC(SYSDATE - TO_DATE(A.LAST_GR_DT))
+                    ELSE TRUNC(SYSDATE - TO_DATE(A.LAST_GI_DT))
+                    END AS STAY_DAY
+                    ,A.LAST_GR_DT
+                    ,A.LAST_GI_DT
+                    ,NVL(F.AVLB_STOCK_QTY,0) AS AVLB_STOCK_QTY
+                FROM PT_0201T A
+                LEFT OUTER JOIN PT_0211T B ON A.BP_CD = B.BP_CD AND A.DLR_CD = B.DLR_CD
+                LEFT OUTER JOIN (
+                    SELECT
+                        DLR_CD
+                        ,STRGE_CD
+                        ,ITEM_CD
+                        ,MAX(PRC_TP) AS PRC_TP
+                        ,MAX(LINE_NO) AS LINE_NO
+                        ,MAX(NVL(RETL_PRC,0)) AS RETL_PRC
+                        ,MAX(NVL(WHSL_PRC,0)) AS WHSL_PRC
+                        ,MAX(NVL(SALE_PRC_AMT,0)) AS SALE_PRC_AMT
+                    FROM PT_0214T
+                    WHERE DLR_CD = #{sDlrCd}
+                    AND DEL_YN != 'Y'
+                    GROUP BY DLR_CD,STRGE_CD, ITEM_CD
+                ) C ON A.DLR_CD = C.DLR_CD AND A.GR_STRGE_CD = C.STRGE_CD AND A.ITEM_CD = C.ITEM_CD
+                INNER JOIN (
+                    SELECT
+                         A.DLR_CD
+                        ,A.ITEM_CD
+                        ,SUBSTR(xmlagg(xmlelement(a,','||B.STRGE_NM) ORDER BY A.ITEM_CD,A.STRGE_CD).extract('//text()'),2) AS STRGE_CD_LIST
+                        ,SUM(A.AVLB_STOCK_QTY) AS AVLB_STOCK_QTY
+                        ,SUM(A.RESV_STOCK_QTY) AS RESV_STOCK_QTY
+                        ,SUM(A.BORROW_QTY) AS BORROW_QTY
+                        ,SUM(A.RENT_QTY) AS RENT_QTY
+                    FROM PT_0301T A
+                         LEFT OUTER JOIN CM_0104T B
+                                ON A.DLR_CD    = B.DLR_CD
+                               AND A.STRGE_CD  = B.STRGE_CD
+                    WHERE A.DLR_CD = #{sDlrCd}
+                    GROUP BY A.DLR_CD,A.ITEM_CD) F ON A.DLR_CD = F.DLR_CD AND A.ITEM_CD = F.ITEM_CD
+                LEFT JOIN PT_0208T E ON A.DLR_CD = E.DLR_CD AND A.GR_STRGE_CD = E.STRGE_CD AND A.ITEM_CD = E.ITEM_CD
+               WHERE A.DLR_CD = #{sDlrCd}
+                    <if test='sItemCd != null and sItemCd != ""'>
+                        AND A.ITEM_CD LIKE '%'||#{ sItemCd }||'%'
+                    </if>
+                    <if test='sItemDstinCd != null and sItemDstinCd != ""'>
+                        AND A.ITEM_DSTIN_CD = #{ sItemDstinCd }
+                    </if>
+                    <if test='sCarlineCd != null and sCarlineCd != ""'>
+                        AND A.CARLINE_CD = #{ sCarlineCd }
+                    </if>
+                    <if test='sBpCd != null and sBpCd != ""'>
+                        AND A.BP_CD = #{ sBpCd }
+                    </if>
+                    <if test='sBpNm != null and sBpNm != ""'>
+                        AND B.BP_NM = #{ sBpNm }
+                    </if>
+                    <if test='sNonMovingFlg != null and sNonMovingFlg != ""'>
+                        AND A.NON_MOVING_FLG = #{ sNonMovingFlg }
+                    </if>
+                    <if test='sPurcPrcStart != null and sPurcPrcStart != 0'>
+                        AND C.RETL_PRC <![CDATA[>=]]> #{ sPurcPrcStart }
+                    </if>
+                    <if test='sPurcPrcEnd != null and sPurcPrcEnd != 0'>
+                        AND C.RETL_PRC <![CDATA[<=]]> #{ sPurcPrcEnd }
+                    </if>
+                    AND F.AVLB_STOCK_QTY <![CDATA[>]]> 0
+                    AND A.ITEM_DSTIN_CD != '20'
+            ) T1
+            <where>
+                <if test='sStayDayStart != null and sStayDayStart != 0'>
+                    AND NVL(T1.STAY_DAY,0) <![CDATA[>=]]> #{sStayDayStart}
+                </if>
+                <if test='sStayDayEnd != null and sStayDayEnd != 0'>
+                    AND NVL(T1.STAY_DAY,0) <![CDATA[<=]]> #{sStayDayEnd}
+                </if>
+            </where>
+        )
+    </select>
+
+</mapper>

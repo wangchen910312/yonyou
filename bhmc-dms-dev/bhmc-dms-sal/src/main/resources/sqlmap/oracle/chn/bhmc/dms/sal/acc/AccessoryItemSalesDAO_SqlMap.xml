@@ -1,0 +1,1395 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO">
+
+    <!-- 용품판매문서 정보를 조회한다. -->
+    <select id="selectAccessoryItemSalesByKey" parameterType="map" resultType="AccessoryItemSalesVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.selectAccessoryItemSalesByKey] */
+        SELECT
+             T1.*
+             ,CASE WHEN T1.CONTRACT_STAT_CD ='40' THEN T1.UPDT_DT ELSE NULL END CONFIRM_DT
+             ,T2.CUST_NM AS CONTRACT_CUST_NM
+             ,T3.CUST_NM AS PCON_CUST_NM
+             ,TO_CHAR(NVL(T1.UPDT_DT,T1.REG_DT), 'YYYYMMDDHH24MISS') AS UPDT_DT_STR
+             ,(SELECT A.CARD_NO FROM CR_0813T A WHERE A.DLR_CD = T1.DLR_CD AND A.CARD_TP_CD ='01' AND A.USE_YN = 'Y' AND A.MEMBERSHIP_NO = T1.MEMBERSHIP_NO ) AS CARD_NO
+        FROM SA_0261T T1
+         LEFT JOIN CR_0101T T2 ON T1.CONTRACT_CUST_NO = T2.CUST_NO
+         LEFT JOIN CR_0101T T3 ON T1.PCON_CUST_NO = T3.CUST_NO
+        WHERE T1.DLR_CD = #{dlrCd} AND T1.GOODS_CONTRACT_NO = #{goodsContractNo}
+    </select>
+
+    <!-- 용품판매문서 정보를 저장한다..  -->
+    <insert id="insertAccessoryItemSales" parameterType="AccessoryItemSalesVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.insertAccessoryItemSales] */
+        INSERT INTO SA_0261T(
+            DLR_CD                  --딜러코드
+            ,GOODS_CONTRACT_NO      --용품계약번호
+            ,GOODS_TP               --용품유형
+            ,GOODS_CONTRACT_DT      --용품계약일자
+            ,CONTRACT_CUST_NO       --계약고객번호
+            ,CONTRACT_CUST_TP       --계약고객유형
+            ,PCON_CUST_NO           --연계인고객번호
+            ,TEL_NO                 --전화번호
+            ,CAR_BRAND_CD           --차량브랜드코드
+            ,CARLINE_CD             --차종코드
+            ,FSC_CD                 --차관코드
+            ,MODEL_CD               --모델코드
+            ,OCN_CD                 --OCN코드
+            ,EXT_COLOR_CD           --외장색상코드
+            ,INT_COLOR_CD           --내장색상코드
+            ,VIN_NO                 --차대번호
+            ,CAR_REG_NO             --차량등록번호
+            ,SALE_CONTRACT_NO       --판매계약번호
+            ,EXPC_GI_END_DT         --예정출고완료일자
+            ,EQIP_PRSN_ID           --설치담당자ID
+            ,REAL_DL_DT             --실제인도일자
+            ,GOODS_AMT              --용품금액
+            ,PREN_AMT               --증정금액
+            ,GOODS_REAL_AMT         --용품실제금액
+            ,ADD_PREN_AMT           --추가증정금액
+            ,CUST_PAY_AMT           --고객지불금액
+            ,CONTRACT_STAT_CD       --계약상태코드
+            ,DC_LVL_CD              --할인레벨코드
+            ,DC_APPROVE_YN          --할인승인코드
+            ,DC_APPROVE_DT          --할인승인일자
+            ,MEMBERSHIP_NO          --멤버십 번호
+            ,POINT_VAL              --사용 포인트
+            ,POINT_AMT              --포인트 사용 금액
+            ,CUPN_PUBLI_NO          --쿠폰 발행 번호
+            ,CUPN_AMT               --쿠폰 사용 금액
+            ,REG_USR_ID             --등록자ID
+            ,REG_DT                 --등록일자
+            ,UPDT_USR_ID            --수정자ID
+            ,UPDT_DT                --수정일자
+        ) VALUES (
+             #{dlrCd}               --딜러코드
+            ,#{goodsContractNo}     --용품계약번호
+            ,#{goodsTp}             --용품유형
+            ,SYSDATE                --용품계약일자
+            ,#{contractCustNo}      --계약고객번호
+            ,#{contractCustTp}      --계약고객유형
+            ,#{pconCustNo}          --연계인고객번호
+            ,#{telNo}               --전화번호
+            ,#{carBrandCd}          --차량브랜드코드
+            ,#{carlineCd}           --차종코드
+            ,#{fscCd}               --차관코드
+            ,#{modelCd}             --모델코드
+            ,#{ocnCd}               --OCN코드
+            ,#{extColorCd}          --외장색상코드
+            ,#{intColorCd}          --내장색상코드
+            ,#{vinNo}               --차대번호
+            ,#{carRegNo}            --차량등록번호
+            ,#{saleContractNo}      --판매계약번호
+            ,#{expcGiEndDt}         --예정출고완료일자
+            ,#{eqipPrsnId}          --설치담당자ID
+            ,#{realDlDt}            --실제인도일자
+            ,#{goodsAmt}            --용품금액
+            ,#{prenAmt}             --증정금액
+            ,#{goodsRealAmt}        --용품실제금액
+            ,#{addPrenAmt}          --추가증정금액
+            ,#{custPayAmt}          --고객지불금액
+            ,#{contractStatCd}      --계약상태코드
+            ,#{dcLvlCd}             --할인레벨코드
+            ,#{dcApproveYn}         --할인승인코드
+            <choose>
+                <when test='dcLvlCd != null and dcLvlCd != ""'>
+                ,SYSDATE
+                </when>
+                <otherwise>
+                ,NULL
+                </otherwise>
+            </choose>
+            ,#{membershipNo}        --멤버십 번호
+            ,#{pointVal}            --사용 포인트
+            ,#{pointAmt}            --포인트 사용 금액
+            ,#{cupnPubliNo}         --쿠폰 발행 번호
+            ,#{cupnAmt}             --쿠폰 사용 금액
+            ,#{regUsrId}            --등록자ID
+            ,SYSDATE
+            ,#{updtUsrId}            --수정자ID
+            ,SYSDATE
+        )
+    </insert>
+
+    <!-- 용품판매문서 정보를 변경한다. -->
+    <update id="updateAccessoryItemSales" parameterType="AccessoryItemSalesVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.updateAccessoryItemSales] */
+        UPDATE SA_0261T SET
+            GOODS_TP = #{goodsTp}                   --용품유형
+            ,CONTRACT_CUST_NO = #{contractCustNo}   --계약고객번호
+            ,CONTRACT_CUST_TP = #{contractCustTp}   --계약고객유형
+            ,PCON_CUST_NO = #{pconCustNo}           --연계인고객번호
+            ,TEL_NO = #{telNo}                      --전화번호
+            ,CAR_BRAND_CD = #{carBrandCd}           --차량브랜드코드
+            ,CARLINE_CD = #{carlineCd}              --차종코드
+            ,FSC_CD = #{fscCd}                      --차관코드
+            ,MODEL_CD = #{modelCd}                  --모델코드
+            ,OCN_CD = #{ocnCd}                      --OCN코드
+            ,EXT_COLOR_CD = #{extColorCd}           --외장색상코드
+            ,INT_COLOR_CD = #{intColorCd}           --내장색상코드
+            ,VIN_NO = #{vinNo}                      --차대번호
+            ,CAR_REG_NO = #{carRegNo}               --차량등록번호
+            ,SALE_CONTRACT_NO = #{saleContractNo}   --판매계약번호
+            ,EXPC_GI_END_DT = #{expcGiEndDt}        --예정출고완료일자
+            ,EQIP_PRSN_ID = #{eqipPrsnId}           --설치담당자ID
+            ,REAL_DL_DT = #{realDlDt}               --실제인도일자
+            ,GOODS_AMT = #{goodsAmt}                --용품금액
+            ,PREN_AMT = #{prenAmt}                  --증정금액
+            ,GOODS_REAL_AMT = #{goodsRealAmt}       --용품실제금액
+            ,ADD_PREN_AMT = #{addPrenAmt}           --추가증정금액
+            ,CUST_PAY_AMT = #{custPayAmt}           --고객지불금액
+            ,CONTRACT_STAT_CD = #{contractStatCd}   --계약상태코드
+            ,DC_LVL_CD = #{dcLvlCd}                 --할인승인코드
+            ,DC_APPROVE_YN = #{dcApproveYn}         --할인승인여부
+            ,UPDT_USR_ID = #{updtUsrId}             --수정자ID
+            ,UPDT_DT = SYSDATE
+
+            ,MEMBERSHIP_NO = #{membershipNo}        --멤버십 번호
+            ,POINT_VAL = #{pointVal}                --사용 포인트
+            ,POINT_AMT = #{pointAmt}                --포인트 사용 금액
+            ,CUPN_PUBLI_NO = #{cupnPubliNo}         --쿠폰 발행 번호
+            ,CUPN_AMT = #{cupnAmt}                  --쿠폰 사용 금액
+
+        WHERE
+            DLR_CD = #{dlrCd}                           --딜러코드
+            AND GOODS_CONTRACT_NO = #{goodsContractNo}  --용품계약번호
+    </update>
+
+    <!-- 용품판매문서 품목 정보를 등록한다. -->
+    <insert id="insertAccessoryItemSalesItem" parameterType="AccessoryItemSalesItemVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.insertAccessoryItemSalesItem] */
+        INSERT INTO SA_0262T(
+            DLR_CD                      --딜러코드
+            ,GOODS_CONTRACT_NO          --용품계약번호
+            ,SEQ                        --일련번호
+            ,GOODS_CD                   --용품코드
+            ,GOODS_NM                   --용품명
+            ,GOODS_CNT                  --용품수량
+            ,RETL_PRC                   --소매가격
+            ,DC_RATE                    --할인율
+            ,SALE_AMT                   --판매금액
+            ,TOT_AMT                    --총금액
+            ,PKG_ITEM_CD                --패키지품목코드
+            ,GR_STRGE_CD                --입고창고코드
+            ,GI_STRGE_CD                --입고창고코드
+            ,GOODS_UNIT_CD              --용품단위코드
+            ,DC_AMT                     --할인금액
+            ,REG_USR_ID                 --등록자ID
+            ,REG_DT                     --등록일자
+            ,UPDT_USR_ID                --수정자ID
+            ,UPDT_DT                    --수정일자
+            ,EXPC_GI_END_DT             --예정출고완료일자
+            ,EQIP_PRSN_ID               --설치담당자
+            ,EQIP_COST_AMT              --설치비용
+            ,EXPC_EQIP_DT               --예정설치일
+            ,EQIP_END_DT                --설치완료일
+            ,STAT_CD                    --상태코드
+            ,RETL_TOT_AMT               --실제용품금액
+            ,POINT_VAL                  --사용포인트
+            ,REF_DOC_NO
+            ,REF_DOC_LINE_NO
+        ) VALUES (
+             #{dlrCd}
+            ,#{goodsContractNo}
+            ,(SELECT NVL(MAX(SEQ), 0)+1 FROM SA_0262T WHERE DLR_CD = #{dlrCd} AND GOODS_CONTRACT_NO = #{goodsContractNo})
+            ,#{goodsCd}
+            ,#{goodsNm}
+            ,#{goodsCnt}
+            ,#{retlPrc}
+            ,#{dcRate}
+            ,#{saleAmt}
+            ,#{totAmt}
+            ,#{pkgItemCd}
+            ,#{grStrgeCd}
+            ,#{giStrgeCd}
+            ,#{goodsUnitCd}
+            ,#{dcAmt}
+            ,#{regUsrId}
+            ,SYSDATE
+            ,#{updtUsrId}
+            ,SYSDATE
+            ,#{expcGiEndDt}
+            ,#{eqipPrsnId}
+            ,#{eqipCostAmt}
+            ,#{expcEqipDt}
+            ,#{eqipEndDt}
+            ,#{statCd}
+            ,#{retlTotAmt}
+            ,#{avlbPoint}
+            ,#{refDocNo}
+            ,#{refDocLineNo}
+        )
+    </insert>
+
+    <!-- 용품판매문서 품목 정보를 변경한다. -->
+    <update id="updateAccessoryItemSalesItem" parameterType="AccessoryItemSalesItemVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.updateAccessoryItemSalesItem] */
+        UPDATE SA_0262T SET
+            GOODS_CD = #{goodsCd}                       --용품코드
+            ,GOODS_NM = #{goodsNm}                      --용품명
+            ,GOODS_CNT = #{goodsCnt}                    --용품수량
+            ,RETL_PRC = #{retlPrc}                      --소매가격
+            ,DC_RATE = #{dcRate}                        --할인율
+            ,SALE_AMT = #{saleAmt}                      --판매금액
+<!--             ,PAY_TP = #{payTp}                          지불유형 -->
+            ,TOT_AMT = #{totAmt}                        --총금액
+            ,PKG_ITEM_CD = #{pkgItemCd}                 --패키지품목코드
+            ,GR_STRGE_CD = #{grStrgeCd}                 --입고창고코드
+            ,GI_STRGE_CD = #{giStrgeCd}                 --출고창고코드
+            ,GOODS_UNIT_CD = #{goodsUnitCd}             --용품단위코드
+            ,DC_AMT = #{dcAmt}                          --할인금액
+            ,UPDT_USR_ID = #{updtUsrId}                 --수정자ID
+            ,UPDT_DT = SYSDATE                          --수정일자
+            ,EXPC_GI_END_DT = #{expcGiEndDt}            --예정출고완료일자
+            ,EQIP_PRSN_ID = #{eqipPrsnId}               --설치담당자
+            ,EQIP_COST_AMT = #{eqipCostAmt}             --설치비용
+            ,EXPC_EQIP_DT = #{expcEqipDt}               --예정설치일
+            ,EQIP_END_DT = #{eqipEndDt}                 --설치완료일
+            ,RETL_TOT_AMT = #{retlTotAmt}               --실제용품금액
+        WHERE
+            DLR_CD = #{dlrCd}                           --딜러코드
+            AND GOODS_CONTRACT_NO = #{goodsContractNo}  --용품계약번호
+            AND SEQ = #{seq}                            --일련번호
+    </update>
+
+    <!-- 용품판매문서 품목 정보를 삭제한다. -->
+    <delete id="deleteAccessoryItemSalesItem" parameterType="AccessoryItemSalesItemVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.deleteAccessoryItemSalesItem] */
+        DELETE FROM SA_0262T
+        WHERE
+            DLR_CD = #{dlrCd}                                   --딜러코드
+            AND GOODS_CONTRACT_NO = #{goodsContractNo}          --용품계약번호
+            AND SEQ = #{seq}                                    --일련번호
+    </delete>
+
+    <!-- 용품출고 품목 목록을 조회한다. -->
+    <select id="selectAccessoryItemStockOutItemsByKey" parameterType="AccessoryItemSalesSearchVO" resultType="AccessoryItemSalesItemVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.selectAccessoryItemStockOutItemsByKey] */
+        SELECT   A.DLR_CD
+                ,A.GOODS_CONTRACT_NO
+                ,A.SEQ
+                ,A.GOODS_CD
+                ,A.GOODS_NM
+                ,A.GOODS_CNT
+                ,A.GOODS_UNIT_CD
+                ,A.RETL_PRC
+                ,ROUND(A.RETL_PRC/(1+FN_GET_VAT(A.CONT_DT, 'ALL')), 2) AS TAX_DDCT_PRC
+                ,A.DC_RATE
+                ,A.SALE_AMT
+                ,A.RETL_TOT_AMT
+                ,A.TOT_AMT
+                ,A.PKG_ITEM_CD
+                ,A.GR_STRGE_CD
+                ,A.GI_STRGE_CD
+                ,(
+                  SELECT STRGE_NM
+                   FROM CM_0104T D
+                   WHERE D.DLR_CD   = A.DLR_CD
+                     AND D.STRGE_CD = A.GI_STRGE_CD
+                 ) AS STRGE_NM
+                ,A.DC_AMT
+                ,A.MVT_DOC_YY_MM
+                ,A.MVT_DOC_NO
+                ,A.MVT_DOC_LINE_NO
+                ,A.EXPC_GI_END_DT
+                ,A.EQIP_PRSN_ID
+                ,A.REAL_DL_DT
+                ,A.EQIP_COST_AMT
+                ,A.EXPC_EQIP_DT
+                ,A.EQIP_END_DT
+                ,NVL(A.ORG_RETL_PRC,0) AS ORG_RETL_PRC
+                ,A.STAT_CD
+                ,A.REG_DT
+                ,A.RETURN_DT
+                ,A.PRE_RETURN_QTY
+                ,A.STOCK_QTY
+                ,A.AVLB_STOCK_QTY
+                ,A.RESV_STOCK_QTY
+                ,A.CLAM_STOCK_QTY
+                ,A.BORROW_QTY
+                ,A.RENT_QTY
+                ,A.REF_DOC_NO
+                ,A.REF_DOC_LINE_NO
+         FROM (
+                SELECT   T1.DLR_CD
+                        ,T1.GOODS_CONTRACT_NO
+                        ,T1.SEQ
+                        ,T1.GOODS_CD
+                        ,NVL(T1.GOODS_NM, T2.ITEM_NM) AS GOODS_NM
+                        ,T1.GOODS_CNT
+                        ,T1.GOODS_UNIT_CD
+                        ,T1.RETL_PRC
+                        ,T1.DC_RATE
+                        ,T1.SALE_AMT
+                        ,T1.RETL_TOT_AMT
+                        ,T1.TOT_AMT
+                        ,T1.PKG_ITEM_CD
+                        ,T1.GR_STRGE_CD
+                        ,T1.GI_STRGE_CD
+                        ,T1.DC_AMT
+                        ,T1.MVT_DOC_YY_MM
+                        ,T1.MVT_DOC_NO
+                        ,T1.MVT_DOC_LINE_NO
+                        ,T1.EXPC_GI_END_DT
+                        ,T1.EQIP_PRSN_ID
+                        ,T1.REAL_DL_DT
+                        ,NVL(T1.EQIP_COST_AMT,0) AS EQIP_COST_AMT
+                        ,T1.EXPC_EQIP_DT
+                        ,T1.EQIP_END_DT
+                        ,T3.RETL_PRC AS ORG_RETL_PRC
+                        ,T1.STAT_CD
+                        ,T1.REG_DT
+                        ,T4.RETURN_DT
+                        ,NVL(CASE WHEN T1.STAT_CD ='40' THEN T1.GOODS_CNT ELSE T4.PRE_RETURN_QTY END,0) AS PRE_RETURN_QTY
+                        ,NVL(T5.AVLB_STOCK_QTY,0) + NVL(T5.RESV_STOCK_QTY,0) - NVL(T5.BORROW_QTY,0) + NVL(T5.RENT_QTY,0) AS STOCK_QTY
+                        ,NVL(T5.AVLB_STOCK_QTY,0) AS AVLB_STOCK_QTY
+                        ,NVL(T5.RESV_STOCK_QTY,0) AS RESV_STOCK_QTY
+                        ,NVL(T5.CLAM_STOCK_QTY,0) AS CLAM_STOCK_QTY
+                        ,NVL(T5.BORROW_QTY,0) AS BORROW_QTY
+                        ,NVL(T5.RENT_QTY,0) AS RENT_QTY
+                        ,T1.REF_DOC_NO
+                        ,T1.REF_DOC_LINE_NO
+                        ,(SELECT TO_CHAR(Z.GOODS_CONTRACT_DT, 'YYYYMMDD') AS CONT_DT
+                           FROM SA_0261T Z
+                          WHERE Z.DLR_CD = T1.DLR_CD
+                            AND Z.GOODS_CONTRACT_NO = T1.GOODS_CONTRACT_NO
+                         ) AS CONT_DT
+                    FROM SA_0262T T1
+                    LEFT OUTER JOIN PT_0201T T2 ON T1.DLR_CD = T2.DLR_CD AND T1.GOODS_CD = T2.ITEM_CD
+                    LEFT OUTER JOIN SA_0281T T3 ON T1.DLR_CD = T3.DLR_CD AND T1.GI_STRGE_CD = T3.STRGE_CD AND T1.GOODS_CD = T3.ITEM_CD
+                    LEFT OUTER JOIN  (
+                                           SELECT   A.DLR_CD
+                                                   ,A.GOODS_CONTRACT_NO
+                                                   ,A.GOODS_CD
+                                                   ,A.GI_STRGE_CD
+                                                   ,SUM(A.GOODS_CNT) AS PRE_RETURN_QTY
+                                                   ,MAX(A.REG_DT) AS RETURN_DT
+                                                   ,A.REF_DOC_NO
+                                                   ,A.REF_DOC_LINE_NO
+                                             FROM   SA_0262T A
+                                            WHERE   A.DLR_CD               = #{sDlrCd}
+                                              AND   A.GOODS_CONTRACT_NO    = #{sGoodsContractNo}
+                                              AND   A.STAT_CD              = '40'
+                                            GROUP BY  A.DLR_CD
+                                                     ,A.GOODS_CONTRACT_NO
+                                                     ,A.GOODS_CD
+                                                     ,A.GI_STRGE_CD
+                                                     ,A.REF_DOC_NO
+                                                     ,A.REF_DOC_LINE_NO
+                                     ) T4
+                           ON T1.DLR_CD              = T4.DLR_CD
+                          AND T1.GOODS_CONTRACT_NO   = T4.GOODS_CONTRACT_NO
+                          AND T1.GOODS_CD            = T4.GOODS_CD
+                          AND T1.GI_STRGE_CD         = T4.GI_STRGE_CD
+                          AND T1.SEQ                 = T4.REF_DOC_LINE_NO
+                    LEFT OUTER JOIN  DMSDB.PT_0301T T5
+                           ON T1.DLR_CD      = T5.DLR_CD
+                          AND T1.GI_STRGE_CD = T5.STRGE_CD
+                          AND T1.GOODS_CD    = T5.ITEM_CD
+                    WHERE T1.DLR_CD            = #{sDlrCd}
+                      AND T1.GOODS_CONTRACT_NO = #{sGoodsContractNo}
+            ) A
+        ORDER BY A.DLR_CD, A.GOODS_CONTRACT_NO,A.SEQ,A.REF_DOC_LINE_NO, A.GOODS_CD
+    </select>
+
+    <!-- 용품판매문서상태를 변경한다 -->
+    <update id="updateAccessoryItemSalesContractStatCd" parameterType="map">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.updateAccessoryItemSalesContractStatCd] */
+        UPDATE SA_0261T SET
+            CONTRACT_STAT_CD = #{contractStatCd}
+            ,UPDT_USR_ID = #{updtUsrId}
+            ,UPDT_DT = SYSDATE
+         WHERE
+            DLR_CD = #{dlrCd}
+            AND GOODS_CONTRACT_NO = #{goodsContractNo}
+    </update>
+
+     <!-- 용품판매문서상태를 확정한다 -->
+    <update id="updateAccessoryItemSalesCnfm" parameterType="AccessoryItemSalesVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.updateAccessoryItemSalesCnfm] */
+        UPDATE SA_0261T SET
+             CONTRACT_STAT_CD = #{contractStatCd}
+            ,REAL_DL_DT       = sysdate
+            ,UPDT_USR_ID      = #{updtUsrId}
+            ,UPDT_DT          = SYSDATE
+         WHERE
+            DLR_CD = #{dlrCd}
+            AND GOODS_CONTRACT_NO = #{goodsContractNo}
+    </update>
+
+    <!-- 용품판매품목상태를 변경한다 -->
+    <update id="updateAccessoryItemSaleItemCnfm" parameterType="AccessoryItemSalesItemVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.updateAccessoryItemSaleItemCnfm] */
+        UPDATE SA_0262T SET
+             STAT_CD     = #{statCd}
+            ,REAL_DL_DT  = sysdate
+            ,UPDT_USR_ID = #{updtUsrId}
+            ,UPDT_DT     = SYSDATE
+         WHERE
+            DLR_CD = #{dlrCd}
+            AND GOODS_CONTRACT_NO = #{goodsContractNo}
+            AND SEQ               = #{seq}
+    </update>
+
+    <!-- 용품 출고확정 시 수불 정보를 반영한다. -->
+    <update id="updateAccessoryItemSalesCnfmItemMvtInfo" parameterType="AccessoryItemSalesItemVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.updateAccessorySaleOrdItemMvtInfo] */
+        UPDATE SA_0262T    --용품판매아이템
+           SET MVT_DOC_YY_MM       = #{mvtDocYyMm}            --수불문서년월
+             , MVT_DOC_NO          = #{mvtDocNo}              --수불문서번호
+             , MVT_DOC_LINE_NO     = #{mvtDocLineNo}          --수불문서라인번호
+             , REAL_DL_DT          = SYSDATE                  --출고일자
+             , UPDT_USR_ID         = #{regUsrId}              --수정자ID
+             , UPDT_DT             = sysdate                  --수정일자
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND GOODS_CONTRACT_NO = #{goodsContractNo}            --용품계약번호
+           AND SEQ               = #{seq}        --일련번호
+    </update>
+
+    <!-- 용품판매문서 번호에 해당하는 품목정보를 모두 삭제한다.
+    <delete id="deleteAccessoryItemSalesItemByGoodsContractNo" parameterType="map">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.deleteAccessoryItemSalesItemByGoodsContractNo] */
+        DELETE FROM SA_0262T
+        WHERE
+            DLR_CD = #{dlrCd}
+            AND GOODS_CONTRACT_NO = #{goodsContractNo}
+    </delete>
+    -->
+
+    <!-- 용품판매 상태변경을 위한 품목 목록을 조회한다. -->
+    <select id="selectAccessoryItemSalesItemsForStatChangeCnt" parameterType="AccessoryItemSalesVO" resultType="int">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.selectAccessoryItemSalesItemsForStatChangeCnt] */
+        SELECT COUNT(*)
+          FROM SA_0262T T1
+         WHERE T1.DLR_CD            = #{dlrCd}
+           AND T1.GOODS_CONTRACT_NO = #{goodsContractNo}
+           AND T1.STAT_CD           = '10'
+    </select>
+
+    <!-- 용품판매 출고전 상태 체크한다. -->
+    <select id="selectAccessoryItemSalesItemsForStatCnt" parameterType="AccessoryItemSalesSearchVO" resultType="int">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.selectAccessoryItemSalesItemsForStatChangeCnt] */
+       <!--  SELECT COUNT(*)
+          FROM SA_0262T T1
+         WHERE T1.DLR_CD            = #{sDlrCd}
+           AND T1.GOODS_CONTRACT_NO = #{sGoodsContractNo}
+           AND T1.STAT_CD           = #{sContractStatCd} -->
+
+             SELECT SUM(A) - SUM(B) AS QTY
+              FROM (
+                SELECT GOODS_CD , GI_STRGE_CD ,STAT_CD, SUM(GOODS_CNT) GOODS_CNT
+                      ,CASE WHEN STAT_CD = '20' THEN SUM(GOODS_CNT) ELSE 0 END A
+                      ,CASE WHEN STAT_CD = '40' THEN SUM(GOODS_CNT) ELSE 0 END B
+                  FROM SA_0262T T1
+                 WHERE T1.DLR_CD            = #{sDlrCd}
+                   AND T1.GOODS_CONTRACT_NO = #{sGoodsContractNo}
+                  GROUP BY GOODS_CD , GI_STRGE_CD,STAT_CD
+               )
+
+    </select>
+
+    <!-- 용품판매문서 차량정보를 변경한다 -->
+    <update id="updateAccessoryItemSalesVehicleInfoChange" parameterType="AccessoryItemSalesVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.updateAccessoryItemSalesVehicleInfoChange] */
+        UPDATE SA_0261T
+           SET VIN_NO = #{vinNo}
+             , CARLINE_CD = #{carlineCd}
+             , MODEL_CD = #{modelCd}
+             , OCN_CD = #{ocnCd}
+             , EXT_COLOR_CD = #{extColorCd}
+             , INT_COLOR_CD = #{intColorCd}
+             , CAR_REG_NO = #{carRegNo}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE DLR_CD = #{dlrCd}
+           AND GOODS_CONTRACT_NO = #{goodsContractNo}
+    </update>
+
+
+    <!-- 용품 출고확정 시 수불 정보를 반영한다. -->
+    <update id="updateAccessorySaleOrdItemMvtInfo" parameterType="PartsSaleOrdItemVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.updateAccessorySaleOrdItemMvtInfo] */
+        UPDATE SA_0262T    --용품판매아이템
+           SET MVT_DOC_YY_MM       = #{mvtDocYyMm}            --수불문서년월
+             , MVT_DOC_NO          = #{mvtDocNo}              --수불문서번호
+             , MVT_DOC_LINE_NO     = #{mvtDocLineNo}          --수불문서라인번호
+             , REAL_DL_DT          = SYSDATE                  --출고일자
+             , UPDT_USR_ID         = #{regUsrId}              --수정자ID
+             , UPDT_DT             = sysdate                  --수정일자
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND GOODS_CONTRACT_NO = #{parSaleOrdNo}            --용품계약번호
+           AND SEQ               = #{parSaleOrdLineNo}        --일련번호
+    </update>
+
+
+
+    <!-- 판매 계약내역과 관련된 경품관리 내역을 삭제한다. -->
+    <delete id="deleteContractAccessoryItemSalesItem" parameterType="AccessoryItemSalesVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.deleteContractAccessoryItemSalesItem] */
+        DELETE
+          FROM SA_0262T    --용품판매아이템
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND GOODS_CONTRACT_NO = #{goodsContractNo}         --용품계약번호
+    </delete>
+
+    <!-- 판매 계약내역과 관련된 경품관리 내역을 삭제한다. -->
+    <delete id="deleteContractAccessoryItemSalesHeader" parameterType="AccessoryItemSalesVO">
+    /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.deleteContractAccessoryItemSalesHeader] */
+        DELETE
+          FROM SA_0261T    --용품판매아이템
+         WHERE DLR_CD            = #{dlrCd}                   --딜러코드
+           AND GOODS_CONTRACT_NO = #{goodsContractNo}         --용품계약번호
+    </delete>
+
+
+    <!-- 용품 할인레벨 조회한다 -->
+    <select id="selectDlrGoodsDcLevel" parameterType="AccessoryItemSalesSearchVO" resultType="AccessoryItemSalesVO">
+        SELECT A.DC_LVL_CD
+             , A.PRC_NREG_YN
+           FROM (
+               SELECT 'A' AS ETC
+                    , CASE WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= 0 ]]> THEN ''
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT1 THEN '01'
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT2 THEN '02'
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT3 THEN '03'
+                           ELSE '04'
+                      END AS DC_LVL_CD
+                    , A.PRC_NREG_YN
+                 FROM SA_0120T A
+                where A.CARLINE_CD = #{sCarlineCd}
+                  and A.MODEL_CD = #{sModelCd}
+                  AND A.OCN_CD =  #{sOcnCd}
+                  AND A.START_DT <![CDATA[ <= ]]> SYSDATE
+                  AND A.END_DT   <![CDATA[ >= ]]> TO_DATE(TO_CHAR(SYSDATE, 'YYYYMMDD'),'YYYYMMDD')
+                  AND A.DLR_Cd = #{sDlrCd}
+
+               UNION
+
+               SELECT 'X' AS ETC
+                    , CASE WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= 0 ]]> THEN ''
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT1 THEN '01'
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT2 THEN '02'
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT3 THEN '03'
+                           ELSE '04'
+                      END AS DC_LVL_CD
+                    , A.PRC_NREG_YN
+                 FROM SA_0120T A
+                where A.CARLINE_CD = #{sCarlineCd}
+                  and A.MODEL_CD = #{sModelCd}
+                  AND A.OCN_CD =  'ALL'
+                  AND A.START_DT <![CDATA[ <= ]]> SYSDATE
+                  AND A.END_DT   <![CDATA[ >= ]]> TO_DATE(TO_CHAR(SYSDATE, 'YYYYMMDD'),'YYYYMMDD')
+                  AND A.DLR_Cd = #{sDlrCd}
+
+               UNION
+
+               SELECT 'Z' AS ETC
+                    , CASE WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= 0 ]]> THEN ''
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT1 THEN '01'
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT2 THEN '02'
+                           WHEN NVL(#{sPrenSumAmt}, 0) <![CDATA[ <= ]]> A.DC_TOT_AMT3 THEN '03'
+                           ELSE '04'
+                      END AS DC_LVL_CD
+                    , A.PRC_NREG_YN
+                 FROM SA_0120T A
+                where A.CARLINE_CD = #{sCarlineCd}
+                  and A.MODEL_CD = 'ALL'
+                  AND A.OCN_CD =  'ALL'
+                  AND A.START_DT <![CDATA[ <= ]]> SYSDATE
+                  AND A.END_DT   <![CDATA[ >= ]]> TO_DATE(TO_CHAR(SYSDATE, 'YYYYMMDD'),'YYYYMMDD')
+                  AND A.DLR_Cd = #{sDlrCd}
+
+                ORDER BY ETC DESC           -- ALL 우선 적용
+             ) A
+        WHERE ROWNUM = 1                    -- 다중건일시 한건만 처리
+    </select>
+
+
+    <!-- 악세서리판매 헤더 정보를 조회한다. -->
+    <select id="selectAccessorySaleUpdtDtByKey" parameterType="AccessoryItemSalesVO" resultType="String">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.selectAccessorySaleUpdtDtByKey] */
+        SELECT TO_CHAR(NVL(A.UPDT_DT,A.REG_DT), 'YYYYMMDDHH24MISS') AS UPDT_DT_STR
+          FROM DMSDB.SA_0261T A    --용품판매헤더정보
+         WHERE A.DLR_CD             = #{dlrCd}
+           AND A.GOODS_CONTRACT_NO  = #{goodsContractNo}
+    </select>
+
+
+    <!-- 용품판매문서 목록수를 조회한다 -->
+    <select id="selectAccessoryItemSalesByConditionCnt" parameterType="AccessoryItemSalesSearchVO" resultType="int">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.selectAccessoryItemSalesByConditionCnt] */
+        SELECT COUNT(*)
+        FROM SA_0261T T1
+        LEFT JOIN (
+            SELECT
+                 V1.DLR_CD
+                ,V1.GOODS_CONTRACT_NO
+                ,WM_CONCAT(NVL(V1.GOODS_NM, V2.ITEM_NM)) AS GOODS_NM
+                ,SUM(V1.GOODS_CNT) AS GOODS_CNT
+            FROM SA_0262T V1
+            LEFT JOIN PT_0201T V2 ON V1.DLR_CD = V2.DLR_CD AND V1.GOODS_CD = V2.ITEM_CD
+            GROUP BY V1.DLR_CD, V1.GOODS_CONTRACT_NO
+        ) T2 ON T1.DLR_CD = T2.DLR_CD AND T1.GOODS_CONTRACT_NO = T2.GOODS_CONTRACT_NO
+        LEFT JOIN CR_0101T T3 ON T1.CONTRACT_CUST_NO = T3.CUST_NO
+        LEFT JOIN SA_0201T T5 ON T1.DLR_CD = T5.DLR_CD AND T1.SALE_CONTRACT_NO = T5.CONTRACT_NO
+        LEFT JOIN (
+            SELECT
+                V1.DLR_CD
+                ,V1.GOODS_CONTRACT_NO
+                ,MAX(V1.REG_DT) AS RETURN_DT
+            FROM SA_0262T V1
+            WHERE
+                V1.DLR_CD = #{sDlrCd}
+                <if test='sGoodsContractNo != null and sGoodsContractNo != ""'>
+                    AND V1.GOODS_CONTRACT_NO LIKE '%'|| #{sGoodsContractNo} ||'%'
+                </if>
+                AND V1.STAT_CD = '40'
+            GROUP BY V1.DLR_CD, V1.GOODS_CONTRACT_NO
+        ) T6 ON T1.DLR_CD = T6.DLR_CD AND T1.GOODS_CONTRACT_NO = T6.GOODS_CONTRACT_NO
+        WHERE
+            T1.DLR_CD = #{sDlrCd}
+            <if test='sGoodsTp != null and sGoodsTp != ""'>
+                AND T1.GOODS_TP = #{sGoodsTp}
+            </if>
+            <if test='sGoodsContractNo != null and sGoodsContractNo != ""'>
+                AND T1.GOODS_CONTRACT_NO LIKE '%'|| #{sGoodsContractNo} ||'%'
+            </if>
+            <if test='sStartGoodsContractDt != null'>
+                AND T1.GOODS_CONTRACT_DT <![CDATA[>=]]> #{sStartGoodsContractDt}
+            </if>
+            <if test='sEndGoodsContractDt  != null'>
+                AND T1.GOODS_CONTRACT_DT <![CDATA[<]]> #{sEndGoodsContractDt} + 1
+            </if>
+            <if test='sContractCustNo != null and sContractCustNo != ""'>
+                AND T1.CONTRACT_CUST_NO = #{sContractCustNo}
+            </if>
+            <if test='sContractCustNm != null and sContractCustNm != ""'>
+                AND T3.CUST_NM LIKE '%'|| #{sContractCustNm} ||'%'
+            </if>
+            <if test='sContractStatCd != null and sContractStatCd != ""'>
+                AND T1.CONTRACT_STAT_CD = #{sContractStatCd}
+            </if>
+            <if test='sContractStatCdList != null and !sContractStatCdList.isEmpty'>
+                AND T1.CONTRACT_STAT_CD IN
+                <foreach item="contractStatCd" index="index" collection="sContractStatCdList" open="(" separator="," close=")">
+                    #{contractStatCd}
+                </foreach>
+            </if>
+            <if test='sStartExpcGiEndDt != null'>
+                AND T1.EXPC_GI_END_DT <![CDATA[>=]]> #{sStartExpcGiEndDt}
+            </if>
+            <if test='sEndExpcGiEndDt != null'>
+                AND T1.EXPC_GI_END_DT <![CDATA[<]]> #{sEndExpcGiEndDt} + 1
+            </if>
+            <if test='sStartRegDt != null'>
+                AND T1.REG_DT <![CDATA[>=]]> #{sStartRegDt}
+            </if>
+            <if test='sEndRegDt != null'>
+                AND T1.REG_DT <![CDATA[<]]> #{sEndRegDt} + 1
+            </if>
+            <if test='sStartRealDlDt != null'>
+                AND T1.REAL_DL_DT <![CDATA[>=]]> #{sStartRealDlDt}
+            </if>
+            <if test='sEndRealDlDt != null'>
+                AND T1.REAL_DL_DT <![CDATA[<]]> #{sEndRealDlDt} + 1
+            </if>
+            <if test='sStartReturnDt != null'>
+                AND T6.RETURN_DT <![CDATA[>=]]> #{sStartReturnDt}
+            </if>
+            <if test='sEndReturnDt != null'>
+                AND T6.RETURN_DT <![CDATA[<]]> #{sEndReturnDt} + 1
+            </if>
+            <if test='sSaleContractNo != null and sSaleContractNo != ""'>
+                AND T1.SALE_CONTRACT_NO LIKE '%'|| #{sSaleContractNo} ||'%'
+            </if>
+            <if test='sVinNo != null and sVinNo != ""'>
+                AND T5.VIN_NO LIKE '%'|| #{sVinNo} ||'%'
+            </if>
+            <if test='sTelNo != null and sTelNo != ""'>
+                AND T1.TEL_NO LIKE '%'|| #{sTelNo} ||'%'
+            </if>
+            <if test='sCarRegNo != null and sCarRegNo != ""'>
+                AND T1.CAR_REG_NO LIKE '%'|| #{sCarRegNo} ||'%'
+            </if>
+    </select>
+
+<!-- 용품판매문서 목록을 조회한다 -->
+    <select id="selectAccessoryItemSalesByCondition" parameterType="AccessoryItemSalesSearchVO" resultType="AccessoryItemSalesVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.selectAccessoryItemSalesByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                     T1.DLR_CD                                              <!-- 딜러코드 -->
+                    ,T1.GOODS_CONTRACT_NO                                   <!-- 용품계약번호 -->
+                    ,T1.GOODS_TP                                            <!-- 경품업무유형 -->
+                    ,T1.GOODS_CONTRACT_DT                                   <!-- 용품계약일자 -->
+                    ,T1.CONTRACT_CUST_NO                                    <!-- 계약고객번호 -->
+                    ,T3.CUST_NM AS CONTRACT_CUST_NM                         <!-- 계약고객명 -->
+                    ,T1.TEL_NO                                              <!-- 계약고객전화 -->
+                    ,T1.CONTRACT_CUST_TP                                    <!-- 계약고객유형 -->
+                    ,T1.PCON_CUST_NO                                        <!-- 연계인고객번호 -->
+                    ,T4.CUST_NM AS PCON_CUST_NM                             <!-- 연계인명 -->
+                    ,T1.TEL_NO                                              <!-- 전화번호 -->
+                    ,T1.CAR_BRAND_CD                                        <!-- 차량브랜드코드 -->
+                    ,T1.CARLINE_CD                                          <!-- 차종코드 -->
+                    ,FN_GET_CARLINE_NM(T1.CARLINE_CD) AS CARLINE_NM         <!-- 차종명 -->
+                    ,CASE WHEN T1.MODEL_CD IS NULL
+                          THEN T1.FSC_CD
+                          ELSE FN_GET_MODEL_TP_CD(T1.MODEL_CD, T1.OCN_CD)
+                          END FSC_CD
+                    ,CASE WHEN T1.MODEL_CD IS NULL
+                          THEN FN_GET_FSC_NM(T1.CARLINE_CD, T1.FSC_CD)
+                          ELSE FN_GET_MODEL_TP_NM(T1.MODEL_CD, T1.OCN_CD)
+                     END FSC_NM
+                    ,T1.FSC_CD                                              <!-- 차관코드 -->
+                    ,FN_GET_MODEL_NM(T1.MODEL_CD) AS MODEL_NM               <!-- 차관명 -->
+                    ,T1.MODEL_CD                                            <!-- 모델코드 -->
+                    ,FN_GET_MODEL_NM(T1.MODEL_CD) AS MODEL_NM               <!-- 모델명 -->
+                    ,T1.OCN_CD                                              <!-- OCN코드 -->
+                    ,FN_GET_OCN_NM(T1.MODEL_CD, T1.OCN_CD) AS OCN_NM        <!-- OCN명 -->
+                    ,T1.EXT_COLOR_CD                                        <!-- 외장색상코드 -->
+                    ,FN_GET_EXT_COLOR_NM(T1.EXT_COLOR_CD) AS EXT_COLOR_NM   <!-- 외장색상명 -->
+                    ,T1.INT_COLOR_CD                                        <!-- 내장색상코드 -->
+                    ,FN_GET_INT_COLOR_NM(T1.INT_COLOR_CD) AS INT_COLOR_NM   <!-- 내장색상명 -->
+                    ,T1.VIN_NO                                              <!-- 차대번호 -->
+                    ,T1.CAR_REG_NO                                          <!-- 차량등록번호 -->
+                    ,T1.SALE_CONTRACT_NO                                    <!-- 판매계약번호 -->
+                    ,T1.EXPC_GI_END_DT                                      <!-- 예정출고완료일자 -->
+                    ,T1.EQIP_PRSN_ID                                        <!-- 설치담당자ID -->
+                    ,T1.REAL_DL_DT                                          <!-- 실제인도일자 -->
+                    ,T1.GOODS_AMT                                           <!-- 용품금액 -->
+                    ,T1.PREN_AMT                                            <!-- 증정금액 -->
+                    ,T1.GOODS_REAL_AMT                                      <!-- 용품실제금액 -->
+                    ,T1.ADD_PREN_AMT                                        <!-- 추가증정금액 -->
+                    ,T1.CUST_PAY_AMT                                        <!-- 고객지불금액 -->
+                    ,T1.CONTRACT_STAT_CD                                    <!-- 용품주문상태 -->
+                    ,T2.GOODS_NM                                            <!-- 용품명 -->
+                    ,T2.GOODS_CNT                                           <!-- 용품목록수 -->
+                    ,T2.GOODS_QTY
+                    ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = T1.REG_USR_ID) AS REG_USR_NM
+                    ,T6.RETURN_DT                                           <!-- 최종반품일 -->
+                    ,T1.REG_DT                                              <!-- 판매일자 -->
+                    ,TO_CHAR(NVL(T1.UPDT_DT,T1.REG_DT), 'YYYYMMDDHH24MISS') AS UPDT_DT_STR
+                    ,T1.MEMBERSHIP_NO
+                    ,(SELECT A.CARD_NO FROM CR_0813T A WHERE A.DLR_CD = T1.DLR_CD AND A.CARD_TP_CD ='01' AND A.USE_YN = 'Y' AND A.MEMBERSHIP_NO = T1.MEMBERSHIP_NO ) AS CARD_NO
+                    ,T1.POINT_VAL
+                    ,T1.POINT_AMT
+                    ,T1.CUPN_PUBLI_NO
+                    ,T1.CUPN_AMT
+                FROM SA_0261T T1
+                LEFT JOIN (
+                    SELECT
+                         V1.DLR_CD
+                        ,V1.GOODS_CONTRACT_NO
+                        <!-- ,WM_CONCAT(NVL(V1.GOODS_NM, V2.ITEM_NM)) AS GOODS_NM -->
+                        ,WM_CONCAT(CASE WHEN V1.STAT_CD <![CDATA[ <= ]]>  '20' AND (V1.GOODS_CNT - NVL(V3.PRE_RETURN_QTY,0) ) <![CDATA[ > ]]> 0
+                                        THEN V1.GOODS_NM ELSE '' END ) AS GOODS_NM
+                        ,COUNT(V1.GOODS_CD) AS GOODS_QTY
+                        ,SUM(CASE WHEN V1.STAT_CD IN ('30', '40') THEN V1.GOODS_CNT * -1 ELSE V1.GOODS_CNT END) AS GOODS_CNT
+                    FROM SA_0262T V1 LEFT JOIN PT_0201T V2
+                      ON V1.DLR_CD = V2.DLR_CD
+                     AND V1.GOODS_CD = V2.ITEM_CD
+                     LEFT OUTER JOIN (
+                                 SELECT A.DLR_CD
+                                       ,A.GOODS_CONTRACT_NO
+                                       ,A.GOODS_CD
+                                       ,A.GI_STRGE_CD
+                                       ,SUM(A.GOODS_CNT) AS PRE_RETURN_QTY
+                                       ,A.REF_DOC_NO
+                                       ,A.REF_DOC_LINE_NO
+                                   FROM SA_0262T A
+                                  WHERE A.DLR_CD               = #{sDlrCd}
+                                    AND A.STAT_CD              = '40'
+                                GROUP BY  A.DLR_CD
+                                         ,A.GOODS_CONTRACT_NO
+                                         ,A.GOODS_CD
+                                         ,A.GI_STRGE_CD
+                                         ,A.REF_DOC_NO
+                                         ,A.REF_DOC_LINE_NO
+                                ) V3
+                        ON V1.DLR_CD              = V3.DLR_CD
+                      AND V1.GOODS_CONTRACT_NO   = V3.GOODS_CONTRACT_NO
+                      AND V1.GOODS_CD            = V3.GOODS_CD
+                      AND V1.GI_STRGE_CD         = V3.GI_STRGE_CD
+                      AND V1.SEQ                 = V3.REF_DOC_LINE_NO
+                    GROUP BY V1.DLR_CD, V1.GOODS_CONTRACT_NO
+                ) T2 ON T1.DLR_CD = T2.DLR_CD AND T1.GOODS_CONTRACT_NO = T2.GOODS_CONTRACT_NO
+                LEFT JOIN CR_0101T T3 ON T1.CONTRACT_CUST_NO = T3.CUST_NO
+                LEFT JOIN CR_0101T T4 ON T1.PCON_CUST_NO = T4.CUST_NO
+                LEFT JOIN SA_0201T T5 ON T1.DLR_CD = T5.DLR_CD AND T1.SALE_CONTRACT_NO = T5.CONTRACT_NO
+                LEFT JOIN (
+                    SELECT
+                        V1.DLR_CD
+                        ,V1.GOODS_CONTRACT_NO
+                        ,MAX(V1.REG_DT) AS RETURN_DT
+                    FROM SA_0262T V1
+                    WHERE
+                        V1.DLR_CD = #{sDlrCd}
+                        <if test='sGoodsContractNo != null and sGoodsContractNo != ""'>
+                            AND V1.GOODS_CONTRACT_NO LIKE '%'|| #{sGoodsContractNo} ||'%'
+                        </if>
+                        AND V1.STAT_CD = '40'
+                    GROUP BY V1.DLR_CD, V1.GOODS_CONTRACT_NO
+                ) T6 ON T1.DLR_CD = T6.DLR_CD AND T1.GOODS_CONTRACT_NO = T6.GOODS_CONTRACT_NO
+                WHERE
+                    T1.DLR_CD = #{sDlrCd}
+                    <if test='sGoodsTp != null and sGoodsTp != ""'>
+                        AND T1.GOODS_TP = #{sGoodsTp}
+                    </if>
+                    <if test='sGoodsContractNo != null and sGoodsContractNo != ""'>
+                        AND T1.GOODS_CONTRACT_NO LIKE '%'|| #{sGoodsContractNo} ||'%'
+                    </if>
+                    <if test='sStartGoodsContractDt != null'>
+                        AND T1.GOODS_CONTRACT_DT <![CDATA[>=]]> #{sStartGoodsContractDt}
+                    </if>
+                    <if test='sEndGoodsContractDt != null'>
+                        AND T1.GOODS_CONTRACT_DT <![CDATA[<]]> #{sEndGoodsContractDt} + 1
+                    </if>
+                    <if test='sContractCustNo != null and sContractCustNo != ""'>
+                        AND T1.CONTRACT_CUST_NO = #{sContractCustNo}
+                    </if>
+                    <if test='sContractCustNm != null and sContractCustNm != ""'>
+                        AND T3.CUST_NM LIKE '%'|| #{sContractCustNm} ||'%'
+                    </if>
+                    <if test='sContractStatCd != null and sContractStatCd != ""'>
+                        AND T1.CONTRACT_STAT_CD = #{sContractStatCd}
+                    </if>
+                    <if test='sContractStatCdList != null and !sContractStatCdList.isEmpty'>
+                        AND T1.CONTRACT_STAT_CD IN
+                        <foreach item="contractStatCd" index="index" collection="sContractStatCdList" open="(" separator="," close=")">
+                            #{contractStatCd}
+                        </foreach>
+                    </if>
+                    <if test='sStartExpcGiEndDt != null'>
+                        AND T1.EXPC_GI_END_DT <![CDATA[>=]]> #{sStartExpcGiEndDt}
+                    </if>
+                    <if test='sEndExpcGiEndDt != null'>
+                        AND T1.EXPC_GI_END_DT <![CDATA[=]]> #{sEndExpcGiEndDt} + 1
+                    </if>
+                    <if test='sStartRegDt != null'>
+                        AND T1.REG_DT <![CDATA[>=]]> #{sStartRegDt}
+                    </if>
+                    <if test='sEndRegDt != null'>
+                        AND T1.REG_DT <![CDATA[<]]> #{sEndRegDt} + 1
+                    </if>
+                    <if test='sStartRealDlDt != null'>
+                        AND T1.REAL_DL_DT <![CDATA[>=]]> #{sStartRealDlDt}
+                    </if>
+                    <if test='sEndRealDlDt != null'>
+                        AND T1.REAL_DL_DT <![CDATA[<]]> #{sEndRealDlDt} + 1
+                    </if>
+                    <if test='sStartReturnDt != null'>
+                        AND T6.RETURN_DT <![CDATA[>=]]> #{sStartReturnDt}
+                    </if>
+                    <if test='sEndReturnDt != null'>
+                        AND T6.RETURN_DT <![CDATA[<]]> #{sEndReturnDt} + 1
+                    </if>
+                    <if test='sSaleContractNo != null and sSaleContractNo != ""'>
+                        AND T1.SALE_CONTRACT_NO LIKE '%'|| #{sSaleContractNo} ||'%'
+                    </if>
+                    <if test='sVinNo != null and sVinNo != ""'>
+                        AND T1.VIN_NO LIKE '%'|| #{sVinNo} ||'%'
+                    </if>
+                    <if test='sTelNo != null and sTelNo != ""'>
+                        AND T1.TEL_NO LIKE '%'|| #{sTelNo} ||'%'
+                    </if>
+                    <if test='sCarRegNo != null and sCarRegNo != ""'>
+                        AND T1.CAR_REG_NO LIKE '%'|| #{sCarRegNo} ||'%'
+                    </if>
+                 ORDER BY
+                 <choose>
+                     <when test='sort != null'>
+                         <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                             <choose>
+                                 <when test='item.field == "regDt"'>T1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "contractStatCd"'>T1.CONTRACT_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "goodsTp"'>T1.GOODS_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "regUsrNm"'>T3.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "contractCustNm"'>T3.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "carlineCd"'>T1.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "goodsContractNo"'>T1.GOODS_CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "goodsNm"'>T2.GOODS_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "goodsQty"'>T2.GOODS_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "goodsCnt"'>T2.GOODS_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "goodsRealAmt"'>T1.GOODS_REAL_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "carRegNo"'>T1.CAR_REG_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "contractCustTp"'>T1.CONTRACT_CUST_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "expcGiEndDt"'>T1.EXPC_GI_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "saleContractNo"'>T1.SALE_CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "vinNo"'>T1.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "telNo"'>T1.TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "membershipNo"'>T1.MEMBERSHIP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "pointVal"'>T1.POINT_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "pointAmt"'>T1.POINT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "cupnPubliNo"'>T1.CUPN_PUBLI_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "cupnAmt"'>T1.CUPN_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <!-- 20210106 tjx 精品销售管理 订单不会按照订单日期排序 -->
+                                 <when test='item.field == "goodsContractDt"'>T1.GOODS_CONTRACT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <otherwise>
+                                    T1.DLR_CD ASC, T1.GOODS_CONTRACT_NO DESC
+                                 </otherwise>
+                             </choose>
+                         </foreach>
+                     </when>
+                     <otherwise>
+                       T1.DLR_CD ASC, T1.GOODS_CONTRACT_NO DESC
+                     </otherwise>
+                 </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 용품판매문서 품목 목록수를 조회한다. -->
+    <select id="selectAccessoryItemSalesItemsByConditionCnt" parameterType="AccessoryItemSalesSearchVO" resultType="int">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.selectAccessoryItemSalesItemsByConditionCnt] */
+        SELECT COUNT(*)
+          FROM SA_0261T T1
+         INNER JOIN SA_0262T T2 ON T1.DLR_CD = T2.DLR_CD
+           AND T1.GOODS_CONTRACT_NO = T2.GOODS_CONTRACT_NO
+          LEFT JOIN CR_0101T T3 ON T1.CONTRACT_CUST_NO = T3.CUST_NO
+          LEFT JOIN SA_0201T T5 ON T1.DLR_CD = T5.DLR_CD AND T1.SALE_CONTRACT_NO = T5.CONTRACT_NO
+          LEFT JOIN PT_0201T T6 ON T2.DLR_CD = T6.DLR_CD AND T2.GOODS_CD = T6.ITEM_CD
+         WHERE
+            T1.DLR_CD = #{sDlrCd}
+            <if test='sGoodsTp != null and sGoodsTp != ""'>
+                AND T1.GOODS_TP = #{sGoodsTp}
+            </if>
+            <if test='sGoodsContractNo != null and sGoodsContractNo != ""'>
+                AND T1.GOODS_CONTRACT_NO LIKE '%'|| #{sGoodsContractNo} ||'%'
+            </if>
+            <if test='sStartGoodsContractDt != null'>
+                AND T1.GOODS_CONTRACT_DT <![CDATA[>=]]> #{sStartGoodsContractDt}
+            </if>
+            <if test='sEndGoodsContractDt  != null'>
+                AND T1.GOODS_CONTRACT_DT <![CDATA[<]]> #{sEndGoodsContractDt} + 1
+            </if>
+            <if test='sContractCustNo != null and sContractCustNo != ""'>
+                AND T1.CONTRACT_CUST_NO = #{sContractCustNo}
+            </if>
+            <if test='sContractCustNm != null and sContractCustNm != ""'>
+                AND T3.CUST_NM LIKE '%'|| #{sContractCustNm} ||'%'
+            </if>
+            <if test='sContractStatCd != null and sContractStatCd != ""'>
+                AND T1.CONTRACT_STAT_CD = #{sContractStatCd}
+            </if>
+            <if test='sStartExpcGiEndDt != null'>
+                AND T1.EXPC_GI_END_DT <![CDATA[>=]]> #{sStartExpcGiEndDt}
+            </if>
+            <if test='sEndExpcGiEndDt != null'>
+                AND T1.EXPC_GI_END_DT <![CDATA[<]]> #{sEndExpcGiEndDt} + 1
+            </if>
+            <if test='sStartRegDt != null'>
+                AND T1.REG_DT <![CDATA[>=]]> #{sStartRegDt}
+            </if>
+            <if test='sEndRegDt != null'>
+                AND T1.REG_DT <![CDATA[<]]> #{sEndRegDt} + 1
+            </if>
+            <if test='sStartRealDlDt != null'>
+                AND T1.REAL_DL_DT <![CDATA[>=]]> #{sStartRealDlDt}
+            </if>
+            <if test='sEndRealDlDt != null'>
+                AND T1.REAL_DL_DT <![CDATA[<]]> #{sEndRealDlDt} + 1
+            </if>
+            <if test='sSaleContractNo != null and sSaleContractNo != ""'>
+                AND T1.SALE_CONTRACT_NO LIKE '%'|| #{sSaleContractNo} ||'%'
+            </if>
+            <if test='sVinNo != null and sVinNo != ""'>
+                AND T5.VIN_NO LIKE '%'|| #{sVinNo} ||'%'
+            </if>
+            <if test='sTelNo != null and sTelNo != ""'>
+                AND T1.TEL_NO LIKE '%'|| #{sTelNo} ||'%'
+            </if>
+            <if test='sCarRegNo != null and sCarRegNo != ""'>
+                AND T1.CAR_REG_NO LIKE '%'|| #{sCarRegNo} ||'%'
+            </if>
+    </select>
+
+    <!-- 용품판매문서 품목 목록을 조회한다. -->
+    <select id="selectAccessoryItemSalesItemsByCondition" parameterType="AccessoryItemSalesSearchVO" resultType="AccessoryItemSalesItemVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.selectAccessoryItemSalesItemsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T0.* FROM (
+               SELECT
+                     T2.DLR_CD
+                    ,T2.GOODS_CONTRACT_NO
+                    ,T2.SEQ
+                    ,T6.CARLINE_CD
+                    ,T2.GOODS_CD
+                    ,NVL(T2.GOODS_NM, T6.ITEM_NM) AS GOODS_NM
+                    ,CASE WHEN STAT_CD ='30' OR STAT_CD ='40' THEN (T2.GOODS_CNT)*-1 ELSE T2.GOODS_CNT END AS GOODS_CNT
+                    ,T2.GOODS_UNIT_CD
+                    ,T2.RETL_PRC
+                    ,CASE WHEN STAT_CD ='30' OR STAT_CD ='40' THEN (T2.DC_RATE)*-1 ELSE T2.DC_RATE END AS DC_RATE
+                    ,CASE WHEN STAT_CD ='30' OR STAT_CD ='40' THEN (T2.SALE_AMT)*-1 ELSE T2.SALE_AMT END AS SALE_AMT
+                    ,CASE WHEN STAT_CD ='30' OR STAT_CD ='40' THEN (T2.RETL_TOT_AMT)*-1 ELSE T2.RETL_TOT_AMT END AS RETL_TOT_AMT
+                    ,CASE WHEN STAT_CD ='30' OR STAT_CD ='40' THEN (T2.TOT_AMT)*-1 ELSE T2.TOT_AMT END AS TOT_AMT
+                    ,CASE WHEN STAT_CD ='30' OR STAT_CD ='40' THEN (T2.DC_AMT)*-1 ELSE T2.DC_AMT END AS DC_AMT
+                    ,T2.PKG_ITEM_CD
+                    ,T2.GR_STRGE_CD
+                    ,T2.GI_STRGE_CD
+                    ,(
+                      SELECT STRGE_NM
+                       FROM CM_0104T D
+                       WHERE D.DLR_CD   = T2.DLR_CD
+                        AND D.STRGE_CD  = T2.GI_STRGE_CD
+                     ) AS STRGE_NM
+                    ,T2.MVT_DOC_YY_MM
+                    ,T2.MVT_DOC_NO
+                    ,T2.MVT_DOC_LINE_NO
+                    ,T2.EXPC_GI_END_DT
+                    ,T2.EQIP_PRSN_ID
+                    ,T2.REAL_DL_DT
+                    ,CASE WHEN STAT_CD ='30' OR STAT_CD ='40' THEN (T2.EQIP_COST_AMT)*-1 ELSE T2.EQIP_COST_AMT END AS EQIP_COST_AMT
+                    <!-- ,NVL(T2.EQIP_COST_AMT,0) AS EQIP_COST_AMT -->
+                    ,T2.EXPC_EQIP_DT
+                    ,T2.EQIP_END_DT
+                    ,T3.CUST_NM AS CONTRACT_CUST_NM
+                    ,T2.STAT_CD
+                    ,T6.ITEM_DSTIN_CD
+                    ,T1.REG_DT
+                    ,T1.MEMBERSHIP_NO
+                    ,(SELECT A.CARD_NO FROM CR_0813T A WHERE A.DLR_CD = T1.DLR_CD AND A.CARD_TP_CD ='01' AND A.USE_YN = 'Y' AND A.MEMBERSHIP_NO = T1.MEMBERSHIP_NO ) AS CARD_NO
+                    ,T1.POINT_VAL
+                    ,T1.POINT_AMT
+                    ,T1.CUPN_PUBLI_NO
+                    ,T1.CUPN_AMT
+                    ,T1.CAR_REG_NO                                          <!-- 차량 번호 -->
+                    ,T5.VIN_NO                                              <!-- 차대번호 -->
+                    ,T3.TEL_NO                                              <!-- 계약고객전화 -->
+                    ,T3.CUST_NM AS CONTRACT_CUST_NM                         <!-- 계약고객명 -->
+                    ,T7.GOODS_QTY
+                    ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = T1.REG_USR_ID) AS REG_USR_NM
+                    ,T2.POINT_VAL AS ITEM_POINT_VAL
+                    ,T1.CONTRACT_STAT_CD
+                    ,T2.REF_DOC_NO
+                    ,T2.REF_DOC_LINE_NO
+                    ,CASE WHEN T2.STAT_CD ='40' THEN T2.GOODS_CNT ELSE T4.PRE_RETURN_QTY END AS PRE_RETURN_QTY
+                FROM SA_0261T T1
+                INNER JOIN SA_0262T T2 ON T1.DLR_CD = T2.DLR_CD AND T1.GOODS_CONTRACT_NO = T2.GOODS_CONTRACT_NO
+                LEFT OUTER JOIN  (
+                               SELECT   A.DLR_CD
+                                       ,A.GOODS_CONTRACT_NO
+                                       ,A.GOODS_CD
+                                       ,A.GI_STRGE_CD
+                                       ,SUM(A.GOODS_CNT) AS PRE_RETURN_QTY
+                                       ,MAX(A.REG_DT) AS RETURN_DT
+                                       ,A.REF_DOC_NO
+                                       ,A.REF_DOC_LINE_NO
+                                 FROM   SA_0262T A
+                                WHERE   A.DLR_CD               = #{sDlrCd}
+                                  AND   A.GOODS_CONTRACT_NO    = #{sGoodsContractNo}
+                                  AND   A.STAT_CD              = '40'
+                                GROUP BY  A.DLR_CD
+                                         ,A.GOODS_CONTRACT_NO
+                                         ,A.GOODS_CD
+                                         ,A.GI_STRGE_CD
+                                         ,A.REF_DOC_NO
+                                         ,A.REF_DOC_LINE_NO
+                         ) T4
+                   ON T2.DLR_CD              = T4.DLR_CD
+                  AND T2.GOODS_CONTRACT_NO   = T4.GOODS_CONTRACT_NO
+                  AND T2.GOODS_CD            = T4.GOODS_CD
+                  AND T2.GI_STRGE_CD         = T4.GI_STRGE_CD
+                  AND T2.SEQ                 = T4.REF_DOC_LINE_NO
+                LEFT JOIN CR_0101T T3 ON T1.CONTRACT_CUST_NO = T3.CUST_NO
+                LEFT JOIN SA_0201T T5 ON T1.DLR_CD = T5.DLR_CD AND T1.SALE_CONTRACT_NO = T5.CONTRACT_NO
+                LEFT JOIN PT_0201T T6 ON T2.DLR_CD = T6.DLR_CD AND T2.GOODS_CD = T6.ITEM_CD
+                LEFT JOIN (
+                            SELECT
+                                 V1.DLR_CD
+                                ,V1.GOODS_CONTRACT_NO
+                                ,WM_CONCAT(NVL(V1.GOODS_NM, V2.ITEM_NM)) AS GOODS_NM
+                                ,SUM(V1.GOODS_CNT) AS GOODS_QTY
+                                ,SUM(CASE WHEN V1.STAT_CD IN ('30', '40') THEN V1.GOODS_CNT * -1 ELSE V1.GOODS_CNT END) AS GOODS_CNT
+                            FROM SA_0262T V1
+                            LEFT JOIN PT_0201T V2 ON V1.DLR_CD = V2.DLR_CD AND V1.GOODS_CD = V2.ITEM_CD
+                            GROUP BY V1.DLR_CD, V1.GOODS_CONTRACT_NO
+                        ) T7 ON T1.DLR_CD = T7.DLR_CD AND T1.GOODS_CONTRACT_NO = T7.GOODS_CONTRACT_NO
+                WHERE
+                    T1.DLR_CD = #{sDlrCd}
+                    <if test='sGoodsTp != null and sGoodsTp != ""'>
+                        AND T1.GOODS_TP = #{sGoodsTp}
+                    </if>
+                    <if test='sGoodsContractNo != null and sGoodsContractNo != ""'>
+                        AND T1.GOODS_CONTRACT_NO LIKE '%'|| #{sGoodsContractNo} ||'%'
+                    </if>
+                    <if test='sStartGoodsContractDt != null'>
+                        AND T1.GOODS_CONTRACT_DT <![CDATA[>=]]> #{sStartGoodsContractDt}
+                    </if>
+                    <if test='sEndGoodsContractDt  != null'>
+                        AND T1.GOODS_CONTRACT_DT <![CDATA[<]]> #{sEndGoodsContractDt} + 1
+                    </if>
+                    <if test='sContractCustNo != null and sContractCustNo != ""'>
+                        AND T1.CONTRACT_CUST_NO = #{sContractCustNo}
+                    </if>
+                    <if test='sContractCustNm != null and sContractCustNm != ""'>
+                        AND T3.CUST_NM LIKE '%'|| #{sContractCustNm} ||'%'
+                    </if>
+                    <if test='sContractStatCd != null and sContractStatCd != ""'>
+                        AND T1.CONTRACT_STAT_CD = #{sContractStatCd}
+                    </if>
+                    <if test='sStartExpcGiEndDt != null'>
+                        AND T1.EXPC_GI_END_DT <![CDATA[>=]]> #{sStartExpcGiEndDt}
+                    </if>
+                    <if test='sEndExpcGiEndDt != null'>
+                        AND T1.EXPC_GI_END_DT <![CDATA[<]]> #{sEndExpcGiEndDt} + 1
+                    </if>
+                    <if test='sStartRegDt != null'>
+                        AND T1.REG_DT <![CDATA[>=]]> #{sStartRegDt}
+                    </if>
+                    <if test='sEndRegDt != null'>
+                        AND T1.REG_DT <![CDATA[<]]> #{sEndRegDt} + 1
+                    </if>
+                    <if test='sStartRealDlDt != null'>
+                        AND T1.REAL_DL_DT <![CDATA[>=]]> #{sStartRealDlDt}
+                    </if>
+                    <if test='sEndRealDlDt != null'>
+                        AND T1.REAL_DL_DT <![CDATA[<]]> #{sEndRealDlDt} + 1
+                    </if>
+                    <if test='sSaleContractNo != null and sSaleContractNo != ""'>
+                        AND T1.SALE_CONTRACT_NO LIKE '%'|| #{sSaleContractNo} ||'%'
+                    </if>
+                    <if test='sVinNo != null and sVinNo != ""'>
+                        AND T5.VIN_NO LIKE '%'|| #{sVinNo} ||'%'
+                    </if>
+                    <if test='sTelNo != null and sTelNo != ""'>
+                        AND T1.TEL_NO LIKE '%'|| #{sTelNo} ||'%'
+                    </if>
+                    <if test='sCarRegNo != null and sCarRegNo != ""'>
+                        AND T1.CAR_REG_NO LIKE '%'|| #{sCarRegNo} ||'%'
+                    </if>
+                ORDER BY
+                <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "regDt"'>T1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "goodsContractNo"'>T1.GOODS_CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "itemDstinCd"'>T6.ITEM_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "goodsUnitCd"'>T2.GOODS_UNIT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "goodsCd"'>T2.GOODS_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "goodsNm"'>GOODS_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "goodsCnt"'>T2.GOODS_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "retlPrc"'>T2.RETL_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "dcRate"'>T2.DC_RATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "dcAmt"'>T2.DC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "eqipCostAmt"'>T2.EQIP_COST_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "giStrgeCd"'>T2.GI_STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "statCd"'>T2.STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "saleAmt"'>T2.SALE_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+        <!--                     <when test='item.field == "payTp"'>T2.PAY_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when> -->
+                            <when test='item.field == "totAmt"'>T2.TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "pkgItemCd"'>T2.PKG_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "membershipNo"'>T1.MEMBERSHIP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "pointVal"'>T1.POINT_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "pointAmt"'>T1.POINT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "cupnPubliNo"'>T1.CUPN_PUBLI_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "cupnAmt"'>T1.CUPN_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <otherwise>
+                                T2.DLR_CD ASC, T2.GOODS_CONTRACT_NO DESC, T2.SEQ
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                    T2.DLR_CD ASC, T2.GOODS_CONTRACT_NO DESC, T2.SEQ
+                </otherwise>
+                </choose>
+                ) T0
+            <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                ROWNUM <![CDATA[<=]]> #{lastIndex}
+            </if>
+            </where>
+            )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectAccessoryItemSalesContractByCondition" parameterType="AccessoryItemSalesSearchVO" resultType="AccessoryItemSalesItemVO">
+        /* [chn.bhmc.dms.sal.acc.service.dao.AccessoryItemSalesDAO.selectAccessoryItemSalesContractByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T0.* FROM (
+               SELECT
+                     T2.DLR_CD
+                    ,T2.GOODS_CONTRACT_NO
+                    ,T2.SEQ
+                    ,T6.CARLINE_CD
+                    ,T2.GOODS_CD
+                    ,NVL(T2.GOODS_NM, T6.ITEM_NM) AS GOODS_NM
+                    ,T2.GOODS_CNT
+                    ,T2.GOODS_UNIT_CD
+                    ,T2.RETL_PRC
+                    ,T2.DC_RATE
+                    ,T2.SALE_AMT
+                    ,T2.RETL_TOT_AMT
+                    ,T2.TOT_AMT
+                    ,T2.DC_AMT
+                    ,T2.PKG_ITEM_CD
+                    ,T2.GR_STRGE_CD
+                    ,T2.GI_STRGE_CD
+                    ,T2.MVT_DOC_YY_MM
+                    ,T2.MVT_DOC_NO
+                    ,T2.MVT_DOC_LINE_NO
+                    ,T2.EXPC_GI_END_DT
+                    ,T2.EQIP_PRSN_ID
+                    ,T2.REAL_DL_DT
+                    <!-- ,NVL(T2.EQIP_COST_AMT,0) AS EQIP_COST_AMT -->
+                    ,CASE WHEN T2.STAT_CD ='30' OR T2.STAT_CD ='40' THEN (T2.EQIP_COST_AMT)*-1 ELSE T2.EQIP_COST_AMT END AS EQIP_COST_AMT
+                    ,T2.EXPC_EQIP_DT
+                    ,T2.EQIP_END_DT
+                    ,T3.CUST_NM AS CONTRACT_CUST_NM
+                    ,T2.STAT_CD
+                    ,T6.ITEM_DSTIN_CD
+                    ,T1.REG_DT
+                    ,T1.MEMBERSHIP_NO
+                    ,(SELECT A.CARD_NO FROM CR_0813T A WHERE A.DLR_CD = T1.DLR_CD AND A.CARD_TP_CD ='01' AND A.USE_YN = 'Y' AND A.MEMBERSHIP_NO = T1.MEMBERSHIP_NO ) AS CARD_NO
+                    ,T1.POINT_VAL
+                    ,T1.POINT_AMT
+                    ,T1.CUPN_PUBLI_NO
+                    ,T1.CUPN_AMT
+                    ,T1.CAR_REG_NO                                          <!-- 차량 번호 -->
+                    ,T5.VIN_NO                                              <!-- 차대번호 -->
+                    ,T3.TEL_NO                                              <!-- 계약고객전화 -->
+                    ,T3.CUST_NM AS CONTRACT_CUST_NM                         <!-- 계약고객명 -->
+                    ,T7.GOODS_QTY
+                    ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = T1.REG_USR_ID) AS REG_USR_NM
+                    ,T2.POINT_VAL AS ITEM_POINT_VAL
+                    ,T1.CONTRACT_STAT_CD
+                FROM SA_0261T T1
+                INNER JOIN SA_0262T T2 ON T1.DLR_CD = T2.DLR_CD AND T1.GOODS_CONTRACT_NO = T2.GOODS_CONTRACT_NO
+                LEFT JOIN CR_0101T T3 ON T1.CONTRACT_CUST_NO = T3.CUST_NO
+                LEFT JOIN SA_0201T T5 ON T1.DLR_CD = T5.DLR_CD AND T1.SALE_CONTRACT_NO = T5.CONTRACT_NO
+                LEFT JOIN PT_0201T T6 ON T2.DLR_CD = T6.DLR_CD AND T2.GOODS_CD = T6.ITEM_CD
+                LEFT JOIN (
+                            SELECT
+                                 V1.DLR_CD
+                                ,V1.GOODS_CONTRACT_NO
+                                ,WM_CONCAT(NVL(V1.GOODS_NM, V2.ITEM_NM)) AS GOODS_NM
+                                ,SUM(V1.GOODS_CNT) AS GOODS_QTY
+                                ,SUM(CASE WHEN V1.STAT_CD IN ('30', '40') THEN V1.GOODS_CNT * -1 ELSE V1.GOODS_CNT END) AS GOODS_CNT
+                            FROM SA_0262T V1
+                            LEFT JOIN PT_0201T V2 ON V1.DLR_CD = V2.DLR_CD AND V1.GOODS_CD = V2.ITEM_CD
+                            GROUP BY V1.DLR_CD, V1.GOODS_CONTRACT_NO
+                        ) T7 ON T1.DLR_CD = T7.DLR_CD AND T1.GOODS_CONTRACT_NO = T7.GOODS_CONTRACT_NO
+                WHERE
+                    T1.DLR_CD = #{sDlrCd}
+                    <if test='sGoodsTp != null and sGoodsTp != ""'>
+                        AND T1.GOODS_TP = #{sGoodsTp}
+                    </if>
+                    <if test='sGoodsContractNo != null and sGoodsContractNo != ""'>
+                        AND T1.GOODS_CONTRACT_NO LIKE '%'|| #{sGoodsContractNo} ||'%'
+                    </if>
+                    <if test='sStartGoodsContractDt != null'>
+                        AND T1.GOODS_CONTRACT_DT <![CDATA[>=]]> #{sStartGoodsContractDt}
+                    </if>
+                    <if test='sEndGoodsContractDt  != null'>
+                        AND T1.GOODS_CONTRACT_DT <![CDATA[<]]> #{sEndGoodsContractDt} + 1
+                    </if>
+                    <if test='sContractCustNo != null and sContractCustNo != ""'>
+                        AND T1.CONTRACT_CUST_NO = #{sContractCustNo}
+                    </if>
+                    <if test='sContractCustNm != null and sContractCustNm != ""'>
+                        AND T3.CUST_NM LIKE '%'|| #{sContractCustNm} ||'%'
+                    </if>
+                    <if test='sContractStatCd != null and sContractStatCd != ""'>
+                        AND T1.CONTRACT_STAT_CD = #{sContractStatCd}
+                    </if>
+                    <if test='sStartExpcGiEndDt != null'>
+                        AND T1.EXPC_GI_END_DT <![CDATA[>=]]> #{sStartExpcGiEndDt}
+                    </if>
+                    <if test='sEndExpcGiEndDt != null'>
+                        AND T1.EXPC_GI_END_DT <![CDATA[<]]> #{sEndExpcGiEndDt} + 1
+                    </if>
+                    <if test='sStartRegDt != null'>
+                        AND T1.REG_DT <![CDATA[>=]]> #{sStartRegDt}
+                    </if>
+                    <if test='sEndRegDt != null'>
+                        AND T1.REG_DT <![CDATA[<]]> #{sEndRegDt} + 1
+                    </if>
+                    <if test='sStartRealDlDt != null'>
+                        AND T1.REAL_DL_DT <![CDATA[>=]]> #{sStartRealDlDt}
+                    </if>
+                    <if test='sEndRealDlDt != null'>
+                        AND T1.REAL_DL_DT <![CDATA[<]]> #{sEndRealDlDt} + 1
+                    </if>
+                    <if test='sSaleContractNo != null and sSaleContractNo != ""'>
+                        AND T1.SALE_CONTRACT_NO LIKE '%'|| #{sSaleContractNo} ||'%'
+                    </if>
+                    <if test='sVinNo != null and sVinNo != ""'>
+                        AND T5.VIN_NO LIKE '%'|| #{sVinNo} ||'%'
+                    </if>
+                    <if test='sTelNo != null and sTelNo != ""'>
+                        AND T1.TEL_NO LIKE '%'|| #{sTelNo} ||'%'
+                    </if>
+                    <if test='sCarRegNo != null and sCarRegNo != ""'>
+                        AND T1.CAR_REG_NO LIKE '%'|| #{sCarRegNo} ||'%'
+                    </if>
+                ORDER BY
+                <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "regDt"'>T1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "goodsContractNo"'>T1.GOODS_CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "itemDstinCd"'>T6.ITEM_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "goodsUnitCd"'>T2.GOODS_UNIT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "goodsCd"'>T2.GOODS_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "goodsNm"'>GOODS_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "goodsCnt"'>T2.GOODS_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "retlPrc"'>T2.RETL_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "dcRate"'>T2.DC_RATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "dcAmt"'>T2.DC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "eqipCostAmt"'>T2.EQIP_COST_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "giStrgeCd"'>T2.GI_STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "statCd"'>T2.STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "saleAmt"'>T2.SALE_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+        <!--                     <when test='item.field == "payTp"'>T2.PAY_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when> -->
+                            <when test='item.field == "totAmt"'>T2.TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "pkgItemCd"'>T2.PKG_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "membershipNo"'>T1.MEMBERSHIP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "pointVal"'>T1.POINT_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "pointAmt"'>T1.POINT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "cupnPubliNo"'>T1.CUPN_PUBLI_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "cupnAmt"'>T1.CUPN_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <otherwise>
+                                T2.DLR_CD ASC, T2.GOODS_CONTRACT_NO DESC, T2.SEQ
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                    T2.DLR_CD ASC, T2.GOODS_CONTRACT_NO DESC, T2.SEQ
+                </otherwise>
+                </choose>
+                ) T0
+            <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                ROWNUM <![CDATA[<=]]> #{lastIndex}
+            </if>
+            </where>
+            )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+</mapper>

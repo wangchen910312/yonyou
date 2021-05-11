@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : BatInvcDAO_SqlMap.xml
+    Description : 송장 배치작업
+    author In Bo Shim
+    since 2016. 5. 17.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 05. 17.     In Bo Shim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.bat.par.pcm.service.dao.BatInvcDAO">
+
+    <!-- 배치작업 송장 헤더정보를 추가한다. -->
+    <insert id="insertBatInvc" parameterType="BatInvcVO">
+        /* [chn.bhmc.dms.cmm.bat.par.pcm.service.dao.BatInvcDAO.insertBatInvc] */
+        INSERT INTO PT_0431T
+        (
+          DLR_CD
+         ,INVC_DOC_NO
+         ,INVC_TP
+         ,INVC_DSTIN_CD
+         ,INVC_STAT_CD
+         ,INVC_DT
+         ,ARRV_DT
+         ,CONFIRM_DT
+         ,PLT_CD
+         ,BP_CD
+         ,MOBIS_INVC_NO
+         ,CURR_CD
+         ,INVC_TOT_AMT
+         ,VAT_CD
+         ,VAT_AMT
+         ,REMARK
+         ,CANC_YN
+         ,REG_USR_ID
+         ,REG_DT
+         ,IF_YN
+        )
+        VALUES
+        (
+          #{dlrCd}
+         ,#{invcDocNo}
+         ,#{invcTp}
+         ,#{invcDstinCd}
+         ,#{invcStatCd}
+         ,#{invcDt}
+         ,#{arrvDt}
+         ,#{confirmDt}
+         ,#{pltCd}
+         ,#{bpCd}
+         ,#{mobisInvcNo}
+         ,nvl(#{currCd},'CNY')
+         ,#{invcTotAmt}
+         ,#{vatCd}
+         ,#{vatAmt}
+         ,#{remark}
+         ,#{cancYn}
+         ,#{regUsrId}
+         ,SYSDATE
+         ,#{ifYn}
+        )
+     </insert>
+
+    <!-- 배치작업 송장 헤더정보를 수정한다. -->
+    <update id="updateBatInvc" parameterType="BatInvcVO">
+        /* [chn.bhmc.dms.cmm.bat.par.pcm.service.dao.BatInvcDAO.updateBatInvc] */
+        UPDATE PT_0431T
+        SET
+          INVC_TP = #{invcTp}
+          ,INVC_DSTIN_CD = #{invcDstinCd}
+          ,INVC_STAT_CD = #{invcStatCd}
+          ,INVC_DT = #{invcDt}
+          ,ARRV_DT = #{arrvDt}
+          ,CONFIRM_DT = #{confirmDt}
+          ,BP_CD = #{bpCd}
+          ,MOBIS_INVC_NO = #{mobisInvcNo}
+          ,CURR_CD = nvl(#{currCd},'CNY')
+          ,INVC_TOT_AMT = #{invcTotAmt}
+          ,VAT_CD = #{vatCd}
+          ,VAT_AMT = #{vatAmt}
+          ,REMARK = #{remark}
+          ,CANC_YN = #{cancYn}
+          ,UPDT_USR_ID = #{updtUsrId}
+          ,UPDT_DT = SYSDATE
+          ,IF_YN = #{ifYn}
+     WHERE 1 = 1
+       AND INVC_DOC_NO = #{invcDocNo}
+       AND DLR_CD = #{dlrCd}
+    </update>
+
+    <!-- 배치작업 송장 헤더정보를 조회한다. -->
+    <select id="selectBatInvcByKey" parameterType="string" resultType="BatInvcVO">
+        /* [chn.bhmc.dms.cmm.bat.par.pcm.service.dao.BatInvcDao.selectBatInvcByKey] */
+        SELECT * FROM PT_0431T
+        WHERE INVC_DOC_NO = #{invcDocNo}
+        AND DLR_CD = #{dlrCd}
+    </select>
+
+    <!-- 배치작업 송장 헤더목록을 조회한다. -->
+    <select id="selectBatInvcsByCondition" parameterType="BatInvcSearchVO" resultType="BatInvcVO">
+        /* [chn.bhmc.dms.cmm.bat.par.pcm.service.dao.BatInvcDao.selectBatInvcsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT * FROM PT_0431T
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sDlrCd,"*")'>
+                            <bind name='sDlrCd' value='@org.apache.commons.lang3.StringUtils@replace(sDlrCd, "*", "%")' />
+                             AND DLR_CD LIKE #{sDlrCd}
+                        </when>
+                        <otherwise>
+                             AND DLR_CD = #{sDlrCd}
+                        </otherwise>
+                        </choose>
+                    </if>
+                    <if test='sInvcDocNo != null and sInvcDocNo != ""'>
+                        <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sInvcDocNo,"*")'>
+                            <bind name='sInvcDocNo' value='@org.apache.commons.lang3.StringUtils@replace(sInvcDocNo, "*", "%")' />
+                             AND INVC_DOC_NO LIKE #{sInvcDocNo}
+                        </when>
+                        <otherwise>
+                             AND INVC_DOC_NO = #{sInvcDocNo}
+                        </otherwise>
+                        </choose>
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "invcDocNo"'>INVC_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 배치작업 송장 헤더 목록수를 조회한다. -->
+    <select id="selectBatInvcsByConditionCnt" parameterType="BatInvcSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.bat.par.pcm.service.dao.BatInvcDao.selectBatInvcsByConditionCnt] */
+        SELECT COUNT(*) AS VALUE FROM PT_0431T
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                <choose>
+                <when test='@org.apache.commons.lang3.StringUtils@contains(sDlrCd,"*")'>
+                    <bind name='sDlrCd' value='@org.apache.commons.lang3.StringUtils@replace(sDlrCd, "*", "%")' />
+                     AND DLR_CD LIKE #{sDlrCd}
+                </when>
+                <otherwise>
+                     AND DLR_CD = #{sDlrCd}
+                </otherwise>
+                </choose>
+            </if>
+            <if test='sInvcDocNo != null and sInvcDocNo != ""'>
+                <choose>
+                <when test='@org.apache.commons.lang3.StringUtils@contains(sInvcDocNo,"*")'>
+                    <bind name='sInvcDocNo' value='@org.apache.commons.lang3.StringUtils@replace(sInvcDocNo, "*", "%")' />
+                     AND INVC_DOC_NO LIKE #{sInvcDocNo}
+                </when>
+                <otherwise>
+                     AND INVC_DOC_NO = #{sInvcDocNo}
+                </otherwise>
+                </choose>
+            </if>
+        </where>
+    </select>
+
+
+</mapper>

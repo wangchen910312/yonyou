@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : SatisFactionManageDAO_SqlMap.xml
+    Description : 설문 템플릿 관리
+    author Hyun Ho Kim
+    since 2016. 03. 04.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 03. 04.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.css.service.dao.SatisFactionManageDAO">
+    <!-- 만족도 조사 검색조건 -->
+    <sql id="searchSatisFactionManage">
+        <where>
+            AND A.DLR_CD = #{sDlrCd}
+
+            <if test='sCustTargYn != null and sCustTargYn != ""'>
+                <choose>
+                    <when test=' sCustTargYn == "Y" '>
+                        AND A.CUST_TARG_YN = #{sCustTargYn}
+                        AND A.STSF_IVST_EXPD_CD IN ('03','04') -- 조사수단(전시장/고객휴게소방문, 기타)
+                        AND (TO_CHAR(SYSDATE,'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(A.START_DT,'YYYYMMDD') AND TO_CHAR(SYSDATE,'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(A.END_DT,'YYYYMMDD'))
+                    </when>
+                    <otherwise>
+                        AND A.CUST_TARG_YN = #{sCustTargYn}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sStsfIvstMthCd != null and sStsfIvstMthCd != ""'>
+                AND     A.STSF_IVST_MTH_CD  = #{sStsfIvstMthCd}           --만족도조사방법코드(유형?)
+            </if>
+
+            <if test='sStsfIvstExpdCd != null and sStsfIvstExpdCd != ""'>
+                AND     A.STSF_IVST_EXPD_CD = #{sStsfIvstExpdCd}          --만족도조사수단코드
+            </if>
+
+            <if test='sStsfIvstTpCd != null and sStsfIvstTpCd != ""'>
+                AND     A.STSF_IVST_TP_CD = #{sStsfIvstTpCd}          --만족도조사타입코드
+            </if>
+
+            <if test='sUseYn != null and sUseYn != ""'>
+                AND     A.USE_YN = #{sUseYn}          --사용여부
+            </if>
+
+            <choose>
+                <when test='(sStartDt != null and sEndDt == null)'>
+                    AND     A.REG_DT <![CDATA[>=]]> #{sStartDt}
+                </when>
+                <when test='(sStartDt == null and sEndDt != null)'>
+                    AND     A.REG_DT <![CDATA[<]]> #{sEndDt}+1
+                </when>
+                <otherwise>
+                    <if test='(sStartDt != null) and (sEndDt != null)'>
+                        AND     (A.REG_DT <![CDATA[>=]]> #{sStartDt} AND A.REG_DT <![CDATA[<]]> #{sEndDt}+1)
+                    </if>
+                </otherwise>
+            </choose>
+
+            <choose>
+                <when test='(sStartRegDt != null and sEndRegDt == null)'>
+                    AND     A.REG_DT <![CDATA[>=]]> #{sStartRegDt}
+                </when>
+                <when test='(sStartRegDt == null and sEndRegDt != null)'>
+                    AND     A.REG_DT <![CDATA[<]]> #{sEndRegDt}+1
+                </when>
+                <otherwise>
+                    <if test='(sStartRegDt != null) and (sEndRegDt != null)'>
+                        AND     (A.REG_DT <![CDATA[>=]]> #{sStartRegDt} AND A.REG_DT <![CDATA[<]]> #{sEndRegDt}+1)
+                    </if>
+                </otherwise>
+            </choose>
+            <choose>
+                <when test='(sStsfStartDt != null) and (sStsfEndDt == null)'>
+                    AND     A.START_DT <![CDATA[>=]]> #{sStsfStartDt}
+                </when>
+                <when test='(sStsfStartDt == null) and (sStsfEndDt != null)'>
+                    AND     A.END_DT <![CDATA[<]]> #{sStsfEndDt}+1
+                </when>
+                <otherwise>
+                    <if test='(sStsfStartDt != null) and (sStsfEndDt != null)'>
+                        AND     (A.START_DT <![CDATA[>=]]> #{sStsfStartDt} AND A.END_DT <![CDATA[<]]> #{sStsfEndDt}+1)
+                    </if>
+                </otherwise>
+            </choose>
+            <if test='sStsfIvstNm != null and sStsfIvstNm != ""'>
+                AND A.STSF_IVST_NM LIKE '%'||#{sStsfIvstNm}||'%'
+            </if>
+        </where>
+    </sql>
+
+    <!-- 만족도 조사 관리 목록수를 조회한다. -->
+    <select id="selectSatisFactionManagesByConditionCnt" parameterType="SurveySatisFactionSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionManageDAO.selectSatisFactionManagesByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0901T A   --만족도마스터
+        <include refid="searchSatisFactionManage" />
+    </select>
+
+    <!-- 만족도 조사 관리 정보 목록을 조회한다. -->
+    <select id="selectSatisFactionManagesByCondition" parameterType="SurveySatisFactionSearchVO" resultType="SatisFactionManageVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionManageDAO.selectSatisFactionManagesByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT  A.DLR_CD                    --딜러코드
+                        ,A.SEQ                      --일련번호
+                        ,A.STSF_IVST_NM             --만족도조사명
+                        ,FN_CMM_CD_NM('CRM091', A.STSF_IVST_MTH_CD, #{sLangCd}, 'N') AS STSF_IVST_MTH_CD_NM   --만족도조사유형코드
+                        ,FN_CMM_CD_NM('CRM092', A.STSF_IVST_EXPD_CD, #{sLangCd}, 'N') AS STSF_IVST_EXPD_CD_NM   --만족도조사수단코드
+                        ,A.STSF_IVST_TP_CD  --만족도조사타입코드
+                        ,FN_CMM_CD_NM('CRM094', A.STSF_IVST_TP_CD, #{sLangCd}, 'N') AS STSF_IVST_TP_CD_NM   --만족도조사타입코드
+                        ,A.SUBY_TMPL_SEQ            --설문템플릿일련번호
+                        ,A.RCPE_EXTR_SEQ            --대상자추출일련번호
+                        ,NVL2(
+                             A.RCPE_EXTR_SEQ
+                            ,1
+                            ,(SELECT COUNT(*) AS CNT FROM CR_0911T WHERE DLR_CD = A.DLR_CD AND SEQ = A.SEQ)
+                        ) AS RCPE_EXTR_SEQ_CHK_CNT
+                        ,A.START_DT                 --시작일자
+                        ,A.END_DT                   --종료일자
+                        ,A.USE_YN                   --사용여부
+                        ,A.CUST_TARG_YN             --고객대상여부
+                        ,A.REG_USR_ID               --등록자ID
+                        ,A.REG_DT                   --등록일자
+                        ,A.UPDT_USR_ID              --수정자ID
+                        ,A.UPDT_DT                  --수정일자
+                        ,A.CUST_EXTR_AUTO_YN        --고객추출자동여부
+                        ,A.CUST_EXTR_CYCLE_TP       --고객추출주기유형
+                        ,A.CUST_EXTR_CYCLE_CONT     --고객추출주기내용
+                        ,A.LAST_EXTR_DT             --최종추출일자
+                        ,A.STSF_CONT                --설명/화술
+                        ,CASE WHEN A.START_DT <![CDATA[>]]> SYSDATE THEN 'Y' ELSE 'N' END AS EDIT_YN --수정가능여부
+                        ,NVL((SELECT
+                                COUNT(*)
+                            FROM CR_0905T B
+                            LEFT OUTER JOIN CR_0101T C ON B.DLR_CD = C.DLR_CD AND B.CUST_NO = C.CUST_NO
+                            WHERE A.DLR_CD = B.DLR_CD
+                            AND A.SEQ = B.STSF_IVST_SEQ
+                            AND B.DEL_YN = 'N'
+                        ),0) AS STSF_CUST_CNT --만족도 조사 대상자 수
+                FROM    CR_0901T A    --만족도마스터
+                <include refid="searchSatisFactionManage" />
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "stsfIvstNm"'>A.STSF_IVST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "stsfIvstMthCd"'>A.STSF_IVST_MTH_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "stsfIvstExpd"'>A.STSF_IVST_EXPD_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "stsfIvstExpdCd"'>A.STSF_IVST_EXPD_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "stsfIvstTpCd"'>A.STSF_IVST_TP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "subyTmplSeq"'>A.SUBY_TMPL_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "rcpeExtrSeq"'>A.RCPE_EXTR_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "startDtFormat"'>A.START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "endDtFormat"'>A.END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "useYn"'>A.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "custTargYn"'>A.CUST_TARG_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "custExtrAutoYn"'>A.CUST_EXTR_AUTO_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "custExtrCycleCont"'>A.CUST_EXTR_CYCLE_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "lastExtrDtFormat"'>A.LAST_EXTR_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDtFormat"'>A.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "stsfCont"'>A.STSF_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "batOperId"'>A.BAT_OPER_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "custExtrCycleTp"'>A.CUST_EXTR_CYCLE_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "stsfCustCnt"'>STSF_CUST_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.START_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.REG_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <insert id="insertSatisFactionManage" parameterType="SatisFactionManageVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionManageDAO.insertSatisFactionManage] */
+        INSERT INTO CR_0901T    --만족도마스터
+        (
+            DLR_CD                    --딜러코드
+            ,SEQ                      --일련번호
+            ,STSF_IVST_NM             --만족도조사명
+            ,STSF_IVST_MTH_CD         --유형코드
+            ,STSF_IVST_TP_CD          --조사타입
+            ,STSF_IVST_EXPD_CD        --만족도조사수단코드
+            ,SUBY_TMPL_SEQ            --설문템플릿일련번호
+            ,RCPE_EXTR_SEQ            --대상자추출일련번호
+            ,START_DT                 --시작일자
+            ,END_DT                   --종료일자
+            ,USE_YN                   --사용여부
+            ,CUST_TARG_YN             --고객대상여부
+            ,REG_USR_ID               --등록자ID
+            ,REG_DT                   --등록일자
+            ,CUST_EXTR_AUTO_YN        --고객추출자동여부
+            ,CUST_EXTR_CYCLE_TP       --고객추출주기유형
+            ,CUST_EXTR_CYCLE_CONT     --고객추출주기내용
+            ,STSF_CONT                --설명/화술
+            ,BAT_OPER_ID              --배치작업ID
+        )
+        VALUES
+        (
+            #{dlrCd}                    --딜러코드
+            ,SEQ_CR_0901T.NEXTVAL  -- 일련번호
+            ,#{stsfIvstNm}              --만족도조사명
+            ,#{stsfIvstMthCd}           --유형코드
+            ,#{stsfIvstTpCd}           --유형코드
+            ,#{stsfIvstExpdCd}          --만족도조사수단코드
+            ,#{subyTmplSeq}             --설문템플릿일련번호
+            ,#{rcpeExtrSeq}             --대상자추출일련번호
+            ,#{startDt}                 --시작일자
+            ,#{endDt}                   --종료일자
+            ,#{useYn}                   --사용여부
+            ,#{custTargYn}              --고객대상여부
+            ,#{regUsrId}                --등록자ID
+            ,SYSDATE                    --등록일자
+            ,#{custExtrAutoYn}          --고객추출자동여부
+            ,#{custExtrCycleTp}         --고객추출주기유형
+            ,#{custExtrCycleCont}       --고객추출주기내용
+            ,#{stsfCont}                --설명/화술
+            ,#{batOperId}               --배치작업ID
+        )
+
+        <selectKey resultType="int" keyProperty="seq" order="AFTER">
+            SELECT SEQ_CR_0901T.currval AS seq FROM DUAL
+        </selectKey>
+
+    </insert>
+
+    <update id="updateSatisFactionManage" parameterType="SatisFactionManageVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionManageDAO.updateSatisFactionManage] */
+        UPDATE  CR_0901T    --만족도마스터
+                SET     USE_YN            = #{useYn}                   --사용여부
+                        ,BAT_OPER_ID       = #{batOperId}               -- 배치작업ID
+                <if test='editYn != null and editYn == "N"'>
+                        ,START_DT          = #{startDt}                 --시작일자
+                        ,END_DT            = #{endDt}                   --종료일자
+                </if>
+                <if test='editYn != null and editYn == "Y"'>
+                        ,STSF_IVST_NM       = #{stsfIvstNm}              --만족도조사명
+                        ,STSF_IVST_MTH_CD  = #{stsfIvstMthCd}           --만족도조사방법코드
+                        ,STSF_IVST_EXPD_CD = #{stsfIvstExpdCd}          --만족도조사수단코드
+                        ,STSF_IVST_TP_CD   = #{stsfIvstTpCd}            --만족도조사타입코드
+                        ,SUBY_TMPL_SEQ     = #{subyTmplSeq}             --설문템플릿일련번호
+                        ,RCPE_EXTR_SEQ     = #{rcpeExtrSeq}             --대상자추출일련번호
+                        ,CUST_TARG_YN      = #{custTargYn}               --고객대상여부
+                        ,UPDT_USR_ID       = #{updtUsrId}               --수정자ID
+                        ,UPDT_DT           = SYSDATE                    --수정일자
+                        ,CUST_EXTR_AUTO_YN = #{custExtrAutoYn}      --고객추출자동여부
+                        ,CUST_EXTR_CYCLE_TP= #{custExtrCycleTp}         --고객추출주기유형
+                        ,CUST_EXTR_CYCLE_CONT = #{custExtrCycleCont}  --고객추출주기내용
+                        ,STSF_CONT = #{stsfCont}               --설명/화술
+                        ,START_DT          = #{startDt}                 --시작일자
+                        ,END_DT            = #{endDt}                   --종료일자
+                </if>
+        WHERE   SEQ                = #{seq}                      --일련번호
+        AND     DLR_CD             = #{dlrCd}                      --딜러코드
+    </update>
+
+    <update id="updateLastExtrDt" parameterType="SatisFactionManageVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionManageDAO.updateLastExtrDt] */
+        UPDATE  CR_0901T    --만족도마스터
+        SET     LAST_EXTR_DT = SYSDATE               --마지막 추출일
+        WHERE   DLR_CD             = #{dlrCd}                      --딜러코드
+        AND     SEQ                = #{seq}                      --일련번호
+    </update>
+
+    <select id="selectStsfIvstNmsByCondition" parameterType="SurveySatisFactionSearchVO" resultType="SatisFactionManageVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionManageDAO.selectStsfIvstNmsByCondition] */
+        SELECT A.DLR_CD
+               ,A.SEQ
+               ,A.STSF_IVST_NM
+               ,A.STSF_IVST_EXPD_CD
+               ,A.SUBY_TMPL_SEQ
+               ,B.SUBY_TMPL_NM
+                ,NVL2(
+                    (SELECT DISTINCT SUBY_TMPL_SEQ FROM CR_0903T C WHERE DLR_CD = #{sDlrCd} AND C.SUBY_TMPL_SEQ  = B.SUBY_TMPL_SEQ)
+                    ,DECODE(
+                        B.DEL_YN
+                        , 'Y', 'Y'
+                        , 'N', 'N'
+                    )
+                    , 'N'
+                ) AS DEL_YN
+        FROM    CR_0901T A INNER JOIN CR_0902T B
+                ON A.DLR_CD = B.DLR_CD
+                AND A.SUBY_TMPL_SEQ = B.SUBY_TMPL_SEQ
+                <if test='sCustTargYn == "Y"'>
+                    AND A.STSF_IVST_EXPD_CD IN ('03','04') -- 조사수단(전시장/고객휴게소방문, 기타)
+                </if>
+                AND A.CUST_TARG_YN = #{sCustTargYn}
+                AND A.DLR_CD = #{sDlrCd}
+                AND A.USE_YN = #{sUseYn}
+                AND (TO_CHAR(SYSDATE,'YYYYMMDD') <![CDATA[>=]]> TO_CHAR(A.START_DT,'YYYYMMDD') AND TO_CHAR(SYSDATE,'YYYYMMDD') <![CDATA[<=]]> TO_CHAR(A.END_DT,'YYYYMMDD'))
+                ORDER BY A.START_DT DESC
+        <!-- <if test='sStsfIvstNm != null and sStsfIvstNm != ""'>
+        AND     STSF_IVST_NM = #{sStsfIvstNm}
+        </if> -->
+        <!-- AND     USR_ID = #{usrId} -->
+    </select>
+
+    <select id="selectSurveyCdByKey" parameterType="SatisFactionMobileSearchVO" resultType="SatisFactionManageVO">
+    /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionManageDAO.selectSurveyCdByKey] */
+        SELECT   A.DLR_CD
+                ,A.STSF_IVST_NM
+                ,A.SEQ
+                ,A.SUBY_TMPL_SEQ
+            <if test='sQestTp != null and sQestTp != ""'>
+                , ( SELECT COUNT(STSF_IVST_YN) AS CNT FROM CR_0905T WHERE  A.SEQ = STSF_IVST_SEQ AND STSF_IVST_YN = 'Y') AS STSF_IVST_Y
+                , ( SELECT COUNT(STSF_IVST_YN) AS CNT FROM CR_0905T WHERE  A.SEQ = STSF_IVST_SEQ AND STSF_IVST_YN = 'N') AS STSF_IVST_N
+            </if>
+        FROM    CR_0901T A
+        WHERE   A.DLR_CD = #{sDlrCd}
+        AND     A.SEQ = ${sSeq}
+    </select>
+
+    <!-- 만족도 조사 고객추출 - 오늘 고객 추출 수량 조회 ( 배치에서 사용 )
+     * @param searchVO - sDlrCd / sCurruntDt
+     * @return 오늘 스케줄 돌아야 할 수량
+     -->
+    <select id="selectSatisFactionBatchCnt" parameterType="SatisFactionManageSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionManageDAO.selectSatisFactionBatchCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_0901T
+        WHERE DLR_CD = #{sDlrCd}
+        AND (
+          (
+            CUST_EXTR_CYCLE_TP = 'W' AND CUST_EXTR_CYCLE_CONT LIKE '%'||UPPER(to_char(#{sCurruntDt}, 'dy','NLS_DATE_LANGUAGE=AMERICAN'))||'%'
+          ) OR (
+            CUST_EXTR_CYCLE_TP = 'S' AND CUST_EXTR_CYCLE_CONT LIKE '%'||to_char(#{sCurruntDt}, 'YYYY-MM-DD')||'%'
+          ) OR (
+            CUST_EXTR_CYCLE_TP = 'D'
+          )
+        )
+    </select>
+
+    <!-- 만족도 조사 관리 상세 정보를 조회한다. -->
+    <select id="selectSatisFactionManageByKey" parameterType="SurveySatisFactionSearchVO" resultType="SatisFactionManageVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SatisFactionManageDAO.selectSatisFactionManageByKey] */
+        SELECT
+             CR0901T.DLR_CD                    --딜러코드
+            ,CR0901T.SEQ                      --일련번호
+            ,CR0901T.STSF_IVST_NM             --만족도조사명
+            ,CR0901T.STSF_IVST_MTH_CD         --만족도조사방법코드
+            ,CR0901T.STSF_IVST_EXPD_CD        --만족도조사수단코드
+            ,CR0901T.STSF_IVST_TP_CD          --만족도조사타입코드
+            ,CR0901T.SUBY_TMPL_SEQ            --설문템플릿일련번호
+            ,CR0901T.RCPE_EXTR_SEQ            --대상자추출일련번호
+            ,NVL2(
+                CR0901T.RCPE_EXTR_SEQ
+                ,1
+                ,(SELECT COUNT(*) AS CNT FROM CR_0911T WHERE DLR_CD = CR0901T.DLR_CD AND SEQ = CR0901T.SEQ)
+            ) AS RCPE_EXTR_SEQ_CHK_CNT
+            ,CR0901T.START_DT                 --시작일자
+            ,CR0901T.END_DT                   --종료일자
+            ,CR0901T.USE_YN                   --사용여부
+            ,CR0901T.CUST_TARG_YN             --고객대상여부
+            ,CR0901T.REG_USR_ID               --등록자ID
+            ,CR0901T.REG_DT                   --등록일자
+            ,CR0901T.UPDT_USR_ID              --수정자ID
+            ,CR0901T.UPDT_DT                  --수정일자
+            ,CR0901T.CUST_EXTR_AUTO_YN        --고객추출자동여부
+            ,CR0901T.CUST_EXTR_CYCLE_TP       --고객추출주기유형
+            ,CR0901T.CUST_EXTR_CYCLE_CONT     --고객추출주기내용
+            ,CR0901T.LAST_EXTR_DT             --최종추출일자
+            ,CR0901T.STSF_CONT                --설명/화술
+            ,NVL(CR0901T.BAT_OPER_ID,'') AS BAT_OPER_ID      --배치작업 ID
+            ,CASE
+                WHEN CR0901T.START_DT <![CDATA[>]]> SYSDATE
+                THEN 'Y' ELSE 'N'
+             END
+             AS EDIT_YN --수정가능여부
+            ,FN_GET_USER_NM(CR0901T.REG_USR_ID) AS REG_USR_NM--등록자이름
+        FROM    CR_0901T CR0901T --만족도마스터
+        WHERE CR0901T.DLR_CD = #{sDlrCd}
+        AND CR0901T.SEQ = #{sSeq}
+    </select>
+
+    <!-- 만족도 유형 데이터를 조회한다. -->
+    <select id="selectStsfIvstMthCdList" parameterType="SatisFactionManageSearchVO" resultType="CommonCodeVO">
+        SELECT
+             NVL(B.CMM_CD, A.CMM_CD) AS CMM_CD
+            ,NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+        FROM CM_0303T A, CM_0304T B
+        WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+        AND  A.CMM_CD = B.CMM_CD
+        AND  B.LANG_CD = #{sLangCd}
+        AND  A.CMM_GRP_CD = 'CRM091'
+        AND  A.USE_YN = 'Y'
+        AND  A.REMARK1 LIKE '%'||#{sCmmCd}||'%'
+        ORDER BY A.SORT_ORDER ASC
+    </select>
+
+
+</mapper>

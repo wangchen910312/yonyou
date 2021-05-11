@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : InsuranceManageDAO_SqlMap.xml
+    Description : 보험관리  마스터에 관한 데이터처리
+    author Kwon Ki Hyun
+    since 2016. 01. 28.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 28.  Kwon Ki Hyun     최초 생성
+-->
+
+
+<mapper namespace="chn.bhmc.dms.ser.svi.service.dao.InsuranceManageDAO">
+
+    <!-- 보험관리 리스트 수량 -->
+    <select id="selectInsuranceManagesByConditionCnt" parameterType="InsuranceManageSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.InsuranceManageDAO.selectInsuranceManagesByConditionCnt] */
+
+        SELECT COUNT(*) AS VALUE
+          FROM SE_1016T
+         <where>
+            <if test='sIncCmpNm !=null and sIncCmpNm != "" '>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sIncCmpNm,"*")'>
+                        <bind name='sIncCmpNm' value='@org.apache.commons.lang3.StringUtils@replace(sIncCmpNm, "*", "%")'/>
+                            AND INC_CMP_NM LIKE #{sIncCmpNm}
+                    </when>
+                    <otherwise>
+                            AND INC_CMP_NM = #{sIncCmpNm}
+                    </otherwise>
+                </choose>
+            </if>
+            <if test='sIncUsrNm !=null and sIncUsrNm != "" '>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sIncUsrNm,"*")'>
+                        <bind name='sIncUsrNm' value='@org.apache.commons.lang3.StringUtils@replace(sIncUsrNm, "*", "%")' />
+                            AND INC_USR_NM LIKE #{sIncUsrNm}
+                    </when>
+                    <otherwise>
+                            AND INC_USR_NM = #{sIncUsrNm}
+                    </otherwise>
+                </choose>
+            </if>
+         </where>
+    </select>
+
+    <!-- 보험관리 리스트 -->
+    <select id="selectInsuranceManagesByCondition" parameterType="InsuranceManageSearchVO" resultType="InsuranceManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.InsuranceManageDAO.selectInsuranceManagesByCondition] */
+
+      SELECT * FROM (
+        SELECT ROWNUM AS RNUM , T1.*
+          FROM (
+            SELECT  DLR_CD,INC_CMP_CD,INC_CMP_NM,INC_CMP_TEL_NO,INC_DEPT_NM
+                   ,INC_USR_NM,INC_RESP_TEL_NO,INC_RESP_HP_NO,REG_USR_ID
+                   ,REG_DT,UPDT_USR_ID,UPDT_DT
+             FROM SE_1016T
+             <where>
+                 <if test='sIncCmpNm !=null and sIncCmpNm != "" '>
+                    <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sIncCmpNm,"*")'>
+                            <bind name='sIncCmpNm' value='@org.apache.commons.lang3.StringUtils@replace(sIncCmpNm, "*", "%")'/>
+                                AND INC_CMP_NM LIKE #{sIncCmpNm}
+                        </when>
+                        <otherwise>
+                                AND INC_CMP_NM = #{sIncCmpNm}
+                        </otherwise>
+                    </choose>
+                </if>
+                <if test='sIncUsrNm !=null and sIncUsrNm != "" '>
+                    <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sIncUsrNm,"*")'>
+                            <bind name='sIncUsrNm' value='@org.apache.commons.lang3.StringUtils@replace(sIncUsrNm, "*", "%")' />
+                                AND INC_USR_NM LIKE #{sIncUsrNm}
+                        </when>
+                        <otherwise>
+                                AND INC_USR_NM = #{sIncUsrNm}
+                        </otherwise>
+                    </choose>
+                </if>
+            </where>
+            ORDER BY
+             <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "incCmpCd" '>INC_CMP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                            <when test='item.field == "incCmpNm" '>INC_CMP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                            <otherwise>
+                                INC_CMP_CD ASC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                    INC_CMP_CD ASC
+                </otherwise>
+             </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+         )
+         <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 보험관리 PK Check -->
+    <select id="selectInsuranceManageByKey" parameterType="InsuranceManageVO" resultType="InsuranceManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.InsuranceManageDAO.selectInsuranceManageByKey] */
+
+
+            SELECT DLR_CD,INC_CMP_CD
+              FROM SE_1016T
+             WHERE DLR_CD     = #{dlrCd}
+               AND INC_CMP_CD = #{incCmpCd}
+    </select>
+
+    <!-- 보험관리 등록-->
+    <insert id="insertInsuranceManage" parameterType="InsuranceManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.InsuranceManageDAO.insertInsuranceManage] */
+
+         INSERT INTO SE_1016T(
+          DLR_CD
+         ,INC_CMP_CD
+         ,INC_CMP_NM
+         ,INC_CMP_TEL_NO
+         ,INC_DEPT_NM
+         ,INC_USR_NM
+         ,INC_RESP_TEL_NO
+         ,INC_RESP_HP_NO
+         ,REG_USR_ID
+         ,REG_DT
+         ,UPDT_USR_ID
+         ,UPDT_DT
+        )VALUES(
+          #{dlrCd}
+         ,#{incCmpCd}
+         ,#{incCmpNm}
+         ,#{incCmpTelNo}
+         ,#{incDeptNm}
+         ,#{incUsrNm}
+         ,#{incRespTelNo}
+         ,#{incRespHpNo}
+         ,#{regUsrId}
+         ,sysdate
+         ,#{regUsrId}
+         ,sysdate
+        )
+    </insert>
+
+    <!-- 보험관리 수정 -->
+    <update id="updateInsuranceManage" parameterType="InsuranceManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.InsuranceManageDAO.updateInsuranceManage] */
+        UPDATE DMSDB.SE_1016T
+            SET
+             INC_CMP_NM      = #{incCmpNm}
+            ,INC_CMP_TEL_NO  = #{incCmpTelNo}
+            ,INC_DEPT_NM     = #{incDeptNm}
+            ,INC_USR_NM      = #{incUsrNm}
+            ,INC_RESP_TEL_NO = #{incRespTelNo}
+            ,INC_RESP_HP_NO  = #{incRespHpNo}
+            ,UPDT_USR_ID     = #{regUsrId}
+            ,UPDT_DT         = SYSDATE
+       WHERE 1 = 1
+         AND INC_CMP_CD = #{incCmpCd}
+         AND DLR_CD     = #{dlrCd}
+    </update>
+
+    <delete id="deleteInsuranceManage" parameterType="InsuranceManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.InsuranceManageDAO.deleteInsuranceManage] */
+        DELETE FROM DMSDB.SE_1016T
+         WHERE INC_CMP_CD = #{incCmpCd}
+           AND DLR_CD     = #{dlrCd}
+    </delete>
+
+</mapper>

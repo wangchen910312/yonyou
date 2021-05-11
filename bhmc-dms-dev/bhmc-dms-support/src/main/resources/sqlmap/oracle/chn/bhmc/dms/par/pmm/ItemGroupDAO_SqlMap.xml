@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : ItemGroupDAO_SqlMap.xml
+    Description : 품목그룹 정보관리.
+    author In Bo Shim
+    since 2016. xx. xx.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. xx. xx.     In Bo Shim     최초 생성
+-->
+<mapper namespace="chn.bhmc.dms.par.pmm.service.dao.ItemGroupDAO">
+
+    <!-- 품목그룹 정보를 추가한다. -->
+    <insert id="insertItemGroup" parameterType="ItemGroupVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ItemGroupDAO.insertItemGroup] */
+        INSERT INTO PT_0101T (
+            DLR_CD
+            , ITEM_DSTIN_CD
+            , ITEM_GRP_CD
+            , ITEM_GRP_NM
+            , USE_YN
+            , REMARK
+            , LVL_VAL
+            , PENT_ITEM_DSTIN_CD
+            , REG_USR_ID
+            , REG_DT
+        ) VALUES (
+            #{ dlrCd }
+            , #{ itemDstinCd }
+            , #{ itemGrpCd }
+            , #{ itemGrpNm }
+            , #{ useYn }
+            , #{ remark }
+            , #{ lvlVal }
+            , #{ pentItemDstinCd }
+            , #{ regUsrId }
+            , SYSDATE
+        )
+    </insert>
+
+    <!-- 품목그룹 정보를 수정한다. -->
+    <update id="updateItemGroup" parameterType="ItemGroupVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ItemGroupDAO.updateItemGroup] */
+        UPDATE PT_0101T SET
+            ITEM_GRP_NM = #{ itemGrpNm }
+            , REMARK = #{ remark }
+            , USE_YN = #{ useYn }
+            , LVL_VAL = #{ lvlVal }
+            , PENT_ITEM_DSTIN_CD = #{ pentItemDstinCd }
+            , UPDT_USR_ID = #{ updtUsrId }
+            , UPDT_DT = SYSDATE
+        WHERE DLR_CD = #{ dlrCd }
+        AND ITEM_DSTIN_CD = #{ itemDstinCd }
+        AND ITEM_GRP_CD = #{ itemGrpCd }
+    </update>
+
+    <!-- 품목그룹 정보를 삭제한다. -->
+    <delete id="deleteItemGroup" parameterType="ItemGroupVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ItemGroupDAO.deleteItemGroup] */
+        DELETE FROM PT_0101T
+        WHERE DLR_CD = #{ dlrCd }
+        AND ITEM_DSTIN_CD = #{ itemDstinCd }
+        AND ITEM_GRP_CD = #{ itemGrpCd }
+    </delete>
+
+    <!-- 품목그룹 정보를 조회한다. -->
+    <select id="selectItemGroupByKey" parameterType="map" resultType="ItemGroupVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ItemGroupDAO.selectItemGroupByKey] */
+        SELECT * FROM PT_0101T
+        WHERE DLR_CD = #{ dlrCd }
+        AND ITEM_DSTIN_CD = #{ itemDstinCd }
+        AND ITEM_GRP_CD = #{ itemGrpCd }
+    </select>
+
+    <!-- 품목그룹 Combo정보를 조회한다. -->
+    <select id="selectItemGroupCodesByCondition" parameterType="map" resultType="ItemGroupVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ItemGroupDAO.selectItemGroupCodesByCondition] */
+        SELECT   ITEM_DSTIN_CD
+                ,ITEM_GRP_CD
+                ,ITEM_GRP_NM
+          FROM   PT_0101T
+         WHERE   DLR_CD = #{ sDlrCd }
+           AND   USE_YN = 'Y'
+    </select>
+
+    <!-- 품목그룹 정보 목록을 조회한다. -->
+    <select id="selectItemGroupsByCondition" parameterType="ItemGroupSearchVO" resultType="ItemGroupVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ItemGroupDAO.selectItemGroupsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    DLR_CD
+                    , ITEM_DSTIN_CD
+                    , ITEM_GRP_CD
+                    , ITEM_GRP_NM
+                    , USE_YN
+                    , 'Y' DB_YN
+                    , REMARK
+                    , LVL_VAL
+                    , PENT_ITEM_DSTIN_CD
+                    , REG_USR_ID
+                    , REG_DT
+                    , UPDT_USR_ID
+                    , UPDT_DT
+                FROM PT_0101T
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND DLR_CD LIKE '%'||#{sDlrCd}||'%'
+                    </if>
+                    <if test='sItemDstinCd != null and sItemDstinCd != ""'>
+                        AND ITEM_DSTIN_CD LIKE '%'||#{sItemDstinCd}||'%'
+                    </if>
+
+                    <if test='sItemGrpCd != null and sItemGrpCd != ""'>
+                        AND ITEM_GRP_CD LIKE '%'||#{sItemGrpCd}||'%'
+                    </if>
+
+                    <if test='sItemGrpNm != null and sItemGrpNm != ""'>
+                        AND ITEM_GRP_NM LIKE '%'||#{sItemGrpNm}||'%'
+                    </if>
+
+                    <if test='sUseYn != null and sUseYn != ""'>
+                        AND USE_YN = #{sUseYn}
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "itemDstinCd"'>ITEM_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemGrpCd"'>ITEM_GRP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemGrpNm"'>ITEM_GRP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "useYn"'>USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 품목그룹 정보 카운트를 조회한다. -->
+    <select id="selectItemGroupsByConditionCnt" parameterType="ItemGroupSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ItemGroupDAO.selectItemGroupsByConditionCnt] */
+        SELECT COUNT(*) AS VALUE FROM PT_0101T
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND DLR_CD LIKE '%'||#{sDlrCd}||'%'
+            </if>
+            <if test='sItemDstinCd != null and sItemDstinCd != ""'>
+                AND ITEM_DSTIN_CD LIKE '%'||#{sItemDstinCd}||'%'
+            </if>
+
+            <if test='sItemGrpCd != null and sItemGrpCd != ""'>
+                AND ITEM_GRP_CD LIKE '%'||#{sItemGrpCd}||'%'
+            </if>
+
+            <if test='sItemGrpNm != null and sItemGrpNm != ""'>
+                AND ITEM_GRP_NM LIKE '%'||#{sItemGrpNm}||'%'
+            </if>
+
+            <if test='sUseYn != null and sUseYn != ""'>
+                AND USE_YN = #{sUseYn}
+            </if>
+        </where>
+
+    </select>
+
+</mapper>

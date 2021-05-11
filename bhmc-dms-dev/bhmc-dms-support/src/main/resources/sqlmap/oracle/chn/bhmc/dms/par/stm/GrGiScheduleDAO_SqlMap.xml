@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : GrGiScheduleDao_SqlMap.xml
+    Description : 입출고예정정보관리.
+    author Ju Won Lee
+    since 2016. 1. 20.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 20.     Ju Won Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.par.stm.service.dao.GrGiScheduleDAO">
+    <!-- 입출고예정 정보를 추가한다. -->
+    <insert id="insertGrGiSchedule" parameterType="GrGiScheduleVO">
+    <![CDATA[
+        /* [chn.bhmc.dms.par.stm.service.dao.GrGiScheduleDAO.insertGrGiSchedule] */
+        INSERT INTO DMSDB.PT_0303T    --입출고예정HISTORY정보
+        (
+          DLR_CD                   --딜러코드
+         ,PLT_CD                   --센터코드
+         ,STRGE_CD                 --창고코드
+         ,ITEM_CD                  --품목코드
+         ,GR_GI_DOC_NO             --입출고문서번호
+         ,GR_GI_DOC_LINE_NO        --입출고문서라인번호
+         ,SEQ                      --일련번호
+         ,GR_GI_TP                 --입출고유형
+         ,PROC_QTY                 --처리수량
+         ,GR_GI_QTY                --입출고수량
+         ,GR_GI_SCHE_DT            --입출고예정일자
+         ,BP_CD                    --거래처코드
+         ,CUST_CD                  --고객코드
+         ,REG_USR_ID               --등록자ID
+         ,REG_DT                   --등록일자
+        )
+        VALUES
+        (
+          #{dlrCd}                   --딜러코드
+         ,#{pltCd}                   --센터코드
+         ,#{strgeCd}                 --창고코드
+         ,#{itemCd}                  --품목코드
+         ,#{grGiDocNo}               --입출고문서번호
+         ,#{grGiDocLineNo}           --입출고문서라인번호
+         ,#{seq}                     --일련번호
+         ,#{grGiTp}                  --입출고유형
+         ,#{procQty}                 --처리수량
+         ,#{grGiQty}                 --입출고수량
+         ,#{grGiScheDt}              --입출고예정일자
+         ,#{bpCd}                    --거래처코드
+         ,#{custCd}                  --고객코드
+         ,#{regUsrId}                --등록자ID
+         ,sysdate                    --등록일자
+        )
+    ]]>
+    </insert>
+
+    <!-- 입출고예정 정보 Max 라인번호를 조회한다. -->
+    <select id="selectGrGiDocMaxLineNo" parameterType="GrGiScheduleVO" resultType="int">
+        /* [chn.bhmc.dms.par.stm.service.dao.GrGiScheduleDAO.selectGrGiDocMaxLineNo] */
+        SELECT   NVL(max(SEQ), 0) + 1
+          FROM   DMSDB.PT_0303T A    --입출고예정정보
+         WHERE   A.DLR_CD             = #{dlrCd}
+           AND   A.PLT_CD             = #{pltCd}
+           AND   A.STRGE_CD           = #{strgeCd}
+           AND   A.ITEM_CD            = #{itemCd}
+           AND   A.GR_GI_DOC_NO       = #{grGiDocNo}
+           AND   A.GR_GI_DOC_LINE_NO  = #{grGiDocLineNo}
+           AND   A.GR_GI_TP           = #{grGiTp}
+    </select>
+
+    <!-- 입출고예정 정보 수정에 대한 원본 수량을 조회한다. -->
+    <select id="selectGrGiDocOrgQty" parameterType="GrGiScheduleVO" resultType="double">
+        /* [chn.bhmc.dms.par.stm.service.dao.GrGiScheduleDAO.selectGrGiDocOrgQty] */
+        SELECT   A.GR_GI_QTY
+          FROM
+                (
+                    SELECT   A.SEQ
+                            ,A.GR_GI_QTY
+                      FROM   DMSDB.PT_0303T A    --입출고예정정보
+                     WHERE   A.DLR_CD             = #{dlrCd}
+                       AND   A.PLT_CD             = #{pltCd}
+                       AND   A.STRGE_CD           = #{strgeCd}
+                       AND   A.ITEM_CD            = #{itemCd}
+                       AND   A.GR_GI_DOC_NO       = #{grGiDocNo}
+                       AND   A.GR_GI_DOC_LINE_NO  = #{grGiDocLineNo}
+                       AND   A.GR_GI_TP           = #{grGiTp}
+                       ORDER BY A.SEQ DESC
+                 ) A
+         WHERE   ROWNUM = 1
+    </select>
+
+    <!-- 이전입출고예정에 대한 정보를 조회한다.[창고변경확인용] -->
+    <select id="selectBefGrGiDocInfo" parameterType="GrGiScheduleVO" resultType="GrGiScheduleVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.GrGiScheduleDAO.selectBefGrGiDocInfo] */
+       SELECT   A.DLR_CD                   --딜러코드
+               ,A.PLT_CD                   --센터코드
+               ,A.STRGE_CD                 --창고코드
+               ,A.ITEM_CD                  --품목코드
+               ,A.GR_GI_DOC_NO             --입출고문서번호
+               ,A.GR_GI_DOC_LINE_NO        --입출고문서라인번호
+               ,A.SEQ                      --일련번호
+               ,A.GR_GI_TP                 --입출고유형
+               ,A.PROC_QTY                 --처리수량
+               ,A.GR_GI_QTY                --입출고수량
+               ,A.GR_GI_SCHE_DT            --입출고예정일자
+               ,A.BP_CD                    --거래처코드
+               ,A.CUST_CD                  --고객코드
+               ,A.REG_USR_ID               --등록자ID
+               ,A.REG_DT                   --등록일자
+               ,A.UPDT_USR_ID              --수정자ID
+               ,A.UPDT_DT                  --수정일자
+         FROM   DMSDB.PT_0303T A
+                  INNER JOIN
+                           (
+                                SELECT   A.DLR_CD
+                                        ,A.PLT_CD
+                                        ,A.ITEM_CD
+                                        ,A.GR_GI_DOC_NO
+                                        ,A.GR_GI_DOC_LINE_NO
+                                        ,A.GR_GI_TP
+                                        ,MAX(SEQ) AS SEQ
+                                  FROM   DMSDB.PT_0303T A    --입출고예정정보
+                                 WHERE   A.DLR_CD             = #{dlrCd}
+                                   AND   A.PLT_CD             = #{pltCd}
+                                   AND   A.ITEM_CD            = #{itemCd}
+                                   AND   A.GR_GI_DOC_NO       = #{grGiDocNo}
+                                   AND   A.GR_GI_DOC_LINE_NO  = #{grGiDocLineNo}
+                                   AND   A.GR_GI_TP           = #{grGiTp}
+                              GROUP BY A.DLR_CD
+                                     , A.PLT_CD
+                                     , A.ITEM_CD
+                                     , A.GR_GI_DOC_NO
+                                     , A.GR_GI_DOC_LINE_NO
+                                     , A.GR_GI_TP
+                            ) B
+                     ON A.DLR_CD            = B.DLR_CD
+                    AND A.PLT_CD            = B.PLT_CD
+                    AND A.ITEM_CD           = B.ITEM_CD
+                    AND A.GR_GI_DOC_NO      = B.GR_GI_DOC_NO
+                    AND A.GR_GI_DOC_LINE_NO = B.GR_GI_DOC_LINE_NO
+                    AND A.GR_GI_TP          = B.GR_GI_TP
+                    AND A.SEQ               = B.SEQ
+
+    </select>
+</mapper>

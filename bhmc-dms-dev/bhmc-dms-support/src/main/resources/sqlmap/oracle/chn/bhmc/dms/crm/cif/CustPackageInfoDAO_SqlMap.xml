@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CustPackageInfoDAO_SqlMap.xml
+    Description :
+    author Kyo Jin Lee
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kyo Jin Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cif.service.dao.CustPackageInfoDAO">
+
+    <!-- 조회 검색조건 -->
+    <sql id="searchWhere">
+        <where>
+            <if test='sDlrCd      != null and sDlrCd      != ""'> AND CR_0824T.DLR_CD      = #{sDlrCd}    </if>
+            <if test='sPkgSeq     != null and sPkgSeq     != ""'> AND CR_0824T.PKG_SEQ     = #{sPkgSeq}   </if>
+            <if test='sPkgNm         != null and sPkgNm         != ""'>
+            AND CR_0824T.PKG_NM LIKE '%'||#{sPkgNm}||'%'
+            </if>
+            <if test='sUseYn      != null and sUseYn      != ""'> AND CR_0824T.USE_YN      = #{sUseYn}    </if>
+            <if test='sRegUsrId   != null and sRegUsrId   != ""'> AND CR_0824T.REG_USR_ID  = #{sRegUsrId} </if>
+            <if test='sRegDt      != null and sRegDt      != ""'> AND CR_0824T.REG_DT      = #{sRegDt}    </if>
+            <if test='sUpdtUsrId  != null and sUpdtUsrId  != ""'> AND CR_0824T.UPDT_USR_ID = #{sUpdtUsrId}</if>
+            <if test='sUpdtDt     != null and sUpdtDt     != ""'> AND CR_0824T.UPDT_DT     = #{sUpdtDt}   </if>
+        </where>
+    </sql>
+
+    <!-- 정보 목록수를 조회한다. -->
+    <select id="selectCustCouponPackageInfoByConditionCnt" parameterType="CustPackageInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustPackageInfoDAO.selectCustCouponPackageInfoByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM CR_0824T
+         <include refid="searchWhere" />
+    </select>
+
+    <!-- 정보 목록을 조회한다. -->
+    <select id="selectCustCouponPackageInfoByCondition" parameterType="CustPackageInfoSearchVO" resultType="CustPackageInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustPackageInfoDAO.selectCustCouponPackageInfoByCondition] */
+        SELECT T2.*
+            FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A1.* FROM (
+                    SELECT
+                        CR_0824T.DLR_CD
+                        ,CR_0824T.PKG_SEQ
+                        ,CR_0824T.PKG_NM
+                        ,CR_0824T.USE_YN
+                        ,(SELECT COUNT(*) FROM CR_0825T WHERE PKG_SEQ = CR_0824T.PKG_SEQ) AS PKG_PUB_CNT
+                        ,CR_0824T.REG_USR_ID
+                        ,CR_0824T.REG_DT
+                        ,CR_0824T.UPDT_USR_ID
+                        ,CR_0824T.UPDT_DT
+                    FROM CR_0824T CR_0824T
+                    <include refid="searchWhere" />
+                    ) A1
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>      A1.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "pkgSeq"'>     A1.PKG_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "pkgNm"'>      A1.PKG_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "useYn"'>      A1.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "regUsrId"'>   A1.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "regDt"'>      A1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "updtUsrId"'>  A1.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtDt"'>     A1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <otherwise>
+                                    A1.REG_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A1.REG_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        ) T2
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 목록을 조회한다. -->
+    <select id="selectCustCouponPackageInfoByConditionByKey" parameterType="CustPackageInfoVO" resultType="CustPackageInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustPackageInfoDAO.selectCustCouponPackageInfoByConditionByKey] */
+        SELECT A1.* FROM (
+            SELECT
+                CR_0824T.DLR_CD
+                ,CR_0824T.PKG_SEQ
+                ,CR_0824T.PKG_NM
+                ,CR_0824T.USE_YN
+                ,CR_0824T.REG_USR_ID
+                ,CR_0824T.REG_DT
+                ,CR_0824T.UPDT_USR_ID
+                ,CR_0824T.UPDT_DT
+            FROM CR_0824T CR_0824T
+            <include refid="searchWhere" />
+            ) A1
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "dlrCd"'>      A1.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "pkgSeq"'>     A1.PKG_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                        <when test='item.field == "pkgNm"'>      A1.PKG_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "useYn"'>      A1.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "regUsrId"'>   A1.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                        <when test='item.field == "regDt"'>      A1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "updtUsrId"'>  A1.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "updtDt"'>     A1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                        <otherwise>
+                            A1.REG_DT DESC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                A1.REG_DT DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 추가한다. -->
+    <insert id="insertCustPackage" parameterType="CustPackageInfoVO" >
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustPackageInfoDAO.insertCustPackage] */
+
+        <selectKey resultType="int" keyProperty="pkgSeq" order="AFTER">
+            SELECT SEQ_CR_0824T.currval AS PKG_SEQ FROM DUAL
+        </selectKey>
+
+        INSERT INTO CR_0824T(
+            DLR_CD
+            ,PKG_SEQ
+            ,PKG_NM
+            ,USE_YN
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+        ) VALUES (
+            #{dlrCd}
+            ,SEQ_CR_0824T.NEXTVAL
+            ,#{pkgNm}
+            ,#{useYn}
+            ,#{regUsrId}
+            ,SYSDATE
+            ,#{regUsrId}
+            ,SYSDATE
+        )
+    </insert>
+
+    <!-- 업데이트 한다. -->
+    <update id="updateCustPackage" parameterType="CustPackageInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustPackageInfoDAO.updateCustPackage] */
+        UPDATE CR_0824T SET
+            UPDT_DT          = SYSDATE
+            ,UPDT_USR_ID      = #{regUsrId}
+            <if test='pkgNm != null and pkgNm != ""'>
+            ,PKG_NM         = #{pkgNm}
+            </if>
+            <if test='useYn != null and useYn != ""'>
+            ,USE_YN         = #{useYn}
+            </if>
+        WHERE DLR_CD = #{dlrCd}
+          AND PKG_SEQ = #{pkgSeq}
+    </update>
+
+    <!-- 삭제 한다. -->
+    <delete id="deleteCustPackage" parameterType="CustPackageInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInfoDAO.deleteCustPackage] */
+        DELETE CR_0824T
+        WHERE DLR_CD = #{dlrCd}
+          AND PKG_SEQ = #{pkgSeq}
+    </delete>
+</mapper>

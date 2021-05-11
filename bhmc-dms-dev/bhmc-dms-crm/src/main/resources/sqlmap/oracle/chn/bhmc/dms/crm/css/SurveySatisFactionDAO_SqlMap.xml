@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : SurveySatisFactionDAO_SqlMap.xml
+    Description : 설문 템플릿 관리
+    author Hyun Ho Kim
+    since 2016. 03. 04.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 03. 04.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.css.service.dao.SurveySatisFactionDAO">
+    <!-- 설문 템플릿 검색조건 -->
+    <sql id="searchSurveySatisFaction">
+        <where>
+            AND A.DLR_CD = #{sDlrCd}
+            <if test='sDelYn != null and sDelYn != ""'>
+                AND A.DEL_YN = #{sDelYn}
+            </if>
+
+            <if test='sSubyTmplNm != null and sSubyTmplNm != ""'>
+                AND A.SUBY_TMPL_NM LIKE '%'||#{sSubyTmplNm}||'%'
+              <!-- <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sSubyTmplNm,"*")'>
+                        <bind name='sSubyTmplNm' value='@org.apache.commons.lang3.StringUtils@replace(sSubyTmplNm, "*", "%")' />
+                        AND A.SUBY_TMPL_NM LIKE #{sSubyTmplNm}
+                    </when>
+                    <otherwise>
+                         AND A.SUBY_TMPL_NM = #{sSubyTmplNm}
+                    </otherwise>
+              </choose> -->
+            </if>
+            <choose>
+                <when test='(sStartDt != null and sEndDt == null)'>
+                    AND     A.REG_DT <![CDATA[>=]]> #{sStartDt}
+                </when>
+                <when test='(sStartDt == null and sEndDt != null)'>
+                    AND     A.REG_DT <![CDATA[<=]]> #{sEndDt}+1
+                </when>
+                <otherwise>
+                    <if test='(sStartDt != null) and (sEndDt != null)'>
+                        AND     (A.REG_DT <![CDATA[>=]]> #{sStartDt} AND A.REG_DT <![CDATA[<=]]> #{sEndDt}+1)
+                    </if>
+                </otherwise>
+            </choose>
+
+        </where>
+    </sql>
+
+    <!-- 설문 템플릿 관리 목록수를 조회한다. -->
+    <select id="selectSurveySatisFactionsByConditionCnt" parameterType="SurveySatisFactionSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.css.service.dao.SurveySatisFactionDAO.selectSurveySatisFactionsByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0902T A LEFT OUTER JOIN CM_0101T B    --만족도설문템플릿, 고객테이블
+                ON A.REG_USR_ID = B.DLR_CD
+        <include refid="searchSurveySatisFaction" />
+    </select>
+
+    <!-- 설문 템플릿 관리 정보 목록을 조회한다. -->
+    <select id="selectSurveySatisFactionsByCondition" parameterType="SurveySatisFactionSearchVO" resultType="SurveySatisFactionVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SurveySatisFactionDAO.selectSurveySatisFactionsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT  A.DLR_CD                --딜러코드
+                        ,A.SUBY_TMPL_SEQ        --설문템플릿 일련번호
+                        ,A.SUBY_TMPL_NM        --설문템플릿명
+                        ,A.DEL_YN              --삭제여부
+                        ,A.REG_USR_ID          --등록자ID
+                        ,A.REG_DT              --등록일자
+                        ,A.UPDT_USR_ID         --수정자ID
+                        ,A.UPDT_DT             --수정일자
+                        ,FN_GET_USER_NM(A.REG_USR_ID) AS USR_NM              --사용자명
+                        ,(
+                            SELECT  COUNT(*)
+                            FROM    CR_0905T
+                            WHERE   DLR_CD = A.DLR_CD
+                            AND     SUBY_TMPL_SEQ = A.SUBY_TMPL_SEQ
+                           ) AS TMPL_RESULT_CNT -- 시험결과건수여부
+                FROM    CR_0902T A
+                <include refid="searchSurveySatisFaction" />
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "subyTmplNm"'>A.SUBY_TMPL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "delYn"'>A.DEL_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDtFormat"'>A.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "usrNm"'>USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.REG_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.REG_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectSurveySatisFactionByKey" parameterType="SurveySatisFactionSearchVO" resultType="SurveySatisFactionVO" >
+        SELECT  DLR_CD             --딜러코드
+                ,SUBY_TMPL_SEQ       --설문템플릿 일련번호
+                ,SUBY_TMPL_NM       --설문템플릿 명
+                ,DEL_YN             --삭제여부
+                ,REG_USR_ID         --등록자ID
+                ,REG_DT             --등록일자
+                ,UPDT_USR_ID        --수정자ID
+                ,UPDT_DT            --수정일자
+        FROM    CR_0902T
+        WHERE   SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+        AND     DLR_CD  = #{sDlrCd}
+    </select>
+
+    <insert id="insertSurveySatisFaction" parameterType="SurveySatisFactionSearchVO">
+        INSERT INTO CR_0902T    --만족도설문템플릿
+        (
+            DLR_CD        --딜러코드
+            ,SUBY_TMPL_SEQ        --설문템플릿 일련번호
+            ,SUBY_TMPL_NM        --설문템플릿 명
+            ,DEL_YN              --삭제여부
+            ,REG_USR_ID          --등록자ID
+            ,REG_DT              --등록일자
+        )
+        VALUES
+        (
+            #{dlrCd}        --딜러코드
+            ,SEQ_CR_0902T.NEXTVAL  --설문템플릿 일련번호
+            ,#{subyTmplNm}         --설문템플릿 명
+            ,#{delYn}              --삭제여부
+            ,#{regUsrId}           --등록자ID
+            ,SYSDATE              --등록일자
+        )
+    </insert>
+
+    <!-- <update id="updateSurveySatisFaction" parameterType="SurveySatisFactionSearchVO"> -->
+    <update id="updateSurveySatisFaction" parameterType="SurveySatisFactionVO">
+        UPDATE  CR_0902T    --만족도설문템플릿
+        SET     SUBY_TMPL_NM = #{subyTmplNm}        --만족도설문명
+                ,DEL_YN       = #{delYn}            --삭제여부
+                ,UPDT_USR_ID  = #{updtUsrId}        --수정자ID
+                ,UPDT_DT      = SYSDATE             --수정일자
+        WHERE   1 = 1
+        AND     SUBY_TMPL_SEQ = #{subyTmplSeq}                --일련번호
+        AND     DLR_CD = #{dlrCd}                --딜러코드
+    </update>
+
+    <!-- 설문 미리보기 정보 목록을 조회한다. -->
+    <select id="selectSurveyViewByCondition" parameterType="SurveySatisFactionSearchVO" resultType="SurveySatisFactionVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SurveySatisFactionDAO.selectSurveyViewByCondition] */
+        SELECT  A.SUBY_TMPL_SEQ
+                ,A.DLR_CD
+                ,B.SUBY_TMPL_QEST_SEQ
+                ,ROW_NUMBER()OVER (PARTITION BY B.SUBY_TMPL_QEST_SEQ ORDER BY B.SORT_ORDER, C.SORT_ORDER) AS QEST_NUM
+                ,C.ITEM_SEQ
+                ,A.SUBY_TMPL_NM
+                ,B.QEST_CONT
+                ,B.QEST_WGT_VAL
+                ,B.QEST_TP_CD
+                ,C.ANSW_CONT
+                ,C.ANSW_SCORE_VAL
+        FROM    CR_0902T A LEFT OUTER JOIN CR_0903T B
+                ON A.SUBY_TMPL_SEQ = B.SUBY_TMPL_SEQ
+                AND A.DLR_CD = B.DLR_CD
+                LEFT OUTER JOIN CR_0904T C
+                ON B.SUBY_TMPL_SEQ = C.SUBY_TMPL_SEQ
+                AND B.SUBY_TMPL_QEST_SEQ = C.SUBY_TMPL_QEST_SEQ
+                AND B.DLR_CD = C.DLR_CD
+        WHERE   A.SUBY_TMPL_SEQ = #{sSubyTmplSeq}
+        AND     A.DLR_CD = #{dlrCd}
+    </select>
+
+    <!-- 설문 미리보기 정보 목록을 조회한다. -->
+    <select id="selectSurveyTmplsByCondition" parameterType="SurveySatisFactionSearchVO" resultType="SurveySatisFactionVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SurveySatisFactionDAO.selectSurveyTmplsByCondition] */
+        SELECT   B.DLR_CD
+                ,B.SUBY_TMPL_SEQ
+                ,B.SUBY_TMPL_NM
+                ,B.REG_DT
+                ,NVL2(
+                    (SELECT DISTINCT SUBY_TMPL_SEQ FROM CR_0903T C WHERE DLR_CD = #{sDlrCd} AND C.SUBY_TMPL_SEQ  = B.SUBY_TMPL_SEQ)
+                    ,DECODE(
+                        B.DEL_YN
+                        , 'Y', 'Y'
+                        , 'N', 'N'
+                    )
+                    , 'N'
+                ) AS DEL_YN
+        FROM    CR_0902T B
+        WHERE   B.DLR_CD = #{sDlrCd}
+        AND     B.DEL_YN = #{sDelYn}
+        ORDER BY B.REG_DT DESC
+    </select>
+
+    <delete id="deleteSurveySatisFaction" parameterType="SurveySatisFactionVO">
+        /* [chn.bhmc.dms.crm.css.service.dao.SurveySatisFactionDAO.deleteSurveySatisFaction] */
+        DELETE  CR_0902T
+        WHERE   DLR_CD = #{dlrCd}
+        AND     SUBY_TMPL_SEQ = #{subyTmplSeq}
+    </delete>
+</mapper>

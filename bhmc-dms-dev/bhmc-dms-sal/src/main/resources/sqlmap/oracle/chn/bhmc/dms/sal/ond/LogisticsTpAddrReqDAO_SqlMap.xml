@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.ond.service.dao.LogisticsTpAddrReqDAO">
+
+	<!-- 물류운송주소 목록 조회  -->
+	<select id="selectLogisticsTpAddrReqList" parameterType="LogisticsTpAddrReqSearchVO" resultType="LogisticsTpAddrReqVO">
+        SELECT A.REQ_DT||LPAD(A.REQ_NO,3,0) AS REQ_NO_CHAR,
+               A.REQ_NO,
+               A.IS4S_YN,
+               A.SHIP_TO_DLR_CD,
+               A.SHIP_TO_IDNO,
+               A.SHIP_TO_ADDR,
+               A.SHIP_TO_PROV,
+               A.SHIP_TO_CITY,
+               A.SHIP_TO_RECV,
+               A.SHIP_TO_RECV_TEL,
+               A.SHIP_TO_ADOC_NO,
+               TO_DATE(A.REQ_DT,'YYYYMMDD') AS REQ_DT,
+               A.EVAL_RSLT_CD,
+               A.EVAL_DT,
+               A.PEVAL_NAME,
+               B.DLR_NM
+        FROM SA_0490T AS A INNER JOIN CM_0101T AS B
+          ON A.DLR_CD = B.DLR_CD
+        WHERE 1=1
+        <if test='sEvalRsltCd != null and sEvalRsltCd != ""'>
+            AND A.EVAL_RSLT_CD = #{sEvalRsltCd}
+        </if>
+        <if test='sCompanyNm != null and sCompanyNm != ""'>
+            AND B.DLR_NM LIKE '%'||#{sCompanyNm}||'%'
+        </if>
+        <if test='sStartReqDt != null and sEndReqDt != null'>
+            AND A.REQ_DT <![CDATA[>=]]> TRUNC(#{sStartReqDt},'DD')
+            AND A.REQ_DT <![CDATA[<]]> TRUNC(#{sEndReqDt},'DD')+1
+        </if>
+	</select>
+
+    <!-- 물류운송주소 목록 등록 -->
+    <insert id="insertLogisticsTpAddrReqList" parameterType="LogisticsTpAddrReqVO">
+
+        <selectKey resultType="int" keyProperty="reqNo" order="BEFORE">
+            SELECT NVL(MAX(REQ_NO),0)+1 FROM SA_0490T
+        </selectKey>
+
+        INSERT INTO SA_0490T(
+             DLR_CD
+            ,USR_ID
+            ,REQ_NO
+            ,REQ_DT
+            ,IS4S_YN
+            ,SHIP_TO_DLR_CD
+            ,SHIP_TO_IDNO
+            ,SHIP_TO_ADDR
+            ,SHIP_TO_PROV
+            ,SHIP_TO_CITY
+            ,SHIP_TO_RECV
+            ,SHIP_TO_RECV_TEL
+            ,FILE_DOC_NO
+            ,FILE_NO
+            ,SHIP_TO_ADOC_NO
+            ,EVAL_DT
+            ,EVAL_RSLT_CD
+            ,PEVAL_ID
+            ,PEVAL_NAME
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+        )VALUES(
+             #{dlrCd}
+            ,#{usrId}
+            ,#{reqNo}
+            ,TO_CHAR(#{reqDt}, 'YYYYMMDD')
+            ,#{is4sYn}
+            ,#{shipToDlrCd}
+            ,#{shipToIdno}
+            ,#{shipToAddr}
+            ,#{shipToProv}
+            ,#{shipToCity}
+            ,#{shipToRecv}
+            ,#{shipToRecvTel}
+            ,'1'
+            ,'1'
+            ,#{shipToAdocNo}
+            ,#{evalDt}
+            ,'R'
+            ,'1'
+            ,#{pevalName}
+            ,#{regUsrId}
+            ,SYSDATE
+            ,#{updtUsrId}
+            ,SYSDATE
+        )
+
+    </insert>
+
+    <!-- 물류운송주소 목록 변경 -->
+    <update id="updateLogisticsTpAddrReqList" parameterType="LogisticsTpAddrReqVO">
+
+        UPDATE SA_0490T
+           SET DLR_CD = #{dlrCd}
+             , USR_ID = #{usrId}
+             , REQ_DT = TO_CHAR(#{reqDt}, 'YYYYMMDD')
+             , IS4S_YN = #{is4sYn}
+             , SHIP_TO_DLR_CD = #{shipToDlrCd}
+             , SHIP_TO_IDNO = #{shipToIdno}
+             , SHIP_TO_ADDR = #{shipToAddr}
+             , SHIP_TO_PROV = #{shipToProv}
+             , SHIP_TO_CITY = #{shipToCity}
+             , SHIP_TO_RECV = #{shipToRecv}
+             , SHIP_TO_RECV_TEL = #{shipToRecvTel}
+             , FILE_DOC_NO = '1'
+             , FILE_NO = '1'
+             , SHIP_TO_ADOC_NO = #{shipToAdocNo}
+             , EVAL_DT = #{evalDt}
+             , EVAL_RSLT_CD = 'R'
+             , PEVAL_ID = '1'
+             , PEVAL_NAME = #{pevalName}
+             , REG_USR_ID = #{regUsrId}
+             , REG_DT = SYSDATE
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE REQ_NO = #{reqNo}
+
+    </update>
+
+    <delete id="deleteLogisticsTpAddrReqList" parameterType="LogisticsTpAddrReqVO">
+        UPDATE SA_0490T
+           SET EVAL_RSLT_CD = 'T'
+         WHERE REQ_NO = #{reqNo}
+    </delete>
+
+    <!-- 물류운송주소 프로시져 호출  -->
+    <insert id="callProcedureLogisticsTpAddrReqList" parameterType="LogisticsTpAddrReqSpVO" statementType="CALLABLE">
+        {CALL SP_SAL_DMS_P_0490T_IF(
+              #{eaiId, mode=IN, jdbcType=VARCHAR}
+            , #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{usrId, mode=IN, jdbcType=VARCHAR}
+            , #{reqNo, mode=IN, jdbcType=INTEGER}
+            , TO_CHAR(#{reqDt}, 'YYYYMMDD')
+        )}
+    </insert>
+
+</mapper>

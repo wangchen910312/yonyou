@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : VenderTelDAO_SqlMap.xml
+    Description : 거래처 연락처 관리.
+    author In Bo Shim
+    since 2016. 4. 21.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 04. 21.     In Bo Shim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.par.pmm.service.dao.VenderTelDAO">
+
+    <!-- 거래처 연락처 정보를 추가한다. -->
+    <insert id="insertVenderTel" parameterType="VenderTelVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.VenderTelDAO.insertVenderTel] */
+        INSERT INTO PT_0215T(
+            DLR_CD
+            ,BP_CD
+            ,LINE_NO
+            ,PRSN_NM
+            ,PRSN_HP_NO
+            ,PRSN_EMAIL_NM
+            ,PRSN_TEL_NO
+            ,SEX_CD
+            ,ETC_COMM_MTH_CD
+            ,ETC_COMM_NO
+            ,PRSN_FAX_NO
+            ,REG_USR_ID
+            ,REG_DT
+        ) VALUES (
+            #{ dlrCd }
+            ,#{ bpCd }
+            ,#{ lineNo }
+            ,#{ prsnNm }
+            ,#{ prsnHpNo }
+            ,#{ prsnEmailNm }
+            ,#{ prsnTelNo }
+            ,#{ sexCd }
+            ,#{ etcCommMthCd }
+            ,#{ etcCommNo }
+            ,#{ prsnFaxNo }
+            ,#{ regUsrId }
+            ,SYSDATE
+        )
+    </insert>
+
+    <!-- 거래처 연락처 정보를 수정한다. -->
+    <update id="updateVenderTel" parameterType="VenderTelVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.VenderTelDAO.updateVenderTel] */
+        UPDATE PT_0215T SET
+            UPDT_DT = SYSDATE
+            <if test='updtUsrId != null'>
+            ,UPDT_USR_ID = #{ updtUsrId }
+            </if>
+            ,PRSN_NM = #{ prsnNm }
+            <if test='prsnHpNo != null'>
+            ,PRSN_HP_NO = #{ prsnHpNo }
+            </if>
+            <if test='prsnEmailNm != null'>
+            ,PRSN_EMAIL_NM = #{ prsnEmailNm }
+            </if>
+            <if test='prsnTelNo != null'>
+            ,PRSN_TEL_NO = #{ prsnTelNo }
+            </if>
+            ,SEX_CD = #{ sexCd }
+            <if test='etcCommMthCd != null'>
+            ,ETC_COMM_MTH_CD = #{ etcCommMthCd }
+            </if>
+            <if test='etcCommNo != null'>
+            ,ETC_COMM_NO = #{ etcCommNo }
+            </if>
+            <if test='prsnFaxNo != null'>
+            ,PRSN_FAX_NO = #{ prsnFaxNo }
+            </if>
+        WHERE DLR_CD = #{dlrCd}
+        AND BP_CD = #{bpCd}
+        AND LINE_NO = #{lineNo}
+    </update>
+
+    <!-- 거래처 연락처 정보를 삭제한다. -->
+    <delete id="deleteVenderTel" parameterType="VenderTelVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.VenderTelDAO.deleteVenderTel] */
+        DELETE FROM PT_0215T
+        WHERE DLR_CD = #{dlrCd}
+        AND BP_CD = #{bpCd}
+        AND LINE_NO = #{lineNo}
+    </delete>
+
+    <!-- 거래처 연락처 정보 목록을 조회한다. -->
+    <select id="selectVenderTelsByCondition" parameterType="VenderTelSearchVO" resultType="VenderTelVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.VenderTelDAO.selectVenderTelsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                A.*
+                , A.PRSN_NM AS DB_PRSN_NM
+                , 'Y ' AS DB_YN
+                FROM PT_0215T A
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND A.DLR_CD LIKE '%'||#{sDlrCd}||'%'
+                    </if>
+
+                    <if test='sBpCd != null and sBpCd != ""'>
+                        AND A.BP_CD LIKE '%'||#{sBpCd}||'%'
+                    </if>
+
+                    <if test='sLineNo != null and sLineNo != 0'>
+                        AND A.LINE_NO = #{sLineNo}
+                    </if>
+
+                    <if test='sPrsnNm != null and sPrsnNm != ""'>
+                        AND A.PRSN_NM LIKE '%'||#{sPrsnNm}||'%'
+                    </if>
+
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "bpCd"'>A.BP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.DLR_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.DLR_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 거래처 연락처 정보 카운트를 조회한다. -->
+    <select id="selectVenderTelsByConditionCnt" parameterType="VenderTelSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.pmm.service.dao.VenderTelDAO.selectVenderTelsByConditionCnt] */
+        SELECT count(*) FROM PT_0215T
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND DLR_CD LIKE '%'||#{sDlrCd}||'%'
+            </if>
+
+            <if test='sBpCd != null and sBpCd != ""'>
+                AND BP_CD LIKE '%'||#{sBpCd}||'%'
+            </if>
+
+            <if test='sLineNo != null and sLineNo != 0'>
+                AND LINE_NO = #{sLineNo}
+            </if>
+
+            <if test='sPrsnNm != null and sPrsnNm != ""'>
+                AND PRSN_NM LIKE '%'||#{sPrsnNm}||'%'
+            </if>
+
+        </where>
+    </select>
+
+    <!-- 거래처 연락처 정보 목록을 최대 2개를 조회한다. -->
+    <select id="selectVenderTelsMaxTwoRowByCondition" parameterType="VenderTelSearchVO" resultType="VenderTelVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.VenderTelDAO.selectVenderTelsMaxTwoRowByCondition] */
+        SELECT
+        T.*
+        FROM(
+            SELECT
+              A.BP_CD
+              ,A.DLR_CD
+              ,B.PRSN_NM
+              ,B.PRSN_HP_NO
+              ,B.PRSN_EMAIL_NM
+              ,B.PRSN_TEL_NO
+              ,B.REG_USR_ID
+              ,B.REG_DT
+              ,B.UPDT_USR_ID
+              ,B.UPDT_DT
+              ,1 AS LINE_NO
+              ,B.SEX_CD
+              ,B.ETC_COMM_MTH_CD
+              ,B.ETC_COMM_NO
+              ,B.PRSN_FAX_NO
+              ,NVL(B.DB_PRSN_NM,'-') AS DB_PRSN_NM
+              ,'Y' AS DB_YN
+            FROM
+            (
+            SELECT
+              #{sBpCd} AS BP_CD
+              ,#{sDlrCd} AS DLR_CD
+            FROM DUAL
+            )A LEFT JOIN
+            (
+            SELECT
+                A.*
+                , A.PRSN_NM AS DB_PRSN_NM
+                , 'Y' AS DB_YN
+                FROM PT_0215T A
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND A.DLR_CD LIKE '%'||#{sDlrCd}||'%'
+                    </if>
+
+                    <if test='sBpCd != null and sBpCd != ""'>
+                        AND A.BP_CD LIKE '%'||#{sBpCd}||'%'
+                    </if>
+
+                    <if test='sLineNo != null and sLineNo != 0'>
+                        AND A.LINE_NO = #{sLineNo}
+                    </if>
+
+                    <if test='sPrsnNm != null and sPrsnNm != ""'>
+                        AND A.PRSN_NM LIKE '%'||#{sPrsnNm}||'%'
+                    </if>
+
+                </where>
+                AND LINE_NO = 1
+            )B ON A.BP_CD = B.BP_CD
+            UNION
+            SELECT
+              A.BP_CD
+              ,A.DLR_CD
+              ,B.PRSN_NM
+              ,B.PRSN_HP_NO
+              ,B.PRSN_EMAIL_NM
+              ,B.PRSN_TEL_NO
+              ,B.REG_USR_ID
+              ,B.REG_DT
+              ,B.UPDT_USR_ID
+              ,B.UPDT_DT
+              ,2 AS LINE_NO
+              ,B.SEX_CD
+              ,B.ETC_COMM_MTH_CD
+              ,B.ETC_COMM_NO
+              ,B.PRSN_FAX_NO
+              ,NVL(B.DB_PRSN_NM,'-') AS DB_PRSN_NM
+              ,'Y' AS DB_YN
+            FROM
+            (
+            SELECT
+              #{sBpCd} AS BP_CD
+              ,#{sDlrCd} AS DLR_CD
+            FROM DUAL
+            )A LEFT JOIN
+            (
+            SELECT
+                A.*
+                , A.PRSN_NM AS DB_PRSN_NM
+                , 'Y' AS DB_YN
+                FROM PT_0215T A
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND A.DLR_CD LIKE '%'||#{sDlrCd}||'%'
+                    </if>
+
+                    <if test='sBpCd != null and sBpCd != ""'>
+                        AND A.BP_CD LIKE '%'||#{sBpCd}||'%'
+                    </if>
+
+                    <if test='sLineNo != null and sLineNo != 0'>
+                        AND A.LINE_NO = #{sLineNo}
+                    </if>
+
+                    <if test='sPrsnNm != null and sPrsnNm != ""'>
+                        AND A.PRSN_NM LIKE '%'||#{sPrsnNm}||'%'
+                    </if>
+
+                </where>
+                AND LINE_NO = 2
+            )B ON A.BP_CD = B.BP_CD
+        )T
+        ORDER BY T.LINE_NO ASC
+
+
+    </select>
+
+</mapper>

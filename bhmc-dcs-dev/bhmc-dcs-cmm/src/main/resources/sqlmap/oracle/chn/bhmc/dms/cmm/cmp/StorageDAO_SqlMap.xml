@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : StorageDao_SqlMap.xml
+    Description : 창고에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 1. 29.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 29.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.cmp.service.dao.StorageDAO">
+
+	<!-- 창고 정보를 등록한다. -->
+	<insert id="insertStorage" parameterType="StorageVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.StorageDAO.insertStorage] */
+		INSERT INTO CM_0104T(
+			STRGE_CD
+            , PLT_CD
+            , DLR_CD
+            , STRGE_NM
+            , NETING_USE_YN
+            , LOC_MNG_YN
+            , STRGE_TP
+            , STRGE_CRE_DT
+            , STRGE_REG_PRSN_NM
+            , REMARK
+            , REG_USR_ID
+            , REG_DT
+		)VALUES(
+			#{strgeCd}
+            , #{pltCd}
+            , #{dlrCd}
+            , #{strgeNm}
+            , #{netingUseYn}
+            , #{locMngYn}
+            , #{strgeTp}
+            , #{strgeCreDt}
+            , #{strgeRegPrsnNm}
+            , #{remark}
+            , #{regUsrId}
+            , SYSDATE
+		)
+	</insert>
+
+	<!-- 창고 정보 정보를 수정한다. -->
+	<update id="updateStorage" parameterType="StorageVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.StorageDAO.updateStorage] */
+		UPDATE CM_0104T SET
+            STRGE_NM = #{strgeNm}
+            , NETING_USE_YN = #{netingUseYn}
+            , LOC_MNG_YN = #{locMngYn}
+            , STRGE_TP = #{strgeTp}
+            , STRGE_CRE_DT = #{strgeCreDt}
+            , STRGE_REG_PRSN_NM = #{strgeRegPrsnNm}
+            , REMARK = #{remark}
+            , UPDT_USR_ID  = #{regUsrId}
+            , UPDT_DT = SYSDATE
+		WHERE STRGE_CD = #{strgeCd}
+            AND PLT_CD = #{pltCd}
+            AND DLR_CD = #{dlrCd}
+	</update>
+
+	<!-- 창고 정보 정보를 삭제한다. -->
+	<delete id="deleteStorage" parameterType="StorageVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.StorageDAO.deleteStorage] */
+		DELETE FROM CM_0104T
+		WHERE STRGE_CD = #{strgeCd}
+            AND PLT_CD = #{pltCd}
+            AND DLR_CD = #{dlrCd}
+	</delete>
+
+	<!-- 창고 정보를 조회한다. -->
+	<select id="selectStorageByKey" parameterType="map" resultType="StorageVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.StorageDAO.selectStorageByKey] */
+		SELECT * FROM CM_0104T
+		WHERE STRGE_CD = #{strgeCd}
+            AND PLT_CD = #{pltCd}
+            AND DLR_CD = #{dlrCd}
+	</select>
+
+	<!-- 창고 정보 목록을 조회한다. -->
+	<select id="selectStoragesByCondition" parameterType="StorageSearchVO" resultType="StorageVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.StorageDAO.selectStoragesByCondition] */
+		SELECT * FROM (
+            SELECT ROWNUM AS RNUM, V1.* FROM (
+                SELECT T1.*, T2.PLT_NM
+                FROM CM_0104T T1
+                INNER JOIN CM_0103T T2 ON
+                    T1.PLT_CD = T2.PLT_CD
+                    AND T1.DLR_CD = T2.DLR_CD
+                <where>
+                    <if test='sStrgeCd != null and sStrgeCd != ""'>
+                        T1.STRGE_CD = #{sStrgeCd}
+                    </if>
+
+                    <if test='sPltCd != null and sPltCd != ""'>
+                        AND T1.PLT_CD = #{sPltCd}
+                    </if>
+
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND T1.DLR_CD = #{sDlrCd}
+                    </if>
+
+                    <if test='sStrgeNm != null and sStrgeNm != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sStrgeNm,"*")'>
+                                <bind name='sStrgeNm' value='@org.apache.commons.lang3.StringUtils@replace(sStrgeNm, "*", "%")' />
+                                 AND T1.STRGE_NM LIKE #{sStrgeNm}
+                            </when>
+                            <otherwise>
+                                 AND T1.STRGE_NM = #{sStrgeNm}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sNetingUseYn != null and sNetingUseYn != ""'>
+                        AND T1.NETING_USE_YN = #{sNetingUseYn}
+                    </if>
+
+                    <if test='sLocMngYn != null and sLocMngYn != ""'>
+                        AND T1.LOC_MNG_YN = #{sLocMngYn}
+                    </if>
+
+                    <if test='sStrgeTp != null and sStrgeTp != ""'>
+                        AND T1.STRGE_TP = #{sStrgeTp}
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "strgeCd"'>STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "pltCd"'>PLT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "strgeNm"'>STRGE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "netingUseYn"'>NETING_USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "locMngYn"'>LOC_MNG_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "strgeTp"'>STRGE_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regUsrId"'>REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDt"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtUsrId"'>UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtDt"'>UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    STRGE_NM ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        STRGE_NM ASC
+                    </otherwise>
+                </choose>
+            ) V1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+	<!-- 창고 정보 목록수를 조회한다. -->
+	<select id="selectStoragesByConditionCnt" parameterType="StorageSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.StorageDAO.selectStoragesByConditionCnt] */
+		SELECT COUNT(*) AS VALUE
+        FROM CM_0104T T1
+        INNER JOIN CM_0103T T2 ON
+            T1.PLT_CD = T2.PLT_CD
+            AND T1.DLR_CD = T2.DLR_CD
+		<where>
+
+            <if test='sStrgeCd != null and sStrgeCd != ""'>
+                T1.STRGE_CD = #{sStrgeCd}
+            </if>
+
+			<if test='sPltCd != null and sPltCd != ""'>
+                AND T1.PLT_CD = #{sPltCd}
+            </if>
+
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND T1.DLR_CD = #{sDlrCd}
+            </if>
+
+            <if test='sStrgeNm != null and sStrgeNm != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sStrgeNm,"*")'>
+                        <bind name='sStrgeNm' value='@org.apache.commons.lang3.StringUtils@replace(sStrgeNm, "*", "%")' />
+                         AND T1.STRGE_NM LIKE #{sStrgeNm}
+                    </when>
+                    <otherwise>
+                         AND T1.STRGE_NM = #{sStrgeNm}
+                    </otherwise>
+                </choose>
+            </if>
+
+            <if test='sNetingUseYn != null and sNetingUseYn != ""'>
+                AND T1.NETING_USE_YN = #{sNetingUseYn}
+            </if>
+
+            <if test='sLocMngYn != null and sLocMngYn != ""'>
+                AND T1.LOC_MNG_YN = #{sLocMngYn}
+            </if>
+
+            <if test='sStrgeTp != null and sStrgeTp != ""'>
+                AND T1.STRGE_TP = #{sStrgeTp}
+            </if>
+		</where>
+	</select>
+
+</mapper>

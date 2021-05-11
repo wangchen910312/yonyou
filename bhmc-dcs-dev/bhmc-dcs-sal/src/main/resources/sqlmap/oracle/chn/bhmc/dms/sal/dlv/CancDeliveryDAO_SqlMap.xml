@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.dlv.service.dao.CancDeliveryDAO">
+
+    <!-- 이월판매취소 목록  -->
+    <select id="selectCancDeliveryByCondition" parameterType="CancDeliverySearchVO" resultType="CancDeliveryVO">
+         SELECT * FROM (
+            SELECT ROWNUM AS RNUM,
+             <!-- Q21012900002 出库取消审批增加下载功能 下载Excle JiaMing 2021-2-5 start-->
+            CASE WHEN T1.ORD_TP IS NOT NULL THEN  '[' || T1.ORD_TP || ']' ||  FN_CMM_CD_NM ('SAL138', T1.ORD_TP ,'zh', 'N') ELSE  '' END ORD_TP_NM,
+            <!--Q21012900002 出库取消审批增加下载功能 下载Excle JiaMing 2021-2-5 end-->
+            T1.* FROM (
+                SELECT A.REQ_DT
+                      ,A.REQ_STAT_CD
+                      ,A.APPROVE_DT
+                      ,A.DLR_CD
+                      ,A.REAL_DL_DT
+                      ,B.RETL_TP AS RETL_TP_CD
+                      ,A.CONTRACT_NO
+                      ,FN_GET_CARLINE_NM(B.CARLINE_CD) AS CARLINE_NM
+                      ,A.CANC_REASON_CD
+                      ,A.VIN_NO1||A.VIN_NO2 AS VIN_NO
+                      ,FN_GET_MODEL_TP_NM(B.MODEL_CD, B.OCN_CD) AS MODEL_NM
+                      ,FN_GET_OCN_NM(B.MODEL_CD, B.OCN_CD) AS OCN_NM
+                      ,FN_GET_EXT_COLOR_NM(B.EXT_COLOR_CD) AS EXT_COLOR_NM
+                      ,FN_GET_INT_COLOR_NM(B.INT_COLOR_CD) AS INT_COLOR_NM
+                      ,(SELECT ORD_TP FROM SA_0121T WHERE VIN_NO = A.VIN_NO1||A.VIN_NO2) AS ORD_TP
+                      , C.RECEIPT_NO     AS CAR_TAX_RECEIPT_NO
+                      , C.RECEIPT_ISS_DT AS CAR_TAX_RECEIPT_ISS_DT
+                      , C.TAXPAYER_ID_CD AS CAR_TAX_TAXPAYER_ID_CD
+                      , FN_CMM_CD_NM('SAL227',C.CERT_2ND,#{sLangCd},'N') AS CERT_2ND_NM 
+                      , FN_CMM_CD_NM ('SAL154', A.REQ_STAT_CD ,#{sLangCd}, 'N') AS REQ_STAT_NM 
+                      , C.CERT_2ND
+                  <!--  FROM SA_0437T A, SA_0201T B-->
+                  <!-- Q21012900003出库取消审批列表显示有无发票、发票核验结果。查询条件增加有无发票 jiaMing 2021-2-5 start -->
+                  FROM SA_0437T A
+                  LEFT OUTER JOIN (
+                          SELECT A1.* FROM (
+                              SELECT 
+                                     M.*
+                                     , ROW_NUMBER() OVER(PARTITION BY M.VIN_NO ORDER BY M.RECEIPT_ISS_DT DESC) RN
+                                FROM SA_0501T M
+                                WHERE 1=1
+                                <if test='sVinNo != null and sVinNo != ""'>
+                                    AND M.VIN_NO LIKE '%'|| #{sVinNo} || '%'
+                                </if>
+                                <if test='sDlrCd != null and sDlrCd != ""'>
+                                       AND M.DLR_CD = #{sDlrCd}
+                                </if>
+                             ) A1 WHERE A1.RN = 1 
+                     ) C    ON C.VIN_NO = A.VIN_NO1||A.VIN_NO2    AND C.RECEIPT_NO IS NOT NULL
+                    , SA_0201T B
+                    <!-- Q21012900003出库取消审批列表显示有无发票、发票核验结果。查询条件增加有无发票 jiaMing 2021-2-5 end --> 
+                 WHERE A.DLR_CD = B.DLR_CD
+                   AND A.CONTRACT_NO = B.CONTRACT_NO
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                    AND A.DLR_CD = #{sDlrCd}
+                 </if>
+                 <if test='sCarlineCd != null and sCarlineCd != ""'>
+                   AND B.CARLINE_CD = #{sCarlineCd}
+                 </if>
+                 <if test='sCancReasonCd != null and sCancReasonCd != ""'>
+                   AND A.CANC_REASON_CD = #{sCancReasonCd}
+                 </if>
+                 <if test='sApproveYn != null and sApproveYn != ""'>
+                   AND A.REQ_STAT_CD = #{sApproveYn}
+                 </if>
+                 <if test='sReqStartDt != null and sReqStartDt != null and sReqEndDt != null and sReqEndDt != null'>
+                   AND A.REQ_DT <![CDATA[>=]]> TRUNC(#{sReqStartDt},'DD')
+                   AND A.REQ_DT <![CDATA[<]]> TRUNC(#{sReqEndDt},'DD')+1
+                 </if>
+                 <if test='sApproveStartDt != null and sApproveStartDt != null and sApproveEndDt != null and sApproveEndDt != null'>
+                   AND A.APPROVE_DT <![CDATA[>=]]> TRUNC(#{sApproveStartDt},'DD')
+                   AND A.APPROVE_DT <![CDATA[<]]> TRUNC(#{sApproveEndDt},'DD')+1
+                 </if>
+                 <if test='sVinNo != null and sVinNo != ""'>
+                    AND A.VIN_NO1||A.VIN_NO2 LIKE '%'|| #{sVinNo} || '%'
+                 </if>
+                 <!-- Q21012900003出库取消审批列表显示有无发票、发票核验结果。查询条件增加有无发票 jiaMing 2021-2-5 start -->
+                  <if test='sReceipYn == "N"'>
+                        AND C.RECEIPT_NO IS NULL
+                  </if>
+                  <if test='sReceipYn == "Y"'>
+                        AND C.RECEIPT_NO IS NOT NULL
+                  </if>
+                  <!-- Q21012900003出库取消审批列表显示有无发票、发票核验结果。查询条件增加有无发票 jiaMing 2021-2-5 end -->
+                     
+             ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "rnum"'>RNUM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "reqDt"'>REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "reqStatCd"'>REQ_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "approveDt"'>APPROVE_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "realDlDt"'>REAL_DL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ordTp"'>ORD_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "custNm"'>CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "contractNo"'>CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "carlineNm"'>CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "cancReasonCd"'>CANC_REASON_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "vinNo1"'>VIN_NO1 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "vinNo2"'>VIN_NO2 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "modelNm"'>MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ocnNm"'>OCN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "extColorNm"'>EXT_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "intColorNm"'>INT_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            CONTRACT_NO ASC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                CONTRACT_NO ASC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 이월판매취소 목록 갯수  -->
+    <select id="selectCancDeliveryByConditionCnt" parameterType="CancDeliverySearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          <!--  FROM SA_0437T A, SA_0201T B -->
+          <!-- Q21012900003出库取消审批列表显示有无发票、发票核验结果。查询条件增加有无发票 jiaMing 2021-2-5 start -->
+                  FROM SA_0437T A
+                  LEFT OUTER JOIN (
+                          SELECT A1.* FROM (
+                              SELECT 
+                                     M.*
+                                     , ROW_NUMBER() OVER(PARTITION BY M.VIN_NO ORDER BY M.RECEIPT_ISS_DT DESC) RN
+                                FROM SA_0501T M
+                                WHERE 1=1
+                                <if test='sVinNo != null and sVinNo != ""'>
+                                    AND M.VIN_NO LIKE '%'|| #{sVinNo} || '%'
+                                </if>
+                                <if test='sDlrCd != null and sDlrCd != ""'>
+                                       AND M.DLR_CD = #{sDlrCd}
+                                </if>
+                             ) A1 WHERE A1.RN = 1 
+                     ) C    ON C.VIN_NO = A.VIN_NO1||A.VIN_NO2    AND C.RECEIPT_NO IS NOT NULL
+                    , SA_0201T B
+                    <!-- Q21012900003出库取消审批列表显示有无发票、发票核验结果。查询条件增加有无发票 jiaMing 2021-2-5 end --> 
+         WHERE A.DLR_CD = B.DLR_CD
+           AND A.CONTRACT_NO = B.CONTRACT_NO
+         <if test='sDlrCd != null and sDlrCd != ""'>
+            AND A.DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sCarlineCd != null and sCarlineCd != ""'>
+           AND B.CARLINE_CD = #{sCarlineCd}
+         </if>
+         <if test='sCancReasonCd != null and sCancReasonCd != ""'>
+           AND A.CANC_REASON_CD = #{sCancReasonCd}
+         </if>
+         <if test='sApproveYn != null and sApproveYn != ""'>
+           AND A.REQ_STAT_CD = #{sApproveYn}
+         </if>
+         <if test='sReqStartDt != null and sReqStartDt != null and sReqEndDt != null and sReqEndDt != null'>
+           AND A.REQ_DT <![CDATA[>=]]> TRUNC(#{sReqStartDt},'DD')
+           AND A.REQ_DT <![CDATA[<]]> TRUNC(#{sReqEndDt},'DD')+1
+         </if>
+         <if test='sApproveStartDt != null and sApproveStartDt != null and sApproveEndDt != null and sApproveEndDt != null'>
+           AND A.APPROVE_DT <![CDATA[>=]]> TRUNC(#{sApproveStartDt},'DD')
+           AND A.APPROVE_DT <![CDATA[<]]> TRUNC(#{sApproveEndDt},'DD')+1
+         </if>
+         <if test='sVinNo != null and sVinNo != ""'>
+            AND A.VIN_NO1||A.VIN_NO2 LIKE '%'|| #{sVinNo} || '%'
+         </if>
+         <!-- Q21012900003出库取消审批列表显示有无发票、发票核验结果。查询条件增加有无发票 jiaMing 2021-2-5 start -->
+         <if test='sReceipYn == "N"'>
+               AND C.RECEIPT_NO IS NULL
+         </if>
+         <if test='sReceipYn == "Y"'>
+               AND C.RECEIPT_NO IS NOT NULL
+         </if>
+        <!-- Q21012900003出库取消审批列表显示有无发票、发票核验结果。查询条件增加有无发票 jiaMing 2021-2-5 end -->
+    </select>
+
+    <!-- 이월판매취소 승인  -->
+    <update id="updateApproveCancDelivery" parameterType="cancDeliveryVO" >
+        UPDATE SA_0437T
+           SET APPROVE_YN = 'Y'
+              ,APPROVE_DT = SYSDATE
+              ,REQ_STAT_CD = #{approveYn}
+              ,UPDT_USR_ID = #{updtUsrId}
+              ,UPDT_DT = SYSDATE
+         WHERE 1=1
+           AND CONTRACT_NO = #{contractNo}
+           AND DLR_CD = #{dlrCd}
+    </update>
+
+    <!-- 이월판매취소 승인  프로시져  -->
+    <update id="procApproveCancDelivery" parameterType="cancDeliveryVO" statementType="CALLABLE">
+        {CALL SP_SAL_DCS_P_0201T_IF(
+              'SAL076'
+            , #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{contractNo, mode=IN, jdbcType=VARCHAR}
+            , #{approveYn, mode=IN, jdbcType=VARCHAR}
+        )}
+    </update>
+</mapper>

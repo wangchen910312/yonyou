@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : BatchResultDao_SqlMap.xml
+    Description : 배치결과에 관한 데이터처리
+    author Kang Seok Han
+    since 2016. 2. 24.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 02. 24.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.bat.mgr.service.dao.BatchResultDAO">
+
+	<!-- 배치결과 정보를 등록한다. -->
+	<insert id="insertBatchResult" parameterType="BatchResultVO">
+        /* [chn.bhmc.dms.cmm.bat.service.dao.BatchResultDao.insertBatchResult] */
+		INSERT INTO CM_0403T(
+			 BAT_RSLT_ID
+			,BAT_OPER_ID
+			,BAT_SCHEDULE_ID
+			,BAT_PARAM_VAL
+			,BAT_OPER_RSLT_CD
+			,BAT_START_TM
+		)VALUES(
+			 #{batRsltId}
+			,#{batOperId}
+			,#{batScheduleId}
+			,#{batParamVal}
+			,#{batOperRsltCd}
+			,#{batStartTm}
+		)
+	</insert>
+
+	<!-- 배치결과 정보를 수정한다. -->
+	<update id="updateBatchResult" parameterType="BatchResultVO">
+        /* [chn.bhmc.dms.cmm.bat.service.dao.BatchResultDao.updateBatchResult] */
+		UPDATE CM_0403T SET
+			 BAT_OPER_RSLT_CD = #{batOperRsltCd}
+			,ERR_MESG_TXT = #{errMesgTxt}
+			,BAT_END_TM = #{batEndTm}
+		WHERE BAT_RSLT_ID = #{batRsltId}
+	</update>
+
+	<!-- 배치결과 정보 정보를 삭제한다. -->
+	<delete id="deleteBatchResult" parameterType="BatchResultVO">
+        /* [chn.bhmc.dms.cmm.bat.service.dao.BatchResultDao.deleteBatchResult] */
+		DELETE FROM CM_0403T
+		WHERE BAT_RSLT_ID = #{batRsltId}
+	</delete>
+
+	<!-- 배치작업 ID에 해당하는 배치결과 정보를 모두 삭제한다. -->
+	<delete id="deleteBatchResultByBatOperId" parameterType="string">
+        /* [chn.bhmc.dms.cmm.bat.service.dao.BatchResultDao.deleteBatchResultByBatOperId] */
+		DELETE FROM CM_0403T
+		WHERE BAT_OPER_ID = #{value}
+	</delete>
+
+	<!-- 배치스케쥴 ID에 해당하는 배치결과 정보를 모두 삭제한다. -->
+	<delete id="deleteBatchResultByBatScheduleId" parameterType="string">
+        /* [chn.bhmc.dms.cmm.bat.service.dao.BatchResultDao.deleteBatchResultByBatScheduleId] */
+		DELETE FROM CM_0403T
+		WHERE BAT_SCHEDULE_ID = #{value}
+	</delete>
+
+	<!-- 배치결과 정보를 조회한다. -->
+	<select id="selectBatchResultByKey" parameterType="string" resultType="BatchResultVO">
+        /* [chn.bhmc.dms.cmm.bat.service.dao.BatchResultDao.selectBatchResultByKey] */
+		SELECT *
+		FROM CM_0403T
+		WHERE BAT_RSLT_ID = #{value}
+	</select>
+
+	<!-- 배치결과 정보 목록을 조회한다. -->
+	<select id="selectBatchResultsByCondition" parameterType="BatchResultSearchVO" resultType="BatchResultVO">
+        /* [chn.bhmc.dms.cmm.bat.service.dao.BatchResultDao.selectBatchResultsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT * FROM CM_0403T
+                <where>
+                    <if test='sBatOperId != null and sBatOperId != ""'>
+                        <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sBatOperId,"*")'>
+                            <bind name='sBatOperId' value='@org.apache.commons.lang3.StringUtils@replace(sBatOperId, "*", "%")' />
+                             AND BAT_OPER_ID LIKE #{sBatOperId}
+                        </when>
+                        <otherwise>
+                             AND BAT_OPER_ID = #{sBatOperId}
+                        </otherwise>
+                        </choose>
+                    </if>
+                    <if test='sBatScheduleId != null and sBatScheduleId != ""'>
+                        <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sBatScheduleId,"*")'>
+                            <bind name='sBatScheduleId' value='@org.apache.commons.lang3.StringUtils@replace(sBatScheduleId, "*", "%")' />
+                             AND BAT_SCHEDULE_ID LIKE #{sBatScheduleId}
+                        </when>
+                        <otherwise>
+                             AND BAT_SCHEDULE_ID = #{sBatScheduleId}
+                        </otherwise>
+                        </choose>
+                    </if>
+                    <if test='sBatOperRsltCd != null and sBatOperRsltCd != ""'>
+                        <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sBatOperRsltCd,"*")'>
+                            <bind name='sBatOperRsltCd' value='@org.apache.commons.lang3.StringUtils@replace(sBatOperRsltCd, "*", "%")' />
+                             AND BAT_OPER_RSLT_CD LIKE #{sBatOperRsltCd}
+                        </when>
+                        <otherwise>
+                             AND BAT_OPER_RSLT_CD = #{sBatOperRsltCd}
+                        </otherwise>
+                        </choose>
+                    </if>
+                    <if test='sErrMesgTxt != null and sErrMesgTxt != ""'>
+                        <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sErrMesgTxt,"*")'>
+                            <bind name='sErrMesgTxt' value='@org.apache.commons.lang3.StringUtils@replace(sErrMesgTxt, "*", "%")' />
+                             AND ERR_MESG_TXT LIKE #{sErrMesgTxt}
+                        </when>
+                        <otherwise>
+                             AND ERR_MESG_TXT = #{sErrMesgTxt}
+                        </otherwise>
+                        </choose>
+                    </if>
+                    <if test='sStartTm != null and sStartTm != ""'>
+                         AND BAT_START_TM >= #{sStartTm}
+                    </if>
+                    <if test='sEndTm != null and sEndTm != ""'>
+                         AND BAT_END_TM <![CDATA[<=]]> #{sEndTm}
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "batRsltId"'>BAT_RSLT_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "batOperRsltCd"'>BAT_OPER_RSLT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "errMesgTxt"'>ERR_MESG_TXT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "batStartTm"'>BAT_START_TM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "batEndTm"'>BAT_END_TM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    BAT_START_TM DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        BAT_START_TM DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+	<!-- 배치결과 정보 목록수를 조회한다. -->
+	<select id="selectBatchResultsByConditionCnt" parameterType="BatchResultSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.bat.service.dao.BatchResultDao.selectBatchResultsByConditionCnt] */
+		SELECT COUNT(*) AS VALUE FROM CM_0403T
+		<where>
+            <if test='sBatOperId != null and sBatOperId != ""'>
+                <choose>
+                <when test='@org.apache.commons.lang3.StringUtils@contains(sBatOperId,"*")'>
+                    <bind name='sBatOperId' value='@org.apache.commons.lang3.StringUtils@replace(sBatOperId, "*", "%")' />
+                     AND BAT_OPER_ID LIKE #{sBatOperId}
+                </when>
+                <otherwise>
+                     AND BAT_OPER_ID = #{sBatOperId}
+                </otherwise>
+                </choose>
+            </if>
+            <if test='sBatScheduleId != null and sBatScheduleId != ""'>
+                <choose>
+                <when test='@org.apache.commons.lang3.StringUtils@contains(sBatScheduleId,"*")'>
+                    <bind name='sBatScheduleId' value='@org.apache.commons.lang3.StringUtils@replace(sBatScheduleId, "*", "%")' />
+                     AND BAT_SCHEDULE_ID LIKE #{sBatScheduleId}
+                </when>
+                <otherwise>
+                     AND BAT_SCHEDULE_ID = #{sBatScheduleId}
+                </otherwise>
+                </choose>
+            </if>
+            <if test='sBatOperRsltCd != null and sBatOperRsltCd != ""'>
+                <choose>
+                <when test='@org.apache.commons.lang3.StringUtils@contains(sBatOperRsltCd,"*")'>
+                    <bind name='sBatOperRsltCd' value='@org.apache.commons.lang3.StringUtils@replace(sBatOperRsltCd, "*", "%")' />
+                     AND BAT_OPER_RSLT_CD LIKE #{sBatOperRsltCd}
+                </when>
+                <otherwise>
+                     AND BAT_OPER_RSLT_CD = #{sBatOperRsltCd}
+                </otherwise>
+                </choose>
+            </if>
+            <if test='sErrMesgTxt != null and sErrMesgTxt != ""'>
+                <choose>
+                <when test='@org.apache.commons.lang3.StringUtils@contains(sErrMesgTxt,"*")'>
+                    <bind name='sErrMesgTxt' value='@org.apache.commons.lang3.StringUtils@replace(sErrMesgTxt, "*", "%")' />
+                     AND ERR_MESG_TXT LIKE #{sErrMesgTxt}
+                </when>
+                <otherwise>
+                     AND ERR_MESG_TXT = #{sErrMesgTxt}
+                </otherwise>
+                </choose>
+            </if>
+            <if test='sStartTm != null and sStartTm != ""'>
+                 AND BAT_START_TM >= #{sStartTm}
+            </if>
+            <if test='sEndTm != null and sEndTm != ""'>
+                 AND BAT_END_TM <![CDATA[<=]]> #{sEndTm}
+            </if>
+        </where>
+	</select>
+</mapper>

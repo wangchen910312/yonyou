@@ -1,0 +1,745 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : BatBatLaborCodeManageDAO_SqlMap.xml
+    Description : 공임관리 에 관한 데이터처리
+    author YIN XUEYUAN
+    since 2016. 5. 24.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 5. 24.  YIN XUEYUAN     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO">
+
+    <!-- 공임코드 마스터 데이터를 입력 -->
+    <insert id="insertLaborMaster" parameterType="BatLaborCodeMasterVO">
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.insertLaborMaster] */
+         INSERT INTO SE_1060T (
+            DSTIN_CD , DLR_CD , LBR_CD,LBR_EN_NM,LBR_CHN_NM,LBR_QTY, BRAND_CD
+           ,REG_USR_ID ,REG_DT,UPDT_USR_ID,UPDT_DT
+         )VALUES(
+             #{dstinCd} ,#{dlrCd}, #{lbrCd} , #{lbrEnNm}, #{lbrChnNm},#{lbrQty},#{brandCd}
+            ,#{regUsrId},SYSDATE , #{regUsrId} , SYSDATE
+         )
+
+    </insert>
+
+    <!-- 공임코드 디테일 상세 데이터를 입력 -->
+    <insert id="insertLaborCodeDetail" parameterType="BatLaborCodeDetailVO">
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.insertLaborCodeDetail] */
+        INSERT INTO SE_1061T (
+          DSTIN_CD , DLR_CD , LBR_CD , LTS_MODEL_CD , VALID_START_DT , VALID_END_DT
+         ,LBR_HM , DEL_YN , BRAND_CD, REG_USR_ID , REG_DT , UPDT_USR_ID , UPDT_DT
+        )VALUES(
+           #{dstinCd} , #{dlrCd}, #{lbrCd} , #{ltsModelCd} ,
+           #{validStartDt} , #{validEndDt}
+          ,#{lbrHm} , #{delYn} ,#{brandCd}, #{regUsrId} ,SYSDATE , #{regUsrId} , SYSDATE
+        )
+
+    </insert>
+
+    <!-- 보증수리 공임 전체 이관 -->
+    <insert id="insertWartLaborCodeDetail" parameterType="BatLaborCodeMasterVO">
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.insertWartLaborCodeDetail] */
+
+            INSERT INTO SE_1060T(
+            DSTIN_CD , DLR_CD , LBR_CD , LBR_EN_NM , LBR_CHN_NM, LBR_QTY
+             ,REG_DT , REG_USR_ID , UPDT_USR_ID , UPDT_DT , BRAND_CD
+            )
+             SELECT DSTIN_CD , 'D0101' AS DLR_CD , LBR_CD , LBR_EN_NM , LBR_CHN_NM, LBR_QTY
+                   ,SYSDATE , REG_USR_ID , UPDT_USR_ID , SYSDATE , BRAND_CD
+               FROM SE_1060T
+               WHERE DSTIN_CD ='H'
+                  AND (LBR_CD , LBR_EN_NM , LBR_CHN_NM, LBR_QTY)
+                  NOT IN (
+                  SELECT LBR_CD , LBR_EN_NM , LBR_CHN_NM, LBR_QTY
+                    FROM SE_1060T
+                   WHERE DSTIN_CD='H'
+                     AND DLR_CD = 'D0101'
+                  );
+
+    </insert>
+
+    <!-- 공임코드디데일 상세 데이터를 수정 -->
+    <update id="updateLaborCodeDetail" parameterType="BatLaborCodeDetailVO">
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.updateLaborCodeDetail] */
+
+        UPDATE SE_1061T
+         SET DEL_YN         = #{delYn}
+          <if test='dstinCd !="H" '>
+            ,VALID_START_DT = #{validStartDt}
+            ,VALID_END_DT   = #{validEndDt}
+            ,LBR_HM       = #{lbrHm}
+         </if>
+            ,UPDT_DT      = SYSDATE
+            ,UPDT_USR_ID  = #{regUsrId}
+       WHERE DSTIN_CD     = #{dstinCd}
+         AND DLR_CD       = #{dlrCd}
+         AND LBR_CD       = #{lbrCd}
+         AND LTS_MODEL_CD = #{ltsModelCd}
+
+    </update>
+
+    <!-- 공임코드마스터  데이터를 수정 -->
+    <update id="updateLaborMaster" parameterType="BatLaborCodeDetailVO">
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.updateLaborMaster] */
+
+        UPDATE SE_1060T
+           SET LBR_EN_NM   = #{lbrEnNm}
+              ,LBR_CHN_NM  = #{lbrChnNm}
+              ,UPDT_USR_ID = #{regUsrId}
+              ,UPDT_DT     = SYSDATE
+         WHERE DSTIN_CD = #{dstinCd}
+           AND DLR_CD   = #{dlrCd}
+           AND LBR_CD   = #{lbrCd}
+
+    </update>
+
+    <!-- 공임코드  데이터 목록수를 조회  -->
+    <select id="selectLaborCodeManageByConditionCnt" parameterType="BatLaborCodeSearchVO" resultType="int" >
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.selectLaborCodeManageByConditionCnt] */
+
+
+                SELECT COUNT(LBR_CD) AS VALUE
+                  FROM SE_1060T
+                 WHERE DSTIN_CD = #{sDstinCd}
+                 <if test='sBrandCd!=null and sBrandCd !="" '>
+                     AND BRAND_CD = #{sBrandCd}
+                 </if>
+                 <if test='sDstinCd !=null and sDstinCd !="" '>
+                  <choose>
+                    <when test='sDstinCd == "H" '>
+                       AND DLR_CD   = 'A07AA'
+                    </when>
+                    <otherwise>
+                       AND DLR_CD   = #{sDlrCd}
+                     </otherwise>
+                  </choose>
+                 </if>
+                 <if test='sLbrCd != null and sLbrCd != "" '>
+                    <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrCd,"*")'>
+                            <bind name='sLbrCd' value='@org.apache.commons.lang3.StringUtils@replace(sLbrCd, "*", "%")' />
+                            AND LBR_CD   LIKE #{sLbrCd}
+                        </when>
+                        <otherwise>
+                            AND LBR_CD   = #{sLbrCd}
+                        </otherwise>
+                    </choose>
+                </if>
+                <if test='sLbrNm !=null and sLbrNm !="" '>
+                    <choose>
+                        <when test='sLangCd == "ko" '>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrNm,"*")'>
+                                    <bind name='sLbrNm' value='@org.apache.commons.lang3.StringUtils@replace(sLbrNm, "*", "%")' />
+                                        AND LBR_EN_NM LIKE #{sLbrNm}
+                                </when>
+                                <otherwise>
+                                        AND LBR_EN_NM = #{sLbrNm}
+                                </otherwise>
+                            </choose>
+
+                        </when>
+                        <when test='sLangCd == "zh" '>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrNm,"*")'>
+                                    <bind name='sLbrNm' value='@org.apache.commons.lang3.StringUtils@replace(sLbrNm, "*", "%")' />
+                                        AND LBR_CHN_NM LIKE #{sLbrNm}
+                                </when>
+                                <otherwise>
+                                        AND LBR_CHN_NM = #{sLbrNm}
+                                </otherwise>
+                            </choose>
+
+                        </when>
+                    </choose>
+                </if>
+
+    </select>
+
+    <!-- 공임관리 목록 조회  -->
+    <select id="selectLaborCodeManages" parameterType="BatLaborCodeSearchVO" resultType="BatLaborCodeMasterVO" >
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.selectLaborCodeManages] */
+
+        SELECT *
+          FROM (
+              SELECT ROWNUM AS RNUM ,T1.*
+                FROM (
+                SELECT DSTIN_CD ,DLR_CD, LBR_CD , LBR_EN_NM , LBR_CHN_NM , BRAND_CD
+                  FROM SE_1060T
+                 WHERE DSTIN_CD = #{sDstinCd}
+                   <if test='sBrandCd!=null and sBrandCd !="" '>
+                       AND BRAND_CD = #{sBrandCd}
+                   </if>
+                   <if test='sDstinCd !=null and sDstinCd !="" '>
+                  <choose>
+                    <when test='sDstinCd == "H" '>
+                       AND DLR_CD   = 'A07AA'
+                    </when>
+                    <otherwise>
+                       AND DLR_CD   = #{sDlrCd}
+                     </otherwise>
+                  </choose>
+                 </if>
+                <if test='sLbrCd != null and sLbrCd != "" '>
+                    <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrCd,"*")'>
+                            <bind name='sLbrCd' value='@org.apache.commons.lang3.StringUtils@replace(sLbrCd, "*", "%")' />
+                            AND LBR_CD   LIKE #{sLbrCd}
+                        </when>
+                        <otherwise>
+                            AND LBR_CD   = #{sLbrCd}
+                        </otherwise>
+                    </choose>
+                </if>
+                <if test='sLbrNm !=null and sLbrNm !="" '>
+                    <choose>
+                        <when test='sLangCd == "ko" '>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrNm,"*")'>
+                                    <bind name='sLbrNm' value='@org.apache.commons.lang3.StringUtils@replace(sLbrNm, "*", "%")' />
+                                        AND LBR_EN_NM LIKE #{sLbrNm}
+                                </when>
+                                <otherwise>
+                                        AND LBR_EN_NM = #{sLbrNm}
+                                </otherwise>
+                            </choose>
+
+                        </when>
+                        <when test='sLangCd == "zh" '>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrNm,"*")'>
+                                    <bind name='sLbrNm' value='@org.apache.commons.lang3.StringUtils@replace(sLbrNm, "*", "%")' />
+                                        AND LBR_CHN_NM LIKE #{sLbrNm}
+                                </when>
+                                <otherwise>
+                                        AND LBR_CHN_NM = #{sLbrNm}
+                                </otherwise>
+                            </choose>
+
+                        </when>
+                    </choose>
+              </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "lbrCd"'>LBR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "lbrEnNm"'>LBR_EN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "lbrChnNm"'>LBR_CHN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    LBR_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        LBR_CD ASC
+                    </otherwise>
+                </choose>
+              ) T1
+              <where>
+                  <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                  </if>
+             </where>
+             )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+
+    </select>
+
+    <!-- 공임코드 상세 데이터를 조회  -->
+    <select id="selectLaborCodeManageByCondition"   parameterType="BatLaborCodeSearchVO" resultType="BatLaborCodeDetailVO" >
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.selectLaborCodeManageByCondition] */
+
+        SELECT A.DSTIN_CD , A.LBR_CD , A.DLR_CD , B.LTS_MODEL_CD
+              ,(SELECT
+                       <choose>
+                            <when test='sLangCd == "ko"'> LTS_EN_NM </when>
+                            <when test='sLangCd == "zh"'> LTS_CHN_NM </when>
+                            <otherwise>LTS_EN_NM</otherwise>
+                        </choose>
+                   FROM SE_1064T
+                  WHERE LTS_MODEL_CD = B.LTS_MODEL_CD) AS LTS_MODEL_NM
+              ,B.LBR_HM
+              ,B.VALID_START_DT
+              ,B.VALID_END_DT
+              ,B.DEL_YN
+              ,A.BRAND_CD
+          FROM SE_1060T A , SE_1061T B
+         WHERE A.DSTIN_CD = B.DSTIN_CD
+           AND A.LBR_CD   = B.LBR_CD
+           AND A.DLR_CD   = B.DLR_CD
+           AND A.DLR_CD   = #{sDlrCd}
+         <if test='sDstinCd != null and sDstinCd != "" '>
+           AND A.DSTIN_CD = #{sDstinCd}
+         </if>
+         <if test='sLbrCd != null and sLbrCd != "" '>
+           AND A.LBR_CD   = #{sLbrCd}
+         </if>
+         <if test='sBrandCd!=null and sBrandCd !="" '>
+           AND A.BRAND_CD = #{sBrandCd}
+         </if>
+         ORDER BY LTS_MODEL_CD
+
+    </select>
+
+    <!-- 공임코드 마스터 데이터갯수 조회  -->
+    <select id="selectLaborMasterByConditionCnt"  parameterType="BatLaborCodeMasterVO" resultType="int" >
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.selectLaborMasterByConditionCnt] */
+
+         SELECT COUNT(LBR_CD) AS VALUE
+           FROM SE_1060T
+          WHERE DSTIN_CD = #{dstinCd}
+            AND DLR_CD    = #{dlrCd}
+            AND LBR_CD    = #{lbrCd}
+           <if test='brandCd !=null and brandCd !="" '>
+           AND BRAND_CD = #{brandCd}
+           </if>
+    </select>
+
+    <!-- 공임코드 팝업 데이터갯수 조회  -->
+    <select id="selectLaborCodePopUpByConditionCnt"  parameterType="BatLaborCodeSearchVO" resultType="int" >
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.selectLaborCodePopUpByConditionCnt] */
+
+        SELECT COUNT(A.LBR_CD) AS VALUE
+         FROM SE_1060T A , SE_1061T B
+         WHERE A.DSTIN_CD = B.DSTIN_CD
+           AND A.LBR_CD   = B.LBR_CD
+           AND A.DLR_CD   = B.DLR_CD
+           AND A.DSTIN_CD = #{sDstinCd}
+           <if test='sBrandCd!=null and sBrandCd !="" '>
+           AND A.BRAND_CD = #{sBrandCd}
+           </if>
+           <if test='sDstinCd !=null and sDstinCd !="" '>
+              <choose>
+                <when test='sDstinCd == "H" '>
+                   AND A.DLR_CD   = 'A07AA'
+                </when>
+                <otherwise>
+                   AND A.DLR_CD   = #{sDlrCd}
+                 </otherwise>
+              </choose>
+           </if>
+           AND B.LTS_MODEL_CD = #{sLtsModelCd}
+           <if test='sLbrCd != null and sLbrCd != "" '>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrCd,"*")'>
+                        <bind name='sLbrCd' value='@org.apache.commons.lang3.StringUtils@replace(sLbrCd, "*", "%")' />
+                        AND A.LBR_CD   LIKE #{sLbrCd}
+                    </when>
+                    <otherwise>
+                        AND A.LBR_CD   = #{sLbrCd}
+                    </otherwise>
+                </choose>
+            </if>
+            <if test='sLbrNm !=null and sLbrNm !="" '>
+                <choose>
+                    <when test='sLangCd == "ko" '>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrNm,"*")'>
+                                <bind name='sLbrNm' value='@org.apache.commons.lang3.StringUtils@replace(sLbrNm, "*", "%")' />
+                                    AND A.LBR_EN_NM LIKE #{sLbrNm}
+                            </when>
+                            <otherwise>
+                                    AND A.LBR_EN_NM = #{sLbrNm}
+                            </otherwise>
+                        </choose>
+
+                    </when>
+                    <when test='sLangCd == "zh" '>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrNm,"*")'>
+                                <bind name='sLbrNm' value='@org.apache.commons.lang3.StringUtils@replace(sLbrNm, "*", "%")' />
+                                    AND A.LBR_CHN_NM LIKE #{sLbrNm}
+                            </when>
+                            <otherwise>
+                                    AND A.LBR_CHN_NM = #{sLbrNm}
+                            </otherwise>
+                        </choose>
+
+                    </when>
+                </choose>
+              </if>
+           AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN B.VALID_START_DT AND B.VALID_END_DT
+           AND B.DEL_YN = 'N'
+    </select>
+
+    <!-- 공임코드 팝업 데이터 조회  -->
+    <select id="selectLaborCodePopUpByCondition"  parameterType="BatLaborCodeSearchVO" resultType="BatLaborCodeDetailVO" >
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.selectLaborCodePopUpByCondition] */
+
+    SELECT * FROM (
+       SELECT  ROWNUM AS RNUM , T1.*
+         FROM (
+          SELECT C.DSTIN_CD , C.DLR_CD , LBR_CD ,LBR_NM
+                ,LBR_QTY ,LBR_HM , VALID_START_DT , VALID_END_DT
+                ,LBR_RATE01, LBR_RATE02, LBR_RATE03, LBR_RATE04, LBR_RATE05
+                ,C.BRAND_CD
+           FROM (
+          SELECT A.DSTIN_CD , A.DLR_CD, A.LBR_CD
+                 <choose>
+                    <when test='sLangCd == "ko"' > , A.LBR_EN_NM AS LBR_NM </when>
+                    <otherwise>, A.LBR_CHN_NM AS LBR_NM</otherwise>
+                 </choose>
+                ,A.LBR_QTY  , B.LBR_HM , B.VALID_START_DT , B.VALID_END_DT
+                ,A.BRAND_CD
+           FROM SE_1060T A , SE_1061T B
+            WHERE A.DSTIN_CD = B.DSTIN_CD
+             AND A.LBR_CD   = B.LBR_CD
+             AND A.DLR_CD   = B.DLR_CD
+             AND A.DSTIN_CD = #{sDstinCd}
+             AND A.DLR_CD = #{sDlrCd}
+             AND B.LTS_MODEL_CD = #{sLtsModelCd}
+             AND A.BRAND_CD = #{sBrandCd}
+             AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN B.VALID_START_DT AND B.VALID_END_DT
+             AND B.DEL_YN = 'N'
+          ) C LEFT OUTER JOIN (
+                SELECT #{sDlrCd}   AS DLR_CD
+                      ,#{sDstinCd} AS DSTIN_CD
+                      ,DECODE(SUM(D_LBR_RATE01),0,SUM(H_LBR_RATE01),SUM(D_LBR_RATE01)) AS LBR_RATE01
+                      ,DECODE(SUM(D_LBR_RATE02),0,SUM(H_LBR_RATE02),SUM(D_LBR_RATE02)) AS LBR_RATE02
+                      ,DECODE(SUM(D_LBR_RATE03),0,SUM(H_LBR_RATE03),SUM(D_LBR_RATE03)) AS LBR_RATE03
+                      ,DECODE(SUM(D_LBR_RATE04),0,SUM(H_LBR_RATE04),SUM(D_LBR_RATE04)) AS LBR_RATE04
+                      ,DECODE(SUM(D_LBR_RATE05),0,SUM(H_LBR_RATE05),SUM(D_LBR_RATE05)) AS LBR_RATE05
+                 FROM (
+                   SELECT
+                           SUM(CASE WHEN DLR_CD = 'A07AA' AND RO_TP ='01' THEN RTE_AMT ELSE 0 END) AS H_LBR_RATE01
+                          ,SUM(CASE WHEN DLR_CD = 'A07AA' AND RO_TP ='02' THEN RTE_AMT ELSE 0 END) AS H_LBR_RATE02
+                          ,SUM(CASE WHEN DLR_CD = 'A07AA' AND RO_TP ='03' THEN RTE_AMT ELSE 0 END) AS H_LBR_RATE03
+                          ,SUM(CASE WHEN DLR_CD = 'A07AA' AND RO_TP ='04' THEN RTE_AMT ELSE 0 END) AS H_LBR_RATE04
+                          ,SUM(CASE WHEN DLR_CD = 'A07AA' AND RO_TP ='05' THEN RTE_AMT ELSE 0 END) AS H_LBR_RATE05
+                          ,SUM(CASE WHEN DLR_CD !='A07AA' AND RO_TP ='01' THEN RTE_AMT ELSE 0 END) AS D_LBR_RATE01
+                          ,SUM(CASE WHEN DLR_CD !='A07AA' AND RO_TP ='02' THEN RTE_AMT ELSE 0 END) AS D_LBR_RATE02
+                          ,SUM(CASE WHEN DLR_CD !='A07AA' AND RO_TP ='03' THEN RTE_AMT ELSE 0 END) AS D_LBR_RATE03
+                          ,SUM(CASE WHEN DLR_CD !='A07AA' AND RO_TP ='04' THEN RTE_AMT ELSE 0 END) AS D_LBR_RATE04
+                          ,SUM(CASE WHEN DLR_CD !='A07AA' AND RO_TP ='05' THEN RTE_AMT ELSE 0 END) AS D_LBR_RATE05
+                      FROM SE_1063T
+                     WHERE USE_YN ='Y'
+                       AND DLR_CD = #{sDlrCd}
+                       AND BRAND_CD = #{sBrandCd}
+                       AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+                       UNION
+                        SELECT
+                           SUM(CASE WHEN DLR_CD ='A07AA' AND RO_TP ='01' THEN RTE_AMT ELSE 0 END) AS H_LBR_RATE01
+                          ,SUM(CASE WHEN DLR_CD ='A07AA' AND RO_TP ='02' THEN RTE_AMT ELSE 0 END) AS H_LBR_RATE02
+                          ,SUM(CASE WHEN DLR_CD ='A07AA' AND RO_TP ='03' THEN RTE_AMT ELSE 0 END) AS H_LBR_RATE03
+                          ,SUM(CASE WHEN DLR_CD ='A07AA' AND RO_TP ='04' THEN RTE_AMT ELSE 0 END) AS H_LBR_RATE04
+                          ,SUM(CASE WHEN DLR_CD ='A07AA' AND RO_TP ='05' THEN RTE_AMT ELSE 0 END) AS H_LBR_RATE05
+                          ,SUM(CASE WHEN DLR_CD!='A07AA' AND RO_TP ='01' THEN RTE_AMT ELSE 0 END) AS D_LBR_RATE01
+                          ,SUM(CASE WHEN DLR_CD!='A07AA' AND RO_TP ='02' THEN RTE_AMT ELSE 0 END) AS D_LBR_RATE02
+                          ,SUM(CASE WHEN DLR_CD!='A07AA' AND RO_TP ='03' THEN RTE_AMT ELSE 0 END) AS D_LBR_RATE03
+                          ,SUM(CASE WHEN DLR_CD!='A07AA' AND RO_TP ='04' THEN RTE_AMT ELSE 0 END) AS D_LBR_RATE04
+                          ,SUM(CASE WHEN DLR_CD!='A07AA' AND RO_TP ='05' THEN RTE_AMT ELSE 0 END) AS D_LBR_RATE05
+                      FROM SE_1063T
+                     WHERE USE_YN = 'Y'
+                       AND DLR_CD = 'A07AA'
+                       AND BRAND_CD = #{sBrandCd}
+                       AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+                  )
+              ) D
+              ON C.DLR_CD = D.DLR_CD
+             AND C.DSTIN_CD = D.DSTIN_CD
+             ORDER BY
+             <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "lbrCd"'>LBR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "lbrQty"'>LBR_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "lbrHm"'>LBR_HM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "lbrStartDt"'>VALID_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "lbrEndDt"'>VALID_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <otherwise>
+                                LBR_CD ASC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                    LBR_CD ASC
+                </otherwise>
+              </choose>
+          ) T1
+          <where>
+           <if test='sLbrCd != null and sLbrCd != "" '>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrCd,"*")'>
+                        <bind name='sLbrCd' value='@org.apache.commons.lang3.StringUtils@replace(sLbrCd, "*", "%")' />
+                        AND LBR_CD   LIKE #{sLbrCd}
+                    </when>
+                    <otherwise>
+                        AND LBR_CD   = #{sLbrCd}
+                    </otherwise>
+                </choose>
+            </if>
+            <if test='sLbrNm !=null and sLbrNm !="" '>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrNm,"*")'>
+                        <bind name='sLbrNm' value='@org.apache.commons.lang3.StringUtils@replace(sLbrNm, "*", "%")' />
+                            AND LBR_NM LIKE #{sLbrNm}
+                    </when>
+                    <otherwise>
+                            AND LBR_NM = #{sLbrNm}
+                    </otherwise>
+                </choose>
+              </if>
+              <if test='firstIndex != -1 and lastIndex != -1'>
+               AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+              </if>
+          </where>
+       )
+     <where>
+        <if test='firstIndex != -1 and lastIndex != -1'>
+            RNUM > #{firstIndex}
+        </if>
+    </where>
+    </select>
+
+    <!-- 공임관리 목록 조회  -->
+    <select id="selectLaborCodeDetailByCondition" parameterType="BatLaborCodeSearchVO" resultType="BatLaborCodeDetailVO" >
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.selectLaborCodeDetailByCondition] */
+
+        SELECT *
+          FROM (
+              SELECT ROWNUM AS RNUM ,T1.*
+                FROM (
+                SELECT *
+                  FROM SE_1061T
+                 WHERE DSTIN_CD = #{sDstinCd}
+                   <if test='sBrandCd!=null and sBrandCd !="" '>
+                       AND BRAND_CD = #{sBrandCd}
+                   </if>
+                   <if test='sValidStartDt!=null'>
+                       AND VALID_START_DT = #{sValidStartDt}
+                   </if>
+                   <if test='sLtsModelCd!=null and sLtsModelCd !="" '>
+                       AND LTS_MODEL_CD = #{sLtsModelCd}
+                   </if>
+                   <if test='sDstinCd !=null and sDstinCd !="" '>
+                  <choose>
+                    <when test='sDstinCd == "H" '>
+                       AND DLR_CD   = 'A07AA'
+                    </when>
+                    <otherwise>
+                       AND DLR_CD   = #{sDlrCd}
+                     </otherwise>
+                  </choose>
+                 </if>
+                <if test='sLbrCd != null and sLbrCd != "" '>
+                    <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrCd,"*")'>
+                            <bind name='sLbrCd' value='@org.apache.commons.lang3.StringUtils@replace(sLbrCd, "*", "%")' />
+                            AND LBR_CD   LIKE #{sLbrCd}
+                        </when>
+                        <otherwise>
+                            AND LBR_CD   = #{sLbrCd}
+                        </otherwise>
+                    </choose>
+                </if>
+                <if test='sLbrNm !=null and sLbrNm !="" '>
+                    <choose>
+                        <when test='sLangCd == "ko" '>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrNm,"*")'>
+                                    <bind name='sLbrNm' value='@org.apache.commons.lang3.StringUtils@replace(sLbrNm, "*", "%")' />
+                                        AND LBR_EN_NM LIKE #{sLbrNm}
+                                </when>
+                                <otherwise>
+                                        AND LBR_EN_NM = #{sLbrNm}
+                                </otherwise>
+                            </choose>
+
+                        </when>
+                        <when test='sLangCd == "zh" '>
+                            <choose>
+                                <when test='@org.apache.commons.lang3.StringUtils@contains(sLbrNm,"*")'>
+                                    <bind name='sLbrNm' value='@org.apache.commons.lang3.StringUtils@replace(sLbrNm, "*", "%")' />
+                                        AND LBR_CHN_NM LIKE #{sLbrNm}
+                                </when>
+                                <otherwise>
+                                        AND LBR_CHN_NM = #{sLbrNm}
+                                </otherwise>
+                            </choose>
+
+                        </when>
+                    </choose>
+              </if>
+                 ORDER BY LBR_CD ASC
+              ) T1
+              <where>
+                  <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                  </if>
+             </where>
+             )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+
+    </select>
+
+    <!-- 공임관리 VIN MAPPING 목록 조회  -->
+    <select id="selectLaborCodeVinByCondition" parameterType="BatLaborCodeSearchVO" resultType="BatLaborCodeVinVO" >
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.selectLaborCodeVinByCondition] */
+
+        SELECT *
+          FROM (
+              SELECT ROWNUM AS RNUM ,T1.*
+                FROM (
+                SELECT *
+                  FROM SE_1062T
+                  WHERE 1=1
+                   <if test='sLtsModelCd!=null and sLtsModelCd !="" '>
+                       AND LTS_MODEL_CD = #{sLtsModelCd}
+                   </if>
+                   <if test='sVinNo!=null and sVinNo !="" '>
+                       AND VIN_NO = #{sVinNo}
+                   </if>
+                 ORDER BY VIN_NO ASC
+              ) T1
+              <where>
+                  <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                  </if>
+             </where>
+             )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+
+    </select>
+
+    <!-- 공임관리 MODEL 목록 조회  -->
+    <select id="selectLaborCodeModelByCondition" parameterType="BatLaborCodeSearchVO" resultType="BatLaborCodeModelVO" >
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.selectLaborCodeModelByCondition] */
+
+        SELECT *
+          FROM (
+              SELECT ROWNUM AS RNUM ,T1.*
+                FROM (
+                SELECT *
+                  FROM SE_1064T
+                  WHERE 1=1
+                   <if test='sLtsModelCd!=null and sLtsModelCd !="" '>
+                       AND LTS_MODEL_CD = #{sLtsModelCd}
+                   </if>
+                   <if test='sValidStartDt!=null'>
+                       AND VALID_START_DT = #{sValidStartDt}
+                   </if>
+                 ORDER BY LTS_MODEL_CD ASC
+              ) T1
+              <where>
+                  <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                  </if>
+             </where>
+             )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+
+    </select>
+
+    <!-- 공임코드 VIN MAPPING 데이터를 입력 -->
+    <insert id="insertLaborCodeVin" parameterType="BatLaborCodeVinVO">
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.insertLaborCodeVin] */
+         INSERT INTO SE_1062T    --LABOR LTS VIN MAPPING
+            (
+              VIN_NO              --차대번호
+             ,LTS_MODEL_CD        --LTS코드
+             ,REG_USR_ID          --등록자ID
+             ,REG_DT              --등록일자
+             ,UPDT_USR_ID         --수정자ID
+             ,UPDT_DT             --수정일자
+            )
+            VALUES
+            (
+              #{vinNo}              --차대번호
+             ,#{ltsModelCd}         --LTS코드
+             ,#{regUsrId}           --등록자ID
+             ,SYSDATE               --등록일자
+             ,#{updtUsrId}          --수정자ID
+             ,SYSDATE             --수정일자
+            )
+
+    </insert>
+
+    <!-- 공임코드 마스터 데이터를 입력 -->
+    <update id="updateLaborCodeVin" parameterType="BatLaborCodeVinVO">
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.insertLaborCodeVin] */
+
+    </update>
+
+    <!-- 공임코드 MODEL 데이터를 입력 -->
+    <insert id="insertLaborCodeModel" parameterType="BatLaborCodeModelVO">
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.insertLaborCodeModel] */
+        INSERT INTO SE_1064T    --LTS MODEL마스터
+            (
+              LTS_MODEL_CD          --LTS모델코드
+             ,VALID_START_DT        --유효시작일자
+             ,VALID_END_DT          --유효종료일자
+             ,LTS_EN_NM             --LTS영문명
+             ,LTS_CHN_NM            --LTS중문명
+             ,REG_USR_ID            --등록자ID
+             ,REG_DT                --등록일자
+             ,UPDT_USR_ID           --수정자ID
+             ,UPDT_DT               --수정일자
+             ,BRAND_CD              --브랜드코드
+            )
+            VALUES
+            (
+              #{ltsModelCd}           --LTS모델코드
+             ,#{validStartDt}         --유효시작일자
+             ,#{validEndDt}           --유효종료일자
+             ,#{ltsEnNm}              --LTS영문명
+             ,#{ltsChnNm}             --LTS중문명
+             ,#{regUsrId}             --등록자ID
+             ,SYSDATE                 --등록일자
+             ,#{updtUsrId}            --수정자ID
+             ,SYSDATE                 --수정일자
+             ,#{brandCd}              --브랜드코드
+            )
+
+    </insert>
+
+
+    <!-- 공임코드 Model 데이터를 수정 -->
+    <update id="updateLaborCodeModel" parameterType="BatLaborCodeModelVO">
+        /* [chn.bhmc.dms.bat.ser.svi.service.dao.BatLaborCodeManageDAO.updateLaborCodeModel] */
+         UPDATE SE_1064T
+            SET UPDT_DT = SYSDATE
+                ,UPDT_USR_ID = #{updtUsrId}
+            <if test='validStartDt!=null'>
+                ,VALID_START_DT = #{validStartDt}
+            </if>
+            <if test='validEndDt!=null'>
+                ,VALID_END_DT = #{validEndDt}
+            </if>
+            <if test='ltsEnNm!=null and ltsEnNm !="" '>
+                ,LTS_EN_NM = #{ltsEnNm}
+            </if>
+            <if test='ltsChnNm!=null and ltsChnNm !="" '>
+                ,LTS_CHN_NM = #{ltsChnNm}
+            </if>
+             WHERE LTS_MODEL_CD = #{ltsModelCd}
+
+    </update>
+
+</mapper>

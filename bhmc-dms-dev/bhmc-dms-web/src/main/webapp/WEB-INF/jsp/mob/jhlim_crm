@@ -1,0 +1,168 @@
+
+** 리드관리 ***
+
+웹) CRM - 리드관리
+http://localhost:8080/bhmc-dms-web/crm/slm/leadInfo/selectLeadInfoMain.do
+http://localhost:8080/bhmc-dms-web/crm/slm/leadInfo/selectLeadInfoMain.do
+
+모바일)
+/mob/crm/slm/leadInfo/selectLeadInfoMain.jsp
+/mob/crm/slm/leadInfo/selectLeadInfoList.jsp
+http://localhost:8080/bhmc-dms-web/mob/crm/slm/leadInfo/selectLeadInfoMain.do
+
+
+http://localhost:8080/bhmc-dms-web/mob/crm/slm/leadInfo/selectLeadInfoMain.do?lang=ko
+
+
+http://localhost:8080/bhmc-dms-web/mob/cmm/crm/commonPopup/selectIntrCarLinePopup.do
+
+
+===
+
+리드 저장부
+
+Controller]
+bhmc-dms-crm/src/main/java/chn/bhmc/dms/crm/slm/web/LeadInfoController.java
+    /**
+     * 리드 정보를 저장 한다.
+     * @param leadInfoVO - 리드 정보
+     * @return
+     */
+    @RequestMapping(value = "/crm/slm/leadInfo/multiLeads.do", method = RequestMethod.POST)
+    @ResponseBody
+    public String multiLeads(@Validated @RequestBody LeadInfoSaveVO saveVO)throws Exception {
+
+        saveVO.getLeadInfoVO().setDlrCd(LoginUtil.getDlrCd());
+        //saveVO.getLeadInfoVO().setPltCd(LoginUtil.getPltCd());
+
+        return leadInfoService.multiLeads(saveVO);
+    }
+
+
+[Service]
+    /*
+     * @see chn.bhmc.dms.crm.slm.service.LeadInfoService#multiLeads(chn.bhmc.dms.crm.slm.vo.LeadInfoSaveVO)
+     */
+    @Override
+    public String multiLeads(LeadInfoSaveVO saveVO) throws Exception {
+
+        try {
+
+            String leadNo = saveVO.getLeadInfoVO().getLeadNo();
+
+            // 리드정보 처리
+            if (StringUtils.isNotEmpty(leadNo)) {
+                updateLead(saveVO.getLeadInfoVO());
+            } else {
+                // Dup Check 고객번호 + 기간(30일)
+                String returnRtl = selectLeadDupByKey(saveVO.getLeadInfoVO().getCustNo(),saveVO.getLeadInfoVO().getLeadTp());
+
+                saveVO.getLeadInfoVO().setStatCd(returnRtl); //신규 셋팅
+
+                leadNo = insertLead(saveVO.getLeadInfoVO());
+            }
+
+            // 관심차종 저장
+            int carLineInsertCnt = saveVO.getCarLineInfoVO().getInsertList().size();
+
+            if (carLineInsertCnt > 0) {
+                for (int i=0; carLineInsertCnt > i; i++) {
+                    saveVO.getCarLineInfoVO().getInsertList().get(i).setRefKeyNm(leadNo);
+                }
+            }
+            carLineInfoService.multiCarLine(saveVO.getCarLineInfoVO());
+
+            return leadNo;
+
+        }catch(Exception e){
+            throw new BizException(e.getMessage());
+        }
+    }
+
+리드 저장하는 부분입니다.
+
+==========================================
+
+박미연 L4/과장 협력사   D:\DES\workspace\projects\bhmc-dms\bhmc-dms-web\src\main\webapp\WEB-INF\jsp\mob\crm\cso\salesOpptMgmt\selectSalesOpptMgmtMain.jsp
+    오후 4:54
+ ---------------------------------------------------------------------------
+박미연 L4/과장 협력사   이건 리스트입니다~
+D:\DES\workspace\projects\bhmc-dms\bhmc-dms-web\src\main\webapp\WEB-INF\jsp\mob\crm\cso\salesOpptMgmt\selectCarLineInfoList.jsp
+    오후 4:54
+
+
+http://localhost:8080/bhmc-dms-web/mob/crm/cso/salesOpptMgmt/selectSalesOpptMgmtMain.do
+
+=============================================
+
+리드배분
+
+4.9.6.002-01_distribution.html
+
+
+/bhmc-dms-web/src/main/webapp/WEB-INF/jsp/crm/ass/assign/selectLeadAssignMain.jsp
+
+http://localhost:8080/bhmc-dms-web/mob/crm/ass/assign/selectLeadAssignMain.do
+
+판매고문 선택팝업
+http://localhost:8080/bhmc-dms-web/mob/crm/ass/assign/selectAssignUserPopMain.do
+
+
+판매고문
+List<UserVO> assignUserList = userService.selectUsersByCondition(searchVO);
+model.addAttribute("assignUserList", assignUserList);
+
+
+체크박스 참고 - 판매 - 물류평가조회
+http://localhost:8080/bhmc-dms-web/mob/sal/lom/evalSearchEdit/selectEvalSearchEditMain.do
+
+
+*** 리드배분 완료시 서버측으로부터 "선택된 목록보다 담당자가 많습니다."  에러메시지를 던지는 현상 발생  6/22
+ - 리드배분 처리는 완료되는것으로 보임
+ - 테스트 데이터가 없어 더이상 서버측 전송테스트는 불가함
+
+
+=============================================
+만족도조사
+
+웹
+/bhmc-dms-web/src/main/webapp/WEB-INF/jsp/crm/css/satisFactionManage/selectSatisFactionManageMain.jsp
+/crm/css/satisFactionManage/selectSatisFactionManages.do
+SatisFactionManageController.java
+
+만족도조사 설문저장
+SatisFactionMobileController.java
+/bhmc-dms-crm/src/main/java/chn/bhmc/dms/crm/css/web/SatisFactionMobileController.java
+/crm/css/satisFactionMobile/multiUsrAnswerSurveys.do
+/bhmc-dms-web/src/main/webapp/WEB-INF/jsp/crm/css/satisFactionManage/selectSatisFactionManageMain.jsp
+
+/bhmc-dms-web/src/main/webapp/WEB-INF/jsp/crm/css/satisFactionMobile/selectSatisFactionMobileMain.jsp
+http://localhost:8080/bhmc-dms-web/crm/css/satisFactionMobile/selectSatisFactionMobileMain.do
+
+
+모바일
+http://localhost:8080/bhmc-dms-web/mob/crm/css/satisFactionMobile/selectSatisFactionMobileMain.do
+
+
+http://10.25.227.52:8080/bhmc-dms-web/mob/crm/css/satisFactionMobile/selectSatisFactionMobileMain.do
+
+
+/bhmc-dms-mobile/src/main/java/chn/bhmc/dms/mob/crm/css/web/MobSatisFactionMobileController.java
+/mob/crm/css/satisFactionMobile/selectSatisFactionMobileMain.do
+/mob/crm/css/satisFactionMobile/selectSatisFactionMobileList.do
+/mob/crm/css/satisFactionMobile/selectSatisFactionSurveyMobiles.do
+/mob/crm/css/satisFactionMobile/multiUsrAnswerSurveys.do
+
+
+selectSatisFactionSurveyMobiles.do
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : CampaignInfoManageDAO_SqlMap.xml
+    Description : 캠페인  마스터에 관한 데이터처리
+    author Kwon Ki Hyun
+    since 2016. 02. 19.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 02. 19.  Kwon Ki Hyun     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.svi.service.dao.CampaignInfoManageDAO">
+
+    <select id="selectCampaignInfoManagesByConditionCnt" parameterType="CampaignSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignInfoManageDAO.selectCampaignInfoManagesByConditionCnt] */
+                
+             SELECT COUNT(A.CR_NO) AS VALUE
+               FROM SE_1070T A 
+              WHERE 1=1
+              <if test='sCrNm != null and sCrNm != "" '>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sCrNm,"*")'>
+                        <bind name='sCrNm' value='@org.apache.commons.lang3.StringUtils@replace(sCrNm, "*", "%")'/>
+                            AND A.CR_NM LIKE #{sCrNm}
+                    </when>
+                    <otherwise>
+                            AND A.CR_NM = #{sCrNm}
+                    </otherwise>
+                </choose>     
+              </if>
+              <if test='sCrStartDt !=null  '>
+                  AND A.CR_START_DT <![CDATA[>=]]> #{sCrStartDt}
+              </if>
+               
+              <if test='sCrEndDt !=null  '>
+                 AND  A.CR_START_DT  <![CDATA[<=]]> #{sCrEndDt}+1
+              </if>
+        
+    </select>
+    <select id="selectCampaignInfoManagesByCondition" parameterType="CampaignSearchVO" resultType="CampaignMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignInfoManageDAO.selectCampaignInfoManagesByCondition] */
+        
+            SELECT *
+              FROM (
+                SELECT ROWNUM AS RNUM , T1.*
+                  FROM(
+                     SELECT A.CR_NO , A.CR_TP , A.CR_NM
+                           ,A.CR_START_DT , A.CR_END_DT
+                           ,A.CRE_START_DT, A.CRE_END_DT 
+                           ,A.SALE_START_DT ,A.SALE_END_DT
+                           ,A.CR_END_TP , A.CR_ISA_NM  
+                       FROM SE_1070T A 
+                      WHERE 1 = 1
+                      <if test='sCrNm != null and sCrNm != "" '>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sCrNm,"*")'>
+                                <bind name='sCrNm' value='@org.apache.commons.lang3.StringUtils@replace(sCrNm, "*", "%")'/>
+                                    AND A.CR_NM LIKE #{sCrNm}
+                            </when>
+                            <otherwise>
+                                    AND A.CR_NM = #{sCrNm}
+                            </otherwise>
+                        </choose>     
+                      </if>
+                      <if test='sCrStartDt !=null  '>
+                          AND A.CR_START_DT <![CDATA[>=]]> #{sCrStartDt}
+                      </if>
+                       
+                      <if test='sCrEndDt !=null  '>
+                         AND  A.CR_START_DT  <![CDATA[<=]]> #{sCrEndDt}+1
+                      </if>
+                     ORDER BY 
+                     <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "crNo"'>A.CR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "crTp"'>A.CR_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "crNm"'>A.CR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        A.CR_NO ASC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            A.CR_NO ASC
+                        </otherwise>
+                    </choose>
+                )T1
+                <where>
+                  <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                  </if>
+               </where>
+             )
+             <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    RNUM > #{firstIndex}
+                </if>
+            </where> 
+    </select>
+    <select id="selectCampaignInfosDetailByConditionCnt" parameterType="CampaignSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignInfoManageDAO.selectCampaignInfosDetailByConditionCnt] */
+        
+             
+             SELECT COUNT(A.CR_NO) VALUE 
+               FROM SE_1070T A , SE_1072T B
+              WHERE A.CR_NO = B.CR_NO
+                AND A.CR_NO = #{sCrNo}  
+              
+    </select>
+    <select id="selectCampaignInfosDetailByCondition" parameterType="CampaignSearchVO" resultType="CampaignDetailVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignInfoManageDAO.selectCampaignInfosDetailByCondition] */
+        
+            SELECT *
+              FROM (
+                SELECT ROWNUM AS RNUM , T1.*
+                  FROM(
+                    SELECT B.CR_NO , A.PC_DSTIN_CD, B.LBR_CD , B.LBR_NM  , B.LBR_QTY , B.CAU_ITEM_CD 
+                          ,B.CAU_ITEM_NM ,B.CAU_CD ,B.CAU_NM , B.PHEN_CD , B.PHEN_NM 
+                          ,B.LBR_HM ,B.LBR_AMT, B.USE_YN 
+                      FROM SE_1070T A , SE_1072T B
+                     WHERE B.CR_NO = A.CR_NO
+                       AND A.CR_NO = #{sCrNo} 
+                     ORDER BY 
+                     <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "crNo"'>B.CR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "lbrCd"'>B.LBR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cauItemCd"'>B.CAU_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        B.CR_NO ASC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            B.CR_NO ASC
+                        </otherwise>
+                    </choose>
+                )T1
+                <where>
+                  <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                  </if>
+               </where>
+             )
+             <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    RNUM > #{firstIndex}
+                </if>
+            </where> 
+    </select>
+
+</mapper>

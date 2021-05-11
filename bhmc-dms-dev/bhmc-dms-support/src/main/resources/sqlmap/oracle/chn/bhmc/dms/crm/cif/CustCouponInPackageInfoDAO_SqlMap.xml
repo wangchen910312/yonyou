@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CustCouponInPackageInfoDAO_SqlMap.xml
+    Description :
+    author Kyo Jin Lee
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kyo Jin Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cif.service.dao.CustCouponInPackageInfoDAO">
+
+    <!-- 조회 검색조건 -->
+    <sql id="searchWhere">
+        INNER JOIN CR_0823T CR_0823T ON CR_0823T.CUPN_SEQ = CR_0826T.CUPN_SEQ
+        <where>
+            <if test='sDlrCd      != null and sDlrCd      != ""'> AND CR_0826T.DLR_CD      = #{sDlrCd}    </if>        --딜러코드
+            <if test='sPkgSeq     != null and sPkgSeq     != ""'> AND CR_0826T.PKG_SEQ     = #{sPkgSeq}   </if>        --패키지일련번호
+            <if test='sCupnSeq    != null and sCupnSeq    != ""'> AND CR_0826T.CUPN_SEQ    = #{sCupnSeq}  </if>        --쿠폰일련번호
+            <if test='sRegUsrId   != null and sRegUsrId   != ""'> AND CR_0826T.REG_USR_ID  = #{sRegUsrId} </if>        --등록자ID
+            <if test='sRegDt      != null and sRegDt      != ""'> AND CR_0826T.REG_DT      = #{sRegDt}    </if>        --등록일자
+            <if test='sUpdtUsrId  != null and sUpdtUsrId  != ""'> AND CR_0826T.UPDT_USR_ID = #{sUpdtUsrId}</if>        --수정자ID
+            <if test='sUpdtDt     != null and sUpdtDt     != ""'> AND CR_0826T.UPDT_DT     = #{sUpdtDt}   </if>        --수정일자
+        </where>
+    </sql>
+
+    <!-- 정보 목록수를 조회한다. -->
+    <select id="selectCouponInPackageInfoByConditionCnt" parameterType="CustCouponInPackageInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInPackageInfoDAO.selectCouponInPackageInfoByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM CR_0826T
+         <include refid="searchWhere" />
+    </select>
+
+    <!-- 정보 목록을 조회한다. -->
+    <select id="selectCouponInPackageInfoByCondition" parameterType="CustCouponInPackageInfoSearchVO" resultType="CustCouponInPackageInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInPackageInfoDAO.selectCouponInPackageInfoByCondition] */
+        SELECT T2.*
+            FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A1.* FROM (
+                    SELECT
+                        CR_0826T.DLR_CD
+                        ,CR_0826T.SEQ
+                        ,CR_0826T.PKG_SEQ
+                        ,CR_0826T.CUPN_SEQ
+                        ,CR_0823T.CUPN_NM
+                        ,CR_0823T.DC_CD
+                        ,CR_0823T.DC_USE_TP
+                        ,CR_0823T.USE_YN
+                        ,CR_0823T.CUPN_FROM_DT
+                        ,CR_0823T.CUPN_TO_DT
+                        ,CR_0823T.CUPN_VALID_PRID
+                        ,CR_0823T.LBR_DC_RATE
+                        ,CR_0823T.LBR_DC_AMT
+                        ,CR_0823T.PAR_DC_RATE
+                        ,CR_0823T.PAR_DC_AMT
+                        ,CR_0823T.TOT_DC_RATE
+                        ,CR_0823T.TOT_DC_AMT
+                        ,CR_0823T.ITEM_CD
+                        ,(SELECT ITEM_NM FROM PT_0201T WHERE ITEM_CD = CR_0823T.ITEM_CD) AS ITEM_NM
+                        ,CR_0823T.GOODS_CNT
+                        ,CR_0826T.REG_USR_ID
+                        ,CR_0826T.REG_DT
+                        ,CR_0826T.UPDT_USR_ID
+                        ,CR_0826T.UPDT_DT
+                    FROM CR_0826T CR_0826T
+                    <include refid="searchWhere" />
+                    ) A1
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>      A1.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "pkgSeq"'>     A1.PKG_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "pkgNm"'>      A1.PKG_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "useYn"'>      A1.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "regUsrId"'>   A1.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "regDt"'>      A1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "updtUsrId"'>  A1.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtDt"'>     A1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <otherwise>
+                                    A1.REG_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A1.REG_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        ) T2
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 목록을 조회한다. -->
+    <select id="selectCouponInPackageInfoByConditionByKey" parameterType="CustCouponInPackageInfoVO" resultType="CustCouponInPackageInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInPackageInfoDAO.selectCouponInPackageInfoByConditionByKey] */
+        SELECT A1.* FROM (
+            SELECT
+                CR_0826T.DLR_CD
+                ,CR_0826T.SEQ
+                ,CR_0826T.PKG_SEQ
+                ,CR_0826T.CUPN_SEQ
+                ,CR_0823T.CUPN_NM
+                ,CR_0823T.DC_CD
+                ,CR_0823T.DC_USE_TP
+                ,CR_0823T.USE_YN
+                ,CR_0823T.CUPN_FROM_DT
+                ,CR_0823T.CUPN_TO_DT
+                ,CR_0823T.CUPN_VALID_PRID
+                ,CR_0823T.LBR_DC_RATE
+                ,CR_0823T.LBR_DC_AMT
+                ,CR_0823T.PAR_DC_RATE
+                ,CR_0823T.PAR_DC_AMT
+                ,CR_0823T.TOT_DC_RATE
+                ,CR_0823T.TOT_DC_AMT
+                ,CR_0823T.ITEM_CD
+                ,(SELECT ITEM_NM FROM PT_0201T WHERE ITEM_CD = CR_0823T.ITEM_CD) AS ITEM_NM
+                ,CR_0823T.GOODS_CNT
+                ,CR_0826T.REG_USR_ID
+                ,CR_0826T.REG_DT
+                ,CR_0826T.UPDT_USR_ID
+                ,CR_0826T.UPDT_DT
+            FROM CR_0826T CR_0826T
+            <include refid="searchWhere" />
+            ) A1
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                                <when test='item.field == "dlrCd"'>      A1.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "pkgSeq"'>     A1.PKG_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "pkgNm"'>      A1.PKG_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "useYn"'>      A1.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "regUsrId"'>   A1.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "regDt"'>      A1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "updtUsrId"'>  A1.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtDt"'>     A1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                        <otherwise>
+                            A1.REG_DT DESC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                A1.REG_DT DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 추가한다. -->
+    <insert id="insertCouponInPackage" parameterType="CustCouponInPackageInfoVO" >
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInPackageInfoDAO.insertCouponInPackage] */
+        INSERT INTO CR_0826T(
+            DLR_CD
+            ,SEQ
+            ,PKG_SEQ
+            ,CUPN_SEQ
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+        ) VALUES (
+            #{dlrCd}
+            ,SEQ_CR_0826T.NEXTVAL
+            ,#{pkgSeq}
+            ,#{cupnSeq}
+            ,#{regUsrId}
+            ,SYSDATE
+            ,#{regUsrId}
+            ,SYSDATE
+        )
+    </insert>
+
+    <!-- 업데이트 한다. -->
+    <update id="updateCouponInPackage" parameterType="CustCouponInPackageInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInPackageInfoDAO.updateCouponInPackage] */
+        UPDATE CR_0826T SET
+            UPDT_USR_ID = #{updtUsrId}
+            ,UPDT_DT = SYSDATE
+            <if test='cupnSeq != null and cupnSeq != ""'>
+            ,CUPN_SEQ = #{cupnSeq}
+            </if>
+        WHERE DLR_CD = #{dlrCd}
+          AND SEQ = #{seq}
+    </update>
+
+    <!-- 삭제 한다. -->
+    <delete id="deleteCouponInPackage" parameterType="CustCouponInPackageInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInfoDAO.deleteCouponInPackage] */
+        DELETE CR_0826T
+        WHERE DLR_CD = #{dlrCd}
+          AND SEQ = #{seq}
+    </delete>
+</mapper>

@@ -1,0 +1,1914 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.mon.service.dao.SalesMonthDAO">
+	<!-- 查询dms修复失败数据 条数 -->
+    <select id="selectDmsSalesMonthCnt" parameterType="TmpDmsOrderCheckVO" resultType="int">
+        SELECT COUNT(1)
+          FROM (SELECT SALES_NO
+                  FROM TMP_DCS_ERP_ORD_DETAIL 
+                   WHERE 1=1 
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                  AND DLR_CD = #{sDlrCd}  
+                 </if> 
+                 <if test='sModelCd != null and sModelCd != ""'>
+                  AND SUBSTR(ALDY,0,6) = #{sModelCd}  
+                 </if> 
+               )
+    </select>
+    
+    <update id="updateDcsOrderBySql" parameterType="string" >
+        ${value}
+    </update>
+    <!-- 查询dcs修复失败数据 条数 -->
+    <select id="selectDcsSalesMonthCnt" parameterType="TmpDcsOrderCheckVO" resultType="int">
+        SELECT COUNT(1)
+                  FROM TMP_DCS_ERP_ORD_DETAIL
+                  WHERE 1=1
+    </select>
+    
+	<!-- 查询dcs修复失败的数据 -->
+	<select id="selectDcsSalesMonth" parameterType="TmpDcsOrderCheckVO" resultType="TmpDcsErpOrderDetailVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT DLR_CD,
+					  SALES_NO,
+					  PRTY,
+					  ORTY,
+					  ALDY,
+					  ORD_YYMM,
+					  ORD_WEEK,
+					  TO_CHAR(ASDY,'YYYY-MM-DD') ASDY_STR,
+					  TO_CHAR(ACDY,'YYYY-MM-DD') ACDY_STR,
+					  TO_CHAR(OCDY,'YYYY-MM-DD') OCDY_STR,
+					  ERP_DLR_CD,
+					  ERP_SALES_NO,
+					  ERP_PRTY,
+					  ERP_ORTY,
+					  ERP_ALDY,
+					  ERP_ORD_YYMM,
+					  ERP_ORD_WEEK,
+					  TO_CHAR(ERP_ASDY,'YYYY-MM-DD') ERP_ASDY_STR,
+					  TO_CHAR(ERP_ACDY,'YYYY-MM-DD') ERP_ACDY_STR,
+					  TO_CHAR(ERP_OCDY,'YYYY-MM-DD') ERP_OCDY_STR
+					FROM TMP_DCS_ERP_ORD_DETAIL
+                 <!-- if test='sModelCd != null and sModelCd != ""'>
+                  AND SUBSTR(ALDY,0,6) = #{sModelCd}  
+                 </if-->   
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "salesNo"'>SALES_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "prty"'>PRTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "orty"'>ORTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "aldy"'>ALDY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ordYymm"'>ORD_YYMM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ordWeek"'>ORD_WEEK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "erpDlrCd"'>ERP_DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "erpSalesNo"'>ERP_SALES_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "erpPrty"'>ERP_PRTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "erpOrty"'>ERP_ORTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "erpAldy"'>ERP_ALDY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "erpOrdYymm"'>ERP_ORD_YYMM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "erpOrdWeek"'>ERP_ORD_WEEK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD, PRTY, SALES_NO
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD, PRTY, SALES_NO
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+	
+	<!-- 查询dms修复失败的数据 -->
+	<select id="selectDmsSalesMonth" parameterType="TmpDcsOrderCheckVO" resultType="TmpDcsErpOrderDetailVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT DLR_CD
+                     , SALES_NO
+                     , PRTY
+                 FROM TMP_DMS_SA_0416T   
+                  WHERE 1=1 
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                  AND DLR_CD = #{sDlrCd}  
+                 </if> 
+                 <if test='sModelCd != null and sModelCd != ""'>
+                  AND SUBSTR(ALDY,0,6) = #{sModelCd}  
+                 </if> 
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "salesNo"'>SALES_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "prty"'>PRTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD, PRTY, SALES_NO
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD, PRTY, SALES_NO
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+	<!-- 查询经销商信息 -->
+	<select id="selectDealerListByCondition" parameterType="DealerSearchVO" resultType="DealerVO">
+		 SELECT  
+		 	 DLR_CD
+	        ,DLR_NM
+	        ,DMS_IP_NM
+         FROM CM_0101T 
+         WHERE DMS_USE_YN = 'Y'
+           AND OPEN_DT &lt; TO_CHAR(SYSDATE,'YYYYMMDD') 
+           AND DLR_CD LIKE 'D%'
+        <!-- SELECT 
+	         DLR_CD
+	        ,DLR_NM
+	        ,DMS_IP_NM
+         FROM CM_0101T
+         WHERE SYS_OWNER_YN = 'Y'
+           AND DMS_IP_NM IS NOT NULL
+           AND DLR_CD LIKE 'D%'
+           AND DMS_IP_NM LIKE  '%172.%' 
+           AND DMS_TEST_URL_NM NOT LIKE  '%10.125.211.115%' 
+           AND DMS_USE_YN = 'Y'
+           AND OPEN_DT &lt; TO_CHAR(SYSDATE,'YYYYMMDD')
+           <if test='sDlrCd != null and sDlrCd != ""'>
+               AND DLR_CD in (#{sDlrCd})
+           </if> 
+        ORDER BY DLR_CD -->
+    </select>
+    <!-- 备份要修改的数据 -->
+    <insert id="saveDmsOrderInfo" parameterType="NotAssignedOrderVO" >
+         MERGE INTO BAK_DMS_SA_0416T A
+          USING (SELECT #{carlineNm} AS DLR_CD
+                      , #{modelCd} AS PRTY
+                      , #{ocnCd} AS ALDY
+                      , #{salesNo} AS SALES_NO
+                      , #{ordYymm} AS ORD_YYMM
+                      , #{ordWeek} AS ORD_WEEK
+                      , #{ordSeq} AS ORD_SEQ
+                      , #{carlineCd} AS CARLINE_CD
+                      , 'MANUAL' AS REG_USR_ID
+                      , SYSDATE AS REG_DT
+                   FROM DUAL ) B
+          ON (A.DLR_CD = B.DLR_CD
+              AND A.SALES_NO = B.SALES_NO
+             )
+          WHEN NOT MATCHED THEN
+            INSERT(
+                A.DLR_CD
+               ,A.PRTY
+               ,A.ALDY
+               ,A.SALES_NO
+               ,A.REG_USR_ID
+               ,A.REG_DT
+               ,A.ORD_YYMM
+               ,A.ORD_WEEK
+               ,A.ORD_SEQ
+               ,A.CARLINE_CD
+            )VALUES(
+                B.DLR_CD
+               ,B.PRTY
+               ,B.ALDY
+               ,B.SALES_NO
+               ,B.REG_USR_ID
+               ,B.REG_DT
+               ,B.ORD_YYMM
+               ,B.ORD_WEEK
+               ,B.ORD_SEQ
+               ,B.CARLINE_CD
+            )
+          WHEN MATCHED THEN
+            UPDATE SET A.PRTY = B.PRTY,A.ALDY = B.ALDY,A.UPDT_DT = SYSDATE,A.UPDT_USR_ID = 'MANUAL'
+    </insert>
+    <!-- 删除备份数据 -->
+    <delete id="deleteDealerData" parameterType="map">
+        DELETE FROM BAK_DMS_SA_0416T WHERE DLR_CD = #{dlrCd}
+    </delete>
+    
+    <!-- 删除DMS TMP数据 -->
+    <delete id="deleteTmpDms" parameterType="map">
+        DELETE FROM TMP_DMS_SA_0416T WHERE DLR_CD = #{dlrCd}
+    </delete>
+    
+    <!-- 添加一次没修复完成的数据到临时表 -->
+    <insert id="saveDmsOrderTmp" parameterType="NotAssignedOrderVO" >
+         MERGE INTO TMP_DMS_SA_0416T A
+          USING (SELECT #{carlineNm} AS DLR_CD
+                      , #{modelCd} AS PRTY
+                      , #{ocnCd} AS ALDY
+                      , #{salesNo} AS SALES_NO
+                      , #{ordYymm} AS ORD_YYMM
+                      , #{ordWeek} AS ORD_WEEK
+                      , #{ordSeq} AS ORD_SEQ
+                      , #{carlineCd} AS CARLINE_CD
+                      , 'MANUAL' AS REG_USR_ID
+                      , SYSDATE AS REG_DT
+                   FROM DUAL ) B
+          ON (A.DLR_CD = B.DLR_CD
+              AND A.SALES_NO = B.SALES_NO
+             )
+          WHEN NOT MATCHED THEN
+            INSERT(
+                A.DLR_CD
+               ,A.PRTY
+               ,A.ALDY
+               ,A.SALES_NO
+               ,A.REG_USR_ID
+               ,A.REG_DT
+               ,A.ORD_YYMM
+               ,A.ORD_WEEK
+               ,A.ORD_SEQ
+               ,A.CARLINE_CD
+            )VALUES(
+                B.DLR_CD
+               ,B.PRTY
+               ,B.ALDY
+               ,B.SALES_NO
+               ,B.REG_USR_ID
+               ,B.REG_DT
+               ,B.ORD_YYMM
+               ,B.ORD_WEEK
+               ,B.ORD_SEQ
+               ,B.CARLINE_CD
+            )
+          WHEN MATCHED THEN
+            UPDATE SET A.PRTY = B.PRTY,A.ALDY = B.ALDY,A.UPDT_DT = SYSDATE,A.UPDT_USR_ID = 'MANUAL'
+    </insert>
+    
+    <!-- 查询dms差异车辆 条数 -->
+    <select id="selectDmsSalesCarCnt" parameterType="AssignSearchVO" resultType="int">
+        SELECT COUNT(1)
+          FROM (SELECT CAR_ID
+                  FROM TMP_SA_0121T
+                  WHERE 1=1 
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                  AND DLR_CD = #{sDlrCd}  
+                 </if> 
+                 <!-- <if test='sVinNo1 != null and sVinNo1 != ""'>
+                   AND TO_CHAR(CUST_SALE_DT,'YYYYMMDD') <![CDATA[>=]]> #{sVinNo1}
+                 </if>
+                 <if test='sVinNo2 != null and sVinNo2 != ""'>
+                   AND TO_CHAR(CUST_SALE_DT,'YYYYMMDD') <![CDATA[<=]]> #{sVinNo2}
+                 </if> -->
+               )
+    </select>
+    
+    <!-- 查询dms存在差异车辆的数据 -->
+	<select id="selectDmsSalesCar" parameterType="AssignSearchVO" resultType="AssignVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT DLR_CD
+                     , VIN_NO
+                     , CAR_STAT_CD statCd
+                 FROM TMP_SA_0121T   
+                  WHERE 1=1 
+                <if test='sDlrCd != null and sDlrCd != ""'>
+                  AND DLR_CD = #{sDlrCd}  
+                 </if> 
+                <!--  <if test='sVinNo1 != null and sVinNo1 != ""'>
+                   AND TO_CHAR(CUST_SALE_DT,'YYYYMMDD') <![CDATA[>=]]> #{sVinNo1}
+                 </if>
+                 <if test='sVinNo2 != null and sVinNo2 != ""'>
+                   AND TO_CHAR(CUST_SALE_DT,'YYYYMMDD') <![CDATA[<=]]> #{sVinNo2}
+                 </if> -->
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "sDlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "sVinNo"'>VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "statCd"'>STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+     <!-- 删除经销商连接失败临时表数据 -->
+    <delete id="deleteTmpConnectionError" >
+        DELETE FROM TMP_CONNECTION_ERROR
+    </delete>
+     <!-- 清空存在差异临时表数据 -->
+    <delete id="deleteTmpDmsAll" >
+        DELETE FROM TMP_DMS_SA_0416T
+    </delete>
+    <!-- 添加连接失败数据-->
+    <insert id="saveConnectionErrorTmp" parameterType="DealerVO" >
+	    INSERT INTO TMP_CONNECTION_ERROR (
+		    DLR_CD,
+		    IP_ADDRESS
+	    )values(
+	    	#{dlrCd},
+	    	#{dmsIpNm}
+	    )
+    </insert>
+    
+    <!-- 查询连接失败的地址 -->
+    <select id="selectConnectionError" resultType="DealerVO">
+        select * from TMP_CONNECTION_ERROR
+    </select>
+    
+    <!-- 添加车辆存在差异的数据到临时表 -->
+    <insert id="saveCarTmp" parameterType="AssignVO" >
+    	INSERT INTO TMP_SA_0121T (
+    		CAR_ID,
+	 		VIN_NO, 
+	 		DLR_CD, 
+	 		CAR_STAT_CD,
+	 		CUST_SALE_DT,
+			REG_USR_ID,
+			REG_DT
+ 		 ) values (
+ 			#{carlineCd},
+ 			#{vinNo},
+ 			#{dlrCd},
+ 			#{statCd},
+ 			#{updtDt},
+ 			#{regUsrId},
+ 			#{regDt}
+			)
+    </insert>
+    
+     <!-- 清空存在差异车辆临时表数据 -->
+    <delete id="deleteCarTmpAll" >
+        DELETE FROM TMP_SA_0121T
+    </delete>
+    
+     <!-- 清空数量对比表 -->
+    <delete id="deleteNumber" >
+        DELETE FROM TMP_NUMBER_CONTRAST
+    </delete>
+    
+    <!-- 查询sap数量 -->
+    <select id="selectSapNumber" parameterType="string" resultType="NumberContrastVO">
+        SELECT B.DLR_CD AS dlrCd
+	      ,COUNT (CASE  A.PRTY  WHEN  'A' THEN 'A' END) AS sapNoAllot
+	      ,COUNT (CASE  WHEN  A.PRTY IN('P','M','N','C','F','D','E') AND SUBSTR(A.ALDY,0,6) = #{month} THEN 'P' END) AS sapAllot 
+		FROM SA_0416IR_ERP A,CM_0101T B
+		WHERE 1=1
+		AND A.DLR_CD(+) = B.DLR_CD
+		       and B.open_dt <![CDATA[<]]> TO_CHAR(SYSDATE,'YYYYMMDD')
+		       and B.DMS_USE_YN = 'Y'
+		         AND B.DLR_CD like 'D%'
+		GROUP BY B.DLR_CD ORDER BY B.DLR_CD
+    </select>
+    
+    <!-- 查询dcs数量 -->
+    <select id="selectDcsNumber" parameterType="string" resultType="NumberContrastVO">
+        SELECT B.DLR_CD AS dlrCd
+	      ,COUNT (CASE  A.PRTY  WHEN  'A' THEN 'A' END) AS dcsNoAllot
+	      ,COUNT (CASE   WHEN  A.PRTY IN('P','M','N','C','F','D','E') AND SUBSTR(A.ALDY,0,6) = #{month} THEN 'P' END) AS dcsAllot
+		FROM SA_0416T A,CM_0101T B
+		WHERE 1=1
+		AND A.DLR_CD(+) = B.DLR_CD
+		       and B.open_dt <![CDATA[<]]> TO_CHAR(SYSDATE,'YYYYMMDD')
+		       and B.DMS_USE_YN = 'Y'
+		       AND B.DLR_CD like 'D%'
+		GROUP BY B.DLR_CD ORDER BY B.DLR_CD
+    </select>
+    <!-- 新增sap数量差异 -->
+    <insert id="insertNumberContrast" parameterType="NumberContrastVO" >
+    	INSERT INTO TMP_NUMBER_CONTRAST (
+    		DLR_CD,
+	 		SAP_NO_ALLOT, 
+	 		SAP_ALLOT, 
+	 		DCS_NO_ALLOT,
+	 		DCS_ALLOT,
+			DMS_NO_ALLOT,
+			DMS_ALLOT
+ 		 ) values (
+ 			#{dlrCd},
+ 			#{sapNoAllot},
+ 			#{sapAllot},
+ 			#{dcsNoAllot},
+ 			#{dcsAllot},
+ 			#{dmsNoAllot},
+ 			#{dmsAllot}
+			)
+    </insert>
+     <!-- 修改dcs数量差异到临时表 -->
+    <update id="updateDcsAllot" parameterType="NumberContrastVO" >
+        UPDATE TMP_NUMBER_CONTRAST SET 
+			DCS_NO_ALLOT = #{dcsNoAllot},
+	 		DCS_ALLOT = #{dcsAllot}
+ 		WHERE DLR_CD = #{dlrCd}
+    </update>
+    
+     <!-- 修改dms数量差异到临时表 -->
+    <update id="updateDmsAllot" parameterType="NumberContrastVO" >
+        UPDATE TMP_NUMBER_CONTRAST SET 
+			DMS_NO_ALLOT = #{dmsNoAllot},
+	 		DMS_ALLOT = #{dmsAllot}
+ 		WHERE DLR_CD = #{dlrCd}
+    </update>
+    
+    <!-- 查询数量对比 条数 -->
+    <select id="selectNumberContrastCnt" parameterType="NumberContrastVO" resultType="int">
+        SELECT COUNT(1)
+          FROM (SELECT DLR_CD
+                  FROM TMP_NUMBER_CONTRAST
+                  WHERE 1=1 
+                 <if test='dlrCd != null and dlrCd != ""'>
+                  AND DLR_CD = #{dlrCd}  
+                 </if> 
+                
+               )
+    </select>
+    
+    <!-- 查询数量对比数据 -->
+	<select id="selectNumberContrast" parameterType="NumberContrastVO" resultType="NumberContrastVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT 
+                	DLR_CD,
+			 		SAP_NO_ALLOT, 
+			 		SAP_ALLOT, 
+			 		DCS_NO_ALLOT,
+			 		DCS_ALLOT,
+					DMS_NO_ALLOT,
+					DMS_ALLOT
+                 FROM TMP_NUMBER_CONTRAST   
+                  WHERE 1=1 
+                <if test='dlrCd != null and dlrCd != ""'>
+                  AND DLR_CD = #{dlrCd}  
+                 </if> 
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+	
+	<!-- 月结修改 Start-->
+	<!-- 月结 DCS订单处理 Start -->
+	<!-- 对比ERP订单临时表和DCS订单业务表之间的差异，并将差异数量插入到展示表中 -->
+	<insert id="callDcsSalesOrderCheck" parameterType="string" statementType="CALLABLE">
+        {CALL SP_SAL_DCS_MONTH_ORD_CHECK(#{value, mode=IN, jdbcType=VARCHAR})}
+    </insert>
+    
+    <!-- 批量修复DCS中订单差异 -->
+    <insert id="updateOrderInfoErpToDcs" parameterType="string" statementType="CALLABLE">
+        {CALL SP_SAL_ERP_DCS_MONTH_UPDATE(#{value, mode=IN, jdbcType=VARCHAR})}
+    </insert>
+    
+    <!-- 查询数量对比 条数 -->
+    <select id="selectDcsOrderDiffCnt" parameterType="TmpDcsOrderCheckVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DCS_ORDER_CHECK
+         WHERE 1=1 
+        <if test='dlrCd != null and dlrCd != ""'>
+         AND DLR_CD = #{dlrCd}  
+        </if>
+    </select>
+    
+    <!-- 查询数量对比数据 -->
+	<select id="selectDcsOrderDiff" parameterType="TmpDcsOrderCheckVO" resultType="TmpDcsOrderCheckVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT 
+                	CHECK_MONTH, 
+                	DLR_CD,
+			        DMS_IP_NM, 
+			        DMS_USE_YN, 
+			        OPEN_DT, 
+			        ALIVE_YN,
+			        ERP_ORDER_NOTMATCH,
+			        ERP_ORDER_MATCH,
+			        DCS_ORDER_NOTMATCH,
+			        DCS_ORDER_MATCH,
+			        NOTMATCH_DIFF,
+			        MATCH_DIFF,
+			        TOTAL_DIFF
+                 FROM TMP_DCS_ORDER_CHECK
+                  WHERE 1=1 
+                 <if test='dlrCd != null and dlrCd != ""'>
+                  AND DLR_CD = #{dlrCd}
+                 </if> 
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+	
+	<!-- 查询DMS数量对比数据 -->
+	<select id="selectDcsOrderDiffForDownload" parameterType="TmpDcsOrderCheckVO" resultType="TmpDcsOrderCheckVO">
+               SELECT 
+               	CHECK_MONTH, 
+               	DLR_CD,
+		        DMS_IP_NM, 
+		        DMS_USE_YN, 
+		        OPEN_DT, 
+		        ALIVE_YN,
+		        ERP_ORDER_NOTMATCH,
+		        ERP_ORDER_MATCH,
+		        DCS_ORDER_NOTMATCH,
+		        DCS_ORDER_MATCH,
+		        NOTMATCH_DIFF,
+		        MATCH_DIFF,
+		        TOTAL_DIFF,
+		        CHECK_RESULT,
+		        CHECK_MESSAGE
+                FROM TMP_DCS_ORDER_CHECK
+               WHERE 1=1 
+               ORDER BY DLR_CD
+	</select>
+	
+	<!-- 查询DCS差异订单详情 条数 -->
+    <select id="selectDcsErpOrdDetailCnt" parameterType="TmpDcsOrderCheckVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DCS_ERP_ORD_DETAIL
+         WHERE 1=1 
+        <if test='dlrCd != null and dlrCd != ""'>
+         AND DLR_CD = #{dlrCd}  
+        </if>
+    </select>
+    
+    <!-- 查询DCS差异订单详情数据 -->
+	<select id="selectDcsErpOrdDetail" parameterType="TmpDcsOrderCheckVO" resultType="TmpDcsErpOrderDetailVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT 
+                   DLR_CD,
+			       SALES_NO,
+			       PRTY,
+			       ORTY,
+			       ALDY,
+			       ORD_YYMM,
+			       ORD_WEEK,
+			       ASDY,
+			       ACDY,
+			       OCDY,
+			       VIN_NO1,
+			       VIN_NO2,
+			       REG_USR_ID,
+			       REG_DT,
+			       UPDT_USR_ID,
+			       UPDT_DT,
+			       ERP_DLR_CD,
+			       ERP_SALES_NO,
+			       ERP_PRTY,
+			       ERP_ORTY,
+			       ERP_ALDY,
+			       ERP_ORD_YYMM,
+			       ERP_ORD_WEEK,
+			       ERP_ASDY,
+			       ERP_ACDY,
+			       ERP_OCDY,
+			       ERP_VIN_NO1,
+			       ERP_VIN_NO2,
+			       ERP_REG_USR_ID,
+			       ERP_REG_DT,
+			       ERP_UPDT_USR_ID,
+			       ERP_UPDT_DT,
+			       
+			       TO_CHAR(ASDY, 'YYYY-MM-DD') ASDY_STR,
+			       TO_CHAR(ACDY, 'YYYY-MM-DD') ACDY_STR,
+			       TO_CHAR(OCDY, 'YYYY-MM-DD') OCDY_STR,
+			       TO_CHAR(REG_DT, 'YYYY-MM-DD') REG_DT_STR,
+			       TO_CHAR(UPDT_DT, 'YYYY-MM-DD') UPDT_DT_STR,
+			       
+			       TO_CHAR(ERP_ASDY, 'YYYY-MM-DD') ERP_ASDY_STR,
+			       TO_CHAR(ERP_ACDY, 'YYYY-MM-DD') ERP_ACDY_STR,
+			       TO_CHAR(ERP_OCDY, 'YYYY-MM-DD') ERP_OCDY_STR,
+			       TO_CHAR(ERP_REG_DT, 'YYYY-MM-DD') ERP_REG_DT_STR,
+			       TO_CHAR(ERP_UPDT_DT, 'YYYY-MM-DD') ERP_UPDT_DT_STR,
+			       
+			       CHECK_RESULT,
+			       CHECK_REASON,
+			       UPDATE_RESULT,
+			       UPDATE_REASON
+                 FROM TMP_DCS_ERP_ORD_DETAIL
+                  WHERE 1=1 
+                 <if test='dlrCd != null and dlrCd != ""'>
+                  AND DLR_CD = #{dlrCd}
+                 </if> 
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+	
+	<!-- 查询DCS差异订单详情数据 -->
+	<select id="selectDcsErpOrdDetailForDownload" parameterType="TmpDcsOrderCheckVO" resultType="TmpDcsErpOrderDetailVO">
+               SELECT 
+               	   DLR_CD,
+			       SALES_NO,
+			       PRTY,
+			       ORTY,
+			       ALDY,
+			       ORD_YYMM,
+			       ORD_WEEK,
+			       ASDY,
+			       ACDY,
+			       OCDY,
+			       VIN_NO1,
+			       VIN_NO2,
+			       REG_USR_ID,
+			       REG_DT,
+			       UPDT_USR_ID,
+			       UPDT_DT,
+			       ERP_DLR_CD,
+			       ERP_SALES_NO,
+			       ERP_PRTY,
+			       ERP_ORTY,
+			       ERP_ALDY,
+			       ERP_ORD_YYMM,
+			       ERP_ORD_WEEK,
+			       ERP_ASDY,
+			       ERP_ACDY,
+			       ERP_OCDY,
+			       ERP_VIN_NO1,
+			       ERP_VIN_NO2,
+			       ERP_REG_USR_ID,
+			       ERP_REG_DT,
+			       ERP_UPDT_USR_ID,
+			       ERP_UPDT_DT,
+			       
+			       TO_CHAR(ASDY, 'YYYY-MM-DD') ASDY_STR,
+			       TO_CHAR(ACDY, 'YYYY-MM-DD') ACDY_STR,
+			       TO_CHAR(OCDY, 'YYYY-MM-DD') OCDY_STR,
+			       TO_CHAR(REG_DT, 'YYYY-MM-DD') REG_DT_STR,
+			       TO_CHAR(UPDT_DT, 'YYYY-MM-DD') UPDT_DT_STR,
+			       
+			       TO_CHAR(ERP_ASDY, 'YYYY-MM-DD') ERP_ASDY_STR,
+			       TO_CHAR(ERP_ACDY, 'YYYY-MM-DD') ERP_ACDY_STR,
+			       TO_CHAR(ERP_OCDY, 'YYYY-MM-DD') ERP_OCDY_STR,
+			       TO_CHAR(ERP_REG_DT, 'YYYY-MM-DD') ERP_REG_DT_STR,
+			       TO_CHAR(ERP_UPDT_DT, 'YYYY-MM-DD') ERP_UPDT_DT_STR,
+			       
+			       CHECK_RESULT,
+			       CHECK_REASON,
+			       UPDATE_RESULT,
+			       UPDATE_REASON
+                FROM TMP_DCS_ERP_ORD_DETAIL
+               WHERE 1=1 
+               ORDER BY DLR_CD
+	</select>
+	<!-- 月结 DCS订单处理 End -->
+	
+	<!-- 月结 DMS订单处理 Start -->
+	<!-- 对比ERP订单临时表和DCS订单业务表之间的差异，并将差异数量插入到展示表中 -->
+	<insert id="callDmsSalesOrderCheck" parameterType="string" statementType="CALLABLE">
+        {CALL SP_SAL_DMS_MONTH_ORD_CHECK(#{value, mode=IN, jdbcType=VARCHAR})}
+    </insert>
+    
+    <!-- 查询待收集数据的经销商信息 -->
+	<select id="selectDealerListByOrderCheck" parameterType="TmpDmsOrderCheckVO" resultType="TmpDmsOrderCheckVO">
+		 SELECT DLR_CD
+	        ,DMS_IP_NM
+	        ,CHECK_MONTH
+         FROM TMP_DMS_ORDER_CHECK 
+        WHERE 1=1 
+         AND (CHECK_RESULT IS NULL OR CHECK_RESULT = 'N')
+         <if test='dlrCd != null and dlrCd != ""'>
+         AND DLR_CD IN (#{dlrCd}) 
+         </if>
+         ORDER BY DLR_CD
+    </select>
+    
+    <!-- 查询数量对比 条数 -->
+    <select id="checkOrderProcessShow" parameterType="OrderSearchVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_ORDER_CHECK
+         WHERE 1=1 
+         AND (CHECK_RESULT = 'Z' OR CHECK_RESULT = 'E')  
+    </select>
+    
+    <!-- 查询数量对比 条数 -->
+    <select id="checkOrderProcessShowAll" parameterType="OrderSearchVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_ORDER_CHECK
+         WHERE 1=1
+    </select>
+    
+    <!-- 修改dms数量差异表检查状态 -->
+    <update id="updateTmpOrderCheckResult" parameterType="TmpDmsOrderCheckVO" >
+        UPDATE TMP_DMS_ORDER_CHECK SET 
+			CHECK_RESULT = #{checkResult},
+	 		CHECK_MESSAGE = #{checkMessage}
+ 		WHERE DLR_CD = #{dlrCd}
+    </update>
+    
+    <!-- 修改dms数量差异表 -->
+    <update id="updateTmpOrderUpdateResult" parameterType="TmpDmsOrderCheckVO" >
+        UPDATE TMP_DMS_ORDER_CHECK SET 
+        	UPDATE_DT = SYSDATE,
+			UPDATE_RESULT = #{updateResult},
+	 		UPDATE_MESSAGE = #{updateMessage}
+ 		WHERE DLR_CD = #{dlrCd}
+    </update>
+    
+    <!-- 查询数量对比 条数 -->
+    <select id="updateOrderProcessShow" parameterType="OrderSearchVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_ORDER_CHECK
+         WHERE 1=1 
+         AND TOTAL_DIFF <![CDATA[>]]> 0
+         AND (UPDATE_RESULT = 'Z' OR UPDATE_RESULT = 'E')
+    </select>
+    
+    <!-- 查询数量对比 条数 -->
+    <select id="updateOrderProcessShowAll" parameterType="OrderSearchVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_ORDER_CHECK
+         WHERE 1=1 
+         AND TOTAL_DIFF <![CDATA[>]]> 0
+    </select>
+    
+	<!-- 查询DMS数量对比 条数 -->
+    <select id="selectDmsOrderDiffCnt" parameterType="TmpDmsOrderCheckVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_ORDER_CHECK
+         WHERE 1=1 
+        <if test='dlrCd != null and dlrCd != ""'>
+         AND DLR_CD = #{dlrCd}  
+        </if>
+    </select>
+    
+    <!-- 查询DMS数量对比数据 -->
+	<select id="selectDmsOrderDiff" parameterType="TmpDmsOrderCheckVO" resultType="TmpDmsOrderCheckVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT 
+                	CHECK_MONTH, 
+                	DLR_CD,
+			        DMS_IP_NM, 
+			        DMS_USE_YN, 
+			        OPEN_DT, 
+			        ALIVE_YN,
+			        ERP_ORDER_NOTMATCH,
+			        ERP_ORDER_MATCH,
+			        DMS_ORDER_NOTMATCH,
+			        DMS_ORDER_MATCH,
+			        NOTMATCH_DIFF,
+			        MATCH_DIFF,
+			        TOTAL_DIFF,
+			        CHECK_RESULT,
+			        CHECK_MESSAGE,
+			        UPDATE_RESULT,
+			        UPDATE_MESSAGE
+                 FROM TMP_DMS_ORDER_CHECK
+                  WHERE 1=1 
+                 <if test='dlrCd != null and dlrCd != ""'>
+                  AND DLR_CD = #{dlrCd}
+                 </if> 
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+	
+	<!-- 查询DMS数量对比数据 -->
+	<select id="selectDmsOrderDiffForDownload" parameterType="TmpDmsOrderCheckVO" resultType="TmpDmsOrderCheckVO">
+               SELECT 
+               	CHECK_MONTH, 
+               	DLR_CD,
+		        DMS_IP_NM, 
+		        DMS_USE_YN, 
+		        OPEN_DT, 
+		        ALIVE_YN,
+		        ERP_ORDER_NOTMATCH,
+		        ERP_ORDER_MATCH,
+		        DMS_ORDER_NOTMATCH,
+		        DMS_ORDER_MATCH,
+		        NOTMATCH_DIFF,
+		        MATCH_DIFF,
+		        TOTAL_DIFF,
+		        CHECK_RESULT,
+		        CHECK_MESSAGE,
+		        UPDATE_RESULT,
+		        UPDATE_MESSAGE
+                FROM TMP_DMS_ORDER_CHECK
+               WHERE 1=1 
+               ORDER BY DLR_CD
+	</select>
+	
+	<!-- 查询DMS差异订单详情 条数 -->
+    <select id="selectDmsErpOrdDetailCnt" parameterType="TmpDmsOrderCheckVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_ERP_ORD_DETAIL
+         WHERE 1=1 
+        <if test='dlrCd != null and dlrCd != ""'>
+         AND DLR_CD = #{dlrCd}  
+        </if>
+    </select>
+    
+    <!-- 查询DMS差异订单详情数据 -->
+	<select id="selectDmsErpOrdDetail" parameterType="TmpDmsOrderCheckVO" resultType="TmpDmsErpOrderDetailVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT 
+                   DLR_CD,
+			       SALES_NO,
+			       PRTY,
+			       ORTY,
+			       ALDY,
+			       ORD_YYMM,
+			       ORD_WEEK,
+			       ASDY,
+			       ACDY,
+			       OCDY,
+			       VIN_NO1,
+			       VIN_NO2,
+			       REG_USR_ID,
+			       REG_DT,
+			       UPDT_USR_ID,
+			       UPDT_DT,
+			       ERP_DLR_CD,
+			       ERP_SALES_NO,
+			       ERP_PRTY,
+			       ERP_ORTY,
+			       ERP_ALDY,
+			       ERP_ORD_YYMM,
+			       ERP_ORD_WEEK,
+			       ERP_ASDY,
+			       ERP_ACDY,
+			       ERP_OCDY,
+			       ERP_VIN_NO1,
+			       ERP_VIN_NO2,
+			       ERP_REG_USR_ID,
+			       ERP_REG_DT,
+			       ERP_UPDT_USR_ID,
+			       ERP_UPDT_DT,
+			       
+			       TO_CHAR(ASDY, 'YYYY-MM-DD') ASDY_STR,
+			       TO_CHAR(ACDY, 'YYYY-MM-DD') ACDY_STR,
+			       TO_CHAR(OCDY, 'YYYY-MM-DD') OCDY_STR,
+			       TO_CHAR(REG_DT, 'YYYY-MM-DD') REG_DT_STR,
+			       TO_CHAR(UPDT_DT, 'YYYY-MM-DD') UPDT_DT_STR,
+			       
+			       TO_CHAR(ERP_ASDY, 'YYYY-MM-DD') ERP_ASDY_STR,
+			       TO_CHAR(ERP_ACDY, 'YYYY-MM-DD') ERP_ACDY_STR,
+			       TO_CHAR(ERP_OCDY, 'YYYY-MM-DD') ERP_OCDY_STR,
+			       TO_CHAR(ERP_REG_DT, 'YYYY-MM-DD') ERP_REG_DT_STR,
+			       TO_CHAR(ERP_UPDT_DT, 'YYYY-MM-DD') ERP_UPDT_DT_STR,
+			       
+			       CHECK_RESULT,
+			       CHECK_REASON,
+			       UPDATE_RESULT,
+			       UPDATE_REASON
+                 FROM TMP_DMS_ERP_ORD_DETAIL
+                  WHERE 1=1 
+                 <if test='dlrCd != null and dlrCd != ""'>
+                  AND DLR_CD = #{dlrCd}
+                 </if> 
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+	
+	<!-- 查询DMS差异订单详情数据 -->
+	<select id="selectDmsErpOrdDetailForDownload" parameterType="TmpDmsOrderCheckVO" resultType="TmpDmsErpOrderDetailVO">
+               SELECT 
+               	   DLR_CD,
+			       SALES_NO,
+			       PRTY,
+			       ORTY,
+			       ALDY,
+			       ORD_YYMM,
+			       ORD_WEEK,
+			       ASDY,
+			       ACDY,
+			       OCDY,
+			       VIN_NO1,
+			       VIN_NO2,
+			       REG_USR_ID,
+			       REG_DT,
+			       UPDT_USR_ID,
+			       UPDT_DT,
+			       ERP_DLR_CD,
+			       ERP_SALES_NO,
+			       ERP_PRTY,
+			       ERP_ORTY,
+			       ERP_ALDY,
+			       ERP_ORD_YYMM,
+			       ERP_ORD_WEEK,
+			       ERP_ASDY,
+			       ERP_ACDY,
+			       ERP_OCDY,
+			       ERP_VIN_NO1,
+			       ERP_VIN_NO2,
+			       ERP_REG_USR_ID,
+			       ERP_REG_DT,
+			       ERP_UPDT_USR_ID,
+			       ERP_UPDT_DT,
+			       
+			       TO_CHAR(ASDY, 'YYYY-MM-DD') ASDY_STR,
+			       TO_CHAR(ACDY, 'YYYY-MM-DD') ACDY_STR,
+			       TO_CHAR(OCDY, 'YYYY-MM-DD') OCDY_STR,
+			       TO_CHAR(REG_DT, 'YYYY-MM-DD') REG_DT_STR,
+			       TO_CHAR(UPDT_DT, 'YYYY-MM-DD') UPDT_DT_STR,
+			       
+			       TO_CHAR(ERP_ASDY, 'YYYY-MM-DD') ERP_ASDY_STR,
+			       TO_CHAR(ERP_ACDY, 'YYYY-MM-DD') ERP_ACDY_STR,
+			       TO_CHAR(ERP_OCDY, 'YYYY-MM-DD') ERP_OCDY_STR,
+			       TO_CHAR(ERP_REG_DT, 'YYYY-MM-DD') ERP_REG_DT_STR,
+			       TO_CHAR(ERP_UPDT_DT, 'YYYY-MM-DD') ERP_UPDT_DT_STR,
+			       
+			       CHECK_RESULT,
+			       CHECK_REASON,
+			       UPDATE_RESULT,
+			       UPDATE_REASON
+                FROM TMP_DMS_ERP_ORD_DETAIL
+               WHERE 1=1 
+               ORDER BY DLR_CD
+	</select>
+	
+	<!-- 查询待修复的经销商数据 -->
+	<select id="selectDealerListByOrderDiff" parameterType="TmpDmsOrderCheckVO" resultType="TmpDmsOrderCheckVO">
+		 SELECT DLR_CD
+	        ,DMS_IP_NM
+	        ,CHECK_MONTH
+         FROM TMP_DMS_ORDER_CHECK 
+         WHERE 1=1
+           AND TOTAL_DIFF <![CDATA[>]]> 0
+           AND (UPDATE_RESULT IS NULL OR UPDATE_RESULT = 'N')
+           <if test='dlrCd != null and dlrCd != ""'>
+	         AND DLR_CD = #{dlrCd}  
+	       </if>
+        ORDER BY DLR_CD   
+    </select>
+    
+    <!-- 查询DMS数量对比 条数 -->
+    <select id="selectDealerByDlrCd" parameterType="TmpDmsOrderCheckVO" resultType="TmpDmsOrderCheckVO">
+       SELECT DLR_CD,DMS_IP_NM
+         FROM CM_0101T
+         WHERE 1=1 
+         AND DLR_CD IN (#{dlrCd})  
+    </select>
+    
+    <!-- 执行修改SQL记录 -->
+    <update id="updateTmpDmsSqlResult" parameterType="TmpDmsUpdateSqlVO" >
+        UPDATE TMP_DMS_UPDATE_SQL SET 
+			UPDATE_DT = SYSDATE,
+			UPDATE_RESULT = #{updateResult},
+	 		UPDATE_MESSAGE = #{updateMessage}
+ 		WHERE DLR_CD = #{dlrCd}
+    </update>
+    <!-- 月结 DMS订单处理 End -->
+    
+    
+    <!-- 月结 DCS车辆处理 Start -->
+	<!-- 对比ERP车辆临时表和DCS车辆业务表之间的差异，并将差异数量插入到展示表中 -->
+	<insert id="callDcsSalesCarCheck" parameterType="string" statementType="CALLABLE">
+        {CALL SP_SAL_DCS_MONTH_CAR_CHECK(#{value, mode=IN, jdbcType=VARCHAR})}
+    </insert>
+    
+    <!-- 批量修复DCS中车辆差异 -->
+    <insert id="updateCarInfoErpToDcs" parameterType="string" statementType="CALLABLE">
+        {CALL SP_SAL_DCS_MONTH_CAR_UPDATE(#{value, mode=IN, jdbcType=VARCHAR})}
+    </insert>
+    
+    <!-- 查询数量对比 条数 -->
+    <select id="selectDcsCarDiffCnt" parameterType="TmpDcsCarCheckVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DCS_CAR_CHECK
+         WHERE 1=1 
+        <if test='dlrCd != null and dlrCd != ""'>
+         AND DLR_CD = #{dlrCd}  
+        </if>
+    </select>
+    
+    <!-- 查询数量对比数据 -->
+	<select id="selectDcsCarDiff" parameterType="TmpDcsCarCheckVO" resultType="TmpDcsCarCheckVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT 
+                	CHECK_MONTH,
+					DLR_CD,
+					DMS_IP_NM,
+					DMS_USE_YN,
+					OPEN_DT,
+					ALIVE_YN,
+					ERP_TRANS,
+					ERP_STOCK,
+					ERP_RETAIL,
+					ERP_STRATEGY,
+					DCS_TRANS,
+					DCS_STOCK,
+					DCS_RETAIL,
+					DCS_STRATEGY,
+					TRANS_DIFF,
+					STOCK_DIFF,
+					RETAIL_DIFF,
+					STRATEGY_DIFF,
+					TOTAL_DIFF,
+					CHECK_RESULT,
+					CHECK_MESSAGE
+                 FROM TMP_DCS_CAR_CHECK
+                  WHERE 1=1 
+                 <if test='dlrCd != null and dlrCd != ""'>
+                  AND DLR_CD = #{dlrCd}
+                 </if> 
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+	<!-- 查询DCS数量对比数据下载 -->
+	<select id="selectDcsCarDiffForDownload" parameterType="TmpDcsCarCheckVO" resultType="TmpDcsCarCheckVO">
+               SELECT 
+               	CHECK_MONTH,
+				DLR_CD,
+				DMS_IP_NM,
+				DMS_USE_YN,
+				OPEN_DT,
+				ALIVE_YN,
+				ERP_TRANS,
+				ERP_STOCK,
+				ERP_RETAIL,
+				ERP_STRATEGY,
+				DCS_TRANS,
+				DCS_STOCK,
+				DCS_RETAIL,
+				DCS_STRATEGY,
+				TRANS_DIFF,
+				STOCK_DIFF,
+				RETAIL_DIFF,
+				STRATEGY_DIFF,
+				TOTAL_DIFF,
+				CHECK_RESULT,
+				CHECK_MESSAGE
+                FROM TMP_DCS_CAR_CHECK
+               WHERE 1=1 
+               ORDER BY DLR_CD
+	</select>
+	
+	<!-- 查询DMS车辆差异详情 条数 -->
+    <select id="selectDcsErpCarDetailCnt" parameterType="TmpDcsCarCheckVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DCS_ERP_CAR_DETAIL
+         WHERE 1=1 
+        <if test='dlrCd != null and dlrCd != ""'>
+         AND DLR_CD = #{dlrCd}  
+        </if>
+    </select>
+    
+    <!-- 查询DMS车辆差异详情 数据 -->
+	<select id="selectDcsErpCarDetail" parameterType="TmpDcsCarCheckVO" resultType="TmpDcsErpCarDetailVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT 
+               	  dlr_cd,
+				  vin_no,
+				  vin_no1,
+				  vin_no2,
+				  car_stat_cd,
+				  plt_gi_dt,
+				  gr_dt,
+				  grte_start_dt,
+				  cust_sale_dt,
+				  str_no,
+				  str_yn,
+				  ord_no,
+				  erp_dlr_cd,
+				  erp_vin_no,
+				  erp_vin_no1,
+				  erp_vin_no2,
+				  erp_car_stat_cd,
+				  erp_plt_gi_dt,
+				  erp_gr_dt,
+				  erp_grte_start_dt,
+				  erp_cust_sale_dt,
+				  erp_str_no,
+				  erp_str_yn,
+				  erp_ord_no,
+				  reg_usr_id,
+				  reg_dt,
+				  updt_usr_id,
+				  updt_dt,
+				  erp_reg_usr_id,
+				  erp_reg_dt,
+				  erp_updt_usr_id,
+				  erp_updt_dt,
+				  check_result,
+				  check_reason,
+				  update_result,
+				  update_reason,
+				  to_char(plt_gi_dt,'yyyy-mm-dd') plt_gi_dt_str,
+				  to_char(gr_dt,'yyyy-mm-dd') gr_dt_str,
+				  to_char(grte_start_dt,'yyyy-mm-dd') grte_start_dt_str,
+				  to_char(cust_sale_dt,'yyyy-mm-dd') cust_sale_dt_str,
+				  to_char(erp_plt_gi_dt,'yyyy-mm-dd') erp_plt_gi_dt_str,
+				  to_char(erp_gr_dt,'yyyy-mm-dd') erp_gr_dt_str,
+				  to_char(erp_grte_start_dt,'yyyy-mm-dd') erp_grte_start_dt_str,
+				  to_char(erp_cust_sale_dt,'yyyy-mm-dd') erp_cust_sale_dt_str,
+				  to_char(reg_dt,'yyyy-mm-dd') reg_dt_str,
+				  to_char(updt_dt,'yyyy-mm-dd') updt_dt_str
+                FROM TMP_DCS_ERP_CAR_DETAIL
+                  WHERE 1=1 
+                 <if test='dlrCd != null and dlrCd != ""'>
+                  AND DLR_CD = #{dlrCd}
+                 </if> 
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+	<!-- 查询DCS车辆差异详情数据下载 -->
+	<select id="selectDcsErpCarDetailForDownload" parameterType="TmpDcsCarCheckVO" resultType="TmpDcsErpCarDetailVO">
+               SELECT 
+               	  dlr_cd,
+				  vin_no,
+				  vin_no1,
+				  vin_no2,
+				  car_stat_cd,
+				  plt_gi_dt,
+				  gr_dt,
+				  grte_start_dt,
+				  cust_sale_dt,
+				  str_no,
+				  str_yn,
+				  ord_no,
+				  erp_dlr_cd,
+				  erp_vin_no,
+				  erp_vin_no1,
+				  erp_vin_no2,
+				  erp_car_stat_cd,
+				  erp_plt_gi_dt,
+				  erp_gr_dt,
+				  erp_grte_start_dt,
+				  erp_cust_sale_dt,
+				  erp_str_no,
+				  erp_str_yn,
+				  erp_ord_no,
+				  reg_usr_id,
+				  reg_dt,
+				  updt_usr_id,
+				  updt_dt,
+				  erp_reg_usr_id,
+				  erp_reg_dt,
+				  erp_updt_usr_id,
+				  erp_updt_dt,
+				  check_result,
+				  check_reason,
+				  update_result,
+				  update_reason,
+				  to_char(plt_gi_dt,'yyyy-mm-dd') plt_gi_dt_str,
+				  to_char(gr_dt,'yyyy-mm-dd') gr_dt_str,
+				  to_char(grte_start_dt,'yyyy-mm-dd') grte_start_dt_str,
+				  to_char(cust_sale_dt,'yyyy-mm-dd') cust_sale_dt_str,
+				  to_char(erp_plt_gi_dt,'yyyy-mm-dd') erp_plt_gi_dt_str,
+				  to_char(erp_gr_dt,'yyyy-mm-dd') erp_gr_dt_str,
+				  to_char(erp_grte_start_dt,'yyyy-mm-dd') erp_grte_start_dt_str,
+				  to_char(erp_cust_sale_dt,'yyyy-mm-dd') erp_cust_sale_dt_str,
+				  to_char(reg_dt,'yyyy-mm-dd') reg_dt_str,
+				  to_char(updt_dt,'yyyy-mm-dd') updt_dt_str,
+				  to_char(reg_dt,'yyyy-mm-dd') reg_dt_str,
+				  to_char(updt_dt,'yyyy-mm-dd') updt_dt_str
+                FROM TMP_DCS_ERP_CAR_DETAIL
+               WHERE 1=1 
+               ORDER BY DLR_CD,VIN_NO
+	</select>
+	<!-- 月结 DCS车辆处理 End -->
+	
+	<!-- 月结 DMS车辆处理 Start -->
+	<!-- 对比ERP车辆临时表和DCS车辆业务表之间的差异，并将差异数量插入到展示表中 -->
+	<insert id="callDmsSalesCarCheck" parameterType="string" statementType="CALLABLE">
+        {CALL SP_SAL_DMS_MONTH_CAR_CHECK(#{value, mode=IN, jdbcType=VARCHAR})}
+    </insert>
+    
+    <!-- 查询待收集数据的经销商信息 -->
+	<select id="selectDealerListByCarCheck" parameterType="TmpDmsCarCheckVO" resultType="TmpDmsCarCheckVO">
+		 SELECT DLR_CD
+	        ,DMS_IP_NM
+	        ,CHECK_MONTH
+         FROM TMP_DMS_CAR_CHECK
+        WHERE 1=1 
+         AND (CHECK_RESULT IS NULL OR CHECK_RESULT = 'N')
+         <if test='dlrCd != null and dlrCd != ""'>
+         AND DLR_CD IN (#{dlrCd}) 
+         </if>
+        ORDER BY DLR_CD
+    </select>
+    
+    <!-- 查询数量对比 条数 -->
+    <select id="checkCarProcessShow" parameterType="CarSearchVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_CAR_CHECK
+         WHERE 1=1 
+         AND (CHECK_RESULT = 'Z' OR CHECK_RESULT = 'E')
+    </select>
+    
+    <!-- 查询数量对比 条数 -->
+    <select id="checkCarProcessShowAll" parameterType="CarSearchVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_CAR_CHECK
+         WHERE 1=1 
+    </select>
+    
+    <!-- 修改dms数量差异表检查状态 -->
+    <update id="updateTmpCarCheckResult" parameterType="TmpDmsCarCheckVO" >
+        UPDATE TMP_DMS_CAR_CHECK SET 
+			CHECK_RESULT = #{checkResult},
+	 		CHECK_MESSAGE = #{checkMessage}
+ 		WHERE DLR_CD = #{dlrCd}
+    </update>
+    
+    <!-- 修改dms数量差异表 -->
+    <update id="updateTmpCarUpdateResult" parameterType="TmpDmsCarCheckVO" >
+        UPDATE TMP_DMS_CAR_CHECK SET 
+        	UPDATE_DT = SYSDATE,
+			UPDATE_RESULT = #{updateResult},
+	 		UPDATE_MESSAGE = #{updateMessage}
+ 		WHERE DLR_CD = #{dlrCd}
+    </update>
+    
+	<!-- 查询DMS数量对比 条数 -->
+    <select id="selectDmsCarDiffCnt" parameterType="TmpDmsCarCheckVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_CAR_CHECK
+         WHERE 1=1 
+        <if test='dlrCd != null and dlrCd != ""'>
+         AND DLR_CD = #{dlrCd}  
+        </if>
+    </select>
+    
+    <!-- 查询DMS数量对比数据 -->
+	<select id="selectDmsCarDiff" parameterType="TmpDmsCarCheckVO" resultType="TmpDmsCarCheckVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT 
+                	CHECK_MONTH,
+					DLR_CD,
+					DMS_IP_NM,
+					DMS_USE_YN,
+					OPEN_DT,
+					ALIVE_YN,
+					ERP_TRANS,
+					ERP_STOCK,
+					ERP_RETAIL,
+					ERP_STRATEGY,
+					DMS_TRANS,
+					DMS_STOCK,
+					DMS_RETAIL,
+					DMS_STRATEGY,
+					TRANS_DIFF,
+					STOCK_DIFF,
+					RETAIL_DIFF,
+					STRATEGY_DIFF,
+					TOTAL_DIFF,
+					CHECK_RESULT,
+					CHECK_MESSAGE,
+					UPDATE_RESULT,
+					UPDATE_MESSAGE
+                 FROM TMP_DMS_CAR_CHECK
+                  WHERE 1=1 
+                 <if test='dlrCd != null and dlrCd != ""'>
+                  AND DLR_CD = #{dlrCd}
+                 </if> 
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+	
+	<!-- 查询DMS车辆差异数量对比数据 -->
+	<select id="selectDmsCarDiffForDownload" parameterType="TmpDmsCarCheckVO" resultType="TmpDmsCarCheckVO">
+               SELECT 
+               	CHECK_MONTH,
+				DLR_CD,
+				DMS_IP_NM,
+				DMS_USE_YN,
+				OPEN_DT,
+				ALIVE_YN,
+				ERP_TRANS,
+				ERP_STOCK,
+				ERP_RETAIL,
+				ERP_STRATEGY,
+				DMS_TRANS,
+				DMS_STOCK,
+				DMS_RETAIL,
+				DMS_STRATEGY,
+				TRANS_DIFF,
+				STOCK_DIFF,
+				RETAIL_DIFF,
+				STRATEGY_DIFF,
+				TOTAL_DIFF,
+				CHECK_RESULT,
+				CHECK_MESSAGE,
+				UPDATE_RESULT,
+				UPDATE_MESSAGE
+                FROM TMP_DMS_CAR_CHECK
+               WHERE 1=1 
+               ORDER BY DLR_CD
+	</select>
+	
+	<!-- 查询待修复的经销商数据 -->
+	<select id="selectCarDealerListByCarDiff" parameterType="TmpDmsCarCheckVO" resultType="TmpDmsCarCheckVO">
+		 SELECT DLR_CD
+	        ,DMS_IP_NM
+         FROM TMP_DMS_CAR_CHECK 
+         WHERE 1=1
+           AND TOTAL_DIFF <![CDATA[>]]> 0
+           AND (UPDATE_RESULT IS NULL OR UPDATE_RESULT = 'E')
+    </select>
+    
+    <!-- 查询DMS数量对比 条数 -->
+    <select id="selectCarDealerByDlrCd" parameterType="TmpDmsCarCheckVO" resultType="TmpDmsCarCheckVO">
+       SELECT DLR_CD,DMS_IP_NM
+         FROM CM_0101T
+         WHERE 1=1 
+         AND DLR_CD IN (#{dlrCd})  
+    </select>
+    
+    <!-- 执行修改SQL记录 -->
+    <update id="updateTmpDmsCarSqlResult" parameterType="TmpDmsUpdateSqlVO" >
+        UPDATE TMP_DMS_CAR_UPDATE_SQL SET 
+			UPDATE_DT = SYSDATE,
+			UPDATE_RESULT = #{updateResult},
+	 		UPDATE_MESSAGE = #{updateMessage}
+ 		WHERE DLR_CD = #{dlrCd}
+    </update>
+    
+    <!-- 查询DMS车辆差异详情 条数 -->
+    <select id="selectDmsErpCarDetailCnt" parameterType="TmpDmsCarCheckVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_ERP_CAR_DETAIL
+         WHERE 1=1 
+        <if test='dlrCd != null and dlrCd != ""'>
+         AND DLR_CD = #{dlrCd}  
+        </if>
+    </select>
+    
+    <!-- 查询DMS车辆差异详情 数据 -->
+	<select id="selectDmsErpCarDetail" parameterType="TmpDmsCarCheckVO" resultType="TmpDmsErpCarDetailVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT 
+               	  dlr_cd,
+				  vin_no,
+				  vin_no1,
+				  vin_no2,
+				  car_stat_cd,
+				  plt_gi_dt,
+				  gr_dt,
+				  grte_start_dt,
+				  cust_sale_dt,
+				  str_no,
+				  str_yn,
+				  ord_no,
+				  erp_dlr_cd,
+				  erp_vin_no,
+				  erp_vin_no1,
+				  erp_vin_no2,
+				  erp_car_stat_cd,
+				  erp_plt_gi_dt,
+				  erp_gr_dt,
+				  erp_grte_start_dt,
+				  erp_cust_sale_dt,
+				  erp_str_no,
+				  erp_str_yn,
+				  erp_ord_no,
+				  reg_usr_id,
+				  reg_dt,
+				  updt_usr_id,
+				  updt_dt,
+				  erp_reg_usr_id,
+				  erp_reg_dt,
+				  erp_updt_usr_id,
+				  erp_updt_dt,
+				  check_result,
+				  check_reason,
+				  update_result,
+				  update_reason,
+				  to_char(plt_gi_dt,'yyyy-mm-dd') plt_gi_dt_str,
+				  to_char(gr_dt,'yyyy-mm-dd') gr_dt_str,
+				  to_char(grte_start_dt,'yyyy-mm-dd') grte_start_dt_str,
+				  to_char(cust_sale_dt,'yyyy-mm-dd') cust_sale_dt_str,
+				  to_char(reg_dt,'yyyy-mm-dd') reg_dt_str,
+				  to_char(updt_dt,'yyyy-mm-dd') updt_dt_str
+                FROM TMP_DMS_ERP_CAR_DETAIL
+                  WHERE 1=1 
+                 <if test='dlrCd != null and dlrCd != ""'>
+                  AND DLR_CD = #{dlrCd}
+                 </if> 
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+	<!-- 查询DMS车辆差异详情数据下载 -->
+	<select id="selectDmsErpCarDetailForDownload" parameterType="TmpDmsCarCheckVO" resultType="TmpDmsErpCarDetailVO">
+               SELECT 
+               	  dlr_cd,
+				  vin_no,
+				  vin_no1,
+				  vin_no2,
+				  car_stat_cd,
+				  plt_gi_dt,
+				  gr_dt,
+				  grte_start_dt,
+				  cust_sale_dt,
+				  str_no,
+				  str_yn,
+				  ord_no,
+				  erp_dlr_cd,
+				  erp_vin_no,
+				  erp_vin_no1,
+				  erp_vin_no2,
+				  erp_car_stat_cd,
+				  erp_plt_gi_dt,
+				  erp_gr_dt,
+				  erp_grte_start_dt,
+				  erp_cust_sale_dt,
+				  erp_str_no,
+				  erp_str_yn,
+				  erp_ord_no,
+				  reg_usr_id,
+				  reg_dt,
+				  updt_usr_id,
+				  updt_dt,
+				  erp_reg_usr_id,
+				  erp_reg_dt,
+				  erp_updt_usr_id,
+				  erp_updt_dt,
+				  check_result,
+				  check_reason,
+				  update_result,
+				  update_reason,
+				  to_char(plt_gi_dt,'yyyy-mm-dd') plt_gi_dt_str,
+				  to_char(gr_dt,'yyyy-mm-dd') gr_dt_str,
+				  to_char(grte_start_dt,'yyyy-mm-dd') grte_start_dt_str,
+				  to_char(cust_sale_dt,'yyyy-mm-dd') cust_sale_dt_str,
+				  to_char(reg_dt,'yyyy-mm-dd') reg_dt_str,
+				  to_char(updt_dt,'yyyy-mm-dd') updt_dt_str
+                FROM TMP_DMS_ERP_CAR_DETAIL
+               WHERE 1=1 
+               ORDER BY DLR_CD,VIN_NO
+	</select>
+	
+	<!-- 查询DMS车辆差异详情待修复数据 -->
+	<select id="selectDmsErpCarDetailForUpdate" parameterType="TmpDmsCarCheckVO" resultType="TmpDmsErpCarDetailVO">
+               SELECT 
+               	  dlr_cd,
+               	  dms_ip_nm,
+				  vin_no,
+				  vin_no1,
+				  vin_no2,
+				  car_stat_cd,
+				  plt_gi_dt,
+				  gr_dt,
+				  grte_start_dt,
+				  cust_sale_dt,
+				  str_no,
+				  str_yn,
+				  ord_no,
+				  erp_dlr_cd,
+				  erp_vin_no,
+				  erp_vin_no1,
+				  erp_vin_no2,
+				  erp_car_stat_cd,
+				  erp_plt_gi_dt,
+				  erp_gr_dt,
+				  erp_grte_start_dt,
+				  erp_cust_sale_dt,
+				  erp_str_no,
+				  erp_str_yn,
+				  erp_ord_no,
+				  reg_usr_id,
+				  reg_dt,
+				  updt_usr_id,
+				  updt_dt,
+				  erp_reg_usr_id,
+				  erp_reg_dt,
+				  erp_updt_usr_id,
+				  erp_updt_dt,
+				  check_result,
+				  check_reason,
+				  update_result,
+				  update_reason,
+				  to_char(plt_gi_dt,'yyyy-mm-dd') plt_gi_dt_str,
+				  to_char(gr_dt,'yyyy-mm-dd') gr_dt_str,
+				  to_char(grte_start_dt,'yyyy-mm-dd') grte_start_dt_str,
+				  to_char(cust_sale_dt,'yyyy-mm-dd') cust_sale_dt_str,
+				  to_char(reg_dt,'yyyy-mm-dd') reg_dt_str,
+				  to_char(updt_dt,'yyyy-mm-dd') updt_dt_str
+                FROM TMP_DMS_ERP_CAR_DETAIL
+               WHERE (UPDATE_RESULT IS NULL OR UPDATE_RESULT = 'N')
+               ORDER BY DLR_CD,VIN_NO
+	</select>
+	
+	<!-- 修改dms数量差异表 -->
+    <update id="updateTmpDmsCarUpdateResult" parameterType="TmpDmsErpCarDetailVO" >
+        UPDATE TMP_DMS_ERP_CAR_DETAIL SET 
+			UPDATE_RESULT = #{updateResult},
+	 		UPDATE_REASON = #{updateReason}
+ 		WHERE VIN_NO = #{vinNo}
+ 		  AND CHECK_REASON = #{checkReason}
+ 		  AND (UPDATE_RESULT IS NULL OR UPDATE_RESULT = 'N')
+    </update>
+    
+    <!-- 查询数量对比 条数 -->
+    <select id="updateCarProcessShow" parameterType="CarSearchVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_ERP_CAR_DETAIL
+         WHERE 1=1 
+         AND (UPDATE_RESULT = 'Z' OR UPDATE_RESULT = 'E')
+    </select>
+    
+    <!-- 查询剩余待修复条数 -->
+    <select id="updateCarProcessShowAll" parameterType="CarSearchVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_ERP_CAR_DETAIL
+         WHERE 1=1
+    </select>
+    
+    <!-- 月结 DMS车辆处理 End -->
+	
+	
+	<!-- 查询已经执行SQL的经销商数量 -->
+	<!-- 查询DMS数量对比 条数 -->
+    <select id="selectDealerByDlrCds" parameterType="TmpDmsUpdateSqlVO" resultType="TmpDmsUpdateSqlVO">
+       SELECT DLR_CD,DMS_IP_NM
+         FROM TMP_DMS_UPDATE_SQL
+         WHERE 1=1 
+           AND (UPDATE_RESULT IS NULL OR UPDATE_RESULT = 'N')
+    </select>
+    
+    <!-- 删除DMS TMP数据 -->
+    <delete id="deleteTmpDmsForUpdate">
+        DELETE FROM TMP_DMS_UPDATE_SQL
+    </delete>
+    
+    <!-- 添加一次没修复完成的数据到临时表 -->
+    <insert id="batchInsertDealerForUpdate" parameterType="TmpDmsUpdateSqlVO" >
+         MERGE INTO TMP_DMS_UPDATE_SQL A
+          USING (SELECT 
+                	DLR_CD,
+			        DMS_IP_NM, 
+			        DMS_USE_YN, 
+			        OPEN_DT, 
+			        ALIVE_YN
+                 FROM CM_0101T
+                WHERE 1=1
+                  AND DMS_USE_YN = 'Y'
+           		  AND OPEN_DT &lt; TO_CHAR(SYSDATE,'YYYYMMDD') 
+           		  AND DLR_CD LIKE 'D%'
+                  <if test='dlrCd != null and dlrCd != ""'>
+                  AND DLR_CD IN (#{dlrCd}) 
+                  </if>
+                    ) B
+          ON (A.DLR_CD = B.DLR_CD)
+          WHEN NOT MATCHED THEN
+            INSERT(
+                A.DLR_CD
+               ,A.DMS_IP_NM
+               ,A.DMS_USE_YN
+               ,A.OPEN_DT
+               ,A.ALIVE_YN
+            )VALUES(
+                B.DLR_CD
+               ,B.DMS_IP_NM
+               ,B.DMS_USE_YN
+               ,B.OPEN_DT
+               ,B.ALIVE_YN
+            )
+    </insert>
+    
+    <!-- 查询DMS执行SQL 条数 -->
+    <select id="selectDmsUpdateResultCnt" parameterType="TmpDmsUpdateSqlVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_UPDATE_SQL
+         WHERE 1=1 
+    </select>
+    
+    <!-- 查询DMS执行SQL数据 -->
+	<select id="selectDmsUpdateResult" parameterType="TmpDmsUpdateSqlVO" resultType="TmpDmsUpdateSqlVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT 
+                	DLR_CD,
+			        DMS_IP_NM, 
+			        DMS_USE_YN, 
+			        OPEN_DT, 
+			        ALIVE_YN,
+			        UPDATE_DT,
+					UPDATE_RESULT,
+					UPDATE_MESSAGE
+                 FROM TMP_DMS_UPDATE_SQL
+                  WHERE 1=1 
+               ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+	
+    <select id="batchUpdateBySqlProcessShow" parameterType="OrderSearchVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_UPDATE_SQL
+         WHERE 1=1 
+         AND (UPDATE_RESULT = 'Z' OR UPDATE_RESULT = 'E')
+    </select>
+    
+    <!-- 查询全部执行SQL的经销商总数量 -->
+    <select id="batchUpdateBySqlProcessShowAll" parameterType="OrderSearchVO" resultType="int">
+       SELECT COUNT(1)
+         FROM TMP_DMS_UPDATE_SQL
+         WHERE 1=1
+    </select>
+    
+    <update id="updateDcsBySql" parameterType="string" >
+        ${value}
+    </update>
+    
+    <!-- 执行数据库事务提交 -->
+    <insert id="callIfMergeCommit" parameterType="string" statementType="CALLABLE">
+        {CALL SP_IF_MERGE_COMMIT()}
+    </insert>
+	<!-- 月结修改 End-->
+</mapper>

@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : TargetMarketStatusDAO_SqlMap.xml
+    Description : [제조사] 시장현황등록
+    author chibeom.song
+    since 2016. 9. 9.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 9. 9.    chibeom.song     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mis.tmp.service.dao.TargetMarketStatusDAO">
+
+    <!-- 성(우편번호) 목록을  조회한다. -->
+    <select id="selectProvinceInfoList" parameterType="TargetMarketStatusSearchVO" resultType="TargetMarketStatusVO">
+    /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMarketStatusDAO.selectProvinceInfoList] */
+        SELECT CSTL_CD AS provinceCd, CSTL_NM AS provinceNm FROM CM_2701T
+        <where>
+            <if test='sMarketStatusProvince != null and sMarketStatusProvince != ""'>
+                SUNG_CD = #{sMarketStatusProvince}
+            </if>
+        </where>
+        GROUP BY CSTL_CD, CSTL_NM ORDER BY CSTL_CD
+    </select>
+
+    <!-- 시(우편번호) 목록을  조회한다. -->
+    <select id="selectCityInfoList" parameterType="TargetMarketStatusSearchVO" resultType="TargetMarketStatusVO">
+    /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMarketStatusDAO.selectCityInfoList] */
+        SELECT CITY_CD AS cityCd, CITY_NM AS cityNm FROM CM_3201T
+        <where>
+            <if test='sMarketStatusProvince != null and sMarketStatusProvince != ""'>
+                CSTL_CD = #{sMarketStatusProvince}
+            </if>
+        </where>
+        GROUP BY CITY_CD, CITY_NM
+        ORDER BY CITY_CD
+    </select>
+
+    <!-- 시(우편번호) 목록을  조회한다. -->
+    <select id="selectManuMarketStatusCityList" parameterType="TargetMarketStatusSearchVO" resultType="TargetMarketStatusVO">
+    /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMarketStatusDAO.selectManuMarketStatusCityList] */
+        SELECT CITY_CD AS cityCd, CITY_NM AS cityNm FROM CM_3201T
+        <where>
+            <if test='provinceCd != null and provinceCd != ""'>
+                CSTL_CD = #{provinceCd}
+            </if>
+        </where>
+        GROUP BY CITY_CD, CITY_NM
+        ORDER BY CITY_CD
+    </select>
+
+    <!-- 시(우편번호) 목록을  조회한다. -->
+    <select id="selectManuMarketStatusCityCnt" parameterType="TargetMarketStatusSearchVO" resultType="int">
+    /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMarketStatusDAO.selectManuMarketStatusCityCnt] */
+        SELECT COUNT(*) AS VALUE FROM CM_3201T
+        <where>
+            <if test='sMarketStatusProvince != null and sMarketStatusProvince != ""'>
+                CSTL_CD = #{sMarketStatusProvince}
+            </if>
+        </where>
+    </select>
+
+    <!-- 시장현황자료를 조회한다. -->
+    <select id="selectManuMarketStatusRegByKey" parameterType="map" resultType="TargetMarketStatusVO">
+    /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMarketStatusDAO.selectManuMarketStatusRegByKey] */
+        SELECT * FROM MS_0107T
+        WHERE REG_YY = SUBSTR(#{sMarketStatusYyMm},1,4)
+        AND REG_MM = SUBSTR(#{sMarketStatusYyMm},5,2)
+        AND SUNG_CD = #{sMarketStatusProvince}
+        AND CITY_CD = #{sMarketStatusCity}
+    </select>
+
+    <!-- 시장현황자료를 등록한다. -->
+    <insert id="insertManuMarketStatusReg" parameterType="TargetMarketStatusVO">
+        /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMarketStatusDAO.insertManuMarketStatusReg] */
+        INSERT INTO MS_0107T(
+              REG_YY
+            , REG_MM
+            , SUNG_CD
+            , CITY_CD
+            , DIST_CD
+            , REF_VAL
+            , DEL_YN
+            , REG_USR_ID
+            , REG_DT
+            , UPDT_USR_ID
+            , UPDT_DT
+        )VALUES(
+              SUBSTR(#{sMarketStatusYyMm},1,4)
+            , SUBSTR(#{sMarketStatusYyMm},5,2)
+            , #{provinceCd}
+            , #{cityCd}
+            , 'TEMP'
+            , #{marketRefVal}
+            , 'N'
+            , #{regUsrId}
+            , SYSDATE
+            , #{regUsrId}
+            , SYSDATE
+        )
+    </insert>
+
+    <!-- 시장현황자료를 수정한다. -->
+    <update id="updateManuMarketStatusReg" parameterType="TargetMarketStatusVO">
+    /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMarketStatusDAO.updateManuMarketStatusReg] */
+        UPDATE MS_0107T SET
+            REF_VAL = #{marketRefVal}
+            , UPDT_USR_ID = #{regUsrId}
+            , UPDT_DT = SYSDATE
+        WHERE REG_YY = SUBSTR(#{sMarketStatusYyMm},1,4)
+            AND REG_MM = SUBSTR(#{sMarketStatusYyMm},5,2)
+            AND SUNG_CD = #{provinceCd}
+    </update>
+
+    <!-- 시장현황자료를 조회한다. -->
+    <select id="selectManuMarketStatusByCondition" parameterType="TargetMarketStatusSearchVO" resultType="TargetMarketStatusVO">
+    /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMarketStatusDAO.selectManuMarketStatusByCondition] */
+        SELECT #{sMarketStatusYyMm} AS SEARCH_DATE
+             , '全国份额' AS NAME_AREA
+             , ROUND(A.REF_VAL, 2) AS LOCAL_POSSESSION_RATE
+             , CASE WHEN B.BM_REF_VAL > 0 THEN ROUND(A.REF_VAL / B.BM_REF_VAL * 100, 2)
+                    ELSE 0 END AS LOCAL_LAST_MONTH_CONTRAST
+             , CASE WHEN C.BY_REF_VAL > 0 THEN ROUND(A.REF_VAL / C.BY_REF_VAL * 100, 2)
+                    ELSE 0 END AS LOCAL_LAST_YEAR_MONTH
+          FROM
+              ( SELECT NVL(MAX(SUM(REF_VAL)),0) AS REF_VAL
+                  FROM MS_0107T
+                 WHERE REG_YY||REG_MM = #{sMarketStatusYyMm}
+                 GROUP BY REG_YY, REG_MM
+              ) A
+             ,( SELECT NVL(MAX(SUM(REF_VAL)),0) AS BM_REF_VAL
+                  FROM MS_0107T
+                 WHERE REG_YY||REG_MM = TO_CHAR(TO_DATE(#{sMarketStatusYyMm}, 'YYYYMM')-1, 'YYYYMM')
+                 GROUP BY REG_YY, REG_MM
+             ) B
+             ,( SELECT NVL(MAX(SUM(REF_VAL)),0) AS BY_REF_VAL
+                  FROM MS_0107T
+                 WHERE REG_YY||REG_MM = TO_CHAR(ADD_MONTHS(TO_DATE(#{sMarketStatusYyMm}, 'YYYYMM'), -12), 'YYYYMM')
+                 GROUP BY REG_YY, REG_MM
+             ) C
+        UNION ALL
+        SELECT #{sMarketStatusYyMm} AS SEARCH_DATE
+             , '本省份额' AS NAME_AREA
+             , ROUND(a.REF_VAL, 2) as LOCAL_POSSESSION_RATE
+             , CASE WHEN B.BM_REF_VAL > 0 THEN ROUND(A.REF_VAL / B.BM_REF_VAL * 100, 2)
+                    ELSE 0 END AS LOCAL_LAST_MONTH_CONTRAST
+             , CASE WHEN C.BY_REF_VAL > 0 THEN ROUND(A.REF_VAL / C.BY_REF_VAL * 100, 2)
+                    ELSE 0 END AS LOCAL_LAST_YEAR_MONTH
+          FROM
+              ( SELECT NVL(MAX(SUM(REF_VAL)),0) AS REF_VAL
+                  FROM MS_0107T
+                 WHERE REG_YY||REG_MM = #{sMarketStatusYyMm}
+                   AND SUNG_CD = #{sMarketStatusProvince}
+                 GROUP BY REG_YY, REG_MM
+              ) A
+             ,( SELECT NVL(MAX(SUM(REF_VAL)),0) AS BM_REF_VAL
+                  FROM MS_0107T
+                 WHERE REG_YY||REG_MM = TO_CHAR(TO_DATE(#{sMarketStatusYyMm}, 'YYYYMM')-1, 'YYYYMM')
+                   AND SUNG_CD = #{sMarketStatusProvince}
+                 GROUP BY REG_YY, REG_MM
+             ) B
+             ,( SELECT NVL(MAX(SUM(REF_VAL)),0) AS BY_REF_VAL
+                  FROM MS_0107T
+                 WHERE REG_YY||REG_MM = TO_CHAR(ADD_MONTHS(TO_DATE(#{sMarketStatusYyMm}, 'YYYYMM'), -12), 'YYYYMM')
+                   AND SUNG_CD = #{sMarketStatusProvince}
+                 GROUP BY REG_YY, REG_MM
+             ) C
+        UNION ALL
+        SELECT #{sMarketStatusYyMm} AS SEARCH_DATE
+             , '本市份额' AS NAME_AREA
+             , ROUND(a.REF_VAL, 2) as LOCAL_POSSESSION_RATE
+             , CASE WHEN B.BM_REF_VAL > 0 THEN ROUND(A.REF_VAL / B.BM_REF_VAL * 100, 2)
+                    ELSE 0 END AS LOCAL_LAST_MONTH_CONTRAST
+             , CASE WHEN C.BY_REF_VAL > 0 THEN ROUND(A.REF_VAL / C.BY_REF_VAL * 100, 2)
+                    ELSE 0 END AS LOCAL_LAST_YEAR_MONTH
+          FROM
+              ( SELECT NVL(MAX(SUM(REF_VAL)),0) AS REF_VAL
+                  FROM MS_0107T
+                 WHERE REG_YY||REG_MM = #{sMarketStatusYyMm}
+                   AND CITY_CD = #{sMarketStatusCity}
+                 GROUP BY REG_YY, REG_MM
+              ) A
+             ,( SELECT NVL(MAX(SUM(REF_VAL)),0) AS BM_REF_VAL
+                  FROM MS_0107T
+                 WHERE REG_YY||REG_MM = TO_CHAR(TO_DATE(#{sMarketStatusYyMm}, 'YYYYMM')-1, 'YYYYMM')
+                   AND CITY_CD = #{sMarketStatusCity}
+                 GROUP BY REG_YY, REG_MM
+             ) B
+             ,( SELECT NVL(MAX(SUM(REF_VAL)),0) AS BY_REF_VAL
+                  FROM MS_0107T
+                 WHERE REG_YY||REG_MM = TO_CHAR(ADD_MONTHS(TO_DATE(#{sMarketStatusYyMm}, 'YYYYMM'), -12), 'YYYYMM')
+                   AND CITY_CD = #{sMarketStatusCity}
+                 GROUP BY REG_YY, REG_MM
+             ) C
+    </select>
+
+    <!-- 조회조건에 해당하는 시장현황 상세자료 정보를 조회한다. -->
+    <select id="selectManuMarketDetailByConditionCnt" parameterType="TargetMarketStatusSearchVO" resultType="int">
+    /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMarketStatusDAO.selectManuMarketDetailByConditionCnt] */
+        SELECT
+             COUNT(*) AS VALUE
+        FROM MS_0107T A, CM_2701T B, CM_3201T C
+        WHERE A.SUNG_CD = B.CSTL_CD
+        AND A.CITY_CD = C.CITY_CD
+        AND A.REG_YY||A.REG_MM = #{sMarketStatusYyMm}
+        <if test='sMarketStatusProvince != null and sMarketStatusProvince != ""'>
+            AND A.SUNG_CD = #{sMarketStatusProvince}
+        </if>
+        <if test='sMarketStatusCity != null and sMarketStatusCity != ""'>
+            AND A.CITY_CD = #{sMarketStatusCity}
+        </if>
+    </select>
+
+    <!-- 시장현황자료 상세를 조회한다. -->
+    <select id="selectManuMarketDetailByCondition" parameterType="TargetMarketStatusSearchVO" resultType="TargetMarketStatusSearchVO">
+    /* [chn.bhmc.dms.mis.tmp.service.dao.TargetMarketStatusDAO.selectManuMarketDetailByCondition] */
+        SELECT * FROM (
+                SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT
+                         A.REG_YY AS marketRegYy
+                        ,A.REG_MM AS marketRegMm
+                        ,A.SUNG_CD AS marketSungCd
+                        ,B.CSTL_NM AS marketSungNm
+                        ,A.CITY_CD AS marketCityCd
+                        ,C.CITY_NM AS marketCityNm
+                        ,A.REF_VAL AS refVal
+                    FROM MS_0107T A, CM_2701T B, CM_3201T C
+                    WHERE A.SUNG_CD = B.CSTL_CD
+                    AND A.CITY_CD = C.CITY_CD
+                    AND A.REG_YY||A.REG_MM = #{sMarketStatusYyMm}
+                    <if test='sMarketStatusProvince != null and sMarketStatusProvince != ""'>
+                        AND A.SUNG_CD = #{sMarketStatusProvince}
+                    </if>
+                    <if test='sMarketStatusCity != null and sMarketStatusCity != ""'>
+                        AND A.CITY_CD = #{sMarketStatusCity}
+                    </if>
+                    ORDER BY A.SUNG_CD, A.CITY_CD
+                ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+</mapper>

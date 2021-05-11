@@ -1,0 +1,574 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="ds2_chart1" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sEndDt"/>
+<O>
+<![CDATA[20170330]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[
+SELECT SALE_EMP_NO
+     , (SELECT USR_NM FROM CM_0801T WHERE USR_ID = SALE_EMP_NO) AS SALE_EMP_NM  -- 판매고문명
+     , MONTH_CNT_B1         -- 전월대비
+     , MONTH_CNT            -- 본월
+     , ROUND(CASE WHEN MONTH_CNT_B1 = 0
+                  THEN MONTH_CNT * 100
+                  ELSE (MONTH_CNT-MONTH_CNT_B1)/MONTH_CNT_B1 * 100
+              END
+       ,1) AS  SALE_RATE   -- 전월대비(%)
+ FROM (
+    SELECT A.SALE_EMP_NO
+             , SUM(DECODE(DL_MM, DL_DT_B1, CAR_SALE_CNT, 0)) AS MONTH_CNT_B1
+             , SUM(DECODE(DL_MM, DL_DT, CAR_SALE_CNT, 0)) AS MONTH_CNT
+      FROM (
+           SELECT SALE_EMP_NO
+                 , DL_MM
+                 , SUM(CAR_SALE_CNT) AS CAR_SALE_CNT
+              FROM (
+                SELECT SALE_EMP_NO
+                     , TO_CHAR(REAL_DL_DT, 'YYYYMM') AS DL_MM
+                     , SUM(1) AS CAR_SALE_CNT
+                  FROM SA_0201T
+                 WHERE DLR_CD = '${sDlrCd}'              -- 딜러코드 : 화면에서 받는 인자값
+                   AND CONTRACT_STAT_CD = '50'
+                   AND TO_CHAR(REAL_DL_DT, 'YYYYMMDD') BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE('${sEndDt}', 'YYYYMMDD'), -1), 'YYYYMM')||'01'
+                                                           AND '${sEndDt}'
+                   GROUP BY SALE_EMP_NO, TO_CHAR(REAL_DL_DT, 'YYYYMM')
+               UNION
+                  SELECT T2.USR_ID AS SALE_EMP_NO
+                       , '${LEFT(sEndDt,6)}' AS DL_MM  --검색조건  : 소매일자 YYYYMM
+                       , 0  AS CAR_SALE_CNT
+                    FROM CM_0803T T1
+                    INNER JOIN CM_0801T T2 ON T1.REF_ID = T2.USR_ID AND T1.REF_TP = 'U'
+                    WHERE T1.SYS_CD = 'D'
+                      AND T1.ROLE_ID = 'ROLE_SALES_ADVISOR'
+                      AND T2.DLR_CD =  '${sDlrCd}'        -- 딜러코드 : 화면에서 받는 인자값
+                      AND T1.USE_YN = 'Y'
+                      AND T2.DEL_YN = 'N'
+                      AND T2.ENABLED_YN = 'Y'
+                      )
+                 GROUP BY SALE_EMP_NO, DL_MM
+       ) A , (
+             SELECT TO_CHAR(ADD_MONTHS(TO_DATE('${sEndDt}', 'YYYYMMDD'), -1), 'YYYYMM') AS DL_DT_B1 --검색조건  : 소매일자 YYYYMM
+                  , TO_CHAR(ADD_MONTHS(TO_DATE('${sEndDt}', 'YYYYMMDD'), 0), 'YYYYMM')  AS DL_DT    --검색조건  : 소매일자 YYYYMM
+               FROM DUAL
+           ) B
+       GROUP BY A.SALE_EMP_NO
+)]]></Query>
+</TableData>
+</TableDataMap>
+<ReportWebAttr>
+<ServerPrinter/>
+<WebPageContent>
+<ToolBars/>
+<WebPage isPage="false" isShowAsImage="false" isAutoScale="false" isTDHeavy="false"/>
+</WebPageContent>
+<WebViewContent>
+<ToolBars/>
+<SortFuncCheck check="true"/>
+<ConditionFuncCheck check="true"/>
+<ListFuncCheck check="true"/>
+</WebViewContent>
+<WebWriteContent>
+<ToolBars/>
+<SelectedColor/>
+<WebWrite SheetPosition="1"/>
+<RptLocation isShowAtLeft="true"/>
+<UnloadCheck/>
+<ShowWidgets/>
+<OtherAttr isAutoStash="false"/>
+</WebWriteContent>
+</ReportWebAttr>
+<Report class="com.fr.report.worksheet.WorkSheet" name="业绩统计">
+<ReportPageAttr>
+<HR/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[723900,723900,723900,723900,723900,723900,723900,723900,800100,723900,876300,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[2016000,2016000,2016000,2016000,2016000,2016000,2016000,2016000,2016000,2743200,4032000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" cs="11" rs="11" s="0">
+<O t="CC">
+<LayoutAttr selectedIndex="0"/>
+<ChangeAttr enable="false" changeType="button" timeInterval="5" buttonColor="-8421505" carouselColor="-8421505">
+<TextAttr>
+<Attr alignText="0"/>
+</TextAttr>
+</ChangeAttr>
+<Chart name="기본" chartClass="com.fr.chart.chartattr.Chart">
+<Chart class="com.fr.chart.chartattr.Chart">
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-6908266"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<ChartAttr isJSDraw="false" isStyleGlobal="false"/>
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-6908266"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[차트제목작성]]></O>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei" style="0" size="88"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="false" position="0"/>
+</Title>
+<Plot class="com.fr.chart.chartattr.CustomPlot">
+<CategoryPlot>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isNullValueBreak="true" autoRefreshPerSecond="-1" seriesDragEnable="false" plotStyle="0" combinedSize="50.0"/>
+<newHotTooltipStyle>
+<AttrContents>
+<Attr showLine="false" position="1" isWhiteBackground="true" isShowMutiSeries="true" seriesLabel="${SERIES}${BR}${CATEGORY}${BR}${VALUE}"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0]]></Format>
+<PercentFormat>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.##%]]></Format>
+</PercentFormat>
+</AttrContents>
+</newHotTooltipStyle>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.CustomAttr">
+<CustomAttr>
+<ConditionAttr name=""/>
+<ctattr renderer="1"/>
+</CustomAttr>
+</DefaultAttr>
+<ConditionAttrList>
+<List index="0">
+<CustomAttr>
+<ConditionAttr name="조건속성1">
+<AttrList>
+<Attr class="com.fr.chart.base.AttrContents">
+<AttrContents>
+<Attr showLine="false" position="6" isWhiteBackground="true" isShowMutiSeries="false" seriesLabel="${VALUE}"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-13408513"/>
+</Attr>
+</TextAttr>
+<PercentFormat>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</PercentFormat>
+</AttrContents>
+</Attr>
+</AttrList>
+<Condition class="com.fr.data.condition.ListCondition">
+<JoinCondition join="0">
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[계열번호]]></CNAME>
+<Compare op="0">
+<O t="I">
+<![CDATA[1]]></O>
+</Compare>
+</Condition>
+</JoinCondition>
+<JoinCondition join="1">
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[系列序号]]></CNAME>
+<Compare op="0">
+<O t="I">
+<![CDATA[1]]></O>
+</Compare>
+</Condition>
+</JoinCondition>
+</Condition>
+</ConditionAttr>
+<ctattr renderer="1"/>
+</CustomAttr>
+</List>
+<List index="1">
+<CustomAttr>
+<ConditionAttr name="조건속성2">
+<AttrList>
+<Attr class="com.fr.chart.base.AttrContents">
+<AttrContents>
+<Attr showLine="false" position="6" isWhiteBackground="true" isShowMutiSeries="false" seriesLabel="${VALUE}"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-6697984"/>
+</Attr>
+</TextAttr>
+<PercentFormat>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##%]]></Format>
+</PercentFormat>
+</AttrContents>
+</Attr>
+</AttrList>
+<Condition class="com.fr.data.condition.ListCondition">
+<JoinCondition join="0">
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[계열번호]]></CNAME>
+<Compare op="0">
+<O t="I">
+<![CDATA[2]]></O>
+</Compare>
+</Condition>
+</JoinCondition>
+<JoinCondition join="1">
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[系列序号]]></CNAME>
+<Compare op="0">
+<O t="I">
+<![CDATA[2]]></O>
+</Compare>
+</Condition>
+</JoinCondition>
+</Condition>
+</ConditionAttr>
+<ctattr renderer="1"/>
+</CustomAttr>
+</List>
+<List index="2">
+<CustomAttr>
+<ConditionAttr name="조건속성3">
+<AttrList>
+<Attr class="com.fr.chart.base.AttrContents">
+<AttrContents>
+<Attr showLine="false" position="6" isWhiteBackground="true" isShowMutiSeries="false" seriesLabel="${VALUE}"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei" style="0" size="72" foreground="-26368"/>
+</Attr>
+</TextAttr>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0%.]]></Format>
+</AttrContents>
+</Attr>
+</AttrList>
+<Condition class="com.fr.data.condition.ListCondition">
+<JoinCondition join="0">
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[계열번호]]></CNAME>
+<Compare op="0">
+<O t="I">
+<![CDATA[3]]></O>
+</Compare>
+</Condition>
+</JoinCondition>
+<JoinCondition join="1">
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[系列序号]]></CNAME>
+<Compare op="0">
+<O t="I">
+<![CDATA[3]]></O>
+</Compare>
+</Condition>
+</JoinCondition>
+</Condition>
+</ConditionAttr>
+<ctattr renderer="1"/>
+</CustomAttr>
+</List>
+</ConditionAttrList>
+</ConditionCollection>
+<Legend>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-6908266"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr position="4" visible="true"/>
+<FRFont name="Microsoft YaHei" style="0" size="48"/>
+</Legend>
+<DataSheet>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isVisible="false"/>
+</DataSheet>
+<NameJavaScriptGroup>
+<NameJavaScript name="chartClick">
+<JavaScript class="com.fr.js.JavaScriptImpl">
+<Parameters/>
+<Content>
+<![CDATA[parent.fCallselectSalesConsultantStatistics();]]></Content>
+</JavaScript>
+</NameJavaScript>
+</NameJavaScriptGroup>
+<DataProcessor class="com.fr.base.chart.chartdata.model.NormalDataModel"/>
+<newPlotFillStyle>
+<AttrFillStyle>
+<AFStyle colorStyle="0"/>
+<FillStyleName fillStyleName=""/>
+<isCustomFillStyle isCustomFillStyle="false"/>
+</AttrFillStyle>
+</newPlotFillStyle>
+<RectanglePlotAttr interactiveAxisTooltip="false"/>
+<xAxis>
+<CategoryAxis class="com.fr.chart.chartattr.CategoryAxis">
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="1" MainGridStyle="0"/>
+<newLineColor mainGridColor="-4144960" lineColor="-5197648"/>
+<AxisPosition value="3"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+</CategoryAxis>
+</xAxis>
+<yAxis>
+<ValueAxis class="com.fr.chart.chartattr.ValueAxis">
+<ValueAxisAttr201108 alignZeroValue="false"/>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="1" MainGridStyle="1"/>
+<newLineColor mainGridColor="-4144960" lineColor="-5197648"/>
+<AxisPosition value="2"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Century Gothic" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+</ValueAxis>
+</yAxis>
+<secondAxis>
+<ValueAxis class="com.fr.chart.chartattr.ValueAxis">
+<ValueAxisAttr201108 alignZeroValue="false"/>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="1" MainGridStyle="0"/>
+<newLineColor mainGridColor="-4144960" lineColor="-5197648"/>
+<AxisPosition value="4"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Century Gothic" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+</ValueAxis>
+</secondAxis>
+<CateAttr isStacked="false"/>
+<CustomTypeConditionCollection>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.CustomAttr">
+<CustomAttr>
+<ConditionAttr name="">
+<AttrList>
+<Attr class="com.fr.chart.base.AttrBarSeries">
+<AttrBarSeries>
+<Attr seriesOverlapPercent="-0.25" categoryIntervalPercent="1.0" axisPosition="LEFT"/>
+</AttrBarSeries>
+</Attr>
+</AttrList>
+</ConditionAttr>
+<ctattr renderer="1"/>
+</CustomAttr>
+</DefaultAttr>
+<ConditionAttrList>
+<List index="0">
+<CustomAttr>
+<ConditionAttr name="계열설정1">
+<AttrList>
+<Attr class="com.fr.chart.base.AttrLineSeries">
+<AttrLineSeries>
+<Attr isCurve="false" isNullValueBreak="true" lineStyle="5" markerType="NullMarker" axisPosition="RIGHT"/>
+</AttrLineSeries>
+</Attr>
+</AttrList>
+<Condition class="com.fr.data.condition.ListCondition">
+<JoinCondition join="0">
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[계열번호]]></CNAME>
+<Compare op="0">
+<O t="I">
+<![CDATA[3]]></O>
+</Compare>
+</Condition>
+</JoinCondition>
+<JoinCondition join="1">
+<Condition class="com.fr.data.condition.CommonCondition">
+<CNUMBER>
+<![CDATA[0]]></CNUMBER>
+<CNAME>
+<![CDATA[系列序号]]></CNAME>
+<Compare op="0">
+<O t="I">
+<![CDATA[3]]></O>
+</Compare>
+</Condition>
+</JoinCondition>
+</Condition>
+</ConditionAttr>
+<ctattr renderer="2"/>
+</CustomAttr>
+</List>
+</ConditionAttrList>
+</ConditionCollection>
+</CustomTypeConditionCollection>
+</CategoryPlot>
+</Plot>
+<ChartDefinition>
+<MoreNameCDDefinition>
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+<TableData class="com.fr.data.impl.NameTableData">
+<Name>
+<![CDATA[ds2_chart1]]></Name>
+</TableData>
+<CategoryName value="SALE_EMP_NM"/>
+<ChartSummaryColumn name="MONTH_CNT_B1" function="com.fr.data.util.function.NoneFunction" customName="上月"/>
+<ChartSummaryColumn name="MONTH_CNT" function="com.fr.data.util.function.NoneFunction" customName="本月"/>
+<ChartSummaryColumn name="SALE_RATE" function="com.fr.data.util.function.NoneFunction" customName="环比"/>
+</MoreNameCDDefinition>
+</ChartDefinition>
+</Chart>
+</Chart>
+</O>
+<PrivilegeControl/>
+<CellGUIAttr adjustmode="0"/>
+<CellPageAttr/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings isHorizontalCenterOnPage="true" headerHeight="1440000" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="54720000" height="60480000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="false" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[Parameter]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID/>
+</WorkBook>

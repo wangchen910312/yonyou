@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : TodoInfoDao_SqlMap.xml
+    Description : Todo 정보에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.main.dao.MainTodoInfoDAO">
+	<!-- Todo 정보 목록을 조회한다. -->
+	<select id="selectTodoInfosByCondition" parameterType="TodoInfoSearchVO" resultType="chn.bhmc.dms.mob.api.main.vo.TodoInfoVO">
+        /* [chn.bhmc.dms.mob.api.main.dao.MainTodoInfoDAO.selectTodoInfosByCondition] */
+		SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT * FROM (
+                    SELECT V1.*, V2.ACTION_TARGET_TP, V2.ACTION_URL_WEB, V2.ACTION_URL_MOB
+                    FROM CM_3305T V1
+                    INNER JOIN CM_3301T V2 ON V1.TODO_POLICY_ID = V2.TODO_POLICY_ID
+                    INNER JOIN (
+                        SELECT TODO_POLICY_ID
+                        FROM CM_3302T
+                        WHERE
+                            (REF_TP = 'R' AND REF_ID = (SELECT TSK_CD FROM CM_0801T WHERE USR_ID=#{sUsrId}))
+                            OR (REF_TP = 'U' AND REF_ID = #{sUsrId})
+                        GROUP BY TODO_POLICY_ID
+                    ) V3 ON V1.TODO_POLICY_ID = V3.TODO_POLICY_ID
+
+                    UNION
+
+                    SELECT M1.*, M2.ACTION_TARGET_TP, M2.ACTION_URL_WEB, M2.ACTION_URL_MOB
+                    FROM CM_3305T M1
+                    INNER JOIN CM_3301T M2 ON M1.TODO_POLICY_ID = M2.TODO_POLICY_ID
+                    INNER JOIN CM_3306T M3 ON M1.TODO_NO = M3.TODO_NO
+                    WHERE M3.USR_ID = #{sUsrId}
+                ) K1
+                <where>
+                    <if test='sHndlYn != null and sHndlYn != ""'>
+                        HNDL_YN = #{sHndlYn}
+                    </if>
+                    <if test='sHndlUsrId != null and sHndlUsrId != ""'>
+                        AND HNDL_USR_ID = #{sHndlUsrId}
+                    </if>
+                    <if test='sStartHndlDt != null'>
+                        AND HNDL_DT >= #{sStartHndlDt}
+                    </if>
+                    <if test='sEndHndlDt != null'>
+                        AND HNDL_DT <![CDATA[<]]> #{sEndHndlDt} + 1
+                    </if>
+                    <if test='sOpenYn != null and sOpenYn != ""'>
+                        AND OPEN_YN = #{sOpenYn}
+                    </if>
+                    <if test='sOpenUsrId != null and sOpenUsrId != ""'>
+                        AND OPEN_USR_ID = #{sOpenUsrId}
+                    </if>
+                    <if test='sStartOpenDt != null'>
+                        AND OPEN_DT >= #{sStartOpenDt}
+                    </if>
+                    <if test='sEndOpenDt != null'>
+                        AND OPEN_DT <![CDATA[<]]> #{sEndOpenDt} + 1
+                    </if>
+                    <if test='sStartRegDt != null'>
+                        AND REG_DT >= #{sStartRegDt}
+                    </if>
+                    <if test='sEndRegDt != null'>
+                        AND REG_DT <![CDATA[<]]> #{sEndRegDt} + 1
+                    </if>
+                    <if test='sActionTargetTp != null and sActionTargetTp == "02"'>
+                        AND (ACTION_TARGET_TP = '01' OR ACTION_TARGET_TP = '02')
+                    </if>
+                    <if test='sActionTargetTp != null and sActionTargetTp == "03"'>
+                        AND (ACTION_TARGET_TP = '01' OR ACTION_TARGET_TP = '03')
+                    </if>
+                </where>
+                
+                and k1.TODO_POLICY_ID in ('TD-P-20001','TD-P-20002','TD-P-20003','TD-P-00001','TD-P-01014','TD-P-00004','TD-P-20004')
+                and k1.reg_dt >= (sysdate -20)
+                
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "todoDesc"'>TODO_DESC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDt"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDtFormat"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "openDt"'>OPEN_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "openDtFormat"'>OPEN_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "hndlDt"'>HNDL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "hndlDtFormat"'>HNDL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    TODO_NO DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        TODO_NO DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+	<!-- Todo 정보 목록수를 조회한다. -->
+	<select id="selectTodoInfosByConditionCnt" parameterType="TodoInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mob.api.main.dao.MainTodoInfoDAO.selectTodoInfosByConditionCnt] */
+		SELECT COUNT(*) AS VALUE FROM (
+            SELECT V1.*, V2.ACTION_TARGET_TP, V2.ACTION_URL_WEB, V2.ACTION_URL_MOB
+            FROM CM_3305T V1
+            INNER JOIN CM_3301T V2 ON V1.TODO_POLICY_ID = V2.TODO_POLICY_ID
+            INNER JOIN (
+                SELECT TODO_POLICY_ID
+                FROM CM_3302T
+                WHERE
+                    (REF_TP = 'R' AND REF_ID = (SELECT TSK_CD FROM CM_0801T WHERE USR_ID=#{sUsrId}))
+                    OR (REF_TP = 'U' AND REF_ID = #{sUsrId})
+                GROUP BY TODO_POLICY_ID
+            ) V3 ON V1.TODO_POLICY_ID = V3.TODO_POLICY_ID
+
+            UNION
+
+            SELECT M1.*, M2.ACTION_TARGET_TP, M2.ACTION_URL_WEB, M2.ACTION_URL_MOB
+            FROM CM_3305T M1
+            INNER JOIN CM_3301T M2 ON M1.TODO_POLICY_ID = M2.TODO_POLICY_ID
+            INNER JOIN CM_3306T M3 ON M1.TODO_NO = M3.TODO_NO
+            WHERE M3.USR_ID = #{sUsrId}
+        ) K1
+        <where>
+            <if test='sHndlYn != null and sHndlYn != ""'>
+                HNDL_YN = #{sHndlYn}
+            </if>
+            <if test='sHndlUsrId != null and sHndlUsrId != ""'>
+                AND HNDL_USR_ID = #{sHndlUsrId}
+            </if>
+            <if test='sStartHndlDt != null'>
+                AND HNDL_DT >= #{sStartHndlDt}
+            </if>
+            <if test='sEndHndlDt != null'>
+                AND HNDL_DT <![CDATA[<]]> #{sEndHndlDt} + 1
+            </if>
+            <if test='sOpenYn != null and sOpenYn != ""'>
+                AND OPEN_YN = #{sOpenYn}
+            </if>
+            <if test='sOpenUsrId != null and sOpenUsrId != ""'>
+                AND OPEN_USR_ID = #{sOpenUsrId}
+            </if>
+            <if test='sStartOpenDt != null'>
+                AND OPEN_DT >= #{sStartOpenDt}
+            </if>
+            <if test='sEndOpenDt != null'>
+                AND OPEN_DT <![CDATA[<]]> #{sEndOpenDt} + 1
+            </if>
+            <if test='sStartRegDt != null'>
+                AND REG_DT >= #{sStartRegDt}
+            </if>
+            <if test='sEndRegDt != null'>
+                AND REG_DT <![CDATA[<]]> #{sEndRegDt} + 1
+            </if>
+            <if test='sActionTargetTp != null and sActionTargetTp == "02"'>
+                AND (ACTION_TARGET_TP = '01' OR ACTION_TARGET_TP = '02')
+            </if>
+            <if test='sActionTargetTp != null and sActionTargetTp == "03"'>
+                AND (ACTION_TARGET_TP = '01' OR ACTION_TARGET_TP = '03')
+            </if>
+        </where>
+        
+        	and k1.TODO_POLICY_ID in ('TD-P-20001','TD-P-20002','TD-P-20003','TD-P-00001','TD-P-01014','TD-P-00004','TD-P-20004')
+            and k1.reg_dt >= (sysdate -20)
+	</select>
+</mapper>

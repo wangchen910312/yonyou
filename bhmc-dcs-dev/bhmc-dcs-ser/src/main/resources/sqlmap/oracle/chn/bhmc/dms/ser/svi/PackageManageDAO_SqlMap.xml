@@ -1,0 +1,507 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : PackageManageDAO_SqlMap.xml
+    Description : Package 마스터에 관한 데이터처리
+    author Yin Xueyuan
+    since 2016. 2. 17.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 2. 27.  Yin Xueyuan      최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO">
+
+    <!-- Package 헤더 등록-->
+    <insert id="insertPackageMaster" parameterType="PackageLtsVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO.insertPackageMaster] */
+        INSERT INTO PT_0230T    --패키지헤더
+            (
+              DLR_CD             --딜러코드
+             ,PKG_ITEM_CD        --패키지품목코드
+             ,PKG_ITEM_NM        --패키지품목명
+             ,REG_USR_ID         --등록자ID
+             ,REG_DT             --등록일자
+            )
+            VALUES
+            (
+              #{dlrCd}             --딜러코드
+             ,#{pkgItemCd}         --패키지품목코드
+             ,#{pkgItemNm}         --패키지품목명
+             ,#{regUsrId}          --등록자ID
+             ,SYSDATE              --등록일자
+            )
+    </insert>
+
+    <!-- Package 헤더 리스트 -->
+    <select id="selectPackageMasterByCondition" parameterType="PackageMasterSearchVO" resultType="PackageMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO.selectPackageMasterByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT DLR_CD , PKG_ITEM_CD ,PKG_ITEM_NM FROM  PT_0230T T1
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND DLR_CD = #{sDlrCd}
+                    </if>
+
+                    <if test='sPkgItemCd != null and sPkgItemCd != ""'>
+                        AND PKG_ITEM_CD LIKE '%${sPkgItemCd}%'
+                    </if>
+                    <if test='sPkgItemNm != null and sPkgItemNm != ""'>
+                        AND PKG_ITEM_NM LIKE '%${sPkgItemNm}%'
+                        <!-- <choose>
+                             <when test='@org.apache.commons.lang3.StringUtils@contains(sPkgItemNm,"*")'>
+                                 <bind name='itemNm' value='@org.apache.commons.lang3.StringUtils@replace(sPkgItemNm, "*", "%")' />
+                                 AND PKG_ITEM_NM LIKE #{sPkgItemNm}
+                             </when>
+                             <otherwise>
+                                 AND PKG_ITEM_NM = #{sPkgItemNm}
+                             </otherwise>
+                       </choose> -->
+                    </if>
+                </where>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- Package 헤더 목록수 -->
+    <select id="selectPackageMasterByConditionCnt" parameterType="PackageMasterSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO.selectPackageMasterByConditionCnt] */
+        SELECT
+            COUNT(*) AS VALUE
+        FROM PT_0230T
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND DLR_CD = #{sDlrCd}
+            </if>
+
+            <if test='sPkgItemCd != null and sPkgItemCd != ""'>
+                AND PKG_ITEM_CD LIKE '%${sPkgItemCd}%'
+            </if>
+            <if test='sPkgItemNm != null and sPkgItemNm != ""'>
+                AND PKG_ITEM_NM LIKE '%${sPkgItemNm}%'
+                 <!-- <choose>
+                     <when test='@org.apache.commons.lang3.StringUtils@contains(sPkgItemNm,"*")'>
+                         <bind name='itemNm' value='@org.apache.commons.lang3.StringUtils@replace(sPkgItemNm, "*", "%")' />
+                         AND PKG_ITEM_NM LIKE #{sPkgItemNm}
+                     </when>
+                     <otherwise>
+                         AND PKG_ITEM_NM = #{sPkgItemNm}
+                     </otherwise>
+               </choose> -->
+            </if>
+        </where>
+    </select>
+
+	<!-- Package 공임 등록-->
+	<insert id="insertPackageLts" parameterType="PackageLtsVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO.insertPackageLts] */
+	    INSERT INTO PT_0232T    --패키지공임
+            (
+              DLR_CD             --딜러코드
+             ,PKG_ITEM_CD        --패키지품목코드
+             ,LINE_NO            --라인번호
+             ,LBR_CD             --공임코드
+             ,LBR_NM             --공임명
+             ,LBR_QTY            --공임수량
+             ,LBR_HM             --공임작업시간
+             ,LBR_PRC_TP         --공임단가유형
+             ,LBR_PRC            --공임단가
+             ,LBR_AMT            --공임금액
+             ,REG_USR_ID         --등록자ID
+             ,REG_DT             --등록일자
+            )
+            VALUES
+            (
+              #{dlrCd}             --딜러코드
+             ,#{pkgItemCd}         --패키지품목코드
+             ,#{lineNo}            --라인번호
+             ,#{lbrCd}             --공임코드
+             ,#{lbrNm}             --공임명
+             ,#{lbrQty}            --공임수량
+             ,#{lbrHm}             --공임작업시간
+             ,#{lbrPrcTp}          --공임단가유형
+             ,#{lbrPrc}            --공임단가
+             ,#{lbrAmt}            --공임금액
+             ,#{regUsrId}          --등록자ID
+             ,SYSDATE              --등록일자
+            )
+    </insert>
+
+	<!-- Package 공임 수정 -->
+	<update id="updatePackageLts" parameterType="PackageLtsVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO.updatePackageLts] */
+		UPDATE PT_0232T    --패키지공임
+          SET
+               LBR_QTY     = #{lbrQty}            --공임수량
+              ,LBR_HM      = #{lbrHm}             --공임작업시간
+              ,LBR_PRC_TP  = #{lbrPrcTp}          --공임단가유형
+              ,LBR_PRC     = #{lbrPrc}            --공임단가
+              ,LBR_AMT     = #{lbrAmt}            --공임금액
+              ,UPDT_USR_ID = #{updtUsrId}         --수정자ID
+              ,PKG_ITEM_CD = #{pkgItemCd}         --패키지품목코드
+              ,UPDT_DT     = SYSDATE              --수정일자
+             WHERE 1 = 1
+               AND PKG_ITEM_CD = #{pkgItemCd}         --패키지품목코드
+               AND LINE_NO     = #{lineNo}            --라인번호
+               AND LBR_CD      = #{lbrCd}             --공임코드
+	</update>
+
+    <!-- Package  공임 삭제 -->
+    <delete id="deletePackageLts" parameterType="PackageLtsVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO.deletePackageLts] */
+        DELETE FROM PT_0232T
+        WHERE 1 = 1
+        AND PKG_ITEM_CD = #{pkgItemCd}         --패키지품목코드
+        AND LINE_NO     = #{lineNo}            --라인번호
+        AND LBR_CD      = #{lbrCd}             --공임코드
+    </delete>
+
+
+    <select id="selectPackageLtsByCondition" parameterType="PackageMasterSearchVO" resultType="PackageLtsVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO.selectPackageLtsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT DLR_CD, PKG_ITEM_CD , LINE_NO , LBR_CD , LBR_NM , LBR_QTY , LBR_HM , LBR_PRC , LBR_PRC AS lbrRate01
+                      ,LBR_AMT
+                  FROM PT_0232T T1
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND DLR_CD = #{sDlrCd}
+                    </if>
+
+                    <if test='sPkgItemCd != null and sPkgItemCd != ""'>
+                        AND PKG_ITEM_CD = #{sPkgItemCd}
+                    </if>
+
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                 <when test='item.field == "dlrCd"'>      T1.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                 <when test='item.field == "pkgItemCd"'>  T1.PKG_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "lineNo"'>     T1.LINE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                 <when test='item.field == "lbrCd"'>      T1.LBR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                 <when test='item.field == "lbrNm"'>      T1.LBR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                 <when test='item.field == "lbrQty"'>     T1.LBR_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                 <when test='item.field == "lbrPrcTp"'>   T1.LBR_PRC_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "lbrPrc"'>     T1.LBR_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                 <when test='item.field == "lbrAmt"'>     T1.LBR_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                  <otherwise>
+                                   T1.DLR_CD ASC
+                                  ,T1.PKG_ITEM_CD ASC
+                                  ,T1.LINE_NO ASC
+                                 </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                       T1.DLR_CD ASC
+                      ,T1.PKG_ITEM_CD ASC
+                      ,T1.LINE_NO ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- Package 공임 목록수 -->
+    <select id="selectPackageLtsByConditionCnt" parameterType="PackageMasterSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO.selectPackageLtsByConditionCnt] */
+        SELECT
+            COUNT(*) AS VALUE
+        FROM PT_0232T
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND DLR_CD = #{sDlrCd}
+            </if>
+
+            <if test='sPkgItemCd != null and sPkgItemCd != ""'>
+                AND PKG_ITEM_CD = #{sPkgItemCd}
+            </if>
+
+        </where>
+    </select>
+
+    <!-- Package 부품 등록-->
+    <insert id="insertPackagePar" parameterType="PackageParVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO.insertPackagePar] */
+        INSERT INTO PT_0231T    --패키지부품
+            (
+              DLR_CD              --딜러코드
+             ,PKG_ITEM_CD         --패키지품목코드
+             ,LINE_NO             --라인번호
+             ,ITEM_CD             --품목코드
+             ,ITEM_NM             --품목명
+             ,ITEM_QTY            --품목수량
+             ,ITEM_UNIT_CD        --품목단위코드
+             ,ITEM_PRC            --품목단가
+             ,ITEM_AMT            --품목금액
+             ,PKG_DETL_DC_RATE    --패키지상세할인율
+             ,PKG_DETL_DC_PRC     --패키지상세할인단가
+             ,USE_YN              --사용여부
+             ,REG_USR_ID          --등록자ID
+             ,REG_DT              --등록일자
+            )
+            VALUES
+            (
+              #{dlrCd}              --딜러코드
+             ,#{pkgItemCd}          --패키지품목코드
+             ,#{lineNo}             --라인번호
+             ,#{itemCd}             --품목코드
+             ,#{itemNm}             --품목명
+             ,#{itemQty}            --품목수량
+             ,#{itemUnitCd}         --품목단위코드
+             ,#{itemPrc}            --품목단가
+             ,#{itemAmt}            --품목금액
+             ,#{pkgDetlDcRate}      --패키지상세할인율
+             ,#{pkgDetlDcPrc}       --패키지상세할인단가
+             ,#{useYn}              --사용여부
+             ,#{regUsrId}           --등록자ID
+             ,SYSDATE               --등록일자
+            )
+    </insert>
+
+    <!-- Package 부품 수정 -->
+    <update id="updatePackagePar" parameterType="PackageParVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO.updatePackagePar] */
+        UPDATE PT_0231T    --패키지부품
+          SET
+               ITEM_QTY     = #{itemQty}            --품목수량
+              ,ITEM_UNIT_CD = #{itemUnitCd}         --품목단위코드
+              ,ITEM_PRC     = #{itemPrc}            --품목단가
+              ,ITEM_AMT     = #{itemAmt}            --품목금액
+              ,PKG_DETL_DC_RATE = #{pkgDetlDcRate}  --패키지상세할인율
+              ,PKG_DETL_DC_PRC = #{pkgDetlDcPrc}    --패키지상세할인단가
+              ,USE_YN = #{useYn}                    --사용여부
+              ,UPDT_USR_ID  = #{updtUsrId}          --수정자ID
+              ,UPDT_DT      = SYSDATE               --수정일자
+             WHERE 1 = 1
+             AND PKG_ITEM_CD  = #{pkgItemCd}          --패키지품목코드
+             AND LINE_NO      = #{lineNo}             --라인번호
+             AND ITEM_CD      = #{itemCd}             --품목코드
+    </update>
+
+    <!-- Package  부품 삭제 -->
+    <delete id="deletePackagePar" parameterType="PackageParVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO.deletePackagePar] */
+        DELETE FROM PT_0231T
+        WHERE 1 = 1
+        AND PKG_ITEM_CD  = #{pkgItemCd}          --패키지품목코드
+        AND LINE_NO      = #{lineNo}             --라인번호
+        AND ITEM_CD      = #{itemCd}             --품목코드
+    </delete>
+
+    <!-- Package 부품 리스트 -->
+    <select id="selectPackageParByCondition" parameterType="PackageMasterSearchVO" resultType="PackageParVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO.selectPackageParByCondition] */
+         SELECT   RNUM
+                 ,DLR_CD                     --딜러코드
+                 ,ITEM_CD                    --품목코드
+                 ,ITEM_NM                    --품목명
+                 ,ITEM_QTY                    --수량
+                 ,ITEM_AMT                    --금액
+                 ,STOCK_UNIT_CD              --재고단위
+                 ,PRC_TP                     --구매단가유형
+                 ,SALE_PRC_AMT               --판매단가
+                 ,ABC_IND                    --ABC CLASS
+                 ,CARLINE_CD                 --차종
+                 ,PURC_LEAD_HM               --구매리드타임
+                 ,NVL(GR_STRGE_CD,' ') AS GR_STRGE_CD                --입고창고
+                 ,NVL(GI_STRGE_CD,' ') AS GI_STRGE_CD                --출고창고
+                 ,PKG_ITEM_CD
+                 ,LINE_NO
+                 ,ITEM_PRC
+                 ,ITEM_UNIT_CD
+                 ,PKG_DETL_DC_RATE
+                 ,PKG_DETL_DC_PRC
+                 ,(ITEM_QTY * ITEM_PRC)*(PKG_DETL_DC_RATE / 100) AS PKG_DETL_DC_AMT
+                 ,(ITEM_QTY * ITEM_PRC) AS PKG_DETL_DC_TOT
+                 ,USE_YN
+                 ,AVLB_STOCK_QTY             --가용재고
+           FROM
+         (
+          SELECT  ROWNUM AS RNUM
+                 ,T1.DLR_CD                     --딜러코드
+                 ,T1.ITEM_CD                    --품목코드
+                 ,T1.ITEM_NM                    --품목명
+                 ,T1.ITEM_QTY                    --수량
+                 ,T1.ITEM_AMT                    --금액
+                 ,T1.STOCK_UNIT_CD              --재고단위
+                 ,T1.PRC_TP                     --구매단가유형
+                 ,T1.SALE_PRC_AMT
+                 ,T1.ABC_IND                    --ABC CLASS
+                 ,T1.CARLINE_CD                 --차종
+                 ,T1.PURC_LEAD_HM               --구매리드타임
+                 ,T1.GR_STRGE_CD                --입고창고
+                 ,T1.GI_STRGE_CD
+                 ,T1.PKG_ITEM_CD
+                 ,T1.LINE_NO
+                 ,T1.ITEM_PRC
+                 ,T1.ITEM_UNIT_CD
+                 ,T1.PKG_DETL_DC_RATE
+                 ,T1.PKG_DETL_DC_PRC
+                 ,T1.USE_YN
+                 ,T1.AVLB_STOCK_QTY
+           FROM
+           (
+                SELECT   A.DLR_CD
+                        ,A.ITEM_CD
+                        ,A.ITEM_NM
+                        ,A.STOCK_UNIT_CD
+                        ,B.PRC_TP
+                        ,NVL(B.SALE_PRC_AMT, 0) AS SALE_PRC_AMT
+                        ,A.ABC_IND
+                        ,A.CARLINE_CD
+                        ,A.PURC_LEAD_HM
+                        ,A.GR_STRGE_CD
+                        ,A.GI_STRGE_CD
+                        ,C.PKG_ITEM_CD
+                        ,C.LINE_NO
+                        ,C.ITEM_PRC
+                        ,C.ITEM_QTY
+                        ,C.ITEM_AMT
+                        ,C.ITEM_UNIT_CD
+                        ,C.PKG_DETL_DC_RATE
+                        ,C.PKG_DETL_DC_PRC
+                        ,C.USE_YN
+                        ,D.AVLB_STOCK_QTY
+                  FROM   PT_0201T A
+                  INNER JOIN PT_0231T C
+                  ON A.ITEM_CD = C.ITEM_CD
+                 LEFT OUTER JOIN (
+                     SELECT   B.DLR_CD
+                             ,B.ITEM_CD
+                             ,B.PRC_TP
+                             ,B.START_DT
+                             ,B.SALE_PRC_AMT
+                       FROM (
+                              SELECT   DLR_CD
+                                      ,ITEM_CD
+                                      ,PRC_TP
+                                      ,MAX(START_DT) AS START_DT
+                                FROM   PT_0214T
+                               WHERE   PRC_TP   = '01'
+                                 AND   DEL_YN  != 'Y'
+                                 AND   APPLY_YN = 'Y'
+                                 AND   END_DT <![CDATA[>=]]> SYSDATE
+                              GROUP BY DLR_CD, ITEM_CD,PRC_TP
+                             ) A
+                               INNER JOIN PT_0214T B
+                                 ON  A.DLR_CD = B.DLR_CD
+                                AND  A.ITEM_CD = B.ITEM_CD
+                                AND  A.PRC_TP = B.PRC_TP
+                                AND  A.START_DT = B.START_DT
+                           ) B
+                         ON A.DLR_CD = B.DLR_CD
+                         AND A.ITEM_CD = B.ITEM_CD
+                     LEFT OUTER JOIN PT_0301T D
+                       ON A.DLR_CD      = D.DLR_CD
+                      AND A.ITEM_CD     = D.ITEM_CD
+                      AND A.GI_STRGE_CD = D.STRGE_CD
+                 WHERE   A.DLR_CD  = #{sDlrCd}
+                   <if test='sPkgItemCd != null and sPkgItemCd != ""'>
+                    AND C.PKG_ITEM_CD = #{sPkgItemCd}
+                   </if>
+                   AND   A.END_YN  != 'Y'
+                   AND   A.ITEM_DSTIN_CD in ('02','05')
+                 ORDER BY
+                 <choose>
+                     <when test='sort != null'>
+                         <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                             <choose>
+                                 <when test='item.field == "itemCd"'>             ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                 <when test='item.field == "itemNm"'>             ITEM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                 <otherwise>
+                                   DLR_CD ASC
+                                 ,PKG_ITEM_CD ASC
+                                 ,LINE_NO ASC
+                                 </otherwise>
+                             </choose>
+                         </foreach>
+                     </when>
+                     <otherwise>
+                       DLR_CD ASC, PKG_ITEM_CD ASC ,LINE_NO ASC
+                     </otherwise>
+                 </choose>
+               ) T1
+           <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+           </where>
+         )
+         <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+         </where>
+    </select>
+
+    <!-- Package 부품 목록수 -->
+    <select id="selectPackageParByConditionCnt" parameterType="PackageMasterSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PackageManageDAO.selectPackageParByConditionCnt] */
+        SELECT COUNT(*)
+          FROM PT_0201T A
+          INNER JOIN PT_0231T C
+          ON A.ITEM_CD = C.ITEM_CD
+            LEFT OUTER JOIN (
+                 SELECT   B.DLR_CD
+                         ,B.ITEM_CD
+                         ,B.PRC_TP
+                         ,B.START_DT
+                         ,B.SALE_PRC_AMT
+                   FROM (
+                          SELECT   DLR_CD
+                                  ,ITEM_CD
+                                  ,PRC_TP
+                                  ,MAX(START_DT) AS START_DT
+                            FROM   PT_0214T
+                           WHERE   PRC_TP   = '01'
+                             AND   DEL_YN  != 'Y'
+                             AND   APPLY_YN = 'Y'
+                             AND   END_DT <![CDATA[>=]]> SYSDATE
+                          GROUP BY DLR_CD, ITEM_CD,PRC_TP
+                         ) A
+                           INNER JOIN PT_0214T B
+                             ON  A.DLR_CD = B.DLR_CD
+                            AND  A.ITEM_CD = B.ITEM_CD
+                            AND  A.PRC_TP = B.PRC_TP
+                            AND  A.START_DT = B.START_DT
+                       ) B
+            ON A.DLR_CD = B.DLR_CD
+            AND A.ITEM_CD = B.ITEM_CD
+            WHERE   A.DLR_CD  = #{sDlrCd}
+            <if test='sPkgItemCd != null and sPkgItemCd != ""'>
+                AND C.PKG_ITEM_CD = #{sPkgItemCd}
+            </if>
+            AND   A.END_YN  != 'Y'
+            AND   A.ITEM_DSTIN_CD in ('02','05')
+    </select>
+
+</mapper>

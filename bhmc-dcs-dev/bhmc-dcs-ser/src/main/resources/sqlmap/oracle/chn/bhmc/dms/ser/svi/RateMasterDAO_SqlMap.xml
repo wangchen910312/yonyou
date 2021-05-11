@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : RateMasterDAO_SqlMap.xml
+    Description : 임률코드 마스터에 관한 데이터처리
+    author Yin Xueyuan
+    since 2016. 01. 26.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 26.  Yin Xueyuan      최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.svi.service.dao.RateMasterDAO">
+
+	<!-- 임률코드 등록-->
+	<insert id="insertRateMaster" parameterType="RateMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateMasterDAO.insertRateMaster] */
+	    INSERT INTO SE_1063T    --임률마스터
+        (
+          DLR_CD                --딜러코드
+         ,RTE_CD                --임률코드
+         ,RO_TP                 --RO유형
+         ,RTE_AMT               --임률금액
+         ,APPLY_START_DT        --적용시작일자
+         ,APPLY_END_DT          --적용종료일자
+         ,USE_YN                --사용여부
+         ,USE_CD                --사용코드
+         ,USE_NM                --사용명
+         ,REG_USR_ID            --등록자ID
+         ,REG_DT                --등록일자
+         ,UPDT_USR_ID           --수정자ID
+         ,UPDT_DT               --수정일자
+         ,BRAND_CD
+        )
+        VALUES
+        (
+          #{dlrCd}                --딜러코드
+         ,#{rteCd}                --임률코드
+         ,#{roTp}                 --RO유형
+         ,#{rteAmt}               --임률금액
+         ,#{applyStartDt}         --적용시작일자
+         ,#{applyEndDt}           --적용종료일자
+         ,#{useYn}                --사용여부
+         ,#{useCd}                --사용코드
+         ,#{useNm}                --사용명
+         ,#{regUsrId}             --등록자ID
+         ,SYSDATE                 --등록일자
+         ,#{updtUsrId}            --수정자ID
+         ,SYSDATE                 --수정일자
+         ,#{brandCd}
+        )
+    </insert>
+
+	<!-- 임률코드 수정 -->
+	<update id="updateRateMaster" parameterType="RateMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateMasterDAO.updateRateMaster] */
+		UPDATE SE_1063T    --임률마스터
+          SET
+               APPLY_START_DT = #{applyStartDt}         --적용시작일자
+              ,APPLY_END_DT   = #{applyEndDt}           --적용종료일자
+              ,USE_YN         = #{useYn}                --사용여부
+              ,USE_CD         = #{useCd}                --사용코드
+              ,USE_NM         = #{useNm}                --사용명
+              ,UPDT_USR_ID    = #{updtUsrId}            --수정자ID
+              ,RTE_AMT        = #{rteAmt}               --임률금액
+              ,UPDT_DT        = SYSDATE                 --수정일자
+             WHERE 1 = 1
+               AND RTE_CD     = #{rteCd}                --임률코드
+               AND DLR_CD     = #{dlrCd}                --딜러코드
+               AND BRAND_CD   = #{brandCd}              --브랜드코드
+               AND RO_TP      = #{roTp}                 --RO유형
+	</update>
+
+    <!-- 임률코드 삭제 -->
+    <delete id="deleteRateMaster" parameterType="RateMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateMasterDAO.deleteRateMaster] */
+        DELETE FROM SE_1063T
+        WHERE RTE_CD         = #{rteCd}                --임률코드
+              AND DLR_CD     = #{dlrCd}                --딜러코드
+              AND BRAND_CD   = #{brandCd}              --브랜드코드
+              AND RO_TP      = #{roTp}                 --RO유형
+    </delete>
+
+    <!-- 임률코드 리스트 -->
+    <select id="selectRateMasterByCondition" parameterType="RateMasterSearchVO" resultType="RateMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateMasterDAO.selectRateMasterByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT * FROM  SE_1063T
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND DLR_CD = #{sDlrCd}
+                    </if>
+
+                    <if test='sRoTp != null and sRoTp != ""'>
+                        AND RO_TP = #{sRoTp}
+                    </if>
+
+                    <if test='sBrandCd != null and sBrandCd != ""'>
+                        AND BRAND_CD = #{sBrandCd}
+                    </if>
+
+                    <if test='sRteCd != null and sRteCd != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sRteCd,"*")'>
+                                <bind name='sRteCd' value='@org.apache.commons.lang3.StringUtils@replace(sRteCd, "*", "%")' />
+                                 AND RTE_CD LIKE #{sRteCd}
+                            </when>
+                            <otherwise>
+                                 AND RTE_CD = #{sRteCd}
+                            </otherwise>
+                        </choose>
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "rteCd"'>RTE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "roTp"'>RO_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "brandCd"'>BRAND_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "rteAmt"'>RTE_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "applyStartDt"'>APPLY_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "applyEndDt"'>APPLY_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "useYn"'>USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "useCd"'>USE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "useNm"'>USE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regUsrId"'>REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDt"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtUsrId"'>UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtDt"'>UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD,RTE_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD,RTE_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 임률코드 목록수 -->
+    <select id="selectRateMasterByConditionCnt" parameterType="RateMasterSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateMasterDAO.selectRateMasterByConditionCnt] */
+        SELECT
+            COUNT(*) AS VALUE
+        FROM SE_1063T
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND DLR_CD = #{sDlrCd}
+            </if>
+
+            <if test='sRoTp != null and sRoTp != ""'>
+                AND RO_TP = #{sRoTp}
+            </if>
+
+            <if test='sBrandCd != null and sBrandCd != ""'>
+                AND BRAND_CD = #{sBrandCd}
+            </if>
+
+            <if test='sRteCd != null and sRteCd != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sRteCd,"*")'>
+                        <bind name='sRteCd' value='@org.apache.commons.lang3.StringUtils@replace(sRteCd, "*", "%")' />
+                         AND RTE_CD LIKE #{sRteCd}
+                    </when>
+                    <otherwise>
+                         AND RTE_CD = #{sRteCd}
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+    </select>
+
+    <!-- 임률코드 키조회 -->
+    <select id="selectRateMasterByKey" parameterType="RateMasterSearchVO" resultType="RateMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateMasterDAO.selectRateMasterByKey] */
+        SELECT * FROM SE_1063T
+        WHERE DLR_CD     = #{sDlrCd}                --딜러코드
+        AND BRAND_CD     = #{sBrandCd}              --브랜드코드
+        AND RO_TP        = #{sRoTp}                 --RO유형
+    </select>
+    
+    <!-- 딜러별 임률 금액 조회 -->
+    <select id="selectDlrRateByKey" parameterType="RateMasterSearchVO" resultType="RateMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateMasterDAO.selectRateMasterByKey] */
+        SELECT DLR_CD , RTE_CD , RO_TP , RTE_AMT
+          FROM SE_1063T
+         WHERE DLR_CD = #{sDlrCd}                --딜러코드
+           AND BRAND_CD = #{sBrandCd}            --브랜드코드
+           AND RO_TP = #{sRoTp}               --RO유형
+           AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+           AND USE_YN = 'Y'
+    </select>
+    
+    <!-- 임률 금액 조회 -->
+    <select id="selectRates" parameterType="RateMasterSearchVO" resultType="RateMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateMasterDAO.selectRateByKey] */
+        
+            SELECT *
+             FROM (
+             SELECT RO_TP , RTE_AMT
+                FROM SE_1063T
+               WHERE USE_YN ='Y'
+                 AND DLR_CD = 'A07AA'
+               <choose>
+                    <when test='sBrandCd != null and sBrandCd != ""'>
+                        AND BRAND_CD = #{sBrandCd} 
+                    </when>
+                    <otherwise>
+                        AND BRAND_CD = 'HD'
+                    </otherwise>
+                </choose>
+                 AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+                 AND (RO_TP) NOT IN (
+                  SELECT RO_TP
+                    FROM SE_1063T
+                   WHERE USE_YN ='Y'
+                     AND DLR_CD = #{sDlrCd}
+                     <choose>
+                        <when test='sBrandCd != null and sBrandCd != ""'>
+                            AND BRAND_CD = #{sBrandCd}
+                        </when>
+                        <otherwise>
+                            AND BRAND_CD = 'HD'
+                        </otherwise>
+                    </choose>
+                     AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+                 )
+              )UNION 
+              SELECT RO_TP , RTE_AMT
+                FROM SE_1063T
+               WHERE USE_YN ='Y'
+                 AND DLR_CD = #{sDlrCd}
+                 <choose>
+                    <when test='sBrandCd != null and sBrandCd != ""'>
+                        AND BRAND_CD = #{sBrandCd}
+                    </when>
+                    <otherwise>
+                        AND BRAND_CD = 'HD'
+                    </otherwise>
+                </choose>
+                 AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+    </select>
+
+</mapper>

@@ -1,0 +1,531 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20170720" releaseVersion="9.0.0">
+<TableDataMap>
+<TableData name="selectSerPrdAmtReportDs" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sStartYyMmDd"/>
+<O>
+<![CDATA[20171001]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sSung"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sEndYyMmDd"/>
+<O>
+<![CDATA[20171031]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDivision"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sOffice"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCity"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT T2.DLR_CD,T2.DLR_NM,T2.SDPT_NM,T2.OFF_NM,T2.SUNG_NM,T2.CITY_NM,SUM(COL1) AS COL1,SUM(COL2) AS COL2,'-' AS COL3,'-' AS COL4,'-' AS COL5,'-' AS COL6,SUM(COL7)AS COL7,SUM(COL8) AS COL8 FROM (
+    SELECT  CM.DLR_CD
+           ,CM.DLR_SHT_NM AS DLR_NM
+           ,(SELECT DIVI_NM FROM CM_2501T WHERE DIVI_CD = CM.SDPT_CD AND ROWNUM = 1) AS SDPT_NM
+           ,(SELECT OFF_NM FROM CM_2601T WHERE OFF_CD = CM.DIST_OFFICE_CD AND ROWNUM = 1) AS OFF_NM
+           ,(SELECT CSTL_NM FROM CM_2701T WHERE CSTL_CD = CM.SALE_DLR_SUNG_CD) AS SUNG_NM
+           ,(SELECT CITY_NM FROM CM_3201T WHERE CITY_CD = CM.SALE_DLR_CITY_CD) AS CITY_NM
+           ,0 AS COL1
+           ,0 AS COL2
+           ,0 AS COL7
+           ,0 AS COL8
+    FROM  CM_0101T CM
+    WHERE CM.DMS_USE_YN = 'Y'
+    ${IF(LEN(sDivision) <= 0,""," AND CM.SDPT_CD = '" + sDivision + "'")}
+	${IF(LEN(sOffice) <= 0,""," AND CM.DIST_OFFICE_CD = '" + sOffice + "'")}
+	${IF(LEN(sSung) <= 0,""," AND CM.SALE_DLR_SUNG_CD = '" + sSung + "'")}
+	${IF(LEN(sCity) <= 0,""," AND CM.SALE_DLR_CITY_CD = '" + sCity + "'")}
+	${IF(LEN(sDlrCd) <= 0,""," AND CM.DLR_CD = '" + sDlrCd + "'")}
+
+
+    UNION ALL
+
+    SELECT * FROM (
+        SELECT T1.DLR_CD
+               ,(SELECT DLR_SHT_NM FROM CM_0101T WHERE DLR_CD = T1.DLR_CD) AS DLR_NM
+               ,(SELECT DIVI_NM FROM CM_2501T WHERE DIVI_CD = T1.SDPT_CD AND ROWNUM = 1) AS SDPT_NM
+               ,(SELECT OFF_NM FROM CM_2601T WHERE OFF_CD = T1.DIST_OFFICE_CD AND ROWNUM = 1) AS OFF_NM
+               ,(SELECT CSTL_NM FROM CM_2701T WHERE CSTL_CD = T1.SALE_DLR_SUNG_CD) AS SUNG_NM
+               ,(SELECT CITY_NM FROM CM_3201T WHERE CITY_CD = T1.SALE_DLR_CITY_CD) AS CITY_NM
+               ,SUM(NVL(PAYM_AMT,0)) AS COL1
+               ,SUM(NVL(CASE WHEN T1.RO_TP != '02' THEN PAYM_AMT ELSE 0 END,0)) AS COL2
+               
+               ,ROUND(CASE WHEN COUNT(DISTINCT(T1.VIN_NO))  > 0 THEN SUM(PAYM_AMT)/COUNT(DISTINCT(VIN_NO)) ELSE 0 END,2) AS COL7
+               ,CASE WHEN SUM(NVL(CASE WHEN T1.RO_TP != '02' THEN 1 ELSE 0 END,0)) > 0
+                     THEN ROUND(SUM(NVL(CASE WHEN T1.RO_TP != '02' THEN PAYM_AMT ELSE 0 END,0)) / SUM(NVL(CASE WHEN T1.RO_TP != '02' THEN 1 ELSE 0 END,0)),2)
+                     ELSE 0
+                END AS COL8
+        FROM (
+            SELECT  CA.DLR_CD
+                   ,DM.SDPT_CD
+                   ,DM.DIST_OFFICE_CD
+                   ,DM.SALE_DLR_SUNG_CD
+                   ,DM.SALE_DLR_CITY_CD
+                   ,CA.VIN_NO
+                   ,(SELECT CASE WHEN CA.CALC_STAT_CD = '07'  THEN SUM(-1*NVL(PAYM_AMT, 0)) ELSE SUM(NVL(PAYM_AMT, 0)) END  FROM SE_0530T WHERE DLR_CD = CA.DLR_CD AND CALC_DOC_NO = CA.CALC_DOC_NO) AS PAYM_AMT
+                   ,CA.RO_TP
+                   ,CA.CALC_STAT_CD
+            FROM SE_0500T CA
+            INNER JOIN CM_0101T DM
+            ON CA.DLR_CD = DM.DLR_CD
+            WHERE 1=1
+            AND (CA.CALC_STAT_CD = '00' OR  CA.CALC_STAT_CD = '07')
+            AND CA.SER_PAR_DSTIN_CD = 'SER'
+            AND DM.DMS_USE_YN = 'Y'
+            AND TO_CHAR(CA.CALC_DT, 'YYYYMMDD') BETWEEN  '${sStartYyMmDd}' AND '${sEndYyMmDd}'
+		${IF(LEN(sDivision) <= 0,""," AND DM.SDPT_CD = '" + sDivision + "'")}
+		${IF(LEN(sOffice) <= 0,""," AND DM.DIST_OFFICE_CD = '" + sOffice + "'")}
+		${IF(LEN(sSung) <= 0,""," AND DM.SALE_DLR_SUNG_CD = '" + sSung + "'")}
+		${IF(LEN(sCity) <= 0,""," AND DM.SALE_DLR_CITY_CD = '" + sCity + "'")}
+		${IF(LEN(sDlrCd) <= 0,""," AND CA.DLR_CD = '" + sDlrCd + "'")}
+           
+        ) T1
+        WHERE 1=1
+        GROUP BY T1.DLR_CD,T1.SDPT_CD,T1.DIST_OFFICE_CD,T1.SALE_DLR_SUNG_CD,T1.SALE_DLR_CITY_CD
+        ORDER BY T1.SDPT_CD,T1.DIST_OFFICE_CD,T1.SALE_DLR_SUNG_CD,T1.SALE_DLR_CITY_CD,T1.DLR_CD
+    )
+)T2
+GROUP BY DLR_CD,DLR_NM,SDPT_NM, OFF_NM,SUNG_NM,CITY_NM
+ORDER BY DLR_CD
+]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="1" T="1"/>
+<FR/>
+<HC/>
+<FC/>
+<UPFCR COLUMN="false" ROW="true"/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[288000,1440000,1440000,0,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[288000,2880000,2880000,2880000,2880000,2880000,8640000,5040000,5040000,5040000,5040000,5040000,5040000,5760000,5760000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="1" s="0">
+<O>
+<![CDATA[事业部 ]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="1" s="0">
+<O>
+<![CDATA[办事处]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="1" s="0">
+<O>
+<![CDATA[省市]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="1" s="0">
+<O>
+<![CDATA[城市]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="1" s="0">
+<O>
+<![CDATA[特约店代码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="1" s="0">
+<O>
+<![CDATA[特约店简称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="1" s="0">
+<O>
+<![CDATA[维修产值(合计)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="1" s="0">
+<O>
+<![CDATA[维修产值(非保修)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="1" s="1">
+<O>
+<![CDATA[配件成本(合计)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="1" s="1">
+<O>
+<![CDATA[配件成本(非保修)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="1" s="1">
+<O>
+<![CDATA[维修毛利(合计)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="1" s="1">
+<O>
+<![CDATA[维修毛利(非保修)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="1" s="0">
+<O>
+<![CDATA[单台数产值(合计)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="1" s="0">
+<O>
+<![CDATA[单台数产值(非保修)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="SDPT_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="OFF_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="SUNG_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="CITY_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="DLR_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="DLR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="COL1"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="COL2"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="COL3"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="10" r="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="COL4"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="COL5"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="12" r="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="COL6"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="13" r="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="COL7"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="COL8"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="16" r="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="3" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="COL01"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="3" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="COL02"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="13" r="3" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="COL06"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="3" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectSerPrdAmtReportDs" columnName="COL11"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="4">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="4">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="4">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="4">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="4">
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="43200000" height="180000000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0" useParamsTemplate="false"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="72" foreground="-8355712"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="JAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID TemplateID="c3ddbbd2-7359-4781-8672-dae24c74cf9f"/>
+<TemplateIdAttMark class="com.fr.base.iofileattr.TemplateIdAttrMark">
+<TemplateIdAttMark TemplateId="c3ddbbd2-7359-4781-8672-dae24c74cf9f"/>
+</TemplateIdAttMark>
+</WorkBook>

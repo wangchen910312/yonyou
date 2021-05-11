@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : PDIChkAtcDAO_SqlMap.xml
+    Description : PDI점검항목 마스터에 관한 데이터처리
+    author Yin Xueyuan
+    since 2016. 01. 27.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 27.  Yin Xueyuan      최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.svi.service.dao.PDIChkAtcDAO">
+
+	<!-- PDI점검항목 등록-->
+	<insert id="insertPDIChkAtc" parameterType="PDIChkAtcVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PDIChkAtcDAO.insertPDIChkAtc] */
+	    INSERT INTO SE_1030T    --PDI문진항목
+        (
+          DLR_CD                   --딜러코드
+         ,CAR_TP_CD                --PDI유형코드
+         ,CAR_CHK_ATC_CD           --PDI점검항목코드
+         ,CAR_CHK_ATC_TP_NM        --PDI점검항목유형명
+         ,CAR_CHK_ATC_LOCAL_NM           --PDI점검항목명
+         ,CAR_CHK_ATC_EN_NM        --PDI점검항목영문명
+         ,REMARK                   --비고
+         ,USE_YN                   --사용여부
+         ,REG_USR_ID               --등록자ID
+         ,REG_DT                   --등록일자
+         ,UPDT_USR_ID              --수정자ID
+         ,UPDT_DT                  --수정일자
+         ,CAR_CHK_CD
+        )
+        VALUES
+        (
+          #{dlrCd}                   --딜러코드
+         ,#{carTpCd}                 --PDI유형코드
+         ,#{carChkAtcCd}             --PDI점검항목코드
+         ,#{carChkAtcTpNm}           --PDI점검항목유형명
+         ,#{carChkAtcLocalNm}             --PDI점검항목명
+         ,#{carChkAtcEnNm}           --PDI점검항목영문명
+         ,#{remark}                  --비고
+         ,#{useYn}                   --사용여부
+         ,#{regUsrId}                --등록자ID
+         ,SYSDATE                    --등록일자
+         ,#{updtUsrId}               --수정자ID
+         ,SYSDATE                    --수정일자
+         ,#{carChkCd}
+        )
+    </insert>
+
+	<!-- PDI점검항목 수정 -->
+	<update id="updatePDIChkAtc" parameterType="PDIChkAtcVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PDIChkAtcDAO.updatePDIChkAtc] */
+		UPDATE SE_1030T    --PDI문진항목
+          SET
+               CAR_CHK_ATC_TP_NM = #{carChkAtcTpNm}           --PDI점검항목유형명
+              ,CAR_CHK_ATC_LOCAL_NM    = #{carChkAtcLocalNm}             --PDI점검항목명
+              ,CAR_CHK_ATC_EN_NM = #{carChkAtcEnNm}           --PDI점검항목영문명
+              ,REMARK            = #{remark}                  --비고
+              ,USE_YN            = #{useYn}                   --사용여부
+              ,UPDT_USR_ID       = #{updtUsrId}               --수정자ID
+              ,UPDT_DT           = SYSDATE                    --수정일자
+              ,CAR_CHK_CD = #{carChkCd}
+             WHERE 1 = 1
+               AND CAR_CHK_CD        = #{carChkCd}
+               AND CAR_TP_CD         = #{carTpCd}             --PDI유형코드
+               AND CAR_CHK_ATC_CD    = #{carChkAtcCd}         --PDI점검항목코드
+               AND DLR_CD            = #{dlrCd}               --딜러코드
+	</update>
+
+    <!-- PDI점검항목 삭제 -->
+    <delete id="deletePDIChkAtc" parameterType="PDIChkAtcVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PDIChkAtcDAO.deletePDIChkAtc] */
+        DELETE FROM SE_1030T
+        WHERE 1 = 1
+        AND CAR_CHK_CD        = #{carChkCd}
+        AND CAR_TP_CD         = #{carTpCd}             --PDI유형코드
+        AND CAR_CHK_ATC_CD    = #{carChkAtcCd}         --PDI점검항목코드
+        AND DLR_CD            = #{dlrCd}               --딜러코드
+    </delete>
+
+    <!-- PDI점검항목 리스트 -->
+    <select id="selectPDIChkAtcByCondition" parameterType="PDIChkAtcSearchVO" resultType="PDIChkAtcVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PDIChkAtcDAO.selectPDIChkAtcByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT * FROM  SE_1030T T1
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND DLR_CD = #{sDlrCd}
+                    </if>
+
+                    <if test='sCarTpCd != null and sCarTpCd != ""'>
+                        AND CAR_TP_CD = #{sCarTpCd}
+                    </if>
+
+                    <if test='sCarChkAtcCd != null and sCarChkAtcCd != ""'>
+                        AND CAR_CHK_ATC_CD = #{sCarChkAtcCd}
+                    </if>
+
+                    <if test='sCarChkCd != null and sCarChkCd != ""'>
+                        AND CAR_CHK_CD = #{sCarChkCd}
+                    </if>
+
+                    <if test='sCarChkAtcLocalNm != null and sCarChkAtcLocalNm != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sCarChkAtcLocalNm,"*")'>
+                                <bind name='sCarChkAtcLocalNm' value='@org.apache.commons.lang3.StringUtils@replace(sCarChkAtcLocalNm, "*", "%")' />
+                                 AND CAR_CHK_ATC_LOCAL_NM LIKE #{sCarChkAtcLocalNm}
+                            </when>
+                            <otherwise>
+                                 AND CAR_CHK_ATC_LOCAL_NM = #{sCarChkAtcLocalNm}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sCarChkAtcEnNm != null and sCarChkAtcEnNm != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sCarChkAtcEnNm,"*")'>
+                                <bind name='sCarChkAtcEnNm' value='@org.apache.commons.lang3.StringUtils@replace(sCarChkAtcEnNm, "*", "%")' />
+                                 AND CAR_CHK_ATC_EN_NM LIKE #{sCarChkAtcEnNm}
+                            </when>
+                            <otherwise>
+                                 AND CAR_CHK_ATC_EN_NM = #{sCarChkAtcEnNm}
+                            </otherwise>
+                        </choose>
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                 <when test='item.field == "dlrCd"'>            T1.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                 <when test='item.field == "carChkCd"'>         T1.CAR_CHK_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                 <when test='item.field == "carTpCd"'>          T1.CAR_TP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                 <when test='item.field == "carChkAtcCd"'>      T1.CAR_CHK_ATC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                 <when test='item.field == "carChkAtcTpNm"'>    T1.CAR_CHK_ATC_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "carChkAtcLocalNm"'>      T1.CAR_CHK_ATC_LOCAL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                 <when test='item.field == "carChkAtcEnNm"'>    T1.CAR_CHK_ATC_EN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "useYn"'>            T1.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                 <otherwise>
+                                   T1.DLR_CD ASC
+                                  ,T1.CAR_CHK_CD ASC
+                                  ,T1.CAR_TP_CD ASC
+                                  ,T1.CAR_CHK_ATC_CD ASC
+                                 </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        T1.DLR_CD ASC
+                       ,T1.CAR_CHK_CD ASC
+                       ,T1.CAR_TP_CD ASC
+                       ,T1.CAR_CHK_ATC_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- PDI점검항목 목록수 -->
+    <select id="selectPDIChkAtcByConditionCnt" parameterType="PDIChkAtcSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.PDIChkAtcDAO.selectPDIChkAtcByConditionCnt] */
+        SELECT
+            COUNT(*) AS VALUE
+        FROM SE_1030T
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND DLR_CD = #{sDlrCd}
+            </if>
+            <if test='sCarTpCd != null and sCarTpCd != ""'>
+                AND CAR_TP_CD = #{sCarTpCd}
+            </if>
+            <if test='sCarChkAtcCd != null and sCarChkAtcCd != ""'>
+                AND CAR_CHK_ATC_CD = #{sCarChkAtcCd}
+            </if>
+            <if test='sCarChkCd != null and sCarChkCd != ""'>
+                AND CAR_CHK_CD = #{sCarChkCd}
+            </if>
+            <if test='sCarChkAtcLocalNm != null and sCarChkAtcLocalNm != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sCarChkAtcLocalNm,"*")'>
+                        <bind name='sCarChkAtcLocalNm' value='@org.apache.commons.lang3.StringUtils@replace(sCarChkAtcLocalNm, "*", "%")' />
+                         AND CAR_CHK_ATC_LOCAL_NM LIKE #{sCarChkAtcLocalNm}
+                    </when>
+                    <otherwise>
+                         AND CAR_CHK_ATC_LOCAL_NM = #{sCarChkAtcLocalNm}
+                    </otherwise>
+                </choose>
+            </if>
+            <if test='sCarChkAtcEnNm != null and sCarChkAtcEnNm != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sCarChkAtcEnNm,"*")'>
+                        <bind name='sCarChkAtcEnNm' value='@org.apache.commons.lang3.StringUtils@replace(sCarChkAtcEnNm, "*", "%")' />
+                         AND CAR_CHK_ATC_EN_NM LIKE #{sCarChkAtcEnNm}
+                    </when>
+                    <otherwise>
+                         AND CAR_CHK_ATC_EN_NM = #{sCarChkAtcEnNm}
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+    </select>
+
+</mapper>

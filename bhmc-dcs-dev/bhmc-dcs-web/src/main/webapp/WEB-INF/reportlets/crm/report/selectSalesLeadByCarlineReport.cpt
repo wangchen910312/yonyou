@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20170715" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="salesLeadByCarline" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sLeadFromDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sLeadToDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sSung"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sSearchFromDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sSearchToDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCarlineCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDivision"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sOffice"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCity"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sBhmcYn"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT FN_GET_CARLINE_NM(T2.INTR_CARLINE_CD) AS CARLINE_NM
+      , COUNT(1) AS COL01    -- 리드생성총수
+      , SUM( DECODE(CASE WHEN T2.TRACE_DT IS NOT NULL AND T2.LEAD_START_DT < T2.T2_TRACE_DT  THEN	1 WHEN T2.LEAD_START_DT < T2.SUBMIT_DT THEN	1  ELSE 0 END, 1, 1, 0 )) AS COL02    -- 딜러 처리수
+      , SUM(DECODE(CASE WHEN ROUND((CASE WHEN T2.TRACE_DT IS NOT NULL AND T2.LEAD_START_DT < T2.T2_TRACE_DT  THEN	T2.T2_TRACE_DT WHEN T2.LEAD_START_DT < T2.SUBMIT_DT THEN	T2.SUBMIT_DT ELSE NULL END - T2.LEAD_START_DT) * 8 ) < 8 THEN 1 ELSE 0 END, 1, 1, 0)) AS COL03    -- 딜러 8h 처리수
+      , SUM(DECODE(T2.LEAD_STAT_CD,'03',1,0)) AS COL04    -- 유효 리드수
+      , SUM(DECODE(T2.LEAD_STAT_CD,'04',1,0)) AS COL05    -- 고객딜러방문수
+      , SUM(DECODE(T2.LEAD_STAT_CD,'06',1,0)) AS COL06    -- 거래량
+FROM (
+    SELECT T1.*
+    , T2.TRACE_DT AS T2_TRACE_DT
+    FROM CR_0223T T1
+    INNER JOIN (
+			SELECT DLR_CD, C_SEQ, TRACE_DT, REG_DT, SEQ
+			FROM CR_0223T
+    ) T2 ON T1.DLR_CD = T2.DLR_CD AND T1.C_SEQ = T2.C_SEQ
+    INNER JOIN CM_0101T DM ON T1.DLR_CD = DM.DLR_CD
+    INNER JOIN CM_2701T SUNG ON DM.SALE_DLR_SUNG_CD = SUNG.CSTL_CD
+    INNER JOIN CM_2501T SDPT ON DM.SDPT_CD = SDPT.DIVI_CD
+    INNER JOIN CM_2601T OFFICE ON DM.DIST_OFFICE_CD = OFFICE.OFF_CD
+    INNER JOIN CM_3201T CITY ON DM.SALE_DLR_CITY_CD = CITY.CITY_CD
+    WHERE 1=1
+    AND T1.DEL_YN = 'N'
+    AND DM.DMS_USE_YN = 'Y'
+--    AND TO_CHAR(T1.SUBMIT_DT,'YYYY-MM-DD') BETWEEN '2000-01-01' AND '2018-01-01' AND T1.LEAD_STAT_CD = '06' -- 거래일자
+--    AND TO_CHAR(T1.LEAD_START_DT,'YYYY-MM-DD') BETWEEN '2000-01-01' AND '2018-01-01' -- 리드배포일자
+    ${IF(LEN(sSearchFromDt) = 0 , ""," AND TO_CHAR(T1.SUBMIT_DT,'YYYY-MM-DD') BETWEEN '"+sSearchFromDt+"' AND '"+sSearchToDt+"' AND T1.LEAD_STAT_CD = '06' ") }
+    ${IF(LEN(sLeadFromDt) = 0 , ""," AND TO_CHAR(T1.LEAD_START_DT,'YYYY-MM-DD') BETWEEN '"+sLeadFromDt+"' AND '"+sLeadToDt+"'") }
+    ${IF(LEN(sDlrCd) <= 0,""," AND DM.DLR_CD = '" + sDlrCd + "'")}
+    ${IF(LEN(sDivision) <= 0,""," AND DM.SDPT_CD = '" + sDivision + "'")}
+    ${IF(LEN(sOffice) <= 0,""," AND DM.DIST_OFFICE_CD = '" + sOffice + "'")}
+    ${IF(LEN(sSung) <= 0,""," AND DM.SALE_DLR_SUNG_CD = '" + sSung + "'")}
+    ${IF(LEN(sCity) <= 0,""," AND DM.SALE_DLR_CITY_CD = '" + sCity + "'")}
+    ${IF(LEN(sCarlineCd) <= 0,""," AND T1.INTR_CARLINE_CD = '" + sCarlineCd + "'")}
+    ${IF(LEN(sBhmcYn) <= 0,""," AND T1.BHMC_YN = '" + sBhmcYn + "'")}
+    ) T2
+WHERE 1=1
+${IF(LEN(sCarlineCd) <= 0,""," AND T2.INTR_CARLINE_CD = '" + sCarlineCd + "'")}
+GROUP BY T2.INTR_CARLINE_CD
+ORDER BY T2.INTR_CARLINE_CD]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="1" T="1"/>
+<FR/>
+<HC/>
+<FC/>
+<UPFCR COLUMN="false" ROW="true"/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[288000,1440000,1440000,0,1440000,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[288000,8640000,3600000,3600000,3600000,3600000,3600000,3600000,2743200,2743200,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="1" s="0">
+<O>
+<![CDATA[车种]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="1" s="0">
+<O>
+<![CDATA[线索生成总量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="1" s="0">
+<O>
+<![CDATA[特约店处理量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="1" s="0">
+<O>
+<![CDATA[特约店8h处理量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="1" s="0">
+<O>
+<![CDATA[有效线索量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="1" s="0">
+<O>
+<![CDATA[客户到店量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="1" s="0">
+<O>
+<![CDATA[成交量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="2" s="1">
+<O t="DSColumn">
+<Attributes dsName="salesLeadByCarline" columnName="CARLINE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="salesLeadByCarline" columnName="COL01"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="salesLeadByCarline" columnName="COL02"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="salesLeadByCarline" columnName="COL03"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="salesLeadByCarline" columnName="COL04"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="salesLeadByCarline" columnName="COL05"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="salesLeadByCarline" columnName="COL06"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="salesLeadByCarline" columnName="COL01"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="salesLeadByCarline" columnName="COL02"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="salesLeadByCarline" columnName="COL03"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="salesLeadByCarline" columnName="COL04"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="salesLeadByCarline" columnName="COL05"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="salesLeadByCarline" columnName="COL06"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="4" s="1">
+<O>
+<![CDATA[合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="4" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(C3)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="4" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(D3)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="4" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(E3)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="4" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(F3)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="4" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(G3)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="4" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(H3)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="43200000" height="180000000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID TemplateID="5c093c06-652a-4f83-804a-b4746b63f66a"/>
+</WorkBook>

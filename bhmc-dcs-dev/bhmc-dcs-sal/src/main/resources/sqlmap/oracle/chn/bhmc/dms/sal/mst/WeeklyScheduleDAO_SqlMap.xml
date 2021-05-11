@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : WeeklyScheduleDAO_SqlMap.xml
+    Description : 주간계획
+    author Bong
+    since 2016. 5. 16.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 5. 16.       Bong              최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.sal.mst.service.dao.WeeklyScheduleDAO">
+
+    <select id="selectWeeklyScheduleConditionCnt" parameterType="WeeklyScheduleSearchVO" resultType="int">
+    <!-- selectEvalInfoDownloadCnt -->
+        SELECT COUNT(*)
+          FROM (SELECT COUNT(BTO_YY_MM_DT)
+                  FROM SA_0432T
+                <if test='sBtoYyMmDt != null'>
+                 WHERE BTO_YY_MM_DT = REPLACE(#{sBtoYyMmDt}, '/', '')
+                </if>
+                 GROUP BY BTO_YY_MM_DT,BTO_CNT,WEEK_START_DT,WEEK_END_DT,WEEK_FST_STOCK_DT,PFP_EXAM_DT,BEF_WEEK_DT,CRE_PLAN_APPLY_YY_MM_DT,CRE_PLAN_APPLY_CNT)
+    </select>
+
+    <select id="selectWeeklyScheduleCondition" parameterType="WeeklyScheduleSearchVO" resultType="WeeklyScheduleVO">
+    <!-- selectEvalInfoDownload -->
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT TO_CHAR(TO_DATE(BTO_YY_MM_DT, 'YYYY/MM'), 'YYYY/MM') AS BTO_YY_MM_DT
+                     , BTO_CNT
+                     , WEEK_START_DT
+                     , WEEK_END_DT
+                     , WEEK_FST_STOCK_DT
+                     , PFP_EXAM_DT
+                     , BEF_WEEK_DT
+                     , CRE_PLAN_APPLY_YY_MM_DT
+                     , CRE_PLAN_APPLY_CNT
+                  FROM SA_0432T
+                <if test='sBtoYyMmDt != null'>
+                 WHERE BTO_YY_MM_DT = REPLACE(#{sBtoYyMmDt}, '/', '')
+                </if>
+                 GROUP BY BTO_YY_MM_DT,BTO_CNT,WEEK_START_DT,WEEK_END_DT,WEEK_FST_STOCK_DT,PFP_EXAM_DT,BEF_WEEK_DT,CRE_PLAN_APPLY_YY_MM_DT,CRE_PLAN_APPLY_CNT
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "btoYyMmDt"'>BTO_YY_MM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "btoCnt"'>BTO_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "weekStartDt"'>WEEK_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "weekEndDt"'>WEEK_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    BTO_YY_MM_DT DESC, BTO_CNT
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        BTO_YY_MM_DT DESC, BTO_CNT
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectWeeklyScheduleDetConditionCnt" parameterType="WeeklyScheduleSearchVO" resultType="int">
+    <!-- selectEvalInfoDownloadCnt -->
+        SELECT COUNT(*)
+          FROM SA_0432T
+         WHERE BTO_YY_MM_DT = REPLACE(#{btoYyMmDt}, '/', '')
+           AND BTO_CNT = #{btoCnt}
+           AND WEEK_START_DT = #{weekStartDt}
+           AND WEEK_END_DT = #{weekEndDt}
+           AND WEEK_FST_STOCK_DT = #{weekFstStockDt}
+           AND PFP_EXAM_DT = #{pfpExamDt}
+           AND BEF_WEEK_DT = #{befWeekDt}
+           AND CRE_PLAN_APPLY_YY_MM_DT = #{crePlanApplyYyMmDt}
+           AND CRE_PLAN_APPLY_CNT = #{crePlanApplyCnt}
+    </select>
+
+    <select id="selectWeeklyScheduleDetCondition" parameterType="WeeklyScheduleVO" resultType="WeeklyScheduleDetVO">
+    <!-- selectEvalInfoDownload -->
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT BTO_WRK_TP
+                     , TO_CHAR(START_DT, 'YYYY/MM/DD') AS START_DT
+                     , TO_CHAR(START_DT, 'HH24:MI') AS START_TIME
+                     , TO_CHAR(END_DT, 'YYYY/MM/DD') AS END_DT
+                     , TO_CHAR(END_DT, 'HH24:MI') AS END_TIME
+                     , OPER_STAT_CD
+                  FROM SA_0432T
+                 WHERE BTO_YY_MM_DT = REPLACE(#{btoYyMmDt}, '/', '')
+                   AND BTO_CNT = #{btoCnt}
+
+                   AND WEEK_START_DT = #{weekStartDt}
+                   AND WEEK_END_DT = #{weekEndDt}
+                   AND WEEK_FST_STOCK_DT = #{weekFstStockDt}
+                   AND PFP_EXAM_DT = #{pfpExamDt}
+                   AND BEF_WEEK_DT = #{befWeekDt}
+
+                   AND CRE_PLAN_APPLY_YY_MM_DT = #{crePlanApplyYyMmDt}
+                   AND CRE_PLAN_APPLY_CNT = #{crePlanApplyCnt}
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "carlineCd"'>BTO_WRK_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelCd"'>START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnCd"'>START_TIME <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "startDt"'>END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "endDt"'>END_TIME <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dcTotAmt1"'>OPER_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    BTO_WRK_TP, START_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        BTO_WRK_TP, START_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+</mapper>

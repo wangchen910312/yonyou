@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : PackageCouponHisSupportDAO_SqlMap.xml
+    Description : 패키지쿠폰 이력
+    author Lee In Moon
+    since 2016.09.03.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 06. 09.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.dmm.service.dao.PackageCouponHisSupportDAO">
+
+
+    <sql id="searchPackageCouponHis">
+        <where>
+            AND DLR_CD = #{sDlrCd}
+            <if test='sPkgNm != null and sPkgNm != ""'>
+                AND PKG_NM = #{sPkgNm}
+            </if>
+
+            <if test='sSeq != null and sSeq != ""'>
+                AND SEQ = #{sSeq}
+            </if>
+
+            <if test='sMembershipNo != null and sMembershipNo != ""'>
+                AND MEMBERSHIP_NO = #{sMembershipNo}
+            </if>
+
+            <if test='sCupnNo != null and sCupnNo != ""'>
+                AND CUPN_NO = #{sCupnNo}
+            </if>
+
+            <if test='sCupnSeq != null and sCupnSeq != ""'>
+                AND CUPN_NO = #{sCupnSeq}
+            </if>
+
+            <if test='sCupnUseYn != null and sCupnUseYn != ""'>
+                AND CUPN_USE_YN = #{sCupnUseYn}
+            </if>
+
+            <if test='sCupnUseYn != null and sCupnUseYn != ""'>
+                AND CUPN_USE_YN = #{sCupnUseYn}
+            </if>
+
+            <if test='sCustNo != null and sCustNo != ""'>
+                AND MEMBERSHIP_NO in ( SELECT MB.MEMBERSHIP_NO FROM CR_0801T MB WHERE MB.CUST_NO = #{sCustNo} )
+            </if>
+
+        </where>
+    </sql>
+
+    <!-- 패키지쿠폰 이력 목록수를 조회한다. -->
+    <select id="selectPackageCouponHissByConditionCnt" parameterType="PackageCouponHisSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponHisDAO.selectPackageCouponHissByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0816T
+        <include refid="searchPackageCouponHis" />
+
+    </select>
+
+    <!-- 패키지쿠폰 이력 정보 목록을 조회한다. -->
+    <select id="selectPackageCouponHissByCondition" parameterType="PackageCouponHisSearchVO" resultType="PackageCouponHisVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponHisDAO.selectPackageCouponHissByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT  DLR_CD
+                            ,SEQ
+                            ,MEMBERSHIP_NO
+                            ,PKG_SEQ
+                            ,PKG_NM
+                            ,PKG_AMT
+                            ,PKG_CONT
+                            ,CUPN_SEQ
+                            ,CUPN_NM
+                            ,CUPN_CONT
+                            ,CUPN_DEST_DT
+                            ,CUPN_USE_YN
+                            ,CUPN_USE_DT
+                            ,USE_DEPT_NM
+                            ,USE_PRSN_ID
+                            ,REG_USR_ID
+                            ,REG_DT
+                            ,UPDT_USR_ID
+                            ,UPDT_DT
+                            ,CUPN_NO
+                            ,CUPN_TP            --쿠폰유형
+                            ,DC_RATE            --할인율
+                            ,DC_AMT             --상품권 할인 금액
+                            ,PREN_GOODS         --사은품 용품
+                            ,PREN_CNT           --사은품 수량
+                    FROM    CR_0816T
+                    <include refid="searchPackageCouponHis" />
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "pkgNm"'>PKG_NM        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cupnNm"'>CUPN_NM        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cupnNo"'>CUPN_NO        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cupnUseYn"'>CUPN_USE_YN        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cupnUseDt"'>CUPN_USE_DT        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "regDt"'>REG_DT        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        PKG_NM DESC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            PKG_NM DESC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+    <update id="updatePackageCouponHis" parameterType="PackageCouponHisVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponHisSupportDAO.updatePackageCouponHis] */
+        UPDATE CR_0816T    --패키지쿠폰사용이력
+        SET    CUPN_DEST_DT  = #{cupnDestDt}          --쿠폰소멸일자
+               ,CUPN_USE_YN   = #{cupnUseYn}           --쿠폰사용여부
+               ,CUPN_USE_DT   = SYSDATE           --쿠폰사용일자
+               ,USE_DEPT_NM   = #{useDeptNm}           --사용부서명
+               ,USE_PRSN_ID   = #{usePrsnId}           --사용담당자ID
+               ,UPDT_USR_ID   = #{updtUsrId}           --수정자ID
+               ,UPDT_DT       = SYSDATE              --수정일자
+        WHERE DLR_CD        = #{dlrCd}               --딜러코드
+        AND SEQ           = #{seq}                 --일련번호
+    </update>
+
+    <!-- 패키지쿠폰 사용가능 이력 정보 목록을 조회한다. : 타 시스템에서 사용함 -->
+    <select id="selectPackageCouponHisUseCondition" parameterType="PackageCouponHisSearchVO" resultType="PackageCouponHisVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.PackageCouponHisSupportDAO.selectPackageCouponHisUseCondition] */
+        SELECT  DLR_CD
+                ,SEQ
+                ,MEMBERSHIP_NO
+                ,PKG_SEQ
+                ,PKG_NM
+                ,PKG_AMT
+                ,PKG_CONT
+                ,CUPN_SEQ
+                ,CUPN_NM
+                ,CUPN_CONT
+                ,CUPN_DEST_DT
+                ,CUPN_USE_YN
+                ,CUPN_USE_DT
+                ,USE_DEPT_NM
+                ,USE_PRSN_ID
+                ,REG_USR_ID
+                ,REG_DT
+                ,UPDT_USR_ID
+                ,UPDT_DT
+                ,CUPN_NO
+                ,CUPN_TP            --쿠폰유형
+                ,DC_RATE            --할인율
+                ,DC_AMT             --상품권 할인 금액
+                ,PREN_GOODS         --사은품 용품
+                ,PREN_CNT           --사은품 수량
+        FROM    CR_0816T
+        WHERE   DLR_CD = #{sDlrCd}
+        AND     MEMBERSHIP_NO = #{sMembershipNo}
+        <if test='sPkgNm != null and sPkgNm != ""'>
+            AND PKG_NM = #{sPkgNm}
+        </if>
+        <if test='sSeq != null and sSeq != ""'>
+            AND SEQ = #{sSeq}
+        </if>
+        <if test='sCupnNo != null and sCupnNo != ""'>
+            AND CUPN_NO = #{sCupnNo}
+        </if>
+        <if test='sCupnSeq != null and sCupnSeq != ""'>
+            AND CUPN_NO = #{sCupnSeq}
+        </if>
+        <if test='sCupnUseYn != null and sCupnUseYn != ""'>
+            AND CUPN_USE_YN = #{sCupnUseYn}
+        </if>
+    </select>
+
+</mapper>

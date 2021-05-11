@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.veh.service.dao.LocalOptionDAO">
+
+	<!-- 조회 목록  -->
+	<select id="selectLocalOptionsByCondition" parameterType="LocalOptionSearchVO" resultType="LocalOptionVO">
+        SELECT DLR_CD                  /* 딜러코드 */
+             , OPTION_CD               /* 옵션코드 */
+             , OPTION_NM               /* 옵션명 */
+             , OPTION_EN_NM            /* 옵션영문명 */
+             , START_DT                /* 시작일자 */
+             , END_DT                  /* 종료일자 */
+             , REG_USR_ID              /* 등록자ID */
+             , REG_DT                  /* 등록일자 */
+             , UPDT_USR_ID             /* 수정자ID */
+             , UPDT_DT                 /* 수정일자 */
+          FROM SA_0118T          /* 옵션TABLE */
+         WHERE 1 = 1
+       <if test='dlrCd != null and dlrCd != ""'>
+           AND DLR_CD LIKE '%' || #{dlrCd} || '%'
+       </if>
+       <if test='optionCd != null and optionCd != ""'>
+           AND OPTION_CD LIKE '%' || #{optionCd} || '%'
+       </if>
+       <if test='optionNm != null and optionNm != ""'>
+           AND OPTION_CD LIKE '%' || #{optionNm} || '%'
+       </if>
+       <if test='startDt != null'>
+           AND START_DT <![CDATA[ <= ]]> #{startDt}
+       </if>
+       <if test='endDt != null'>
+           AND END_DT <![CDATA[ >= ]]> #{endDt}
+       </if>
+	</select>
+
+	<!-- 목록 갯수  -->
+	<select id="selectLocalOptionsByConditionCnt" parameterType="LocalOptionSearchVO" resultType="int">
+		SELECT COUNT(*)
+          FROM SA_0118T          <!--  옵션TABLE -->
+         WHERE 1 = 1
+       <if test='dlrCd != null and dlrCd != ""'>
+           AND DLR_CD LIKE '%' || #{dlrCd} || '%'
+       </if>
+       <if test='optionCd != null and optionCd != ""'>
+           AND OPTION_CD LIKE '%' || #{optionCd} || '%'
+       </if>
+       <if test='startDt != null'>
+           AND START_DT <![CDATA[ <= ]]> #{startDt}
+       </if>
+       <if test='endDt != null'>
+           AND END_DT <![CDATA[ >= ]]> #{endDt}
+       </if>
+       <if test='optionNm != null and optionNm != ""'>
+           AND OPTION_NM = #{optionNm}
+       </if>
+       <if test='updateIsOptionCd != null and updateIsOptionCd != ""'>
+           AND OPTION_CD != #{updateIsOptionCd}
+       </if>
+	</select>
+
+    <!-- 로컬옵션 가격을 저장한다. -->
+    <insert id="insertLocalOptions" parameterType="LocalOptionVO">
+        /* [chn.bhmc.dms.sal.veh.service.dao.LocalOptionDAO.insertLocalOption] */
+        INSERT INTO SA_0118T(
+               DLR_CD
+             , OPTION_CD
+             , OPTION_NM
+             , OPTION_EN_NM
+             , START_DT
+             , END_DT
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+             )
+        VALUES(
+               #{dlrCd}
+             , 'L_' || LPAD( ( SELECT SUBSTR(MAX(OPTION_CD), 3,5) FROM SA_0118T)+1 , 5, '0')
+             , #{optionNm}
+             , #{optionEnNm}
+             , #{startDt}
+             , #{endDt}
+             , #{regUsrId}
+             , SYSDATE
+             , #{updtUsrId}
+             , SYSDATE
+                )
+    </insert>
+
+    <!-- 로컬옵션 가격을 수정한다. -->
+    <update id="updateLocalOptions" parameterType="LocalOptionVO">
+    /* [chn.bhmc.dms.sal.veh.service.dao.LocalOptionDAO.updateLocalOption] */
+        UPDATE SA_0118T
+           SET OPTION_NM    = #{optionNm}
+             , OPTION_EN_NM = #{optionEnNm}
+             , START_DT     = #{startDt}
+             , END_DT       = #{endDt}
+             , UPDT_USR_ID  = #{updtUsrId}
+             , UPDT_DT      = SYSDATE
+          WHERE DLR_CD    = #{dlrCd}
+            AND OPTION_CD = #{optionCd}
+    </update>
+
+    <!-- 로컬옵션 가격을 삭제한다. -->
+    <delete id="deleteLocalOptions" parameterType="LocalOptionVO">
+    /* [chn.bhmc.dms.sal.veh.service.dao.LocalOptionDAO.deleteLocalOption] */
+        DELETE
+          FROM SA_0118T
+         WHERE DLR_CD    = #{dlrCd}
+           AND OPTION_CD = #{optionCd}
+    </delete>
+
+
+</mapper>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.dsc.service.dao.JudgeStepFixDAO">
+
+    <!-- 목록 조회  -->
+    <select id="selectJudgeStepFixsByCondition" resultType="JudgeStepFixVO">
+    /* [chn.bhmc.dms.sal.dsc.service.dao.JudgeStepFixDAO.selectJudgeStepFixsByCondition] */
+        SELECT A.CMM_CD     AS WRK_DSTIN_CD
+             , A.CMM_CD_NM  AS WRK_DSTIN_NM
+             , B.GRADE_CD
+             , DECODE( NVL(B.GRADE_CD, 0) , 1, 'Y', 'N') AS ONE
+             , DECODE( NVL(B.GRADE_CD, 0) , 2, 'Y', 'N') AS TWO
+             , DECODE( NVL(B.GRADE_CD, 0) , 3, 'Y', 'N') AS THREE
+          FROM (
+                SELECT A.CMM_CD
+                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                      , A.SORT_ORDER    -- 정렬순서
+                  FROM CM_0303T A
+                  LEFT OUTER JOIN CM_0304T B
+                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                       AND A.CMM_CD = B.CMM_CD
+                       AND B.LANG_CD = #{sLangCd}
+                 WHERE A.CMM_GRP_CD = 'SAL008'   /*대상업무*/
+                   and A.USE_YN = 'Y'
+                ) A
+          LEFT OUTER JOIN SA_0435T B
+            ON A.CMM_CD = B.WRK_DSTIN_CD
+            ORDER BY A.SORT_ORDER ASC
+    </select>
+
+    <!-- 업무구분코드 유무 확인 -->
+    <select id="selectJudgeStepFixCnt" parameterType="JudgeStepFixVO" resultType="int">
+    /* [chn.bhmc.dms.sal.dsc.service.dao.JudgeStepFixDAO.selectJudgeStepFixCnt] */
+        SELECT COUNT(*)
+          FROM SA_0435T
+         WHERE WRK_DSTIN_CD = #{wrkDstinCd}
+    </select>
+
+    <!-- 심사단계설정 저장 -->
+    <insert id="insertJudgeStepFix" parameterType="JudgeStepFixVO">
+    /* [chn.bhmc.dms.sal.dsc.service.dao.JudgeStepFixDAO.insertJudgeStepFix] */
+        INSERT
+          INTO SA_0435T    --업무별심사등급정보
+            (
+              WRK_DSTIN_CD        --업무구분코드
+             ,GRADE_CD            --등급코드
+             ,REG_USR_ID          --등록자ID
+             ,REG_DT              --등록일자
+             ,UPDT_USR_ID         --수정자ID
+             ,UPDT_DT             --수정일자
+            )
+            VALUES
+            (
+              #{wrkDstinCd}         --업무구분코드
+             ,#{gradeCd}            --등급코드
+             ,#{regUsrId}           --등록자ID
+             ,SYSDATE              --등록일자
+             ,#{updtUsrId}          --수정자ID
+             ,SYSDATE             --수정일자
+            )
+    </insert>
+
+    <!-- 심사단계설정 수정 -->
+    <update id="updateJudgeStepFix" parameterType="JudgeStepFixVO">
+    /* [chn.bhmc.dms.sal.dsc.service.dao.JudgeStepFixDAO.updateJudgeStepFix] */
+        UPDATE SA_0435T
+           SET GRADE_CD     = #{gradeCd}            --등급코드
+             , UPDT_USR_ID  = #{updtUsrId}          --수정자ID
+             , UPDT_DT      = SYSDATE             --수정일자
+          WHERE 1 = 1
+            AND WRK_DSTIN_CD = #{wrkDstinCd}         --업무구분코드
+    </update>
+</mapper>

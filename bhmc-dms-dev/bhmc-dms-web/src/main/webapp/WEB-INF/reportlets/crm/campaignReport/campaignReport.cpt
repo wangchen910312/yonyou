@@ -1,0 +1,992 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="MAK_DS" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sEndMakDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDateFormat"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sHostCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sMakTpCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sMakNm"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sStartMakDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[ SELECT MAK_CD, -- 마케팅 코드
+        MAX(MAK_NM) AS MAK_NM, -- 마케팅 명
+        TO_CHAR(MAX(START_DT), '${sDateFormat}') AS START_DT, -- 시작일
+        TO_CHAR(MAX(END_DT), '${sDateFormat}') AS END_DT, -- 종료일
+        FN_GET_CMMCD_NM ('CRM708', MAX(HOST_CD), 'zh') AS HOST_CD_NM, -- 조최측
+        MAX(MAK_TP_NN) AS MAK_TP_CD_NM, -- 마케팅 유형
+        FN_GET_CMMCD_NM (MAX(MAK_TP_REMARK), MAX(MAK_SUB_TP_CD), 'zh') AS MAK_SUB_TP_CD_NM, -- 마케팅 서브 유형
+        FN_GET_CMMCD_NM ('CRM701', MAX(STAT_CD), 'zh') AS STAT_CD_NM, -- 마케팅상태
+        MAX(BUDGET_AMT) AS BUDGET_AMT, -- 예산
+        MAX(TARG_CUST_CNT) AS TARG_CUST_CNT, -- 목표인원수
+        MAX(PGSS_RATE) AS PGSS_RATE, -- 진도율
+        MAX(TARG_CNT) AS TARG_CNT,
+        MAX(ACT_TOT_AMT) AS ACT_TOT_AMT,
+        SUM(TARG_VISIT_CNT) AS TARG_VISIT_CNT, -- 목표내방수량
+        SUM(TARG_VISIT_REG_CNT) AS TARG_VISIT_REG_CNT, -- 목표내방예약 수량
+        SUM(TARG_OPPT_CNT) AS TARG_OPPT_CNT, -- 목표영업기회 수량
+        SUM(TARG_SAIL_CNT) AS TARG_SAIL_CNT, -- 목표거래수량
+        SUM(TARG_SAIL_AMOUNT) AS TARG_SAIL_AMOUNT, -- 목표거래금액
+        SUM(TARG_SMS_CNT) AS TARG_SMS_CNT, -- 목표sms발송성공 수량
+        SUM(TARG_RO_CNT) AS TARG_RO_CNT,  -- 목표정비완료 수량
+        SUM(TARG_RSLT_VISIT_CNT) AS TARG_RSLT_VISIT_CNT, -- 내방수량
+        SUM(TARG_RSLT_VISIT_REG_CNT) AS TARG_RSLT_VISIT_REG_CNT, -- 내방예약 수량
+        SUM(TARG_RSLT_OPPT_CNT) AS TARG_RSLT_OPPT_CNT, -- 영업기회 수량
+        SUM(TARG_RSLT_SAIL_CNT) AS TARG_RSLT_SAIL_CNT, -- 거래수량
+        SUM(TARG_RSLT_SAIL_AMOUNT) AS TARG_RSLT_SAIL_AMOUNT, -- 거래금액
+        SUM(TARG_RSLT_SMS_CNT) AS TARG_RSLT_SMS_CNT, -- sms발송성공 수량
+        SUM(TARG_RSLT_RO_CNT) AS TARG_RSLT_RO_CNT,  -- 정비완료 수량
+        TO_CHAR(MAX(REG_DT), '${sDateFormat}') AS REG_DT
+   FROM ( SELECT CAMP.MAK_CD,
+                 CAMP.MAK_NM,
+                 CAMP.START_DT,
+                 CAMP.END_DT,
+                 CAMP.HOST_CD,
+                 CAMP.MAK_TP_CD,
+                 CMMCD.CMM_CD_NM AS MAK_TP_NN,
+                 CMMCD.REMARK1 AS MAK_TP_REMARK,
+                 CAMP.MAK_SUB_TP_CD,
+                 CASE WHEN CAMP.STAT_CD = '03' AND CAMP.END_DT < SYSDATE THEN '06' ELSE CAMP.STAT_CD END AS STAT_CD,
+                 CAMP.BUDGET_AMT,
+                 CAMP.TARG_CUST_CNT,
+                 CAMP.PGSS_RATE,
+                 (SELECT COUNT(*) FROM CR_0710T WHERE DLR_CD = CAMP.DLR_CD AND MAK_CD = CAMP.MAK_CD ) AS TARG_CNT,
+                 NVL(ACT_TOT_AMT, 0) AS ACT_TOT_AMT,
+                 NVL(DECODE(TARG.TARG_CD, '02', TARG.TARG_CNT_VAL), 0) AS TARG_VISIT_CNT,
+                 NVL(DECODE(TARG.TARG_CD, '09', TARG.TARG_CNT_VAL), 0) AS TARG_VISIT_REG_CNT,
+                 NVL(DECODE(TARG.TARG_CD, '04', TARG.TARG_CNT_VAL), 0) AS TARG_OPPT_CNT,
+                 NVL(DECODE(TARG.TARG_CD, '05', TARG.TARG_CNT_VAL), 0) AS TARG_SAIL_CNT,
+                 NVL(DECODE(TARG.TARG_CD, '06', TARG.TARG_CNT_VAL), 0) AS TARG_SAIL_AMOUNT,
+                 NVL(DECODE(TARG.TARG_CD, '08', TARG.TARG_CNT_VAL), 0) AS TARG_SMS_CNT,
+                 NVL(DECODE(TARG.TARG_CD, '10', TARG.TARG_CNT_VAL), 0) AS TARG_RO_CNT,
+                 NVL(DECODE(TARG.TARG_CD, '02', TARG.TARG_RSLT_VAL), 0) AS TARG_RSLT_VISIT_CNT,
+                 NVL(DECODE(TARG.TARG_CD, '09', TARG.TARG_RSLT_VAL), 0) AS TARG_RSLT_VISIT_REG_CNT,
+                 NVL(DECODE(TARG.TARG_CD, '04', TARG.TARG_RSLT_VAL), 0) AS TARG_RSLT_OPPT_CNT,
+                 NVL(DECODE(TARG.TARG_CD, '05', TARG.TARG_RSLT_VAL), 0) AS TARG_RSLT_SAIL_CNT,
+                 NVL(DECODE(TARG.TARG_CD, '06', TARG.TARG_RSLT_VAL), 0) AS TARG_RSLT_SAIL_AMOUNT,
+                 NVL(DECODE(TARG.TARG_CD, '08', TARG.TARG_RSLT_VAL), 0) AS TARG_RSLT_SMS_CNT,
+                 NVL(DECODE(TARG.TARG_CD, '10', TARG.TARG_RSLT_VAL), 0) AS TARG_RSLT_RO_CNT,
+                 CAMP.REG_DT
+            FROM CR_0701T CAMP
+                 LEFT OUTER JOIN CR_0711T TARG ON CAMP.DLR_CD = TARG.DLR_CD AND CAMP.MAK_CD = TARG.MAK_CD AND TARG.TARG_CD IS NOT NULL,
+                 ( SELECT T1.CMM_CD,
+                           NVL(T2.CMM_CD_TXT, T1.CMM_CD_NM) AS CMM_CD_NM,
+                           T1.REMARK1
+                      FROM CM_0303T T1 LEFT JOIN CM_0304T T2 ON T1.CMM_GRP_CD = T2.CMM_GRP_CD
+                       AND T1.CMM_CD = T2.CMM_CD
+                       AND T2.LANG_CD = 'zh'
+                     WHERE T1.CMM_GRP_CD = 'CRM702'
+                       AND T1.USE_YN = 'Y') CMMCD
+           WHERE CAMP.DLR_CD = '${sDlrCd}'
+             AND CAMP.STAT_CD = '03'
+             AND (CAMP.CR_END_TP = 'Y' OR CAMP.END_DT < SYSDATE)
+             AND CAMP.MAK_TP_CD = CMMCD.CMM_CD
+${IF(LEN(sMakNm) = 0 , ""," AND CAMP.MAK_NM LIKE '%"+sMakNm+"%'") }--마케팅명
+${IF(LEN(sHostCd) = 0 , ""," AND CAMP.HOST_CD = '"+sHostCd+"'") }--주최코드
+${IF(LEN(sMakTpCd) = 0 , ""," AND CAMP.MAK_TP_CD = '"+sMakTpCd+"'") }--마케팅유형
+${IF(LEN(sStartMakDt) = 0 || LEN(sEndMakDt) = 0 , ""," AND TO_CHAR(CAMP.START_DT,'"+sDateFormat+"') BETWEEN '"+sStartMakDt+"' AND '"+sEndMakDt+"'") }-- 활동날짜
+             )
+  GROUP BY MAK_CD
+  ORDER BY REG_DT DESC, MAK_CD DESC]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="1" T="2"/>
+<FR/>
+<HC F="0" T="2"/>
+<FC/>
+<UPFCR COLUMN="true" ROW="true"/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[495300,1152000,1152000,1152000,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[647700,5040000,10080000,3600000,3600000,2971800,3124200,3600000,3600000,3600000,4320000,3124200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,2743200,4533900,4495800,4991100,3848100,3600000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="1" rs="2" s="0">
+<O>
+<![CDATA[市场活动号码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="1" rs="2" s="0">
+<O>
+<![CDATA[活动名]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="1" rs="2" s="0">
+<O>
+<![CDATA[开始日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="1" rs="2" s="0">
+<O>
+<![CDATA[结束日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="1" rs="2" s="0">
+<O>
+<![CDATA[发起方]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="1" rs="2" s="0">
+<O>
+<![CDATA[类型]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="1" rs="2" s="0">
+<O>
+<![CDATA[状态]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="1" rs="2" s="0">
+<O>
+<![CDATA[邀约目标数]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="1" rs="2" s="0">
+<O>
+<![CDATA[预算(元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="1" rs="2" s="0">
+<O>
+<![CDATA[活动总费用(元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="1" cs="3" s="0">
+<O>
+<![CDATA[展厅到店量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="1" cs="3" s="0">
+<O>
+<![CDATA[商机数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="1" cs="3" s="0">
+<O>
+<![CDATA[成交数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="1" cs="3" s="0">
+<O>
+<![CDATA[成交金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="1" cs="3" s="0">
+<O>
+<![CDATA[预约到店数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="1" cs="3" s="0">
+<O>
+<![CDATA[成功发送短信数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="1" cs="3" s="0">
+<O>
+<![CDATA[售后完成数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="1" rs="2" s="0">
+<O>
+<![CDATA[单客邀约成本(元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="33" r="1" rs="2" s="1">
+<O>
+<![CDATA[单客成交成本(元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="34" r="1" rs="2" s="1">
+<O>
+<![CDATA[活动邀约成功率(%)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="35" r="1" rs="2" s="1">
+<O>
+<![CDATA[活动成交率(%)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="36" r="1" rs="2" s="1">
+<O>
+<![CDATA[录入日]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="2" s="0">
+<O>
+<![CDATA[目标数值]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="2" s="0">
+<O>
+<![CDATA[结果]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="2" s="0">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="2" s="0">
+<O>
+<![CDATA[目标数值]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="2" s="0">
+<O>
+<![CDATA[结果]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="2" s="0">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="2" s="0">
+<O>
+<![CDATA[目标数值]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="2" s="0">
+<O>
+<![CDATA[结果]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="2" s="0">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="2" s="0">
+<O>
+<![CDATA[目标数值]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="2" s="0">
+<O>
+<![CDATA[结果]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="2" s="0">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="2" s="0">
+<O>
+<![CDATA[目标数值]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="2" s="0">
+<O>
+<![CDATA[结果]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="2" s="0">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="2" s="0">
+<O>
+<![CDATA[目标数值]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="2" s="0">
+<O>
+<![CDATA[结果]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="2" s="0">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="2" s="0">
+<O>
+<![CDATA[目标数值]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="2" s="0">
+<O>
+<![CDATA[结果]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="2" s="0">
+<O>
+<![CDATA[完成率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="MAK_CD"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[RowColor]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Scope val="1"/>
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0" extendable="1"/>
+</C>
+<C c="2" r="3" s="3">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="MAK_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="START_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="END_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="HOST_CD_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="MAK_TP_CD_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="STAT_CD_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_CUST_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="3" s="5">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="BUDGET_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="3" s="5">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="ACT_TOT_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_VISIT_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_RSLT_VISIT_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="3" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=M4 / L4]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_OPPT_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_RSLT_OPPT_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="3" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=P4 / O4]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_SAIL_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_RSLT_SAIL_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="3" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=S4 / R4]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_SAIL_AMOUNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_RSLT_SAIL_AMOUNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="3" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=V4 / U4]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_VISIT_REG_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="24" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_RSLT_VISIT_REG_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="25" r="3" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=Y4 / X4]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="26" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_SMS_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="27" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_RSLT_SMS_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="28" r="3" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=AB4 / AA4]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="29" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_RO_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="30" r="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="TARG_RSLT_RO_CNT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="31" r="3" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=AE4 / AD4]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="32" r="3" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(OR(K4 = 0, M4 = 0), "-", K4 / M4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="33" r="3" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(OR(K4 = 0, S4 = 0), "-", K4 / S4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="34" r="3" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(OR(M4 = 0, Y4 = 0), "-", M4 / Y4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="35" r="3" s="6">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=IF(OR(S4 = 0, M4 = 0), "-", S4 / M4)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="36" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="MAK_DS" columnName="REG_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings isHorizontalCenterOnPage="true" headerHeight="1440000" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="144000000" height="72000000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-1"/>
+<Bottom style="1" color="-1"/>
+<Left style="1" color="-1"/>
+<Right style="1" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Microsoft YaHei UI" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Microsoft YaHei UI" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0%]]></Format>
+<FRFont name="Microsoft YaHei UI" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID/>
+</WorkBook>

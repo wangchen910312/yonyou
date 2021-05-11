@@ -1,0 +1,774 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : TpVehicleMonitoringDAO_SqlMap.xml
+    Description : 설명을 기술합니다.
+    author Lee Seungmin
+    since 2016. 3. 23.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 3. 23.     Lee Seungmin     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.sal.lom.service.dao.TpVehicleMonitoringDAO">
+
+    <select id="selectTpVehicleMonitoringConditionCnt" parameterType="TpVehicleConditionSearchVO" resultType="int">
+        SELECT COUNT(A.VIN_NO)
+        FROM SA_0121T A,
+               <!-- CMTDLRM B, -->
+               <!-- DMSDB.SCBFREP C, -->
+            (
+                SELECT VIN_NO
+                     , DSTB_CMP_NM
+                FROM (
+                    SELECT
+                        --RANK() OVER(PARTITION BY VIN_NO ORDER BY UPLOAD_SEQ DESC, UPLOAD_TIMESTAMP DESC) AS TPMS_RANK,
+                        RANK() OVER(PARTITION BY VIN_NO ORDER BY UPLOAD_TIMESTAMP DESC) AS TPMS_RANK, --DCS 在途信息 弹框列表与在途信息展示列信息不对 贾明 2018-9-4 
+                        VIN_NO, DSTB_CMP_NM
+                    FROM SA_0425T
+                )
+                WHERE TPMS_RANK = 1
+            ) D
+         WHERE 1 = 1
+           <!-- AND A.VINM_ORDER_DLR_NO = B.DLRM_DLR_CD
+                AND A.ORD_DLR_CD = C.FREP_DLR_CD(+)
+                AND A.CAR_DUMP_CD = C.FREP_DEPT_PLAC(+) -->
+               AND A.VIN_NO = D.VIN_NO(+)
+               AND A.CAR_STAT_CD = '50'
+               AND A.ORD_TP <![CDATA[<>]]> 'E1'  --车辆订单类型不能是"E1"
+            <if test='sSrchFrDtStr != null and sSrchToDtStr != null'>
+               AND TO_CHAR(A.PLT_GI_DT,'YYYYMMDD') BETWEEN #{sSrchFrDtStr} AND #{sSrchToDtStr}
+            </if>
+            <if test='sSrchFrDt != null'>
+               AND A.PLT_GI_DT <![CDATA[>=]]> TRUNC(#{sSrchFrDt},'DD')
+            </if>
+            <if test='sSrchToDt != null'>
+               AND A.PLT_GI_DT <![CDATA[<]]> TRUNC(#{sSrchToDt},'DD')+1
+            </if>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+               AND A.ORD_DLR_CD = #{sDlrCd}
+            </if>
+            <if test='sTpCmpCd != null and sTpCmpCd != ""'>
+               AND D.DSTB_CMP_NM = #{sTpCmpCd}
+            </if>
+            <if test='sVinNo != null and sVinNo != ""'>
+               AND A.VIN_NO like '%'|| #{sVinNo} ||'%'
+            </if>
+            <if test='sVinNo1 != null and sVinNo1 != ""'>
+               AND A.VIN_NO1 = #{sVinNo1}
+            </if>
+            <if test='sVinNo2 != null and sVinNo2 != ""'>
+               AND A.VIN_NO2 = #{sVinNo2}
+            </if>
+    </select>
+    
+    <select id="selectDistributorAbnormalInventoryCnt" parameterType="TpVehicleConditionSearchVO" resultType="int">
+	      select count(1)
+	          from (
+	select ROWNUM AS RNUM,
+	t.FSC_NM,
+	t.FSC_CD,
+	t.OCN_CD,
+	t.OCN_NM,
+	t.CARLINE_CD,
+	t.EXT_COLOR_CD,
+	t.VIN_NO,
+	t.carline_nm,
+	t.SDPT_CD,
+	t.DIST_OFFICE_CD,
+	t.DLR_CD,
+	t.signoff_dt,
+	t.dlr_gr_dt
+	from (select FN_GET_MODEL_TP_CD(A.MODEL_CD, A.OCN_CD) AS FSC_CD
+	,FN_GET_MODEL_TP_NM(MODEL_CD, a.OCN_CD) AS FSC_NM
+	, FN_GET_OCN_NM_NC(MODEL_CD, A.OCN_CD) AS OCN_NM
+	,a.OCN_CD
+	,a.CARLINE_CD
+	,a.EXT_COLOR_CD
+	,a.VIN_NO
+	,TO_CHAR(a.DLR_GR_DT,'YYYY-MM-DD') DLR_GR_DT
+	,TO_CHAR(a.SIGNOFF_DT,'YYYY-MM-DD') SIGNOFF_DT
+	,b.carline_nm
+	,c.SDPT_CD,c.DIST_OFFICE_CD,c.DLR_CD from se_0710t D,SA_0121T A,cm_0101t c,sa_0101t b
+	where 1=1
+	and d.claim_tp='K'
+	and d.claim_stat_cd = 'A'
+	AND D.VIN_NO=a.vin_no
+	AND a.ORD_DLR_CD = c.dlr_cd
+	AND a.CARLINE_CD = b.CARLINE_CD
+	AND a.car_stat_cd = '60' 
+	<if test='sSrchFrDt != null'>
+                       AND A.PLT_GI_DT <![CDATA[>=]]> TRUNC(#{sSrchFrDt},'DD')
+                    </if>
+                    <if test='sSrchToDt != null'>
+                       AND A.PLT_GI_DT <![CDATA[<]]> TRUNC(#{sSrchToDt},'DD')+1
+                    </if>
+                    <if test='sSrchFrDtStr != null and sSrchToDtStr != null'>
+                       AND TO_CHAR(A.PLT_GI_DT,'YYYYMMDD') BETWEEN #{sSrchFrDtStr} AND #{sSrchToDtStr}
+                    </if>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                       AND A.DLR_CD = #{sDlrCd}
+                    </if>
+                    <if test='sSdptCd != null and sSdptCd != ""'>
+                       AND c.SDPT_CD = #{sSdptCd}
+                    </if>
+                    <if test='sSistOfficeCd != null and sSistOfficeCd != ""'>
+                       AND c.DIST_OFFICE_CD = #{sSistOfficeCd}
+                    </if>
+                    <if test='sGrDtsFrDt != null'>
+                       AND a.dlr_gr_dt <![CDATA[>=]]> TRUNC(#{sGrDtsFrDt},'DD')
+                    </if>
+                    <if test='sGrDtsToDt != null'>
+                       AND A.dlr_gr_dt <![CDATA[<]]> TRUNC(#{sGrDtsToDt},'DD')+1
+                    </if>
+                    <if test='sGrDtsFrDtStr != null and sGrDtsToDt != null'>
+                       AND TO_CHAR(A.dlr_gr_dt,'YYYYMMDD') BETWEEN #{sGrDtsFrDtStr} AND #{sGrDtsToDt}
+                    </if>
+	
+	GROUP BY FN_GET_MODEL_TP_CD(A.MODEL_CD, A.OCN_CD)
+	,FN_GET_MODEL_TP_NM(MODEL_CD, a.OCN_CD)
+	, FN_GET_OCN_NM_NC(MODEL_CD, A.OCN_CD)
+	,a.OCN_CD
+	,a.CARLINE_CD
+	,a.EXT_COLOR_CD
+	,a.VIN_NO
+	,a.DLR_GR_DT
+	,a.SIGNOFF_DT
+	,b.carline_nm
+	,c.SDPT_CD
+	,c.DIST_OFFICE_CD
+	,c.DLR_CD
+	 ) t
+	 )
+    </select>
+    
+    <select id="selectDistributorAbnormalInventory" parameterType="DistributorAbnormalInventorySearchVO" resultType="TpVehicleConditionVO">
+    <!-- selectTpVehicleMonitoring -->
+	select * from(
+	select ROWNUM AS RNUM,
+	t.FSC_NM,
+	t.FSC_CD,
+	t.OCN_CD,
+	t.OCN_NM,
+	t.CARLINE_CD,
+	t.EXT_COLOR_CD,
+	t.VIN_NO,
+	t.carline_nm,
+	t.DIV_CD,
+	t.DIST_CD,
+	t.DLR_CD,
+	t.manufact_yy_mm_dt,
+	t.ord_dlr_yy_mm_dt
+	from (select
+	FN_GET_MODEL_TP_CD(A.MODEL_CD, A.OCN_CD) AS FSC_CD
+	,FN_GET_MODEL_TP_NM(MODEL_CD, a.OCN_CD) AS FSC_NM
+	,
+	FN_GET_OCN_NM_NC(MODEL_CD, A.OCN_CD) AS OCN_NM
+	,a.OCN_CD
+	,a.CARLINE_CD
+	,a.EXT_COLOR_CD
+	,a.VIN_NO
+	,TO_CHAR(a.DLR_GR_DT,'YYYY-MM-DD') manufact_yy_mm_dt
+	,TO_CHAR(a.SIGNOFF_DT,'YYYY-MM-DD') ord_dlr_yy_mm_dt
+	,b.carline_nm
+	,(SELECT DIVI_NM FROM CM_2501T WHERE DIVI_CD = C.SDPT_CD)
+	DIV_CD
+	, (SELECT OFF_NM
+	FROM CM_2601T Y
+	WHERE Y.DIVI_CD = C.SDPT_CD
+	AND Y.OFF_CD = C.DIST_OFFICE_CD
+	) AS DIST_CD
+	,c.DLR_CD
+	from se_0710t D,SA_0121T A,cm_0101t c,sa_0101t b
+	where 1=1 
+	and d.claim_tp='K'
+	and d.claim_stat_cd = 'A'
+	AND D.VIN_NO=a.vin_no
+	AND a.ORD_DLR_CD = c.dlr_cd
+	AND a.CARLINE_CD = b.CARLINE_CD
+	AND a.car_stat_cd = '60' 
+	<if test='sSrchFrDt != null'>
+                       AND A.PLT_GI_DT <![CDATA[>=]]> TRUNC(#{sSrchFrDt},'DD')
+                    </if>
+                    <if test='sSrchToDt != null'>
+                       AND A.PLT_GI_DT <![CDATA[<]]> TRUNC(#{sSrchToDt},'DD')+1
+                    </if>
+                    <if test='sSrchFrDtStr != null and sSrchToDtStr != null'>
+                       AND TO_CHAR(A.PLT_GI_DT,'YYYYMMDD') BETWEEN #{sSrchFrDtStr} AND #{sSrchToDtStr}
+                    </if>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                       AND A.DLR_CD = #{sDlrCd}
+                    </if>
+                    <if test='sSdptCd != null and sSdptCd != ""'>
+                       AND c.SDPT_CD = #{sSdptCd}
+                    </if>
+                    <if test='sSistOfficeCd != null and sSistOfficeCd != ""'>
+                       AND c.DIST_OFFICE_CD = #{sSistOfficeCd}
+                    </if>
+                    <if test='sGrDtsFrDt != null'>
+                       AND a.dlr_gr_dt <![CDATA[>=]]> TRUNC(#{sGrDtsFrDt},'DD')
+                    </if>
+                    <if test='sGrDtsToDt != null'>
+                       AND A.dlr_gr_dt <![CDATA[<]]> TRUNC(#{sGrDtsToDt},'DD')+1
+                    </if>
+                    <if test='sGrDtsFrDtStr != null and sGrDtsToDt != null'>
+                       AND TO_CHAR(A.dlr_gr_dt,'YYYYMMDD') BETWEEN #{sGrDtsFrDtStr} AND #{sGrDtsToDt}
+                    </if>
+	
+	GROUP BY FN_GET_MODEL_TP_CD(A.MODEL_CD, A.OCN_CD)
+	,FN_GET_MODEL_TP_NM(MODEL_CD, a.OCN_CD)
+	, FN_GET_OCN_NM_NC(MODEL_CD, A.OCN_CD)
+	,a.OCN_CD
+	,a.CARLINE_CD
+	,a.EXT_COLOR_CD
+	,a.VIN_NO
+	,a.DLR_GR_DT
+	,a.SIGNOFF_DT
+	,b.carline_nm
+	,c.SDPT_CD
+	,c.DIST_OFFICE_CD
+	,c.DLR_CD
+                    
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "ocnCd"'>a.OCN_CD<choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineCd"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "extColorCd"'>a.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "vinNo"'>A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlrGrDt"'>A.DLR_GR_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "signoffDt"'>A.SIGNOFF_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineNm"'>b.carline_nm <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "sdptCd"'>c.SDPT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "distOfficeCd"'>c.DIST_OFFICE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlrCd"'>C.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                   -- E.DLR_CD, A.VIN_NO, A.MODEL_CD, A.OCN_CD, A.EXT_COLOR_CD, A.INT_COLOR_CD, D.TRSF_CAR_NO,
+                                   -- D.CAR_REG_NO, A.PLT_GI_DT, D.TRSF_LOC_CD, D.TRSF_STAT_CD, D.PRE_ALRT_NTCE_CONT,
+                                   -- D.DRIVER_NM, D.DRIVER_TEL_NO NULLS LAST
+                                   A.SIGNOFF_DT DESC --DCS 在途车信息查询列表按 发车日期 倒序排序 2018-9-3
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                       A.SIGNOFF_DT DESC
+                    </otherwise>
+                </choose>
+                ) t
+            <!-- ) T1-->
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        ) 
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectTpVehicleMonitoringCondition" parameterType="TpVehicleConditionSearchVO" resultType="TpVehicleConditionVO">
+    <!-- selectTpVehicleMonitoring -->
+        SELECT RNUM
+             , VIN_NO
+             , FN_GET_CARLINE_NM_NC(CARLINE_CD) AS CARLINE_NM
+             , FN_GET_MODEL_TP_NM(MODEL_CD, OCN_CD) AS FSC_NM
+             , FN_GET_OCN_NM_NC(MODEL_CD, OCN_CD) AS OCN_NM
+             , FN_GET_EXT_COLOR_NM_NC(EXT_COLOR_CD) AS EXT_COLOR_NM
+             , FN_GET_INT_COLOR_NM_NC(INT_COLOR_CD) AS INT_COLOR_NM
+             , CARLINE_CD
+             , MODEL_CD
+             , FSC_CD
+             , OCN_CD
+             , EXT_COLOR_CD
+             , INT_COLOR_CD
+             , DSTB_CMP_NM
+             , TRSF_CAR_NO
+             , CAR_REG_NO
+             , PLT_GI_DT
+             , EXPT_DATE
+             , DELAY_TIME
+             , TRSF_LOC_CD
+             , TRSF_STAT_CD
+             , DRIVER_NM
+             , DRIVER_TEL_NO
+             , PRE_ALRT_NTCE_CONT
+             , DLR_CD
+             , DLR_NM
+             , DIST_OFFICE_NM
+             , CSTL_NM
+             , DSTB_CMP_DL_DT
+             , TRSF_CMP_CD --物流公司只显示sap传过来的 贾明 2018-9-3
+        FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A.VIN_NO,
+                       A.CARLINE_CD,
+                       A.MODEL_CD,
+                       FN_GET_MODEL_TP_CD(A.MODEL_CD, A.OCN_CD) AS FSC_CD,
+                       A.OCN_CD,
+                       A.EXT_COLOR_CD,
+                       A.INT_COLOR_CD,
+                       A.ORD_DLR_CD,
+                       E.DLR_CD,
+                       E.DLR_NM,
+                       (SELECT OFF_NM
+                          FROM CM_2601T
+                         WHERE OFF_CD = E.DIST_OFFICE_CD
+                           AND DIVI_CD = E.SDPT_CD) AS DIST_OFFICE_NM,
+                       (SELECT CSTL_NM
+                          FROM CM_2701T
+                         WHERE CSTL_CD = E.SALE_DLR_SUNG_CD) AS CSTL_NM,
+        <!--
+                       B.DLRM_DLR_NM AS C_DLR_NM,
+                       B.DLRM_AREA_CD AS C_AREA_CD ,
+                       GET_OCCD_NM('H','A07AA','SALE','cdsa067',B.DLRM_AREA_CD, ?) AS C_AREA_NM,
+                       B.DLRM_BRCH_SEQ_NO AS C_STCD_CD,
+                       GET_OCCD_NM('H','A07AA','SALE','cdof032',B.DLRM_BRCH_SEQ_NO, ?) AS C_STCD_NM,
+
+                       (CASE WHEN A.TRSF_CMP_CD IS NULL THEN ''
+                             ELSE GET_OCCD_NM('SALE', 'cdsa063', TRSF_CMP_CD, ?)
+                        END) AS C_COMP,
+        -->
+                       D.DSTB_CMP_NM AS DSTB_CMP_CD,
+                       FN_CMM_CD_NM('SAL057',A.TRSF_CMP_CD,#{sLangCd},'N') AS DSTB_CMP_NM,
+                       A.TRSF_CMP_CD,
+                       <!-- 物流公司只显示sap传过来的 贾明 2018-9-3 
+                        ( SELECT Z1.CMM_CD_NM
+                            FROM (SELECT A.CMM_CD
+                                       , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                   FROM CM_0303T A
+                                   LEFT OUTER JOIN CM_0304T B
+                                         ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                        AND A.CMM_CD = B.CMM_CD
+                                        AND B.LANG_CD = #{sLangCd}
+                                  WHERE A.CMM_GRP_CD = 'SAL057'   /*물류회사*/
+                                    AND A.USE_YN = 'Y'
+                                  ) Z1
+                          WHERE D.DSTB_CMP_NM = Z1.CMM_CD
+                        ) AS DSTB_CMP_NM,
+                        -->
+                       D.TRSF_CAR_NO,
+                       D.CAR_REG_NO,
+                       A.PLT_GI_DT,
+
+                       <!-- A.PLT_GI_DT + CEIL(C.FREP_LEAD_TIME/24) AS EXPT_DATE, -->
+                       '' AS EXPT_DATE,
+
+                       <!-- CASE WHEN SYSDATE <![CDATA[<]]>= TO_DATE(A.PLT_GI_DT + CEIL(C.FREP_LEAD_TIME/24)) THEN 0
+                            ELSE SYSDATE - TO_DATE(A.PLT_GI_DT + CEIL(C.FREP_LEAD_TIME/24))
+                       END AS DELAY_TIME, -->
+                       '' AS DELAY_TIME
+                       ,D.TRSF_LOC_CD
+                       ,D.TRSF_STAT_CD
+                       ,D.DRIVER_NM
+                       ,D.DRIVER_TEL_NO
+                       ,D.PRE_ALRT_NTCE_CONT
+                       ,D.DSTB_CMP_DL_DT
+                FROM SA_0121T A,
+                       <!-- CMTDLRM B, -->
+                       <!-- DMSDB.SCBFREP C, -->
+                (
+                    SELECT
+                         TPMS_RANK
+                        ,VIN_NO
+                        ,DSTB_CMP_NM
+                        ,TRSF_CAR_NO
+                        ,TRSF_LOC_CD
+                        ,TRSF_STAT_CD
+                        ,DRIVER_NM
+                        ,DRIVER_TEL_NO
+                        ,PRE_ALRT_NTCE_CONT
+                        ,CAR_REG_NO
+                        ,DSTB_CMP_DL_DT
+                    FROM (
+                        SELECT
+                            --RANK() OVER(PARTITION BY VIN_NO ORDER BY UPLOAD_SEQ DESC, UPLOAD_TIMESTAMP DESC) AS TPMS_RANK
+                            RANK() OVER(PARTITION BY VIN_NO ORDER BY UPLOAD_TIMESTAMP DESC) AS TPMS_RANK --DCS 在途信息 弹框列表与在途信息展示列信息不对 贾明 2018-9-4 
+                            ,VIN_NO
+                            ,DSTB_CMP_NM
+                            ,TRSF_CAR_NO
+                            ,TRSF_LOC_CD
+                            ,TRSF_STAT_CD
+                            ,DRIVER_NM
+                            ,DRIVER_TEL_NO
+                            ,PRE_ALRT_NTCE_CONT
+                            ,CAR_REG_NO
+                            ,DSTB_CMP_DL_DT
+                        FROM SA_0425T
+                    )
+                    WHERE TPMS_RANK = 1
+                ) D, CM_0101T E
+                WHERE 1 = 1
+                   <!-- AND A.VINM_ORDER_DLR_NO = B.DLRM_DLR_CD
+                   AND A.ORD_DLR_CD = C.FREP_DLR_CD(+)
+                   AND A.CAR_DUMP_CD = C.FREP_DEPT_PLAC(+) -->
+                   AND A.VIN_NO = D.VIN_NO(+)
+                   AND A.ORD_DLR_CD = E.DLR_CD(+)
+                   AND A.CAR_STAT_CD = '50'
+                   AND A.ORD_TP <![CDATA[<>]]> 'E1'  --车辆订单类型不能是"E1"
+                    <if test='sSrchFrDt != null'>
+                       AND A.PLT_GI_DT <![CDATA[>=]]> TRUNC(#{sSrchFrDt},'DD')
+                    </if>
+                    <if test='sSrchToDt != null'>
+                       AND A.PLT_GI_DT <![CDATA[<]]> TRUNC(#{sSrchToDt},'DD')+1
+                    </if>
+                    <if test='sSrchFrDtStr != null and sSrchToDtStr != null'>
+                       AND TO_CHAR(A.PLT_GI_DT,'YYYYMMDD') BETWEEN #{sSrchFrDtStr} AND #{sSrchToDtStr}
+                    </if>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                       AND A.ORD_DLR_CD = #{sDlrCd}
+                    </if>
+                    <if test='sTpCmpCd != null and sTpCmpCd != ""'>
+                       AND D.DSTB_CMP_NM = #{sTpCmpCd}
+                    </if>
+                    <if test='sVinNo1 != null and sVinNo1 != ""'>
+                       AND A.VIN_NO1 = #{sVinNo1}
+                    </if>
+                    <if test='sVinNo2 != null and sVinNo2 != ""'>
+                       AND A.VIN_NO2 = #{sVinNo2}
+                    </if>
+                    <if test='sVinNo != null and sVinNo != ""'>
+                       AND A.VIN_NO like '%'|| #{sVinNo} ||'%'
+                    </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "vinNo"'>A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelCd"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "fscCd"'>FSC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnCd"'>A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "extColorCd"'>A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "intColorCd"'>A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dstbCmpNm"'>A.TRSF_CMP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "trsfCarNo"'>D.TRSF_CAR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carRegNo"'>D.CAR_REG_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "pltGiDt"'>A.PLT_GI_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "delayTime"'>DELAY_TIME <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "trsfLocCd"'>D.TRSF_LOC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "trsfStatCd"'>D.TRSF_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "preAlrtNtceCont"'>D.PRE_ALRT_NTCE_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "driverNm"'>D.DRIVER_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "driverTelNo"'>D.DRIVER_TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlrCd"'>E.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlrNm"'>E.DLR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "distOfficeNm"'>DIST_OFFICE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "cstlNm"'>CSTL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                   -- E.DLR_CD, A.VIN_NO, A.MODEL_CD, A.OCN_CD, A.EXT_COLOR_CD, A.INT_COLOR_CD, D.TRSF_CAR_NO,
+                                   -- D.CAR_REG_NO, A.PLT_GI_DT, D.TRSF_LOC_CD, D.TRSF_STAT_CD, D.PRE_ALRT_NTCE_CONT,
+                                   -- D.DRIVER_NM, D.DRIVER_TEL_NO NULLS LAST
+                                   A.PLT_GI_DT DESC --DCS 在途车信息查询列表按 发车日期 倒序排序 2018-9-3
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                       -- E.DLR_CD, A.VIN_NO, A.MODEL_CD, A.OCN_CD, A.EXT_COLOR_CD, A.INT_COLOR_CD, D.TRSF_CAR_NO,
+                       -- D.CAR_REG_NO, A.PLT_GI_DT, D.TRSF_LOC_CD, D.TRSF_STAT_CD, D.PRE_ALRT_NTCE_CONT,
+                       -- D.DRIVER_NM, D.DRIVER_TEL_NO NULLS LAST
+                       A.PLT_GI_DT DESC --DCS 在途车信息查询列表按 发车日期 倒序排序 贾明 2018-9-3
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectTpVehicleMonitoringConditionPopupCnt" parameterType="TpVehicleConditionSearchVO" resultType="int">
+        SELECT COUNT(*)
+        FROM SA_0425T
+        WHERE VIN_NO = #{sVinNo}
+    </select>
+
+    <select id="selectTpVehicleMonitoringConditionPopup" parameterType="TpVehicleConditionSearchVO" resultType="TpVehicleConditionVO">
+        SELECT UPLOAD_TIMESTAMP
+              ,UPLOAD_DT
+              ,UPLOAD_HM
+              ,TRSF_LOC_CD
+              ,TRSF_STAT_CD
+              ,PRE_ALRT_NTCE_CONT
+        FROM SA_0425T
+        WHERE VIN_NO = #{sVinNo}
+        ORDER BY UPLOAD_DT DESC --根据上传日期倒序排序 贾明 2018-9-4
+    </select>
+
+    <!-- 운송내역 상세조회 팝업(TP차량모니터링 상세) 갯수 조회 -->
+    <select id="selectTpMonitoringDlrDetailSearchsByConditionCnt" parameterType="TpVehicleConditionSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0425T A                  --TP차량운송중내역
+         WHERE A.VIN_NO = #{sVinNo}
+    </select>
+    <!-- 운송내역 상세조회 팝업(TP차량모니터링 상세) 조회 -->
+    <select id="selectTpMonitoringDlrDetailSearchsByCondition" parameterType="TpVehicleConditionSearchVO" resultType="TpVehicleMonitoringDlrDetailPopupVO">
+        SELECT A.UPLOAD_TIMESTAMP          --업로드타임스탬프
+             , A.VIN_NO                    --차대번호
+             , A.UPLOAD_SEQ                --업로드일련번호
+             , A.UPLOAD_DT                 --업로드일자
+             , A.UPLOAD_HM                 --업로드시간
+             , A.DSTB_CMP_NM               --물류회사명
+             , A.TRSF_CAR_NO               --운송차량번호
+             , A.TRSF_LOC_CD               --운송위치코드
+             , A.TRSF_STAT_CD              --운송상태코드
+             , A.DRIVER_NM                 --운전자명
+             , A.DRIVER_TEL_NO             --운전자전화번호
+             , A.PRE_ALRT_NTCE_CONT        --조기경보통지내용
+             , A.CAR_REG_NO                --차량등록번호
+             , A.DSTB_CMP_DL_DT            --물류회사납품일자
+             , A.REG_USR_ID                --등록자ID
+             , A.REG_DT                    --등록일자
+             , A.UPDT_USR_ID               --수정자ID
+             , A.UPDT_DT                   --수정일자
+          FROM SA_0425T A                  --TP차량운송중내역
+         WHERE A.VIN_NO = #{sVinNo}
+        ORDER BY
+        <choose>
+         <when test='sort != null'>
+             <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                 <choose>
+                     <when test='item.field == "vinNo"'>           A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                     <when test='item.field == "uploadDt"'>        A.UPLOAD_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                     <when test='item.field == "uploadHm"'>        A.UPLOAD_HM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                     <when test='item.field == "trsfLocCd"'>       A.TRSF_LOC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                     <when test='item.field == "trsfStatCd"'>      A.TRSF_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                     <when test='item.field == "preAlrtNtceCont"'> A.PRE_ALRT_NTCE_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                     <otherwise>
+                       A.UPLOAD_TIMESTAMP DESC, A.VIN_NO ASC
+                     </otherwise>
+                 </choose>
+             </foreach>
+         </when>
+         <otherwise>
+            A.UPLOAD_TIMESTAMP DESC, A.VIN_NO ASC
+         </otherwise>
+        </choose>
+    </select>
+
+
+    <!-- tp차량모니터링 저장 -->
+    <insert id="insertTpVehicleMonitoringUpload" parameterType="TpVehicleConditionVO">
+        INSERT INTO SA_0425T    --TP차량운송중내역
+        (
+          UPLOAD_TIMESTAMP          --업로드타임스탬프
+         ,VIN_NO                    --차대번호
+         ,UPLOAD_SEQ                --업로드일련번호
+         ,UPLOAD_DT                 --업로드일자
+         ,UPLOAD_HM                 --업로드시간
+         <!-- ,DSTB_CMP_NM               물류회사명  DCS 在途信息管理 上传模版中 '物流公司' 删掉 贾明 2018-9-3 -->
+         ,TRSF_CAR_NO               --운송차량번호
+         ,TRSF_LOC_CD               --운송위치코드
+         ,TRSF_STAT_CD              --운송상태코드
+         ,DRIVER_NM                 --운전자명
+         ,DRIVER_TEL_NO             --운전자전화번호
+         ,PRE_ALRT_NTCE_CONT        --조기경보통지내용
+         ,CAR_REG_NO                --차량등록번호
+         ,DSTB_CMP_DL_DT            --물류회사납품일자
+         ,REG_USR_ID                --등록자ID
+         ,REG_DT                    --등록일자
+         ,UPDT_USR_ID               --수정자ID
+         ,UPDT_DT                   --수정일자
+         ,DLR_CD                    --딜러코드
+        )
+        VALUES
+        (
+          TO_CHAR(SYSTIMESTAMP, 'yyyyMMddhh24missff2')
+         ,#{vinNo}                        --차대번호
+         ,(SELECT NVL(MAX(UPLOAD_SEQ), 0) + 1 FROM SA_0425T WHERE VIN_NO = #{vinNo})
+         ,SYSDATE                         --업로드일자
+         ,TO_CHAR(SYSDATE, 'hh24mi')      --업로드시간
+         <!--,#{dstbCmpNm}                    물류회사명 DCS 在途信息管理 上传模版中 '物流公司' 删掉 贾明 2018-9-3 -->
+         ,#{trsfCarNo}                    --운송차량번호
+         ,#{trsfLocCd}                    --운송위치코드
+         ,#{trsfStatCd}                   --운송상태코드
+         ,#{driverNm}                     --운전자명
+         ,#{driverTelNo}                  --운전자전화번호
+         ,#{preAlrtNtceCont}              --조기경보통지내용
+         ,#{carRegNo}                     --차량등록번호
+         ,#{dstbCmpDlDt}                  --물류회사납품일자
+         ,#{regUsrId}                     --등록자ID
+         ,SYSDATE
+         ,#{regUsrId}                     --수정자ID
+         ,SYSDATE
+         ,#{dlrCd}                        --딜러코드
+        )
+    </insert>
+
+    <!-- tp차량모니터링 IF 저장 -->
+    <insert id="insertTpVehicleMonitoringUploadIf" parameterType="TpVehicleConditionVO">
+        INSERT INTO SA_0425IS    --TP차량운송중내역 IF
+        (
+          UPLOAD_TIMESTAMP          --업로드타임스탬프
+         ,VIN_NO                    --차대번호
+         ,UPLOAD_SEQ                --업로드일련번호
+         ,UPLOAD_DT                 --업로드일자
+         ,UPLOAD_HM                 --업로드시간
+         <!--,DSTB_CMP_NM               물류회사명 DCS 在途信息管理 上传模版中 '物流公司' 删掉 贾明 2018-9-3 -->
+         ,TRSF_CAR_NO               --운송차량번호
+         ,TRSF_LOC_CD               --운송위치코드
+         ,TRSF_STAT_CD              --운송상태코드
+         ,DRIVER_NM                 --운전자명
+         ,DRIVER_TEL_NO             --운전자전화번호
+         ,PRE_ALRT_NTCE_CONT        --조기경보통지내용
+         ,CAR_REG_NO                --차량등록번호
+         ,DSTB_CMP_DL_DT            --물류회사납품일자
+         ,REG_USR_ID                --등록자ID
+         ,REG_DT                    --등록일자
+         ,UPDT_USR_ID               --수정자ID
+         ,UPDT_DT                   --수정일자
+         ,IFRESULT                  --인터페이스결과코드
+         ,DLR_CD                    --딜러코드
+        )
+        VALUES
+        (
+          TO_CHAR(SYSTIMESTAMP, 'yyyyMMddhh24missff2')
+         ,#{vinNo}                        --차대번호
+         ,(SELECT NVL(MAX(UPLOAD_SEQ), 0) + 1 FROM SA_0425IS WHERE VIN_NO = #{vinNo})
+         ,TO_CHAR(SYSDATE, 'yyyyMMdd')    --업로드일자
+         ,TO_CHAR(SYSDATE, 'hh24mi')      --업로드시간
+         <!--,#{dstbCmpNm}                    물류회사명 DCS 在途信息管理 上传模版中 '物流公司' 删掉 贾明 2018-9-3 -->
+         ,#{trsfCarNo}                    --운송차량번호
+         ,#{trsfLocCd}                    --운송위치코드
+         ,#{trsfStatCd}                   --운송상태코드
+         ,#{driverNm}                     --운전자명
+         ,#{driverTelNo}                  --운전자전화번호
+         ,#{preAlrtNtceCont}              --조기경보통지내용
+         ,#{carRegNo}                     --차량등록번호
+         ,TO_CHAR(#{dstbCmpDlDt}, 'YYYYMMDD')  --물류회사납품일자
+         ,#{regUsrId}                     --등록자ID
+         ,SYSDATE
+         ,#{regUsrId}                     --수정자ID
+         ,SYSDATE
+         ,'N'                             --인터페이스결과코드
+         ,#{dlrCd}                        --딜러코드
+        )
+    </insert>
+
+    <!-- vin 운송정보 조회 -->
+    <select id="selectVehicleStatCdSearch" parameterType="map" resultType="TpVehicleConditionVO">
+        SELECT CAR_STAT_CD, ORD_DLR_CD
+          FROM SA_0121T
+          WHERE VIN_NO = #{sVinNo}
+    </select>
+
+    <!-- tp차량모니터링 묶어서 저장 -->
+    <insert id="insertTpVehicleMonitoringUploads" parameterType="map">
+        INSERT ALL
+        <foreach item="map" collection="list" open="" separator="" close="">
+            INTO SA_0425T
+            (
+              UPLOAD_TIMESTAMP
+             ,VIN_NO
+             ,UPLOAD_SEQ
+             ,UPLOAD_DT
+             ,UPLOAD_HM
+             ,DSTB_CMP_NM
+             ,TRSF_CAR_NO
+             ,TRSF_LOC_CD
+             ,TRSF_STAT_CD
+             ,DRIVER_NM
+             ,DRIVER_TEL_NO
+             ,PRE_ALRT_NTCE_CONT
+             ,CAR_REG_NO
+             ,DSTB_CMP_DL_DT
+             ,REG_USR_ID
+             ,REG_DT
+             ,UPDT_USR_ID
+             ,UPDT_DT
+             ,DLR_CD
+            )VALUES(
+              TO_CHAR(SYSTIMESTAMP, 'yyyyMMddhh24missff2')
+             ,#{map.vinNo}
+             ,(SELECT NVL(MAX(UPLOAD_SEQ), 0) + 1 FROM SA_0425T WHERE VIN_NO = #{map.vinNo})
+             ,SYSDATE
+             ,TO_CHAR(SYSDATE, 'hh24mi')
+             ,#{map.dstbCmpNm}
+             ,#{map.trsfCarNo}
+             ,#{map.trsfLocCd}
+             ,#{map.trsfStatCd}
+             ,#{map.driverNm}
+             ,#{map.driverTelNo}
+             ,#{map.preAlrtNtceCont}
+             ,#{map.carRegNo}
+             ,#{map.dstbCmpDlDt}
+             ,#{map.regUsrId}
+             ,SYSDATE
+             ,#{map.regUsrId}
+             ,SYSDATE
+             ,#{map.dlrCd}
+            )
+        </foreach>
+        SELECT * FROM DUAL
+    </insert>
+
+    <!-- tp차량모니터링 IF 묶어서 저장 -->
+    <insert id="insertTpVehicleMonitoringUploadIfs" parameterType="map">
+        INSERT ALL
+        <foreach item="map" collection="list" open="" separator="" close="">
+            INTO SA_0425IS
+            (
+              UPLOAD_TIMESTAMP
+             ,VIN_NO
+             ,UPLOAD_SEQ
+             ,UPLOAD_DT
+             ,UPLOAD_HM
+             ,DSTB_CMP_NM
+             ,TRSF_CAR_NO
+             ,TRSF_LOC_CD
+             ,TRSF_STAT_CD
+             ,DRIVER_NM
+             ,DRIVER_TEL_NO
+             ,PRE_ALRT_NTCE_CONT
+             ,CAR_REG_NO
+             ,DSTB_CMP_DL_DT
+             ,REG_USR_ID
+             ,REG_DT
+             ,UPDT_USR_ID
+             ,UPDT_DT
+             ,IFRESULT
+             ,DLR_CD
+            )VALUES(
+              TO_CHAR(SYSTIMESTAMP, 'yyyyMMddhh24missff2')
+             ,#{map.vinNo}
+             ,(SELECT NVL(MAX(UPLOAD_SEQ), 0) + 1 FROM SA_0425IS WHERE VIN_NO = #{map.vinNo})
+             ,TO_CHAR(SYSDATE, 'yyyyMMdd')
+             ,TO_CHAR(SYSDATE, 'hh24mi')
+             ,#{map.dstbCmpNm}
+             ,#{map.trsfCarNo}
+             ,#{map.trsfLocCd}
+             ,#{map.trsfStatCd}
+             ,#{map.driverNm}
+             ,#{map.driverTelNo}
+             ,#{map.preAlrtNtceCont}
+             ,#{map.carRegNo}
+             ,TO_CHAR(#{map.dstbCmpDlDt}, 'YYYYMMDD')
+             ,#{map.regUsrId}
+             ,SYSDATE
+             ,#{map.regUsrId}
+             ,SYSDATE
+             ,'N'
+             ,#{map.dlrCd}
+            )
+        </foreach>
+        SELECT * FROM DUAL
+    </insert>
+
+</mapper>

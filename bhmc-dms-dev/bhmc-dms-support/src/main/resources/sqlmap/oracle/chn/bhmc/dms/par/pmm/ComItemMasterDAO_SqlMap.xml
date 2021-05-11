@@ -1,0 +1,869 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : ComItemMasterDao_SqlMap.xml
+    Description : 공용부품 정보관리.
+    author Eun Jung Jang
+    since 2016. 5. 16.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 05. 16.     Eun Jung Jang     최초 생성
+-->
+
+
+
+<mapper namespace="chn.bhmc.dms.par.pmm.service.dao.ComItemMasterDAO">
+
+  <!-- 공용부품마스터 총 갯수 조회. -->
+    <select id="comItemMasterByKeyCnt" resultType="int">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ComItemMasterDao.comItemMasterByKeyCnt] */
+            SELECT
+                COUNT(*)
+            FROM DMSDB.PT_0204T A
+            INNER JOIN DMSDB.PT_0201T B ON A.DLR_CD  = B.DLR_CD AND A.ITEM_CD = B.ITEM_CD
+            LEFT OUTER JOIN DMSDB.PT_0301T C ON A.DLR_CD  = C.DLR_CD AND A.ITEM_CD = C.ITEM_CD
+            WHERE A.DLR_CD = #{sDlrCd}
+            AND A.ITEM_CD = #{sItemCd}
+            <if test='sComItemCd != null and sComItemCd != ""'>
+            AND A.COM_ITEM_CD = #{sComItemCd}
+            </if>
+    </select>
+
+    <!-- Key에 해당하는 공용부품마스터 부품정보를 리스트 조회. -->
+    <select id="comItemMasterByKey" parameterType="ComItemMasterSearchVO" resultType="ComItemMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ComItemMasterDao.comItemMasterByKey] */
+        SELECT
+            ROWNUM AS RNUM
+            ,A.DLR_CD
+            ,A.COM_ITEM_CD
+            ,A.ITEM_CD
+            ,B.ITEM_NM
+            ,A.REMARK
+            ,B.ITEM_NM AS COM_ITEM_NM
+            ,NVL(B.GR_STRGE_CD, B.GI_STRGE_CD) AS STRGE_CD
+            ,B.SPYR_CD
+            ,B.ITEM_EN_NM
+            ,B.ITEM_DSTIN_CD
+            ,B.ITEM_GRP_CD
+            ,B.HS_CD
+            ,B.END_YN
+            ,B.START_DT
+            ,B.END_DT
+            ,B.PRE_ITEM_CD
+            ,B.OLD_RPLC_ITEM_CD
+            ,B.NEW_RPLC_ITEM_CD
+            ,B.OLD_RPLC_PAR_CMPT_YN
+            ,B.NEW_RPLC_PAR_CMPT_YN
+            ,B.SUC_CD
+            ,B.LAST_CMPT_ITEM_CD
+            ,B.CAR_USE_UNIT_CNT
+            ,B.MOBIS_IMP_LOCAL_YN_TP
+            ,B.PAR_SPEC_CD
+            ,B.PNC_CD
+            ,B.STOCK_UNIT_CD
+            ,B.ITEM_LGTH_VAL
+            ,B.ITEM_WIDTH_VAL
+            ,B.ITEM_HGTH_VAL
+            ,B.WEIGHT_UNIT_CD
+            ,B.TOT_WEIGHT_VAL
+            ,B.NET_WEIGHT_VAL
+            ,B.FILE_DOC_NO
+            ,B.PURC_LEAD_HM
+            ,B.CQTY_RAISE_TP
+            ,B.MIN_PURC_QTY
+            ,B.STDRD_STOCK_CALC_YN
+            ,B.SFTY_STOCK_QTY
+            ,B.PURC_CQTY_CALC_YN
+            ,B.STOCK_PRSN_ID
+            ,B.PURC_PRSN_ID
+            ,B.GR_STRGE_CD
+            ,B.GI_STRGE_CD
+            ,B.IMP_TEST_TP
+            ,B.ABC_IND
+            ,B.MM3_AVG_DMND_QTY
+            ,B.MM6_AVG_DMND_QTY
+            ,B.MM12_AVG_DMND_QTY
+            ,B.PURC_REQ_CNT
+            ,B.NON_MOVING_FLG
+            ,B.BEF_LAST_GR_DT
+            ,B.LAST_GR_DT
+            ,B.BEF_LAST_GI_DT
+            ,B.LAST_GI_DT
+            ,B.RECOM_RTPRC_AMT
+            ,B.MOVING_AVG_PRC
+            ,B.CARLINE_CD
+            ,B.CARLINE_CD2
+            ,B.BRAND_CD
+            ,B.STDRD_STOCK_QTY
+            ,B.STDRD_STOCK_APPLY_RATE
+            ,B.COM_CARLINE_NM
+            ,B.PRND_YN
+            ,B.DGR_ITEM_YN
+            ,B.SPYR_CD AS BP_TP
+            ,B.BP_CD
+            ,C.BP_NM
+            ,B.MODEL_CD
+            ,B.LAST_GR_AMT
+            ,B.MAX_SFTY_STOCK_QTY
+            ,B.DLR_SELF_ITEM_NM
+            ,B.MJR_USE_YN
+            ,B.MJR_ERR_YN
+            ,B.RENEW_DT
+            ,B.LOC_CD
+            ,D.AVLB_STOCK_QTY
+        FROM PT_0204T A
+        INNER JOIN PT_0201T B ON A.DLR_CD = B.DLR_CD AND A.COM_ITEM_CD = B.ITEM_CD
+        LEFT OUTER JOIN PT_0211T C ON B.DLR_CD = C.DLR_CD AND B.BP_CD  = C.BP_CD
+        LEFT OUTER JOIN (
+            SELECT
+                AA.DLR_CD
+                ,AA.ITEM_CD
+                ,SUM(AA.AVLB_STOCK_QTY) AS AVLB_STOCK_QTY
+            FROM PT_0301T AA
+            GROUP BY AA.DLR_CD, AA.ITEM_CD
+        ) D ON A.DLR_CD = D.DLR_CD AND A.COM_ITEM_CD = D.ITEM_CD
+        WHERE A.DLR_CD  = #{sDlrCd}
+        AND A.ITEM_CD = #{sItemCd}
+        <if test='sComItemCd != null and sComItemCd != ""'>
+        AND A.COM_ITEM_CD = #{sComItemCd}
+        </if>
+
+    </select>
+
+    <!-- 조회조건에 해당하는 공용부품마스터 총 갯수를 조회한다. -->
+    <select id="comItemMasterByConditionCnt" resultType="int">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ComItemMasterDao.comItemMastersSetByConditionCnt] */
+            SELECT
+                COUNT(*)
+            FROM
+                 (
+                  SELECT A.DLR_CD
+                        ,A.COM_ITEM_CD                   --공용품목코드
+                        ,A.ITEM_CD                       --품목코드
+                        ,D.ITEM_NM                       --품목명
+                        ,A.REMARK                        --비고
+                        ,B.ITEM_NM AS COM_ITEM_NM        --공용품목명
+                        ,NVL(B.GR_STRGE_CD, B.GI_STRGE_CD) AS STRGE_CD --창고
+                        ,B.SPYR_CD                      --공급상코드
+                        ,B.ITEM_EN_NM                  --품목영문명
+                        ,B.ITEM_DSTIN_CD               --품목구분코드
+                        ,B.ITEM_GRP_CD                 --품목그룹코드
+                        ,B.HS_CD                       --HS코드
+                        ,B.END_YN                      --종료여부
+                        ,B.START_DT                    --시작일자
+                        ,B.END_DT                      --종료일자
+                        ,B.PRE_ITEM_CD                 --기존품목코드
+                        ,B.OLD_RPLC_ITEM_CD            --구형대체품목코드
+                        ,B.NEW_RPLC_ITEM_CD            --신규대체품목코드
+                        ,B.OLD_RPLC_PAR_CMPT_YN        --구형대체부품호환여부
+                        ,B.NEW_RPLC_PAR_CMPT_YN        --신규대체부품호환여부
+                        ,B.SUC_CD                      --SUC코드
+                        ,B.LAST_CMPT_ITEM_CD           --최종호환품목코드
+                        ,B.CAR_USE_UNIT_CNT            --차량사용단위수
+                        ,B.MOBIS_IMP_LOCAL_YN_TP       --모비스수입위치유형
+                        ,B.PAR_SPEC_CD                 --부품특성코드
+                        ,B.PNC_CD                      --PNC코드
+                        ,B.STOCK_UNIT_CD               --재고단위코드
+                        ,B.ITEM_LGTH_VAL               --품목길이값
+                        ,B.ITEM_WIDTH_VAL              --품목폭값
+                        ,B.ITEM_HGTH_VAL               --품목높이값
+                        ,B.WEIGHT_UNIT_CD              --중량단위코드
+                        ,B.TOT_WEIGHT_VAL              --총중량값
+                        ,B.NET_WEIGHT_VAL              --순중량값
+                        ,B.FILE_DOC_NO                 --첨부문서번호
+                        ,B.PURC_LEAD_HM                --구매리드타임
+                        ,B.CQTY_RAISE_TP               --소요량올림유형
+                        ,B.MIN_PURC_QTY                --최소구매수량
+                        ,B.STDRD_STOCK_CALC_YN          --적정재고산출여부
+                        ,B.SFTY_STOCK_QTY              --안전재고수량
+                        ,B.PURC_CQTY_CALC_YN             --구매소요량산출여부
+                        ,B.STOCK_PRSN_ID                 --재고담당자ID
+                        ,B.PURC_PRSN_ID                  --구매담당자ID
+                        ,B.GR_STRGE_CD                 --입고창고코드
+                        ,B.GI_STRGE_CD                 --출고창고코드
+                        ,B.IMP_TEST_TP                 --수입검사유형
+                        ,B.ABC_IND                     --ABC CLASS
+                        ,B.MM3_AVG_DMND_QTY            --3개월평균수요
+                        ,B.MM6_AVG_DMND_QTY            --6개월평균수요
+                        ,B.MM12_AVG_DMND_QTY           --12개월평균수요
+                        ,B.PURC_REQ_CNT                  --구매요청횟수
+                        ,B.NON_MOVING_FLG              --NONMOVINGSTOCK여부
+                        ,B.BEF_LAST_GR_DT              --이전최종입고일자
+                        ,B.LAST_GR_DT                  --최종입고일자
+                        ,B.BEF_LAST_GI_DT              --이전최종출고일자
+                        ,B.LAST_GI_DT                  --최종출고일자
+                        ,B.RECOM_RTPRC_AMT             --권장소비자가격금액
+                        ,B.MOVING_AVG_PRC                --이동평균가격
+                        ,B.CARLINE_CD                    --차종코드
+                        ,B.CARLINE_CD2                   --차종코드2_적용차종
+                        ,B.BRAND_CD                    --브랜드
+                        ,B.STDRD_STOCK_QTY               --적정재고량
+                        ,B.STDRD_STOCK_APPLY_RATE        --적정재고적용율
+                        ,B.COM_CARLINE_NM                --공용차종명
+                        ,B.PRND_YN                       --단종여부
+                        ,B.DGR_ITEM_YN                   --위험품여부
+                        ,B.BP_CD                         --거래처코드
+                        ,C.BP_NM                         --거래처명
+                        ,C.BP_TP                         --거래처유형
+                        ,B.MODEL_CD                      --모델코드
+                        ,B.LAST_GR_AMT                   --최종입고금액
+                        ,B.MAX_SFTY_STOCK_QTY            --최대안전재고수량
+                        ,B.DLR_SELF_ITEM_NM              --딜러자체품목명
+                        ,B.MJR_USE_YN                    --주사용여부
+                        ,B.MJR_ERR_YN                    --주고장여부
+                        ,B.RENEW_DT                      --갱신일자
+                        ,B.LOC_CD                        --위치코드
+                        FROM PT_0204T A
+                        INNER JOIN PT_0201T B ON A.DLR_CD = B.DLR_CD AND A.COM_ITEM_CD = B.ITEM_CD
+                        LEFT OUTER JOIN PT_0211T C ON B.DLR_CD = C.DLR_CD AND B.BP_CD = C.BP_CD
+                        INNER JOIN PT_0201T D ON B.DLR_CD = D.DLR_CD AND A.ITEM_CD = D.ITEM_CD
+                  ) A LEFT OUTER JOIN (
+                    SELECT
+                        A.DLR_CD
+                        ,A.ITEM_CD
+                        ,SUM(NVL(A.AVLB_STOCK_QTY,0)) AS AVLB_STOCK_QTY
+                    FROM PT_0301T A
+                    LEFT OUTER JOIN CM_0104T B ON A.DLR_CD = B.DLR_CD AND A.STRGE_CD = B.STRGE_CD AND B.NETING_USE_YN = 'Y'
+                    GROUP BY A.DLR_CD,A.ITEM_CD
+                  ) B ON A.DLR_CD   = B.DLR_CD AND A.COM_ITEM_CD  = B.ITEM_CD --현재고정보
+                  LEFT OUTER JOIN (
+                    SELECT
+                        DLR_CD
+                        ,ITEM_CD
+                        ,MAX(PRC_TP) AS PRC_TP
+                        ,MAX(LINE_NO) AS LINE_NO
+                        ,MAX(NVL(RETL_PRC,0)) AS RETL_PRC
+                        ,MAX(NVL(WHSL_PRC,0)) AS WHSL_PRC
+                        ,MAX(NVL(SALE_PRC_AMT,0)) AS SALE_PRC_AMT
+                    FROM PT_0214T
+                    WHERE DLR_CD = #{sDlrCd}
+                    AND DEL_YN != 'Y'
+                    GROUP BY DLR_CD, ITEM_CD
+                  ) C ON A.DLR_CD = C.DLR_CD AND A.COM_ITEM_CD = C.ITEM_CD
+                  LEFT OUTER JOIN PT_0208T D ON A.DLR_CD = D.DLR_CD AND A.STRGE_CD = D.STRGE_CD AND A.COM_ITEM_CD = D.ITEM_CD
+             WHERE A.DLR_CD  = #{sDlrCd}
+             <if test='sItemCd != null and sItemCd != ""'>
+                AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+             </if>
+             <if test='sItemNm != null and sItemNm != ""'>
+                AND A.ITEM_NM LIKE '%'||#{sItemNm}||'%'
+             </if>
+             <if test='sComItemCd != null and sComItemCd != ""'>
+                AND A.COM_ITEM_CD = #{sComItemCd}
+             </if>
+             <if test='sComItemNm != null and sComItemNm != ""'>
+                AND A.COM_ITEM_NM = #{sComItemNm}
+             </if>
+             <if test='sCarlineCd != null and sCarlineCd != ""'>
+                AND A.CARLINE_CD = #{sCarlineCd}
+            </if>
+            <if test='sCarlineCd2 != null and sCarlineCd2 != ""'>
+                AND A.CARLINE_CD2 = #{sCarlineCd2}
+            </if>
+            <if test='sBrandCd != null and sBrandCd != ""'>
+                AND A.BRAND_CD = #{sBrandCd}
+            </if>
+            <if test='sAbcInd != null and sAbcInd != ""'>
+                AND A.ABC_IND = #{sAbcInd}
+            </if>
+            <if test='sItemDstinCd != null and sItemDstinCd != ""'>
+                AND A.ITEM_DSTIN_CD = #{sItemDstinCd}
+            </if>
+            <if test='sBpTp != null and sBpTp != ""'>
+                AND A.BP_TP = #{sBpTp}
+            </if>
+            <if test='sBpNm != null and sBpNm != ""'>
+                AND A.BP_NM LIKE '%'||#{sBpNm}||'%'
+            </if>
+
+    </select>
+
+    <!-- Key에 해당하는 공용부품마스터 정보를 조회한다. -->
+    <select id="comItemMasterByCondition" parameterType="ComItemMasterSearchVO" resultType="ComItemMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ComItemMasterDao.comItemMasterByCondition] */
+
+            SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                        A.DLR_CD                        --딜러코드
+                        ,A.COM_ITEM_CD                  --공용품목코드
+                        ,A.ITEM_CD                      --품목코드
+                        ,A.ITEM_NM                      --품목명
+                        ,A.REMARK                       --비고
+                        ,A.COM_ITEM_NM                  --공용품목명
+                        ,A.STRGE_CD                     --창고
+                        ,A.SPYR_CD                      --로컬여부
+                        ,A.ITEM_EN_NM                   --품목영문명
+                        ,A.ITEM_DSTIN_CD                --품목구분코드
+                        ,A.ITEM_GRP_CD                  --품목그룹코드
+                        ,A.HS_CD                        --HS코드
+                        ,A.END_YN                       --종료여부
+                        ,A.START_DT                     --시작일자
+                        ,A.END_DT                       --종료일자
+                        ,A.PRE_ITEM_CD                  --기존품목코드
+                        ,A.OLD_RPLC_ITEM_CD             --구형대체품목코드
+                        ,A.NEW_RPLC_ITEM_CD             --신규대체품목코드
+                        ,A.OLD_RPLC_PAR_CMPT_YN         --구형대체부품호환여부
+                        ,A.NEW_RPLC_PAR_CMPT_YN         --신규대체부품호환여부
+                        ,A.SUC_CD                       --SUC코드
+                        ,A.LAST_CMPT_ITEM_CD            --최종호환품목코드
+                        ,A.CAR_USE_UNIT_CNT             --차량사용단위수
+                        ,A.MOBIS_IMP_LOCAL_YN_TP        --모비스수입위치유형
+                        ,A.PAR_SPEC_CD                  --부품특성코드
+                        ,A.PNC_CD                       --PNC코드
+                        ,A.STOCK_UNIT_CD                --재고단위코드
+                        ,A.ITEM_LGTH_VAL                --품목길이값
+                        ,A.ITEM_WIDTH_VAL               --품목폭값
+                        ,A.ITEM_HGTH_VAL                --품목높이값
+                        ,A.WEIGHT_UNIT_CD               --중량단위코드
+                        ,A.TOT_WEIGHT_VAL               --총중량값
+                        ,A.NET_WEIGHT_VAL               --순중량값
+                        ,A.FILE_DOC_NO                  --첨부문서번호
+                        ,A.PURC_LEAD_HM                 --구매리드타임
+                        ,A.CQTY_RAISE_TP                --소요량올림유형
+                        ,A.MIN_PURC_QTY                 --최소구매수량
+                        ,A.STDRD_STOCK_CALC_YN          --적정재고산출여부
+                        ,A.SFTY_STOCK_QTY               --안전재고수량
+                        ,A.PURC_CQTY_CALC_YN            --구매소요량산출여부
+                        ,A.STOCK_PRSN_ID                --재고담당자ID
+                        ,A.PURC_PRSN_ID                 --구매담당자ID
+                        ,A.GR_STRGE_CD                  --입고창고코드
+                        ,A.GI_STRGE_CD                  --출고창고코드
+                        ,A.IMP_TEST_TP                  --수입검사유형
+                        ,A.ABC_IND                      --ABC CLASS
+                        ,A.MM3_AVG_DMND_QTY             --3개월평균수요
+                        ,A.MM6_AVG_DMND_QTY             --6개월평균수요
+                        ,A.MM12_AVG_DMND_QTY            --12개월평균수요
+                        ,A.PURC_REQ_CNT                 --구매요청횟수
+                        ,A.NON_MOVING_FLG               --NONMOVINGSTOCK여부
+                        ,A.BEF_LAST_GR_DT               --이전최종입고일자
+                        ,A.LAST_GR_DT                   --최종입고일자
+                        ,A.BEF_LAST_GI_DT               --이전최종출고일자
+                        ,A.LAST_GI_DT                   --최종출고일자
+                        ,A.RECOM_RTPRC_AMT              --권장소비자가격금액
+                        ,A.CARLINE_CD                   --차종코드
+                        ,A.CARLINE_CD2                  --차종코드2_적용차종
+                        ,A.BRAND_CD                     --브랜드
+                        ,A.STDRD_STOCK_QTY              --적정재고량
+                        ,A.STDRD_STOCK_APPLY_RATE       --적정재고적용율
+                        ,A.COM_CARLINE_NM               --공용차종명
+                        ,A.PRND_YN                      --단종여부
+                        ,A.DGR_ITEM_YN                  --위험품여부
+                        ,A.BP_CD                        --거래처코드
+                        ,A.BP_NM                        --거래처명
+                        ,A.BP_TP                        --거래처유형
+                        ,A.MODEL_CD                     --모델코드
+                        ,A.LAST_GR_AMT                  --최종입고금액
+                        ,A.MAX_SFTY_STOCK_QTY           --최대안전재고수량
+                        ,A.DLR_SELF_ITEM_NM             --딜러자체품목명
+                        ,A.MJR_USE_YN                   --주사용여부
+                        ,A.MJR_ERR_YN                   --주고장여부
+                        ,A.RENEW_DT                     --갱신일자
+                        ,A.LOC_CD                       --위치코드
+                        ,B.AVLB_STOCK_QTY               --가용재고량
+                        ,DECODE(#{sPrcTp},'01',NVL(C.RETL_PRC, 0),'02',NVL(C.WHSL_PRC, 0),'03',NVL(C.INC_PRC, 0),'04',NVL(C.GRTE_PRC, 0),NVL(C.SALE_PRC_AMT, 0)) AS SALE_PRC_AMT
+                        ,NVL(D.MOVING_AVG_PRC, A.MOVING_AVG_PRC) AS MOVING_AVG_PRC                --이동평균가격
+              FROM
+                 (
+                  SELECT A.DLR_CD                        --딜러코드
+                        ,A.COM_ITEM_CD                   --공용품목코드
+                        ,A.ITEM_CD                       --품목코드
+                        ,D.ITEM_NM                       --품목명
+                        ,A.REMARK                        --비고
+                        ,B.ITEM_NM AS COM_ITEM_NM        --공용품목명
+                        ,NVL(B.GR_STRGE_CD, B.GI_STRGE_CD) AS STRGE_CD --창고
+                        ,B.SPYR_CD                    --로컬여부
+                        ,B.ITEM_EN_NM                  --품목영문명
+                        ,B.ITEM_DSTIN_CD               --품목구분코드
+                        ,B.ITEM_GRP_CD                 --품목그룹코드
+                        ,B.HS_CD                       --HS코드
+                        ,B.END_YN                      --종료여부
+                        ,B.START_DT                    --시작일자
+                        ,B.END_DT                      --종료일자
+                        ,B.PRE_ITEM_CD                 --기존품목코드
+                        ,B.OLD_RPLC_ITEM_CD            --구형대체품목코드
+                        ,B.NEW_RPLC_ITEM_CD            --신규대체품목코드
+                        ,B.OLD_RPLC_PAR_CMPT_YN        --구형대체부품호환여부
+                        ,B.NEW_RPLC_PAR_CMPT_YN        --신규대체부품호환여부
+                        ,B.SUC_CD                      --SUC코드
+                        ,B.LAST_CMPT_ITEM_CD           --최종호환품목코드
+                        ,B.CAR_USE_UNIT_CNT            --차량사용단위수
+                        ,B.MOBIS_IMP_LOCAL_YN_TP       --모비스수입위치유형
+                        ,B.PAR_SPEC_CD                 --부품특성코드
+                        ,B.PNC_CD                      --PNC코드
+                        ,B.STOCK_UNIT_CD               --재고단위코드
+                        ,B.ITEM_LGTH_VAL               --품목길이값
+                        ,B.ITEM_WIDTH_VAL              --품목폭값
+                        ,B.ITEM_HGTH_VAL               --품목높이값
+                        ,B.WEIGHT_UNIT_CD              --중량단위코드
+                        ,B.TOT_WEIGHT_VAL              --총중량값
+                        ,B.NET_WEIGHT_VAL              --순중량값
+                        ,B.FILE_DOC_NO                 --첨부문서번호
+                        ,B.PURC_LEAD_HM                --구매리드타임
+                        ,B.CQTY_RAISE_TP               --소요량올림유형
+                        ,B.MIN_PURC_QTY                --최소구매수량
+                        ,B.STDRD_STOCK_CALC_YN          --적정재고산출여부
+                        ,B.SFTY_STOCK_QTY              --안전재고수량
+                        ,B.PURC_CQTY_CALC_YN             --구매소요량산출여부
+                        ,B.STOCK_PRSN_ID                 --재고담당자ID
+                        ,B.PURC_PRSN_ID                  --구매담당자ID
+                        ,B.GR_STRGE_CD                 --입고창고코드
+                        ,B.GI_STRGE_CD                 --출고창고코드
+                        ,B.IMP_TEST_TP                 --수입검사유형
+                        ,B.ABC_IND                     --ABC CLASS
+                        ,B.MM3_AVG_DMND_QTY            --3개월평균수요
+                        ,B.MM6_AVG_DMND_QTY            --6개월평균수요
+                        ,B.MM12_AVG_DMND_QTY           --12개월평균수요
+                        ,B.PURC_REQ_CNT                  --구매요청횟수
+                        ,B.NON_MOVING_FLG              --NONMOVINGSTOCK여부
+                        ,B.BEF_LAST_GR_DT              --이전최종입고일자
+                        ,B.LAST_GR_DT                  --최종입고일자
+                        ,B.BEF_LAST_GI_DT              --이전최종출고일자
+                        ,B.LAST_GI_DT                  --최종출고일자
+                        ,B.RECOM_RTPRC_AMT             --권장소비자가격금액
+                        ,B.MOVING_AVG_PRC                --이동평균가격
+                        ,B.CARLINE_CD                    --차종코드
+                        ,B.CARLINE_CD2                   --차종코드2_적용차종
+                        ,B.BRAND_CD                    --브랜드
+                        ,B.STDRD_STOCK_QTY               --적정재고량
+                        ,B.STDRD_STOCK_APPLY_RATE        --적정재고적용율
+                        ,B.COM_CARLINE_NM                --공용차종명
+                        ,B.PRND_YN                       --단종여부
+                        ,B.DGR_ITEM_YN                   --위험품여부
+                        ,B.BP_CD                         --거래처코드
+                        ,C.BP_NM                         --거래처명
+                        ,C.BP_TP                        --거래처유형
+                        ,B.MODEL_CD                      --모델코드
+                        ,B.LAST_GR_AMT                   --최종입고금액
+                        ,B.MAX_SFTY_STOCK_QTY            --최대안전재고수량
+                        ,B.DLR_SELF_ITEM_NM              --딜러자체품목명
+                        ,B.MJR_USE_YN                    --주사용여부
+                        ,B.MJR_ERR_YN                    --주고장여부
+                        ,B.RENEW_DT                      --갱신일자
+                        ,B.LOC_CD                        --위치코드
+                        FROM PT_0204T A
+                        INNER JOIN PT_0201T B ON A.DLR_CD = B.DLR_CD AND A.COM_ITEM_CD = B.ITEM_CD
+                        LEFT OUTER JOIN PT_0211T C ON B.DLR_CD = C.DLR_CD AND B.BP_CD = C.BP_CD
+                        INNER JOIN PT_0201T D ON B.DLR_CD = D.DLR_CD AND A.ITEM_CD = D.ITEM_CD
+                  ) A  LEFT OUTER JOIN (   SELECT A.DLR_CD
+                                                 ,A.ITEM_CD
+                                                 ,SUM(NVL(A.AVLB_STOCK_QTY,0)) AS AVLB_STOCK_QTY
+                                             FROM PT_0301T A
+                                             LEFT OUTER JOIN CM_0104T B
+                                                      ON A.DLR_CD = B.DLR_CD
+                                                     AND A.STRGE_CD = B.STRGE_CD
+                                                     AND B.NETING_USE_YN = 'Y'
+                                             GROUP BY A.DLR_CD
+                                                     ,A.ITEM_CD) B                 --현재고정보
+                               ON A.DLR_CD   = B.DLR_CD
+                              AND A.COM_ITEM_CD  = B.ITEM_CD
+                    LEFT OUTER JOIN (
+                          SELECT   DLR_CD
+                                  ,ITEM_CD
+                                  ,MAX(PRC_TP) AS PRC_TP
+                                  ,MAX(LINE_NO) AS LINE_NO
+                                  ,MAX(NVL(RETL_PRC,0)) AS RETL_PRC
+                                  ,MAX(NVL(WHSL_PRC,0)) AS WHSL_PRC
+                                  ,MAX(NVL(SALE_PRC_AMT,0)) AS SALE_PRC_AMT
+                                  ,MAX(NVL(INC_PRC,0)) AS INC_PRC
+                                  ,MAX(NVL(GRTE_PRC,0)) AS GRTE_PRC
+                            FROM   PT_0214T
+                           WHERE   DLR_CD = #{sDlrCd}
+                             AND   DEL_YN != 'Y'
+                          GROUP BY DLR_CD, ITEM_CD) C
+                      ON A.DLR_CD = C.DLR_CD
+                     AND A.COM_ITEM_CD = C.ITEM_CD
+                    LEFT OUTER JOIN PT_0208T D
+                      ON A.DLR_CD      = D.DLR_CD
+                     AND A.STRGE_CD    = D.STRGE_CD
+                     AND A.COM_ITEM_CD = D.ITEM_CD
+             WHERE A.DLR_CD  = #{sDlrCd}
+             <if test='sItemCd != null and sItemCd != ""'>
+                AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+             </if>
+             <if test='sItemNm != null and sItemNm != ""'>
+                AND A.ITEM_NM LIKE '%'||#{sItemNm}||'%'
+             </if>
+             <if test='sComItemCd != null and sComItemCd != ""'>
+                AND A.COM_ITEM_CD = #{sComItemCd}
+             </if>
+             <if test='sComItemNm != null and sComItemNm != ""'>
+                AND A.COM_ITEM_NM = #{sComItemNm}
+             </if>
+             <if test='sCarlineCd != null and sCarlineCd != ""'>
+                AND A.CARLINE_CD = #{sCarlineCd}
+            </if>
+            <if test='sCarlineCd2 != null and sCarlineCd2 != ""'>
+                AND A.CARLINE_CD2 = #{sCarlineCd2}
+            </if>
+            <if test='sBrandCd != null and sBrandCd != ""'>
+                AND A.BRAND_CD = #{sBrandCd}
+            </if>
+            <if test='sAbcInd != null and sAbcInd != ""'>
+                AND A.ABC_IND = #{sAbcInd}
+            </if>
+            <if test='sItemDstinCd != null and sItemDstinCd != ""'>
+                AND A.ITEM_DSTIN_CD = #{sItemDstinCd}
+            </if>
+            <if test='sBpTp != null and sBpTp != ""'>
+                AND A.BP_TP = #{sBpTp}
+            </if>
+            <if test='sBpNm != null and sBpNm != ""'>
+                AND A.BP_NM LIKE '%'||#{sBpNm}||'%'
+            </if>
+             ORDER BY
+                 <choose>
+                     <when test='sort != null'>
+                         <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                             <choose>
+                                 <when test='item.field == "itemCd"'>A.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "comItemCd"'>A.COM_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "comItemNm"'>A.COM_ITEM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "itemNmEng"'>A.ITEM_EN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "itemDstinCd"'>A.ITEM_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "brandCd"'>A.BRAND_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "carlineCd"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "carlineCd2"'>A.CARLINE_CD2 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "abcInd"'>A.ABC_IND <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "bpTp"'>A.SPYR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "bpCd"'>A.BP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "bpNm"'>A.BP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "newRplcItemCd"'>A.NEW_RPLC_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "oldRplcItemCd"'>A.OLD_RPLC_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "lastCmptItemCd"'>A.LAST_CMPT_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "stockUnitCd"'>A.STOCK_UNIT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "nonMovingFlg"'>A.NON_MOVING_FLAG <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "endYn"'>A.END_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "dgrItemYn"'>A.DGR_ITEM_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "renewDt"'>A.RENEW_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "updtDt"'>A.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "startDt"'>A.START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "endDt"'>A.END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <otherwise>
+                                   A.DLR_CD ASC
+                                  ,A.COM_ITEM_CD ASC
+                                 </otherwise>
+                             </choose>
+                         </foreach>
+                     </when>
+                     <otherwise>
+                       A.DLR_CD ASC
+                      ,A.COM_ITEM_CD ASC
+                     </otherwise>
+                 </choose>
+         ) T1
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                ROWNUM <![CDATA[<=]]> #{lastIndex}
+            </if>
+        </where>
+    )
+    <where>
+        <if test='firstIndex != -1 and lastIndex != -1'>
+            RNUM > #{firstIndex}
+        </if>
+    </where>
+
+    </select>
+
+    <!-- 조회조건에 해당하는 공용부품마스터 재고정보 총 갯수를 조회한다. -->
+    <select id="comItemMasterStockByConditionCnt" resultType="int">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ComItemMasterDao.comItemMasterStockByConditionCnt] */
+        SELECT
+            COUNT(*) AS VALUE
+        FROM PT_0204T H
+        LEFT JOIN PT_0301T A ON H.DLR_CD = A.DLR_CD AND H.COM_ITEM_CD = A.ITEM_CD
+        INNER JOIN PT_0214T B ON A.DLR_CD = B.DLR_CD AND A.STRGE_CD = B.STRGE_CD AND A.ITEM_CD = B.ITEM_CD
+        LEFT JOIN PT_0201T C ON A.DLR_CD = C.DLR_CD AND A.ITEM_CD = C.ITEM_CD
+        LEFT JOIN CM_0104T E ON C.DLR_CD = E.DLR_CD AND A.STRGE_CD = E.STRGE_CD
+        LEFT JOIN PT_0211T G ON G.DLR_CD = C.DLR_CD AND G.BP_CD = C.BP_CD AND G.END_YN != 'Y'
+        WHERE A.DLR_CD = #{sDlrCd}
+        <if test='sItemCd != null and sItemCd != ""'>
+            AND H.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+        </if>
+        <if test='sItemNm != null and sItemNm != ""'>
+            AND C.ITEM_NM LIKE '%'||#{sItemNm}||'%'
+        </if>
+        <if test='sAbcInd != null and sAbcInd != ""'>
+            AND C.ABC_IND = #{sAbcInd}
+        </if>
+        <if test='sCarlineCd != null and sCarlineCd != ""'>
+            AND C.CARLINE_CD = #{sCarlineCd}
+        </if>
+        <if test='sCarlineCd2 != null and sCarlineCd2 != ""'>
+            AND C.CARLINE_CD2 = #{sCarlineCd2}
+        </if>
+        <if test='sItemDstinCd == null or sItemDstinCd == ""'>
+            AND C.ITEM_DSTIN_CD in ('02','05')
+        </if>
+        <if test='sItemDstinCd != null and sItemDstinCd != ""'>
+            AND C.ITEM_DSTIN_CD = #{sItemDstinCd}
+        </if>
+        <if test='sGrStrgeCd != null and sGrStrgeCd != ""'>
+            AND A.STRGE_CD = #{sGrStrgeCd}
+        </if>
+        <if test='sAvlbStockQtyZeroYn == null or sAvlbStockQtyZeroYn != "N"'>
+            AND A.AVLB_STOCK_QTY <![CDATA[>]]> 0
+        </if>
+        <if test='sBpTp != null and sBpTp != ""'>
+            <choose>
+                <when test='sBpTp == "01"'>
+                     AND G.BP_TP = NVL(#{sBpTp},'03')
+                </when>
+                <otherwise>
+                     AND NVL(G.BP_TP,'03') != '01'
+                </otherwise>
+            </choose>
+        </if>
+        <if test='sPageTp != null and sPageTp != ""'>
+            <choose>
+                <when test='@org.apache.commons.lang3.StringUtils@contains(sPageTp,"IN")'>
+                     AND E.STRGE_TP IN ('09','10')--페인트,보조부품 창고유형 만
+                </when>
+                <otherwise>
+                     AND E.STRGE_TP = #{sPageTp}
+                </otherwise>
+            </choose>
+        </if>
+        AND C.ITEM_DSTIN_CD != '20' <!-- 부품구분(판매용품) 제외 -->
+        AND (C.END_YN != 'Y' OR (C.END_YN = 'Y' AND A.AVLB_STOCK_QTY <![CDATA[>]]> 0))
+        AND A.STRGE_CD IS NOT NULL  <!-- 재고 창고 있는 부품 -->
+
+    </select>
+
+    <!-- 공용부품마스터 재고정보를 조회한다. -->
+    <select id="comItemMasterStockByCondition" parameterType="ItemMasterSearchVO" resultType="ItemMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ComItemMasterDao.comItemMasterStockByCondition] */
+        SELECT
+            RNUM
+            ,DLR_CD
+            ,ITEM_CD
+            ,COM_ITEM_CD
+            ,ITEM_NM
+            ,COM_ITEM_NM
+            ,STOCK_UNIT_CD
+            ,RETL_PRC
+            ,WHSL_PRC
+            ,INC_PRC
+            ,GRTE_PRC
+            ,ABC_IND
+            ,CARLINE_CD
+            ,PURC_LEAD_HM
+            ,ITEM_DSTIN_CD
+            ,NVL(GR_STRGE_CD,' ') AS GR_STRGE_CD
+            ,NVL(GI_STRGE_CD,' ') AS GI_STRGE_CD
+            ,'' AS REQ_STRGE_CD
+            ,NVL(STOCK_QTY,0) AS STOCK_QTY
+            ,NVL(AVLB_STOCK_QTY,0) AS AVLB_STOCK_QTY
+            ,NVL(RESV_STOCK_QTY,0) AS RESV_STOCK_QTY
+            ,NVL(CLAM_STOCK_QTY,0) AS CLAM_STOCK_QTY
+            ,NVL(BORROW_QTY,0) AS BORROW_QTY
+            ,NVL(RENT_QTY,0) AS RENT_QTY
+            ,NVL(MOVING_AVG_PRC, 0) AS MOVING_AVG_PRC
+            ,NVL(LOC_CD, ' ') AS LOC_CD
+            ,NVL(LOC_NM, ' ') AS LOC_NM
+            ,BP_TP
+            ,BP_CD
+            ,BP_NM
+            ,REMARK
+        FROM(
+            SELECT
+                ROWNUM AS RNUM
+                ,T1.DLR_CD
+                ,T1.ITEM_CD
+                ,T1.COM_ITEM_CD
+                ,T1.ITEM_NM
+                ,T1.COM_ITEM_NM
+                ,T1.STOCK_UNIT_CD
+                ,T1.RETL_PRC
+                ,T1.WHSL_PRC
+                ,T1.INC_PRC
+                ,T1.GRTE_PRC
+                ,T1.ABC_IND
+                ,T1.CARLINE_CD
+                ,T1.PURC_LEAD_HM
+                ,T1.ITEM_DSTIN_CD
+                ,T1.GR_STRGE_CD
+                ,T1.GI_STRGE_CD
+                ,T1.STOCK_QTY
+                ,T1.AVLB_STOCK_QTY
+                ,T1.RESV_STOCK_QTY
+                ,T1.CLAM_STOCK_QTY
+                ,T1.BORROW_QTY
+                ,T1.RENT_QTY
+                ,T1.MOVING_AVG_PRC
+                ,T1.LOC_CD
+                ,T1.LOC_NM
+                ,T1.BP_TP
+                ,T1.BP_CD
+                ,T1.BP_NM
+                ,T1.REMARK
+            FROM(
+                SELECT
+                    A.DLR_CD
+                    ,H.ITEM_CD
+                    ,H.COM_ITEM_CD
+                    ,C.ITEM_NM
+                    ,C.ITEM_NM AS COM_ITEM_NM
+                    ,C.STOCK_UNIT_CD
+                    ,CASE WHEN B.STD_PRC_CD IS NULL THEN C.LAST_GR_AMT
+                    ELSE B.RETL_PRC
+                    END AS RETL_PRC
+                    ,CASE WHEN B.STD_PRC_CD IS NULL THEN C.LAST_GR_AMT
+                    ELSE B.WHSL_PRC
+                    END AS WHSL_PRC
+                    ,CASE WHEN B.STD_PRC_CD IS NULL THEN C.LAST_GR_AMT
+                    ELSE B.INC_PRC
+                    END AS INC_PRC
+                    ,NVL(B.GRTE_PRC,0) AS GRTE_PRC
+                    ,C.ABC_IND
+                    ,C.CARLINE_CD
+                    ,C.PURC_LEAD_HM
+                    ,C.ITEM_DSTIN_CD
+                    ,A.STRGE_CD AS GI_STRGE_CD
+                    ,A.STRGE_CD AS GR_STRGE_CD
+                    ,NVL(A.AVLB_STOCK_QTY,0) + NVL(A.RESV_STOCK_QTY,0) - NVL(A.BORROW_QTY,0) + NVL(A.RENT_QTY,0) AS STOCK_QTY
+                    ,NVL(A.AVLB_STOCK_QTY,0) AS AVLB_STOCK_QTY
+                    ,NVL(A.BORROW_QTY,0) AS BORROW_QTY
+                    ,NVL(A.RENT_QTY,0) AS RENT_QTY
+                    ,NVL(A.CLAM_STOCK_QTY,0) AS CLAM_STOCK_QTY
+                    ,NVL(A.RESV_STOCK_QTY,0) AS RESV_STOCK_QTY
+                    ,NVL(D.MOVING_AVG_PRC, C.MOVING_AVG_PRC) AS MOVING_AVG_PRC
+                    ,F.LOC_CD
+                    ,F.LOC_NM
+                    ,G.BP_TP
+                    ,G.BP_CD
+                    ,G.BP_NM
+                    ,H.REMARK
+                FROM PT_0204T H
+                LEFT JOIN PT_0301T A ON H.DLR_CD = A.DLR_CD AND H.COM_ITEM_CD = A.ITEM_CD
+                INNER JOIN PT_0214T B ON A.DLR_CD = B.DLR_CD AND A.STRGE_CD = B.STRGE_CD AND A.ITEM_CD = B.ITEM_CD
+                LEFT JOIN PT_0201T C ON A.DLR_CD = C.DLR_CD AND A.ITEM_CD = C.ITEM_CD
+                LEFT JOIN PT_0208T D ON A.DLR_CD = D.DLR_CD AND A.STRGE_CD = D.STRGE_CD AND A.ITEM_CD = D.ITEM_CD
+                LEFT JOIN CM_0104T E ON A.DLR_CD = E.DLR_CD AND A.STRGE_CD = E.STRGE_CD
+                LEFT JOIN PT_0224T F ON A.DLR_CD = F.DLR_CD AND A.STRGE_CD = F.STRGE_CD AND A.ITEM_CD = F.ITEM_CD  AND F.LOC_CD != ''
+                LEFT JOIN PT_0211T G ON G.DLR_CD = C.DLR_CD AND G.BP_CD = C.BP_CD AND G.END_YN != 'Y'
+                WHERE A.DLR_CD = #{sDlrCd}
+                <if test='sItemCd != null and sItemCd != ""'>
+                    AND H.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                </if>
+                <if test='sItemNm != null and sItemNm != ""'>
+                    AND C.ITEM_NM LIKE '%'||#{sItemNm}||'%'
+                </if>
+                <if test='sAbcInd != null and sAbcInd != ""'>
+                    AND C.ABC_IND = #{sAbcInd}
+                </if>
+                <if test='sCarlineCd != null and sCarlineCd != ""'>
+                    AND C.CARLINE_CD = #{sCarlineCd}
+                </if>
+                <if test='sCarlineCd2 != null and sCarlineCd2 != ""'>
+                    AND C.CARLINE_CD2 = #{sCarlineCd2}
+                </if>
+                <if test='sItemDstinCd == null or sItemDstinCd == ""'>
+                    AND C.ITEM_DSTIN_CD in ('02','05')
+                </if>
+                <if test='sItemDstinCd != null and sItemDstinCd != ""'>
+                    AND C.ITEM_DSTIN_CD = #{sItemDstinCd}
+                </if>
+                <if test='sGrStrgeCd != null and sGrStrgeCd != ""'>
+                    AND A.STRGE_CD = #{sGrStrgeCd}
+                </if>
+                <if test='sAvlbStockQtyZeroYn == null or sAvlbStockQtyZeroYn != "N"'>
+                    AND A.AVLB_STOCK_QTY <![CDATA[>]]> 0
+                </if>
+                <if test='sBpTp != null and sBpTp != ""'>
+                    <choose>
+                        <when test='sBpTp == "01"'>
+                             AND G.BP_TP = NVL(#{sBpTp},'03')
+                        </when>
+                        <otherwise>
+                             AND NVL(G.BP_TP,'03') != '01'
+                        </otherwise>
+                    </choose>
+                </if>
+                <if test='sPageTp != null and sPageTp != ""'>
+                    <choose>
+                        <when test='@org.apache.commons.lang3.StringUtils@contains(sPageTp,"IN")'>
+                             AND E.STRGE_TP IN ('09','10')--페인트,보조부품 창고유형 만
+                        </when>
+                        <otherwise>
+                             AND E.STRGE_TP = #{sPageTp}
+                        </otherwise>
+                    </choose>
+                </if>
+                AND (C.END_YN != 'Y' OR (C.END_YN = 'Y' AND A.AVLB_STOCK_QTY <![CDATA[>]]> 0))
+                AND A.STRGE_CD IS NOT NULL<!-- 재고 창고 있는 부품  -->
+                AND C.ITEM_DSTIN_CD != '20'<!-- 부품구분(판매용품) 제외 -->
+            ) T1
+            ORDER BY
+            <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "stockQty"'>T1.STOCK_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "avlbStockQty"'>T1.AVLB_STOCK_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            T1.DLR_CD ASC ,T1.ITEM_CD ASC
+                        </otherwise>
+                    </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                    T1.DLR_CD ASC ,T1.ITEM_CD ASC
+                </otherwise>
+            </choose>
+            )
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    RNUM <![CDATA[>]]> #{firstIndex} AND ROWNUM <![CDATA[<=]]> #{recordCountPerPage}
+                </if>
+            </where>
+    </select>
+
+    <!-- 공용부품마스터 정보를 등록한다. -->
+    <insert id="insertComItemCd" parameterType="comItemMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ComItemMasterDao.insertComItemCd] */
+        INSERT INTO DMSDB.PT_0204T
+            (
+               DLR_CD
+              ,ITEM_CD
+              ,COM_ITEM_CD
+              ,REMARK
+              ,REG_USR_ID
+              ,REG_DT
+             )
+             VALUES
+             (
+               #{dlrCd}
+              ,#{itemCd}
+              ,#{comItemCd}
+              ,#{remark}
+              ,#{regUsrId}
+              ,SYSDATE
+             )
+    </insert>
+
+    <!-- 공용부품마스터 정보를 수정한다. -->
+    <update id="updateComItemCd" parameterType="comItemMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ComItemMasterDao.updateComItemCd] */
+        UPDATE DMSDB.PT_0204T
+           SET REMARK      = #{remark}
+              ,UPDT_USR_ID = #{updtUsrId}
+              ,UPDT_DT     = SYSDATE
+         WHERE DLR_CD      = #{dlrCd}
+           AND ITEM_CD     = #{itemCd}
+           AND COM_ITEM_CD = #{comItemCd}
+    </update>
+
+    <!-- 공용부품마스터 정보를 삭제한다. -->
+    <delete id="deleteComItemCd" parameterType="comItemMasterVO">
+        /* [chn.bhmc.dms.par.pmm.service.dao.ComItemMasterDao.deleteComItemCd] */
+        DELETE FROM DMSDB.PT_0204T
+           WHERE DLR_CD      = #{dlrCd}
+             AND ITEM_CD     = #{itemCd}
+             AND COM_ITEM_CD = #{comItemCd}
+
+    </delete>
+</mapper>

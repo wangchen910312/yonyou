@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : BatSatisFactionManageDAO_SqlMap.xml
+    Description : 배치작업에 관한 데이터처리
+    author Kim Hyun Ho
+    since 2016. 06. 22.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 06. 22.     Kim Hyun Ho     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.bat.crm.css.service.dao.BatSatisFactionManageDAO">
+
+    <!-- 맴버십 포인트를 소멸하고 이력에 입력. -->
+    <select id="stsfScheduleCondition" parameterType="BatSatisFactionManageSearchVO" resultType="BatSatisFactionManageVO">
+    /* [chn.bhmc.dms.bat.crm.css.service.dao.BatSatisFactionManageDAO.stsfScheduleCondition] */
+        SELECT  DLR_CD
+                ,SEQ
+                ,RCPE_EXTR_SEQ
+                ,SUBY_TMPL_SEQ
+                ,STSF_IVST_MTH_CD
+                ,STSF_IVST_EXPD_CD
+                ,STSF_IVST_TP_CD
+                ,CUST_EXTR_CYCLE_CONT
+                ,CUST_EXTR_CYCLE_TP
+        FROM    CR_0901T
+        WHERE   DLR_CD = #{sDlrCd}
+        AND     USE_YN = #{sUseYn}
+        AND     CUST_EXTR_AUTO_YN = #{sCustExtrAutoYn}
+        AND (
+              (
+                CUST_EXTR_CYCLE_TP = 'W' AND CUST_EXTR_CYCLE_CONT LIKE '%'||UPPER(to_char(#{sCurruntDt}, 'dy','NLS_DATE_LANGUAGE=ENGLISH'))||'%'
+              ) OR (
+                CUST_EXTR_CYCLE_TP = 'S' AND CUST_EXTR_CYCLE_CONT LIKE '%'||to_char(#{sCurruntDt}, 'YYYYMMDD')||'%'
+              ) OR (
+                CUST_EXTR_CYCLE_TP = 'D'
+              )
+        )
+    </select>
+
+    <!-- 대상자 정보 목록을 조회한다. -->
+     <select id="selectTargetExtractSaveExcel" statementType="CALLABLE" parameterType="BatSatisFactionManageVO">
+     /* [chn.bhmc.dms.bat.crm.css.service.dao.BatSatisFactionManageDAO.selectTargetExtractSaveExcel] */
+         { call SP_CRM_TARG_EXTRACT (
+           #{dlrCd, mode=IN, jdbcType=VARCHAR}
+         , #{custExtrTermNo, mode=IN, jdbcType=VARCHAR}
+         , #{regUsrId, mode=IN, jdbcType=VARCHAR}
+         , #{updtUsrId, mode=IN, jdbcType=VARCHAR}
+         , #{result, mode=OUT, jdbcType=VARCHAR}
+         , #{seq, mode=OUT, jdbcType=VARCHAR}
+         ) }
+    </select>
+
+    <!-- 추출한 대상자를 등록 한다. -->
+    <insert id="insertSatisFactionManageTargExtUsr" parameterType="BatSatisFactionManageVO">
+    /* [chn.bhmc.dms.bat.crm.css.service.dao.BatSatisFactionManageDAO.insertSatisFactionManageTargExtUsr] */
+        INSERT INTO CR_0905T    --만족도설문결과
+        (
+            DLR_CD                      --딜러코드
+            ,STSF_IVST_RSLT_SEQ         --만족도조사결과일련번호
+            ,STSF_IVST_SEQ              --만족도조사일련번호
+            ,SUBY_TMPL_SEQ              --설문템플릿일련번호
+            ,CUST_NO                    --고객번호
+            ,STSF_IVST_SCORE_VAL        --만족도조사점수값
+            ,STSF_IVST_DT               --만족도조사일자
+            ,STSF_IVST_EMP_ID           --만족도조사사원ID
+            ,DEL_YN                     --삭제여부
+            ,EMP_ID                     --사원설문ID
+            ,CMPL_REASON_CONT           --불만사유내용
+            ,REG_USR_ID                 --등록자ID
+            ,REG_DT                     --등록일자
+            ,CUST_EXTR_TERM_NO          --고객추출조건번호
+            ,HP_NO
+            ,TEL_NO
+            ,WECHAT_ID
+            ,EMAIL_NM
+            ,SUNG_NM
+            ,CITY_NM
+            ,DIST_NM
+            ,ZIP_CD
+            ,ADDR_NM
+            ,ADDR_DETL_CONT
+            ,CUST_NM
+        )
+        SELECT  B.DLR_CD
+                ,SEQ_CR_0905T.NEXTVAL
+                ,#{stsfIvstSeq} --만족도조사일련번호
+                ,#{subyTmplSeq} --설문템플릿일련번호
+                ,B.CUST_NO
+                ,NULL --만족도조사 점수값
+                ,NULL --만족도조사일자
+                ,NULL -- 만족도조사사원ID
+                ,'N' -- 삭제여부
+                ,NULL --사원설문ID
+                ,NULL --불만사유내용
+                ,#{regUsrId}--등록자
+                ,SYSDATE--등록일자
+                ,#{custExtrTermNo} --고객추출조건번호
+                ,C.HP_NO
+                ,C.TEL_NO
+                ,C.WECHAT_ID
+                ,C.EMAIL_NM
+                ,ADDR.SUNG_NM
+                ,ADDR.CITY_NM
+                ,ADDR.DIST_NM
+                ,ADDR.ZIP_CD
+                ,ADDR.SUNG_NM || ' ' || ADDR.CITY_NM || ' ' || ADDR.DIST_NM AS ADDR_NM
+                ,ADDR.ADDR_DETL_CONT
+                ,C.CUST_NM
+        FROM    CR_1003T B
+                INNER JOIN CR_0101T C ON B.DLR_CD = C.DLR_CD AND B.CUST_NO = C.CUST_NO
+                LEFT OUTER JOIN CR_0116T ADDR ON C.CUST_NO = ADDR.REF_KEY_NM AND C.DLR_CD = ADDR.DLR_CD AND ADDR.REF_TABLE_NM = 'CR_0101T' AND FLAG_YN = 'Y'
+        WHERE   B.DLR_CD = #{dlrCd}
+        AND     B.SEQ = #{seq}
+    </insert>
+
+    <!-- 대상자 정보를 콜센터로 전송한다. -->
+    <select id="selectCallCenterSends" statementType="CALLABLE" parameterType="BatSatisFactionManageVO">
+    /* [chn.bhmc.dms.bat.crm.css.service.dao.BatSatisFactionManageDAO.selectCallCenterSends] */
+         {call SP_CRM_CALLCENTER_SEND (
+           #{dlrCd, mode=IN, jdbcType=VARCHAR}
+         , #{custExtrTermNo, mode=IN, jdbcType=VARCHAR}
+         , #{refKeyNm, mode=IN, jdbcType=VARCHAR}
+         , #{extrDgreCnt, mode=IN, jdbcType=VARCHAR}
+         , #{bizCd, mode=IN, jdbcType=VARCHAR}
+         , #{regUsrId, mode=IN, jdbcType=VARCHAR}
+         , #{updtUsrId, mode=IN, jdbcType=VARCHAR}
+         , #{result, mode=OUT, jdbcType=VARCHAR}
+         )}
+
+    </select>
+
+    <!-- TEMP01 대상자 정보를 삭제한다. -->
+    <delete id="deleteTemp01" parameterType="BatSatisFactionManageSearchVO" >
+        /* [chn.bhmc.dms.bat.crm.css.service.dao.BatSatisFactionManageDAO.deleteTemp01] */
+        DELETE FROM CR_1003T    --대상자 TEMP01
+        WHERE 1 = 1
+        AND DLR_CD          = #{sDlrCd}                    --딜러코드
+        AND SEQ             = #{sSeq}                      --시퀀스
+    </delete>
+
+    <!-- TEMP02 대상자 정보를 삭제한다. -->
+    <delete id="deleteTemp02" parameterType="BatSatisFactionManageSearchVO" >
+        /* [chn.bhmc.dms.bat.crm.css.service.dao.BatSatisFactionManageDAO.deleteTemp02] */
+        DELETE FROM CR_1004T    --대상자 TEMP02
+        WHERE 1 = 1
+        AND DLR_CD          = #{sDlrCd}                    --딜러코드
+        AND SEQ             = #{sSeq}                      --시퀀스
+    </delete>
+
+    <update id="updateLastExtrDt" parameterType="BatSatisFactionManageVO">
+    /* [chn.bhmc.dms.bat.crm.css.service.dao.BatSatisFactionManageDAO.updateLastExtrDt] */
+        UPDATE  CR_0901T    --만족도마스터
+        SET     LAST_EXTR_DT = SYSDATE               --마지막 추출일
+        WHERE   DLR_CD             = #{dlrCd}                      --딜러코드
+        AND     SEQ                = #{stsfIvstSeq}                      --만족도 조사 일련번호
+    </update>
+
+</mapper>

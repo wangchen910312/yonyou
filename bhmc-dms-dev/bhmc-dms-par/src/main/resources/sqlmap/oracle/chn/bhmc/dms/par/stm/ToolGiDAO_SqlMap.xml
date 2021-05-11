@@ -1,0 +1,912 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : ToolGiDAO_SqlMap.xml
+    Description : 공구출고 관리.
+    author Ju Won Lee
+    since 2016. 2. 23.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 02. 23.     Ju Won Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.par.stm.service.dao.ToolGiDAO">
+
+    <!-- 공구출고 헤더 정보를 추가한다. -->
+    <insert id="insertToolGi" parameterType="ToolGiVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.insertToolGi] */
+        INSERT INTO DMSDB.PT_0811T    --공구출고문서헤더정보
+        (
+          DLR_CD               --딜러코드
+         ,TOOL_GI_DOC_NO       --공구출고문서번호
+         ,STAT_CD              --상태코드
+         ,TOOL_GI_TP           --공구출고유형
+         ,RO_DOC_NO            --RO번호
+         ,REMARK               --비고
+         ,REG_USR_ID           --등록자ID
+         ,REG_DT               --등록일자
+         ,UPDT_USR_ID          --수정자ID
+         ,UPDT_DT              --수정일자
+        )
+        VALUES
+        (
+          #{dlrCd}               --딜러코드
+         ,#{toolGiDocNo}         --공구출고문서번호
+         ,#{statCd}              --상태코드
+         ,#{toolGiTp}            --공구출고유형
+         ,#{roDocNo}             --RO번호
+         ,#{remark}              --비고
+         ,#{regUsrId}            --등록자ID
+         ,sysdate                --등록일자
+         ,#{regUsrId}            --등록자ID
+         ,sysdate                --등록일자
+        )
+    </insert>
+
+    <!-- 공구출고  부품 정보를 추가한다. -->
+    <insert id="insertToolGiItem" parameterType="ToolGiItemVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.insertToolGiItem] */
+        INSERT INTO DMSDB.PT_0812T    --공구출고문서품목정보
+        (
+          DLR_CD                    --딜러코드
+         ,TOOL_GI_DOC_NO             --공구출고문서번호
+         ,TOOL_GI_DOC_LINE_NO        --공구출고문서라인번호
+         ,CANC_YN                   --취소여부
+         ,ITEM_CD                   --품목코드
+         ,QTY                       --수량
+         ,UNIT_CD                   --단위코드
+         ,STRGE_CD                  --창고코드
+         ,LOC_CD                    --위치코드
+         ,PRC                       --단가
+         ,AMT                       --금액
+         ,TAX_DDCT_PRC              --세금공제단가
+         ,TAX_DDCT_AMT              --세금공제금액
+         ,TECH_ID                   --수리공ID
+         ,GI_PRSN_ID                --담당자ID
+         ,GI_DT                     --출고일자
+         ,RETURN_PRSN_ID            --반환자ID
+         ,RETURN_DT                 --반환일자
+         ,REF_DOC_NO                --참조번호
+         ,REF_DOC_LINE_NO           --참조라인번호
+         ,REMARK                    --비고
+         ,REG_USR_ID                --등록자ID
+         ,REG_DT                    --등록일자
+        )
+        VALUES
+        (
+          #{dlrCd}                    --딜러코드
+         ,#{toolGiDocNo}              --공구출고문서번호
+         ,#{toolGiDocLineNo}          --공구출고문서라인번호
+         ,'N'                         --취소여부
+         ,#{itemCd}                   --품목코드
+         <choose>
+             <when test='refDocNo != null'>
+              ,#{returnQty}                      --수량
+             </when>
+             <otherwise>
+               ,#{qty}                            --수량
+             </otherwise>
+         </choose>
+         ,#{unitCd}                   --단위코드
+         ,#{strgeCd}                  --창고코드
+         ,#{locCd}                    --위치코드
+         ,nvl(round(#{prc},2),0)               --단가
+         ,nvl(round(#{amt},2),0)               --금액
+         ,nvl(round(#{taxDdctPrc},2),0)        --세금공제단가
+         ,nvl(round(#{taxDdctAmt},2),0)        --세금공제금액
+         ,#{techId}                   --수리공ID
+         ,#{giPrsnId}                 --출고담당자ID
+         <choose>
+             <when test='refDocNo != null'>
+               ,null                     --출고일
+             </when>
+             <otherwise>
+              ,sysdate                     --출고일
+             </otherwise>
+         </choose>
+         ,#{returnPrsnId}             --반환담당자ID
+         <choose>
+             <when test='refDocNo != null'>
+               ,sysdate                     --반환일
+             </when>
+             <otherwise>
+              ,null                     --반환일
+             </otherwise>
+         </choose>
+         ,#{refDocNo}                 --참조번호
+         ,#{refDocLineNo}             --참조라인번호
+         ,#{remark}                   --비고
+         ,#{regUsrId}                 --등록자ID
+         ,sysdate                     --등록일자
+        )
+    </insert>
+
+     <!-- 공구출고  상태 정보를 수정한다. -->
+    <update id="updateToolGiStat" parameterType="ToolGiVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.updateToolGiStat] */
+       UPDATE DMSDB.PT_0811T    --공구출고문서헤더정보
+          SET  STAT_CD       = #{statCd}              --상태
+              ,UPDT_USR_ID   = #{regUsrId}           --수정자ID
+              ,UPDT_DT       = sysdate                --수정일자
+         WHERE DLR_CD               = #{dlrCd}               --딜러코드
+           AND TOOL_GI_DOC_NO       = #{refDocNo}          --공구출고문서번호
+    </update>
+
+     <!-- 공구출고  취소처리한다. -->
+    <update id="updateToolGiCancel" parameterType="ToolGiVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.updateToolGiCancel] */
+       UPDATE DMSDB.PT_0811T    --공구출고문서헤더정보
+          SET  STAT_CD       = #{statCd}              --상태
+              ,UPDT_USR_ID   = #{regUsrId}           --수정자ID
+              ,UPDT_DT       = sysdate                --수정일자
+         WHERE DLR_CD               = #{dlrCd}               --딜러코드
+           AND TOOL_GI_DOC_NO       = #{toolGiDocNo}          --공구출고문서번호
+    </update>
+
+     <!-- 공구출고 품목 반품 시 원 출고 정보를 수정한다. -->
+    <update id="updateToolGiItemReturn" parameterType="ToolGiItemVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.updateToolGiItemReturn] */
+       UPDATE DMSDB.PT_0812T    --공구출고문서헤더정보
+          SET  UPDT_USR_ID   = #{regUsrId}           --수정자ID
+              ,UPDT_DT       = sysdate                --수정일자
+         WHERE DLR_CD               = #{dlrCd}               --딜러코드
+           AND TOOL_GI_DOC_NO       = #{refDocNo}          --공구출고문서번호
+           AND TOOL_GI_DOC_LINE_NO  = #{refDocLineNo}        --공구출고라인번호
+    </update>
+
+     <!-- 공구출고 헤더 정보를 수정한다. -->
+    <update id="updateToolGi" parameterType="ToolGiVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.updateToolGi] */
+        UPDATE DMSDB.PT_0811T    --공구출고문서정보
+          SET  STAT_CD        = #{statCd}              --상태
+              ,REMARK         = #{remark}              --비고
+              ,UPDT_USR_ID    = #{updtUsrId}           --수정자ID
+              ,UPDT_DT        = sysdate                --수정일자
+         WHERE DLR_CD        = #{dlrCd}               --딜러코드
+           AND TOOL_GI_DOC_NO = #{toolGiDocNo}          --공구출고문서번호
+    </update>
+
+    <!-- 공구출고 부품 정보를 수정한다. -->
+    <update id="updateToolGiItem" parameterType="ToolGiItemVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.updateToolGiItem] */
+        UPDATE DMSDB.PT_0812T    --공구출고품목정보
+          SET  PRC                 = round(#{prc},2)            --가격
+              ,TAX_DDCT_PRC        = round(#{taxDdctPrc},2)     --세금공제단가
+              ,AMT                 = round(#{amt},2)            --금액
+              ,TAX_DDCT_AMT        = round(#{taxDdctAmt},2)     --세금공제금액
+              ,QTY                 = #{qty}                     --수량
+              ,STRGE_CD            = #{strgeCd}                 --출고창고
+              ,LOC_CD              = #{locCd}                   --출고로케이션
+              ,TECH_ID             = #{techId}                  --수리공ID
+              ,GI_PRSN_ID          = #{giPrsnId}                --출고담당자ID
+              ,REMARK              = #{remark}              --비고
+              ,UPDT_USR_ID         = #{regUsrId}                --수정자ID
+              ,UPDT_DT             = sysdate                    --수정일자
+         WHERE DLR_CD              = #{dlrCd}                   --딜러코드
+           AND TOOL_GI_DOC_NO       = #{toolGiDocNo}              --공구출고번호
+           AND TOOL_GI_DOC_LINE_NO  = #{toolGiDocLineNo}        --공구출고라인번호
+    </update>
+
+    <!-- 공구폐기 부품 정보의 수불 정보를 반영한다. -->
+    <update id="updateToolGiItemMvtInfo" parameterType="ToolGiItemVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.updateToolGiItemMvtInfo] */
+        UPDATE DMSDB.PT_0812T    --공구출고품목정보
+          SET  MVT_DOC_YY_MM       = #{mvtDocYyMm}               --수불문서년월
+              ,MVT_DOC_NO          = #{mvtDocNo}                 --수불문서번호
+              ,MVT_DOC_LINE_NO     = #{mvtDocLineNo}             --수불문서라인번호
+              ,UPDT_USR_ID         = #{regUsrId}                 --수정자ID
+              ,UPDT_DT             = sysdate                     --수정일자
+         WHERE DLR_CD              = #{dlrCd}                   --딜러코드
+           AND TOOL_GI_DOC_NO       = #{toolGiDocNo}              --공구출고번호
+           AND TOOL_GI_DOC_LINE_NO  = #{toolGiDocLineNo}        --공구출고라인번호
+    </update>
+
+    <!-- 공구폐기 정보의 수불 정보를 반영한다. -->
+    <update id="updateToolGiMvtInfo" parameterType="ToolGiVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.updateToolGiMvtInfo] */
+        UPDATE DMSDB.PT_0811T    --공구출고품목정보
+          SET  MVT_DOC_YY_MM       = #{mvtDocYyMm}               --수불문서년월
+              ,MVT_DOC_NO          = #{mvtDocNo}                 --수불문서번호
+              ,UPDT_USR_ID         = #{regUsrId}                 --수정자ID
+              ,UPDT_DT             = sysdate                     --수정일자
+         WHERE DLR_CD              = #{dlrCd}                   --딜러코드
+           AND TOOL_GI_DOC_NO      = #{toolGiDocNo}              --공구출고번호
+    </update>
+
+    <!-- 공구출고 반환 부품 정보를 수정한다. -->
+    <update id="updateReturnToolGiItem" parameterType="ToolGiItemVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.updateReturnToolGiItem] */
+        UPDATE DMSDB.PT_0812T    --공구출고품목정보
+          SET  PRC                 = round(#{prc},2)                     --가격
+              ,TAX_DDCT_PRC        = round(#{taxDdctPrc},2)              --세금공제단가
+              ,AMT                 = round(#{amt},2)                     --금액
+              ,TAX_DDCT_AMT        = round(#{taxDdctAmt},2)              --세금공제금액
+              ,QTY                 = #{qty}                     --수량
+              ,RETURN_PRSN_ID      = #{returnPrsnId}            --반환담당자ID
+              ,REMARK              = #{remark}              --비고
+              ,UPDT_USR_ID         = #{regUsrId}                --수정자ID
+              ,UPDT_DT             = sysdate                    --수정일자
+         WHERE DLR_CD              = #{dlrCd}                   --딜러코드
+           AND TOOL_GI_DOC_NO       = #{toolGiDocNo}              --공구출고번호
+           AND TOOL_GI_DOC_LINE_NO  = #{toolGiDocLineNo}        --공구출고라인번호
+    </update>
+
+     <!-- 공구출고 부품 정보를 삭제한다. -->
+    <update id="deleteToolGiItem" parameterType="ToolGiItemVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.deleteToolGiItem] */
+        UPDATE DMSDB.PT_0812T    --공구출고품목정보
+          SET  CANC_YN             = 'Y'                        --취소여부
+              ,UPDT_USR_ID         = #{regUsrId}                 --수정자ID
+              ,UPDT_DT             = sysdate                     --수정일자
+         WHERE DLR_CD              = #{dlrCd}                    --딜러코드
+           AND TOOL_GI_DOC_NO      = #{toolGiDocNo}               --공구출고번호
+           AND TOOL_GI_DOC_LINE_NO = #{toolGiDocLineNo}         --공구출고라인번호
+           AND CANC_YN            != 'Y'
+    </update>
+
+    <!-- 공구출고 헤더 정보를 조회한다. -->
+    <select id="selectToolGiByKey" parameterType="ToolGiSearchVO" resultType="ToolGiVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.selectToolGiByKey] */
+         SELECT
+                A.DLR_CD                    --딜러코드
+               ,A.TOOL_GI_DOC_NO            --공구출고번호
+               ,A.STAT_CD                   --상태코드
+               ,A.REG_DT                    --일자
+               ,A.TOOL_GI_TP                --공구출고유형
+               ,B.TECH_ID                   --수리공
+               ,C.TEC_NM AS TECH_NM                   --수리공명
+               ,B.GI_PRSN_ID AS PRSN_ID     --담당자
+               ,D.USR_NM AS PRSN_NM         --담당자명
+               ,A.REMARK                    --비고
+               ,A.RO_DOC_NO                    --비고
+               ,A.MVT_DOC_NO
+               ,A.MVT_DOC_YY_MM
+               ,TO_CHAR(NVL(A.UPDT_DT,A.REG_DT), 'YYYYMMDDHH24MISS') AS UPDT_DT_STR
+          FROM DMSDB.PT_0811T A    --공구출고헤더정보
+               INNER JOIN (
+                 SELECT    DLR_CD
+                          ,TOOL_GI_DOC_NO
+                          ,MAX(TECH_ID) AS TECH_ID
+                          ,MAX(GI_PRSN_ID) AS GI_PRSN_ID
+                          ,MAX(GI_DT) AS GI_DT
+                   FROM    DMSDB.PT_0812T
+                  GROUP BY DLR_CD, TOOL_GI_DOC_NO
+                  ) B
+                  ON A.DLR_CD = B.DLR_CD
+                 AND A.TOOL_GI_DOC_NO = B.TOOL_GI_DOC_NO
+               LEFT OUTER JOIN DMSDB.SE_1026T C
+                       ON A.DLR_CD   = C.DLR_CD
+                      AND B.TECH_ID  = C.TEC_ID
+               LEFT OUTER JOIN DMSDB.CM_0801T D
+                       ON A.DLR_CD      = D.DLR_CD
+                      AND B.GI_PRSN_ID  = D.USR_ID
+                      AND D.DEL_YN     != 'Y'
+         WHERE A.DLR_CD             = #{sDlrCd}
+           AND A.TOOL_GI_DOC_NO     = #{sToolGiDocNo}
+
+    </select>
+
+    <!-- 검색 품목리스트를 조회한다. -->
+    <select id="selectSearchToolItemByCondition" resultType="ToolGiItemVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.selectSearchToolItemByCondition] */
+     SELECT   RNUM
+             ,DLR_CD
+             ,ITEM_CD
+             ,ITEM_NM
+             ,BP_CD
+             ,BP_NM
+             ,STOCK_QTY
+             ,GI_QTY
+             ,RETURN_QTY
+             ,DISUSE_QTY
+       FROM
+     (
+      SELECT  ROWNUM AS RNUM
+             ,T1.DLR_CD
+             ,T1.ITEM_CD
+             ,T1.ITEM_NM
+             ,T1.BP_CD
+             ,T1.BP_NM
+             ,T1.STOCK_QTY
+             ,T1.GI_QTY
+             ,T1.RETURN_QTY
+             ,T1.DISUSE_QTY
+       FROM
+       (
+            SELECT    A.DLR_CD
+                     ,A.ITEM_CD
+                     ,A.ITEM_NM
+                     ,A.BP_CD
+                     ,E.BP_NM
+                     ,NVL(C.AVLB_STOCK_QTY, 0) AS STOCK_QTY
+                     ,D.GI_QTY
+                     ,D.RETURN_QTY
+                     ,D.DISUSE_QTY
+              FROM   PT_0201T A
+                     LEFT OUTER JOIN PT_0101T B
+                       ON A.DLR_CD        = B.DLR_CD
+                      AND A.ITEM_DSTIN_CD = B.ITEM_DSTIN_CD
+                      AND A.ITEM_GRP_CD   = B.ITEM_GRP_CD
+                      AND B.USE_YN = 'Y'
+                     LEFT OUTER JOIN PT_0301T C
+                       ON A.DLR_CD      = C.DLR_CD
+                      AND A.GR_STRGE_CD = C.STRGE_CD
+                      AND A.ITEM_CD     = C.ITEM_CD
+                     LEFT OUTER JOIN (  SELECT   T.DLR_CD
+                                                ,T.ITEM_CD
+                                                ,SUM(T.GI_QTY) AS GI_QTY
+                                                ,SUM(T.RETURN_QTY) AS RETURN_QTY
+                                                ,SUM(T.DISUSE_QTY) AS DISUSE_QTY
+                                          FROM (
+                                                    SELECT   HD.DLR_CD
+                                                            ,DT.ITEM_CD
+                                                            ,CASE WHEN HD.TOOL_GI_TP = 'GI' THEN DT.QTY ELSE 0 END GI_QTY
+                                                            ,CASE WHEN HD.TOOL_GI_TP = 'RT' THEN DT.QTY ELSE 0 END RETURN_QTY
+                                                            ,CASE WHEN HD.TOOL_GI_TP = '65' THEN DT.QTY ELSE 0 END DISUSE_QTY
+                                                      FROM   DMSDB.PT_0811T HD
+                                                             INNER JOIN DMSDB.PT_0812T DT
+                                                                ON HD.DLR_CD         = DT.DLR_CD
+                                                               AND HD.TOOL_GI_DOC_NO = DT.TOOL_GI_DOC_NO
+                                                     WHERE   DT.CANC_YN != 'Y'
+                                                ) T
+                                         GROUP BY T.DLR_CD, T.ITEM_CD
+                                       ) D
+                       ON A.DLR_CD      = D.DLR_CD
+                      AND A.ITEM_CD     = D.ITEM_CD
+                     LEFT OUTER JOIN PT_0211T E
+                       ON A.DLR_CD = E.DLR_CD
+                      AND A.BP_CD  = E.BP_CD
+                      AND E.END_YN != 'Y'
+             WHERE   A.DLR_CD  = #{sDlrCd}
+             <if test='sItemCd != null and sItemCd != ""'>
+                AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+             </if>
+             <if test='sItemNm != null and sItemNm != ""'>
+                AND A.ITEM_NM LIKE '%'||#{sItemNm}||'%'
+             </if>
+                AND A.ITEM_DSTIN_CD = '07'
+                AND A.END_YN  != 'Y'
+             <if test='sBpCd != null and sBpCd != ""'>
+                AND A.BP_CD = #{sBpCd}
+             </if>
+             ORDER BY
+             <choose>
+                 <when test='sort != null'>
+                     <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                         <choose>
+                             <when test='item.field == "itemCd"'>ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <when test='item.field == "itemNm"'>ITEM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                             <otherwise>
+                             DLR_CD ASC ,ITEM_CD ASC
+                             </otherwise>
+                         </choose>
+                     </foreach>
+                 </when>
+                 <otherwise>
+                 DLR_CD ASC, ITEM_CD ASC
+                 </otherwise>
+             </choose>
+           ) T1
+       <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                ROWNUM <![CDATA[<=]]> #{lastIndex}
+            </if>
+       </where>
+     )
+     <where>
+        <if test='firstIndex != -1 and lastIndex != -1'>
+            RNUM > #{firstIndex}
+        </if>
+     </where>
+    </select>
+
+    <!-- 검색 품목리스트를 Count한다. -->
+    <select id="selectSearchToolItemByConditionCnt" resultType="int">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.selectSearchToolItemByConditionCnt] */
+            SELECT   COUNT(*)
+              FROM   PT_0201T A
+                     LEFT OUTER JOIN PT_0101T B
+                       ON A.DLR_CD        = B.DLR_CD
+                      AND A.ITEM_DSTIN_CD = B.ITEM_DSTIN_CD
+                      AND A.ITEM_GRP_CD   = B.ITEM_GRP_CD
+                      AND B.USE_YN = 'Y'
+                     LEFT OUTER JOIN PT_0301T C
+                       ON A.DLR_CD      = C.DLR_CD
+                      AND A.GR_STRGE_CD = C.STRGE_CD
+                      AND A.ITEM_CD     = C.ITEM_CD
+                     LEFT OUTER JOIN (  SELECT   T.DLR_CD
+                                                ,T.ITEM_CD
+                                                ,SUM(T.GI_QTY) AS GI_QTY
+                                                ,SUM(T.RETURN_QTY) AS RETURN_QTY
+                                                ,SUM(T.DISUSE_QTY) AS DISUSE_QTY
+                                          FROM (
+                                                    SELECT   HD.DLR_CD
+                                                            ,DT.ITEM_CD
+                                                            ,CASE WHEN HD.TOOL_GI_TP = 'GI' THEN DT.QTY ELSE 0 END GI_QTY
+                                                            ,CASE WHEN HD.TOOL_GI_TP = 'RT' THEN DT.QTY ELSE 0 END RETURN_QTY
+                                                            ,CASE WHEN HD.TOOL_GI_TP = '65' THEN DT.QTY ELSE 0 END DISUSE_QTY
+                                                      FROM   DMSDB.PT_0811T HD
+                                                             INNER JOIN DMSDB.PT_0812T DT
+                                                                ON HD.DLR_CD         = DT.DLR_CD
+                                                               AND HD.TOOL_GI_DOC_NO = DT.TOOL_GI_DOC_NO
+                                                     WHERE   DT.CANC_YN != 'Y'
+                                                ) T
+                                         GROUP BY T.DLR_CD, T.ITEM_CD
+                                       ) D
+                       ON A.DLR_CD      = D.DLR_CD
+                      AND A.ITEM_CD     = D.ITEM_CD
+                     LEFT OUTER JOIN PT_0211T E
+                       ON A.DLR_CD = E.DLR_CD
+                      AND A.BP_CD  = E.BP_CD
+                      AND E.END_YN != 'Y'
+             WHERE   A.DLR_CD  = #{sDlrCd}
+             <if test='sItemCd != null and sItemCd != ""'>
+                AND A.ITEM_CD LIKE '%'||#{sItemCd}||'%'
+             </if>
+             <if test='sItemNm != null and sItemNm != ""'>
+                AND A.ITEM_NM LIKE '%'||#{sItemNm}||'%'
+             </if>
+                AND A.ITEM_DSTIN_CD = '07'
+                AND A.END_YN       != 'Y'
+             <if test='sBpCd != null and sBpCd != ""'>
+                AND A.BP_CD = #{sBpCd}
+             </if>
+    </select>
+
+    <!-- 공구출고 현황 부품 정보를 조회한다. -->
+    <select id="selectToolGiItemListByKey" parameterType="ToolGiSearchVO" resultType="ToolGiItemVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.selectToolGiItemListByKey] */
+            SELECT   A.DLR_CD
+                    ,A.TOOL_GI_TP
+                    ,A.TOOL_GI_DOC_NO
+                    ,A.TOOL_GI_DOC_LINE_NO
+                    ,A.RO_DOC_NO
+                    ,A.BP_CD
+                    ,A.BP_NM
+                    ,A.ITEM_CD
+                    ,A.ITEM_NM
+                    ,A.TECH_ID
+                    ,A.TECH_NM
+                    ,CASE WHEN A.TOOL_GI_TP = 'GI' THEN A.QTY ELSE 0 END QTY
+                    ,CASE WHEN A.TOOL_GI_TP = 'GI' THEN A.GI_DT ELSE NULL END GI_DT
+                    ,A.UNIT_CD
+                    ,A.STRGE_CD
+                    ,A.LOC_CD
+                    ,CASE WHEN A.TOOL_GI_TP = 'RT' THEN A.QTY ELSE 0 END RETURN_QTY
+                    ,A.RETURN_DT
+                    ,CASE WHEN A.TOOL_GI_TP = '65' THEN A.QTY ELSE 0 END DISUSE_QTY
+                    ,CASE WHEN A.TOOL_GI_TP = '65' THEN A.GI_DT ELSE NULL END DISUSE_DT
+                    ,A.USR_NM AS PRSN_NM
+                    ,A.REF_DOC_NO
+                    ,A.REF_DOC_LINE_NO
+              FROM (
+                    SELECT   A.DLR_CD
+                            ,NVL(B.REF_DOC_NO, A.TOOL_GI_DOC_NO) AS TOOL_GI_DOC_NO
+                            ,A.TOOL_GI_TP
+                            ,A.RO_DOC_NO
+                            ,B.TOOL_GI_DOC_LINE_NO
+                            ,B.ITEM_CD
+                            ,D.ITEM_NM
+                            ,B.QTY
+                            ,B.UNIT_CD
+                            ,B.STRGE_CD
+                            ,B.LOC_CD
+                            ,B.PRC
+                            ,B.TAX_DDCT_PRC
+                            ,B.AMT
+                            ,B.TAX_DDCT_AMT
+                            ,B.REF_DOC_NO
+                            ,B.REF_DOC_LINE_NO
+                            ,B.TECH_ID
+                            ,C.TEC_NM AS TECH_NM
+                            ,NVL(B.GI_DT,F.GI_DT) AS GI_DT
+                            ,B.GI_PRSN_ID
+                            ,B.REMARK
+                            ,B.RETURN_DT
+                            ,E.USR_NM
+                            ,D.BP_CD
+                            ,G.BP_NM
+                      FROM   DMSDB.PT_0811T A
+                             INNER JOIN DMSDB.PT_0812T B
+                                ON A.DLR_CD = B.DLR_CD
+                               AND A.TOOL_GI_DOC_NO = B.TOOL_GI_DOC_NO
+                             INNER JOIN DMSDB.SE_1026T C
+                                ON B.DLR_CD   = C.DLR_CD
+                               AND B.TECH_ID  = C.TEC_ID
+                              INNER JOIN  DMSDB.PT_0201T D    --품목정보
+                                ON B.DLR_CD  = D.DLR_CD
+                               AND B.ITEM_CD = D.ITEM_CD
+                              LEFT OUTER JOIN DMSDB.CM_0801T E
+                                ON B.DLR_CD      = E.DLR_CD
+                               AND B.GI_PRSN_ID  = E.USR_ID
+                               AND E.DEL_YN     != 'Y'
+                              LEFT OUTER JOIN DMSDB.PT_0812T F
+                                ON B.DLR_CD           = F.DLR_CD
+                               AND B.REF_DOC_NO       = F.TOOL_GI_DOC_NO
+                               AND B.REF_DOC_LINE_NO  = F.TOOL_GI_DOC_LINE_NO
+                              LEFT OUTER JOIN PT_0211T G
+                                ON D.DLR_CD = G.DLR_CD
+                               AND D.BP_CD  = G.BP_CD
+                               AND G.END_YN != 'Y'
+                     WHERE   A.DLR_CD   = #{sDlrCd}
+                       AND   B.ITEM_CD  = #{sItemCd}
+                       <if test='sTechId      != null and sTechId      != ""'> AND B.TECH_ID           = #{sTechId}      </if>  --수리공
+                       <if test='sToolGiTp    != null and sToolGiTp    != ""'> AND A.TOOL_GI_TP        = #{sToolGiTp}    </if>  --공구출고유형
+                       <if test='sBpCd        != null and sBpCd        != ""'> AND D.BP_CD           = #{sBpCd}      </if>  --공급업체
+                       <if test='sGiDtFr != null'>
+                           AND B.GI_DT <![CDATA[>=]]> #{sGiDtFr}
+                       </if>
+                       <if test='sGiDtTo != null'>
+                           AND B.GI_DT <![CDATA[<=]]> #{sGiDtTo} + 1
+                       </if>
+                           AND   B.CANC_YN != 'Y'
+                           AND   A.STAT_CD NOT IN ('04')
+             ) A
+             ORDER BY TOOL_GI_DOC_NO, REF_DOC_LINE_NO
+    </select>
+
+    <!-- 공구출고 현황 부품 정보를 Count한다. -->
+    <select id="selectToolGiItemListByKeyCnt" parameterType="ToolGiSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.selectToolGiItemListByKeyCnt] */
+            SELECT   COUNT(*)
+              FROM (
+                    SELECT   A.DLR_CD
+                            ,NVL(B.REF_DOC_NO, A.TOOL_GI_DOC_NO) AS TOOL_GI_DOC_NO
+                            ,A.TOOL_GI_TP
+                            ,A.RO_DOC_NO
+                            ,B.TOOL_GI_DOC_LINE_NO
+                            ,B.ITEM_CD
+                            ,D.ITEM_NM
+                            ,B.QTY
+                            ,B.UNIT_CD
+                            ,B.STRGE_CD
+                            ,B.LOC_CD
+                            ,B.PRC
+                            ,B.TAX_DDCT_PRC
+                            ,B.AMT
+                            ,B.TAX_DDCT_AMT
+                            ,B.REF_DOC_NO
+                            ,B.REF_DOC_LINE_NO
+                            ,B.TECH_ID
+                            ,C.TEC_NM AS TECH_NM
+                            ,NVL(B.GI_DT,F.GI_DT) AS GI_DT
+                            ,B.GI_PRSN_ID
+                            ,B.REMARK
+                            ,B.RETURN_DT
+                            ,E.USR_NM
+                      FROM   DMSDB.PT_0811T A
+                             INNER JOIN DMSDB.PT_0812T B
+                                ON A.DLR_CD = B.DLR_CD
+                               AND A.TOOL_GI_DOC_NO = B.TOOL_GI_DOC_NO
+                             INNER JOIN DMSDB.SE_1026T C
+                                ON B.DLR_CD   = C.DLR_CD
+                               AND B.TECH_ID  = C.TEC_ID
+                              INNER JOIN  DMSDB.PT_0201T D    --품목정보
+                                ON B.DLR_CD  = D.DLR_CD
+                               AND B.ITEM_CD = D.ITEM_CD
+                              LEFT OUTER JOIN DMSDB.CM_0801T E
+                                ON B.DLR_CD      = E.DLR_CD
+                               AND B.GI_PRSN_ID  = E.USR_ID
+                               AND E.DEL_YN     != 'Y'
+                              LEFT OUTER JOIN DMSDB.PT_0812T F
+                                ON B.DLR_CD           = F.DLR_CD
+                               AND B.REF_DOC_NO       = F.TOOL_GI_DOC_NO
+                               AND B.REF_DOC_LINE_NO  = F.TOOL_GI_DOC_LINE_NO
+                              LEFT OUTER JOIN PT_0211T G
+                                ON D.DLR_CD = G.DLR_CD
+                               AND D.BP_CD  = G.BP_CD
+                               AND G.END_YN != 'Y'
+                     WHERE   A.DLR_CD   = #{sDlrCd}
+                       AND   B.ITEM_CD  = #{sItemCd}
+                       <if test='sTechId      != null and sTechId      != ""'> AND B.TECH_ID           = #{sTechId}      </if>  --수리공
+                       <if test='sToolGiTp    != null and sToolGiTp    != ""'> AND A.TOOL_GI_TP        = #{sToolGiTp}    </if>  --공구출고유형
+                       <if test='sStatCd      != null and sStatCd      != ""'> AND A.STAT_CD           = #{sStatCd}      </if>  --상태
+                       <if test='sBpCd        != null and sBpCd        != ""'> AND D.BP_CD           = #{sBpCd}      </if>  --공급업체
+                       <if test='sGiDtFr != null'>
+                           AND B.GI_DT <![CDATA[>=]]> #{sGiDtFr}
+                       </if>
+                       <if test='sGiDtTo != null'>
+                           AND B.GI_DT <![CDATA[<=]]> #{sGiDtTo} + 1
+                       </if>
+                           AND   B.CANC_YN != 'Y'
+                           AND   A.STAT_CD NOT IN ('04')
+             ) A
+    </select>
+
+    <!-- 공구출고 부품 정보를 조회한다. -->
+    <select id="selectToolGiItemByKey" parameterType="ToolGiSearchVO" resultType="ToolGiItemVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.selectToolGiItemByKey] */
+          SELECT
+                    A.DLR_CD                      --딜러코드
+                   ,A.TOOL_GI_DOC_NO               --공구출고번호
+                   ,A.TOOL_GI_DOC_LINE_NO          --공구출고라인번호
+                   ,A.ITEM_CD                     --품목코드
+                   ,C.ITEM_NM
+                   ,C.ITEM_DSTIN_CD
+                   ,(D.AVLB_STOCK_QTY) AS STOCK_QTY              --가용수량
+                   ,A.STRGE_CD                    --출고창고
+                   ,A.QTY
+                   ,NVL2(H.REF_DOC_NO,  (A.QTY - nvl(H.RETURN_QTY,0)), 0) AS RETURN_QTY
+                   ,H.RETURN_QTY AS PRE_RETURN_QTY -- 기반품수량
+                   ,A.PRC
+                   ,A.AMT
+                   ,A.UNIT_CD
+                   ,A.LOC_CD
+                   ,A.TECH_ID
+                   ,E.TEC_NM AS TECH_NM                   --수리공명
+                   ,A.GI_PRSN_ID      --담당자
+                   ,F.USR_NM AS GI_PRSN_NM         --담당자명
+                   ,A.RETURN_PRSN_ID
+                   ,G.USR_NM AS RETURN_PRSN_NM         --담당자명
+                   ,A.GI_DT
+                   ,TO_CHAR(A.GI_DT, 'HH24:MI:SS') AS GI_TIME
+                   ,H.RETURN_DT
+                   ,TO_CHAR(H.RETURN_DT, 'HH24:MI:SS') AS RETURN_TIME
+                   ,A.REMARK
+                   ,H.REF_DOC_NO
+                   ,H.REF_DOC_LINE_NO
+                   ,A.CANC_YN
+                   ,A.MVT_DOC_NO
+                   ,A.MVT_DOC_LINE_NO
+                   ,A.MVT_DOC_YY_MM
+               FROM DMSDB.PT_0812T A    --공구출고품목정보
+                    INNER JOIN  DMSDB.PT_0811T B
+                       ON A.DLR_CD         = B.DLR_CD
+                      AND A.TOOL_GI_DOC_NO = B.TOOL_GI_DOC_NO
+                    INNER JOIN  DMSDB.PT_0201T C    --품목정보
+                       ON A.DLR_CD  = C.DLR_CD
+                      AND A.ITEM_CD = C.ITEM_CD
+                    LEFT OUTER JOIN  DMSDB.PT_0301T D    --재고정보
+                       ON A.DLR_CD      = D.DLR_CD
+                      AND A.STRGE_CD    = D.STRGE_CD
+                      AND A.ITEM_CD     = D.ITEM_CD
+                    LEFT OUTER JOIN DMSDB.SE_1026T E
+                           ON A.DLR_CD   = E.DLR_CD
+                          AND A.TECH_ID  = E.TEC_ID
+                    LEFT OUTER JOIN DMSDB.CM_0801T F
+                           ON A.DLR_CD      = F.DLR_CD
+                          AND A.GI_PRSN_ID  = F.USR_ID
+                          AND F.DEL_YN     != 'Y'
+                    LEFT OUTER JOIN DMSDB.CM_0801T G
+                           ON A.DLR_CD          = G.DLR_CD
+                          AND A.RETURN_PRSN_ID  = G.USR_ID
+                          AND G.DEL_YN         != 'Y'
+                    LEFT OUTER JOIN  (
+                                 SELECT    DLR_CD
+                                          ,REF_DOC_NO
+                                          ,REF_DOC_LINE_NO
+                                          ,SUM(QTY) AS RETURN_QTY
+                                          ,MAX(RETURN_DT) AS RETURN_DT
+                                          ,COUNT(*) AS ITEM_CNT
+                                   FROM    DMSDB.PT_0812T
+                                  WHERE    CANC_YN != 'Y'
+                                  GROUP BY DLR_CD
+                                          ,REF_DOC_NO
+                                          ,REF_DOC_LINE_NO
+                                ) H
+                           ON H.DLR_CD               = A.DLR_CD
+                          AND H.REF_DOC_NO           = A.TOOL_GI_DOC_NO
+                          AND H.REF_DOC_LINE_NO      = A.TOOL_GI_DOC_LINE_NO
+              WHERE A.DLR_CD            = #{sDlrCd}
+                AND A.TOOL_GI_DOC_NO    = #{sToolGiDocNo}
+                AND A.CANC_YN  != 'Y'
+                ORDER BY    A.DLR_CD                      --딜러코드
+                           ,A.TOOL_GI_DOC_NO               --공구출고번호
+                           ,A.TOOL_GI_DOC_LINE_NO          --공구출고라인번호
+    </select>
+
+    <!-- 공구출고 부품 라인정보를 조회한다. -->
+    <select id="selectToolGiLineByKey" parameterType="ToolGiItemVO" resultType="ToolGiItemVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.selectToolGiLineByKey] */
+          SELECT
+                    A.DLR_CD                      --딜러코드
+                   ,A.TOOL_GI_DOC_NO               --공구출고번호
+                   ,A.TOOL_GI_DOC_LINE_NO          --공구출고라인번호
+                   ,A.ITEM_CD                     --품목코드
+                   ,A.STRGE_CD                    --출고창고
+                   ,A.QTY
+                   ,A.PRC
+                   ,A.AMT
+                   ,A.UNIT_CD
+                   ,A.LOC_CD
+                   ,A.TECH_ID
+                   ,A.GI_PRSN_ID      --담당자
+                   ,A.RETURN_PRSN_ID
+                   ,A.GI_DT
+                   ,A.REMARK
+                   ,A.CANC_YN
+               FROM DMSDB.PT_0812T A    --공구출고품목정보
+              WHERE A.DLR_CD                 = #{dlrCd}
+                AND A.TOOL_GI_DOC_NO         = #{toolGiDocNo}
+                AND A.TOOL_GI_DOC_LINE_NO    = #{toolGiDocLineNo}
+    </select>
+
+    <!-- 공구출고 리스트정보를 조회한다. -->
+    <select id="selectToolGisByCondition" parameterType="ToolGiSearchVO" resultType="ToolGiVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.selectToolGisByCondition] */
+      SELECT    A.*
+        FROM
+             (
+          SELECT    ROWNUM AS RNUM
+                   ,T1.*
+            FROM
+                 (
+                     SELECT A.DLR_CD                --딜러코드
+                           ,A.TOOL_GI_TP            --공구출고유형
+                           ,A.TOOL_GI_DOC_NO        --공구출고문서번호
+                           ,B.TECH_ID               --수리공
+                           ,C.TEC_NM AS TECH_NM     --수리공
+                           ,A.STAT_CD               --상태코드
+                           ,A.RO_DOC_NO             --위탁서번호
+                           ,B.GI_DT                 --일자
+                           ,B.RETURN_DT             --반환일자
+                           ,A.REMARK                --비고
+                           ,B.ITEM_CNT
+                      FROM DMSDB.PT_0811T A    --공구출고헤더정보
+                             INNER JOIN
+                                  (
+                                     SELECT    DLR_CD
+                                              ,TOOL_GI_DOC_NO
+                                              ,MAX(TECH_ID) AS TECH_ID
+                                              ,MAX(GI_PRSN_ID) AS GI_PRSN_ID
+                                              ,MAX(GI_DT) AS GI_DT
+                                              ,MAX(RETURN_DT) AS RETURN_DT
+                                              ,COUNT(*) AS ITEM_CNT
+                                       FROM    DMSDB.PT_0812T
+                                      WHERE    CANC_YN != 'Y'
+                                     <if test='sToolGiDocNo      != null and sToolGiDocNo      != ""'> AND TOOL_GI_DOC_NO    = #{sToolGiDocNo}    </if>        --공구출고번호
+                                      GROUP BY DLR_CD, TOOL_GI_DOC_NO
+                                   ) B
+                                ON A.DLR_CD         = B.DLR_CD
+                               AND A.TOOL_GI_DOC_NO = B.TOOL_GI_DOC_NO
+                             LEFT OUTER JOIN DMSDB.SE_1026T C
+                                    ON A.DLR_CD   = C.DLR_CD
+                                   AND B.TECH_ID  = C.TEC_ID
+                     WHERE A.DLR_CD             = #{sDlrCd}  --딜러코드
+                       AND A.STAT_CD NOT IN ('03', '04')  --완료 및 취소
+                       <if test='sToolGiDocNo != null and sToolGiDocNo != ""'> AND A.TOOL_GI_DOC_NO    = #{sToolGiDocNo} </if>  --공구출고번호
+                       <if test='sTechId      != null and sTechId      != ""'> AND B.TECH_ID           = #{sTechId}      </if>  --수리공
+                       <if test='sToolGiTp    != null and sToolGiTp    != ""'> AND A.TOOL_GI_TP        = #{sToolGiTp}    </if>  --공구출고유형
+                       <if test='sStatCd      != null and sStatCd      != ""'> AND A.STAT_CD           = #{sStatCd}      </if>  --상태
+                       <if test='sGiDtFr != null'>
+                           AND B.GI_DT <![CDATA[>=]]> #{sGiDtFr}
+                       </if>
+                       <if test='sGiDtTo != null'>
+                           AND B.GI_DT <![CDATA[<=]]> #{sGiDtTo} + 1
+                       </if>
+                       <if test='sRegDtFr != null'>
+                           AND A.REG_DT <![CDATA[>=]]> #{sRegDtFr}
+                       </if>
+                       <if test='sRegDtTo != null'>
+                           AND A.REG_DT <![CDATA[<=]]> #{sRegDtTo} + 1
+                       </if>
+                     ORDER BY
+                     <choose>
+                         <when test='sort != null'>
+                             <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                 <choose>
+                                     <when test='item.field == "toolGiDocNo"'>    A.TOOL_GI_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                     <when test='item.field == "statCd"'>         A.STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                     <when test='item.field == "regDt"'>          A.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                     <otherwise>
+                                       A.DLR_CD ASC
+                                      ,A.TOOL_GI_DOC_NO DESC
+                                     </otherwise>
+                                 </choose>
+                             </foreach>
+                         </when>
+                         <otherwise>
+                           A.DLR_CD ASC
+                          ,A.TOOL_GI_DOC_NO DESC
+                         </otherwise>
+                     </choose>
+                 ) T1
+             ) A
+             <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    RNUM <![CDATA[<=]]> #{lastIndex}
+                AND RNUM <![CDATA[>]]> #{firstIndex}
+                </if>
+             </where>
+    </select>
+
+    <!-- 공구출고 리스트정보를 조회한다. -->
+    <select id="selectToolGisByConditionCnt" parameterType="ToolGiSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.selectToolGisByConditionCnt] */
+             SELECT COUNT(*)
+               FROM DMSDB.PT_0811T A    --공구출고헤더정보
+                         INNER JOIN
+                              (
+                                 SELECT    DLR_CD
+                                          ,TOOL_GI_DOC_NO
+                                          ,MAX(TECH_ID) AS TECH_ID
+                                          ,MAX(GI_PRSN_ID) AS GI_PRSN_ID
+                                          ,MAX(GI_DT) AS GI_DT
+                                          ,MAX(RETURN_DT) AS RETURN_DT
+                                          ,COUNT(*) AS ITEM_CNT
+                                   FROM    DMSDB.PT_0812T
+                                  WHERE    CANC_YN != 'Y'
+                                 <if test='sToolGiDocNo      != null and sToolGiDocNo      != ""'> AND TOOL_GI_DOC_NO    = #{sToolGiDocNo}    </if>        --공구출고번호
+                                  GROUP BY DLR_CD, TOOL_GI_DOC_NO
+                               ) B
+                            ON A.DLR_CD         = B.DLR_CD
+                           AND A.TOOL_GI_DOC_NO = B.TOOL_GI_DOC_NO
+                         LEFT OUTER JOIN DMSDB.SE_1026T C
+                                ON A.DLR_CD   = C.DLR_CD
+                               AND B.TECH_ID  = C.TEC_ID
+                 WHERE A.DLR_CD             = #{sDlrCd}  --딜러코드
+                   AND A.STAT_CD NOT IN ('03', '04')  --완료 및 취소
+                   <if test='sToolGiDocNo != null and sToolGiDocNo != ""'> AND A.TOOL_GI_DOC_NO    = #{sToolGiDocNo} </if>  --공구출고번호
+                   <if test='sTechId      != null and sTechId      != ""'> AND B.TECH_ID           = #{sTechId}      </if>  --수리공
+                   <if test='sToolGiTp    != null and sToolGiTp    != ""'> AND A.TOOL_GI_TP        = #{sToolGiTp}    </if>  --공구출고유형
+                   <if test='sStatCd      != null and sStatCd      != ""'> AND A.STAT_CD           = #{sStatCd}      </if>  --상태
+                   <if test='sGiDtFr != null'>
+                       AND B.GI_DT <![CDATA[>=]]> #{sGiDtFr}
+                   </if>
+                   <if test='sGiDtTo != null'>
+                       AND B.GI_DT <![CDATA[<=]]> #{sGiDtTo} + 1
+                   </if>
+                   <if test='sRegDtFr != null'>
+                       AND A.REG_DT <![CDATA[>=]]> #{sRegDtFr}
+                   </if>
+                   <if test='sRegDtTo != null'>
+                       AND A.REG_DT <![CDATA[<=]]> #{sRegDtTo} + 1
+                   </if>
+    </select>
+
+    <!-- 공구출고 반환 미완료 품목 Count를 조회한다. -->
+    <select id="selectReturnUnCompleteItemCntByKey" parameterType="ToolGiVO" resultType="int">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.selectReturnUnCompleteItemCntByKey] */
+             SELECT   SUM(A.END_YN) AS END_CNT
+               FROM
+                       (
+                            SELECT   A.DLR_CD
+                                    ,A.TOOL_GI_DOC_NO
+                                    ,A.TOOL_GI_DOC_LINE_NO
+                                    ,A.ITEM_CD
+                                    ,B.REF_DOC_NO
+                                    ,B.REF_DOC_LINE_NO
+                                    ,A.QTY
+                                    ,B.RETURN_QTY
+                                    ,CASE WHEN A.QTY - NVL(B.RETURN_QTY, 0) = 0  THEN 0 ELSE 1 END END_YN
+                              FROM DMSDB.PT_0812T A
+                                   LEFT OUTER JOIN (
+                                       SELECT   DLR_CD
+                                               ,REF_DOC_NO
+                                               ,REF_DOC_LINE_NO
+                                               ,SUM(QTY) AS RETURN_QTY
+                                         FROM   DMSDB.PT_0812T
+                                        WHERE   DLR_CD          = #{dlrCd}
+                                          AND   REF_DOC_NO      = #{refDocNo}
+                                          AND   CANC_YN != 'Y'
+                                        GROUP BY DLR_CD, REF_DOC_NO, REF_DOC_LINE_NO) B
+                                        ON A.DLR_CD = B.DLR_CD
+                                       AND A.TOOL_GI_DOC_NO = B.REF_DOC_NO
+                                       AND A.TOOL_GI_DOC_LINE_NO = B.REF_DOC_LINE_NO
+                             WHERE   A.DLR_CD            = #{dlrCd}
+                               AND   A.TOOL_GI_DOC_NO    = #{refDocNo}
+                               AND   A.CANC_YN          != 'Y'
+                               AND   A.REF_DOC_NO IS NULL
+                       ) A
+    </select>
+
+       <!-- 공구출고 정보 Max 라인번호를 조회한다. -->
+    <select id="selectToolGiMaxLineNo" parameterType="ToolGiVO" resultType="int">
+        /* [chn.bhmc.dms.par.stm.service.dao.ToolGiDAO.selectToolGiMaxLineNo] */
+        SELECT nvl(max(A.TOOL_GI_DOC_LINE_NO),0) + 1
+          FROM DMSDB.PT_0812T A    --공구출고부품정보
+         WHERE A.DLR_CD             = #{dlrCd}                 --딜러코드
+           AND A.TOOL_GI_DOC_NO      = #{toolGiDocNo}
+    </select>
+
+    <!-- 공구출고 헤더 수정일자정보를 조회한다. -->
+    <select id="selectToolGiUpdtDtByKey" parameterType="ToolGiVO" resultType="String">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssueEtcDAO.selectToolGiUpdtDtByKey] */
+        SELECT  TO_CHAR(NVL(A.UPDT_DT,A.REG_DT), 'YYYYMMDDHH24MISS') AS UPDT_DT_STR
+          FROM  DMSDB.PT_0811T A    --공구출고헤더정보
+         WHERE  A.DLR_CD           = #{dlrCd}
+           AND  A.TOOL_GI_DOC_NO   = #{toolGiDocNo}    --공구출고번호
+    </select>
+</mapper>

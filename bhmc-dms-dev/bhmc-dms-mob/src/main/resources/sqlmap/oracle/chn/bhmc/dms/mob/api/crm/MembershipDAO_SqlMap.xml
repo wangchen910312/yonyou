@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : MembershipDAO_SqlMap.xml
+    Description : 멤버십
+    author Hyun Ho Kim
+    since 2016. 03. 22.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 03. 22.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.crm..dao.CrmMembershipDAO">
+
+	<sql id="searchMembership">
+        <if test='sMembershipStan != null and sMembershipStan != ""'>
+            <choose>
+            <when test='sMembershipStan == "C"'>
+                INNER JOIN CR_0101T C ON C.DLR_CD = #{sDlrCd} AND MB.CUST_NO = C.CUST_NO  -- 멤버십이 고객기준
+            </when>
+            <otherwise>
+                INNER JOIN (SELECT A.CUST_NO, A.CUST_NM, A.HP_NO, A.TEL_NO, A.CUST_TP, A.CUST_CD, A.OFFICE_NO, A.EMAIL_NM, A.PREF_COMM_MTH_CD, A.PREF_COMM_NO, A.SSN_CRN_NO, A.MATH_DOC_TP, D.VIN_NO, D.CARLINE_CD, D.MODEL_CD, D.CAR_REG_NO FROM CR_0101T A, SA_0123T B, SA_0121T D WHERE A.DLR_CD = #{sDlrCd} AND A.DLR_CD = B.DLR_CD AND A.CUST_NO = B.BP_CD AND B.USE_YN = 'Y' AND B.CAR_ID = D.CAR_ID ) C ON MB.VIN_NO = C.VIN_NO -- 멤버십 차량기준
+            </otherwise>
+            </choose>
+        </if>
+             , CR_0805T GD
+        <where>
+            AND MB.DLR_CD = #{sDlrCd}
+            AND MB.DLR_CD = GD.DLR_CD
+            AND MB.GRADE_CD = GD.GRADE_SEQ
+            <if test='sCustNo != null and sCustNo != ""'>
+                AND C.CUST_NO = #{sCustNo}
+            </if>
+            <if test='sCustNm != null and sCustNm != ""'>
+                AND ( C.CUST_NM LIKE '%'||#{sCustNm}||'%' OR C.HP_NO LIKE '%'||#{sCustNm}||'%')
+            </if>
+            <if test='sMembershipNo != null and sMembershipNo != ""'>
+                AND MB.MEMBERSHIP_NO LIKE '%'||#{sMembershipNo}||'%'
+            </if>
+            <if test='sMembershipStan == "V" and sVinNo != null and sVinNo != ""'>
+                AND C.VIN_NO LIKE '%'||#{sVinNo}||'%'
+            </if>
+            <choose>
+                <when test='(sStartDt != null) and (sEndDt != null)'>
+                    AND (MB.REG_DT <![CDATA[>=]]> trunc(#{sStartDt},'DD') AND MB.REG_DT <![CDATA[<]]> trunc(#{sEndDt},'DD')+1)
+                </when>
+                <when test='(sStartDt != null) and (sEndDt == null)'>
+                    AND MB.REG_DT <![CDATA[>=]]> trunc(#{sStartDt},'DD')
+                </when>
+                <when test='(sStartDt == null) and (sEndDt != null)'>
+                    AND MB.REG_DT <![CDATA[<]]> trunc(#{sEndDt},'DD')+1
+                </when>
+                <otherwise>
+                </otherwise>
+            </choose>
+        </where>
+    </sql>    
+
+    <select id="selectMembershipsByConditionCnt" parameterType="MembershipSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.MembershipDAO.selectMembershipsByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM CR_0801T MB
+        <include refid="searchMembership" />
+    </select>
+
+    <!-- 멤버십 등록된 목록 조회
+    /**
+     * [20170603] 사용처 - [CRM:고객상세, 멤버십관리, 멤버십양도/양수등록 팝업], [판매:용품판매관리], [모바일:고객상세]
+     * sListTarget :  T:멤버십양도양수팝업, 양도,양수에서는 sum데이터(금액 등) 을 볼필요가 없으므로 파라미터 받아서 분기처리
+     */
+    -->
+    <select id="selectMembershipsByCondition" parameterType="MembershipSearchVO" resultType="chn.bhmc.dms.mob.api.crm.vo.MembershipVO">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.MembershipDAO.selectMembershipsByCondition] */
+        SELECT
+            T2.*
+            , ( SELECT SUM(LAST_POINT_VAL)  -- 20170602 REAL_TOT_AMT 컬럼 용도 변경 ( 수납금액 입력 ) 함에 따라 최종 금액은 LAST_POINT_VAL을 사용한다.
+                  FROM ( SELECT ROW_NUMBER() OVER (PARTITION BY MEMBERSHIP_NO, CARD_NO
+                          ORDER BY POINT_HIS_SEQ DESC ) NUMB, MEMBERSHIP_NO,
+                                LAST_POINT_VAL
+                           FROM CR_0803T A
+                          WHERE A.DLR_CD = #{sDlrCd}
+                            AND A.CARD_TP_CD = '02'
+                       ) WHERE NUMB = 1 AND MEMBERSHIP_NO = T2.MEMBERSHIP_NO
+               ) AS REAL_TOT_AMT    -- 20170602 멤버십 관리에서는 가용금액, 가용포인트 둘다 보여주기 때문에 REAL_TOT_AMT 으로 표시.
+        <if test='sListTarget != "T"'>
+            , (SELECT DECODE(A.SUNG_NM, NULL, '',  A.SUNG_NM|| ' / ' || A.CITY_NM || ' / ' || A.DIST_NM || ' ' || A.ADDR_DETL_CONT)
+                 FROM CR_0116T A
+                WHERE A.DLR_CD = #{sDlrCd}
+                  AND A.REF_TABLE_NM = 'CR_0101T'
+                  AND A.REF_KEY_NM = T2.CUST_NO
+                  AND A.USE_YN = 'Y' AND A.FLAG_YN = 'Y') AS ADDR_FULL
+            , (SELECT A.CARD_NO FROM CR_0813T A WHERE A.DLR_CD = #{sDlrCd} AND A.CARD_TP_CD ='01' AND A.USE_YN = 'Y' AND A.MEMBERSHIP_NO = T2.MEMBERSHIP_NO ) AS CARD_NO
+            , (SELECT MIN(CR0803T.EXTC_DT) FROM CR_0803T CR0803T WHERE  CR0803T.DLR_CD = #{sDlrCd} AND CR0803T.MEMBERSHIP_NO = T2.MEMBERSHIP_NO AND CR0803T.CARD_TP_CD = '01' AND CR0803T.POINT_TP = '+' AND CR0803T.EXTC_TARG_YN = 'Y' AND CR0803T.EXTC_DT IS NOT NULL) AS POINT_EXTC_EXPC_DT
+            , (SELECT SUM(OCCR_POINT_VAL) FROM CR_0803T A WHERE A.DLR_CD = #{sDlrCd} AND A.MEMBERSHIP_NO = T2.MEMBERSHIP_NO AND A.CARD_TP_CD = '01' AND POINT_TP = '-') AS TOT_MINUS_POINT_VAL
+            , (SELECT ABS(SUM(C.OCCR_POINT_VAL)) FROM
+				(
+					SELECT   
+					CASE WHEN POINT_TP = '-' THEN  OCCR_POINT_VAL*(-1) ELSE OCCR_POINT_VAL END
+					OCCR_POINT_VAL
+					FROM  CR_0803T A
+					WHERE A.DLR_CD = #{sDlrCd} AND A.MEMBERSHIP_NO = T2.MEMBERSHIP_NO 
+					AND A.CARD_TP_CD = '02' AND A. POINT_CD  IN ('01','02','03','05','06','07','13','14','19','20','21')
+				)C
+			  ) AS TOT_MINUS_REAL_AMT   --2019.05.10田佳兴,根据会员积分种类POINT_CD来区分并计算消费金额,延保(13,14)售后(03.06)配件(19.20)产品(21.07),购车(01)购买精品(02)代办服务(05)
+        </if>
+
+          <if test='sMembershipStan == "V"'>
+             , FN_GET_CARLINE_NM_NC(CARLINE_CD) AS CARLINE_NM
+             , FN_GET_MODEL_NM_NC(MODEL_CD) AS MODEL_NM
+             , CAR_REG_NO
+          </if>
+          FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT MB.DLR_CD
+                         , MB.MEMBERSHIP_NO
+                         , NVL(MB.LAST_POINT_VAL, 0) AS LAST_POINT_VAL
+                         , MB.GRADE_CD
+                         , GD.GRADE_NM
+                         , C.CUST_NO
+                         , C.CUST_NM
+                         , C.CUST_TP
+                         , C.CUST_CD
+                         , C.HP_NO
+                         , C.TEL_NO
+                         , C.OFFICE_NO
+                         , C.EMAIL_NM
+                         , C.PREF_COMM_MTH_CD
+                         , C.PREF_COMM_NO
+                         , C.SSN_CRN_NO
+                         , C.MATH_DOC_TP
+                         , MB.REG_DT
+                         , MB.FILE_DOC_NO
+                         , MB.VIN_NO
+                    <if test='sMembershipStan == "V"'>
+                         , C.CARLINE_CD
+                         , C.MODEL_CD
+                         , C.CAR_REG_NO
+                    </if>
+                      FROM CR_0801T MB
+                    <include refid="searchMembership" />
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "membershipNo"'>MB.MEMBERSHIP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "custNm"'>C.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "gradeNm"'>GD.GRADE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "lastPointVal"'>MB.LAST_POINT_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "vinNo"'>MB.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "hpNo"'>C.HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "telNo"'>C.TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "regDt"'>MB.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "lastPointVal"'>MB.LAST_POINT_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "regDtFormat"'>MB.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        MB.REG_DT DESC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            MB.REG_DT DESC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        ) T2
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+</mapper>

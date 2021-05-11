@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : DistCodeDao_SqlMap.xml
+    Description : 지역코드에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.sci.service.dao.DistCodeDAO">
+
+	<!-- 지역코드를 등록한다. -->
+	<insert id="insertDistCode" parameterType="DistCodeVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.DistCodeDAO.insertDistCode] */
+		INSERT INTO CM_0206T(
+			DIST_CD
+			, DIST_NM
+			, USE_YN
+            , SALE_DIST_YN
+            , SER_DIST_YN
+            , GOB_DIST_YN
+            , REG_USR_ID
+            , REG_DT
+		)VALUES(
+			#{distCd}
+			, #{distNm}
+			, #{useYn}
+			, #{saleDistYn}
+			, #{serDistYn}
+			, #{gobDistYn}
+            , #{regUsrId}
+            , SYSDATE
+		)
+	</insert>
+
+	<!-- 지역코드 정보를 수정한다. -->
+	<update id="updateDistCode" parameterType="DistCodeVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.DistCodeDAO.updateDistCode] */
+		UPDATE CM_0206T SET
+			DIST_NM = #{distNm}
+            , USE_YN = #{useYn}
+            , SALE_DIST_YN = #{saleDistYn}
+            , SER_DIST_YN = #{serDistYn}
+            , GOB_DIST_YN = #{gobDistYn}
+            , UPDT_USR_ID = #{updtUsrId}
+            , UPDT_DT = #{updtDt}
+		WHERE DIST_CD 	= #{distCd}
+	</update>
+
+	<!-- 지역코드를 조회한다. -->
+	<select id="selectDistCodeByKey" parameterType="string" resultType="DistCodeVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.DistCodeDAO.selectDistCodeByKey] */
+		SELECT * FROM CM_0206T
+		WHERE DIST_CD = #{value}
+	</select>
+
+	<!-- 지역코드 목록을 조회한다. -->
+	<select id="selectDistCodesByCondition" parameterType="DistCodeSearchVO" resultType="DistCodeVO">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.DistCodeDAO.selectDistCodesByCondition] */
+		SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT * FROM CM_0206T
+                <where>
+                    <if test='sDistCd != null and sDistCd != ""'>
+                        DIST_CD = #{sDistCd}
+                    </if>
+
+                    <if test='sDistNm != null and sDistNm != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sDistNm,"*")'>
+                                <bind name='sDistNm' value='@org.apache.commons.lang3.StringUtils@replace(sDistNm, "*", "%")' />
+                                 AND DIST_NM LIKE #{sDistNm}
+                            </when>
+                            <otherwise>
+                                 AND DIST_NM = #{sDistNm}
+                            </otherwise>
+                        </choose>
+                    </if>
+
+                    <if test='sUseYn != null and sUseYn != ""'>
+                        AND USE_YN = #{sUseYn}
+                    </if>
+
+                    <if test='sSaleDistYn != null and sSaleDistYn != ""'>
+                        AND SALE_DIST_YN = #{sSaleDistYn}
+                    </if>
+
+                    <if test='sSerDistYn != null and sSerDistYn != ""'>
+                        AND SER_DIST_YN = #{sSerDistYn}
+                    </if>
+
+                    <if test='sGobDistYn != null and sGobDistYn != ""'>
+                        AND GOB_DIST_YN = #{sGobDistYn}
+                    </if>
+
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "distCd"'>DIST_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "distNm"'>DIST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "useYn"'>USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "saleDistYn"'>SALE_DIST_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "serDistYn"'>SER_DIST_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "gobDistYn"'>GOB_DIST_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DIST_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DIST_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+	<!-- 지역코드 목록수를 조회한다. -->
+	<select id="selectDistCodesByConditionCnt" parameterType="DistCodeSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.sci.service.dao.DistCodeDAO.selectDistCodesByConditionCnt] */
+		SELECT COUNT(*) AS VALUE FROM CM_0206T
+		<where>
+			<if test='sDistCd != null and sDistCd != ""'>
+				DIST_CD = #{sDistCd}
+			</if>
+
+			<if test='sDistNm != null and sDistNm != ""'>
+				<choose>
+					<when test='@org.apache.commons.lang3.StringUtils@contains(sDistNm,"*")'>
+						<bind name='sDistNm' value='@org.apache.commons.lang3.StringUtils@replace(sDistNm, "*", "%")' />
+						 AND DIST_NM LIKE #{sDistNm}
+					</when>
+					<otherwise>
+						 AND DIST_NM = #{sDistNm}
+					</otherwise>
+				</choose>
+			</if>
+
+			<if test='sUseYn != null and sUseYn != ""'>
+				AND USE_YN = #{sUseYn}
+			</if>
+
+            <if test='sSaleDistYn != null and sSaleDistYn != ""'>
+                AND SALE_DIST_YN = #{sSaleDistYn}
+            </if>
+
+            <if test='sSerDistYn != null and sSerDistYn != ""'>
+                AND SER_DIST_YN = #{sSerDistYn}
+            </if>
+
+            <if test='sGobDistYn != null and sGobDistYn != ""'>
+                AND GOB_DIST_YN = #{sGobDistYn}
+            </if>
+		</where>
+	</select>
+
+</mapper>

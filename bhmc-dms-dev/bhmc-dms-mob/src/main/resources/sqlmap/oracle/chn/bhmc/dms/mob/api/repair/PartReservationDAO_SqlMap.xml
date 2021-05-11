@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : PartReservationDAO_SqlMap.xml
+    Description : 부품예약에 관한 데이터처리
+    author KyungMok Kim
+    since 2016. 01. 19.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 19.  KyungMok Kim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.repair.dao.RepairPartReservationDAO">
+    <!-- 부품예약 목록 조회. -->
+    <select id="selectPartReservationByCondition" parameterType="PartReservationSearchVO" resultType="chn.bhmc.dms.mob.api.repair.vo.PartReservationVO">
+        /* [chn.bhmc.dms.mob.api.repair.dao.PartReservationAppDAO.selectPartReservationByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                  ,T1.*
+                  ,T1.PAR_AMT + T1.ETC_AMT AS SUM_AMT
+              FROM (
+                SELECT
+                     PAR_RESV_DOC_NO         --부품예약문서번호
+                    ,DLR_CD                  --딜러코드
+                    ,VIN_NO                  --차대번호
+                    ,CAR_REG_NO              --차량등록번호
+                    ,ENGIN_NO                --엔진번호
+                    ,CAR_OWNER_ID            --차량소유자ID
+                    ,CAR_OWNER_NM            --차량소유자명
+                    ,DRIVER_ID               --운전자ID
+                    ,DRIVER_NM               --운전자명
+                    ,PAR_RESV_DT             --부품예약일자
+                    ,PAR_RESV_STAT_CD        --부품예약상태코드
+                    ,FN_CMM_CD_NM('SER019', PAR_RESV_STAT_CD, #{sLangCd} , 'N') AS PAR_RESV_STAT_NM --부품예약상태명
+                    ,PAR_RESV_TP              --부품예약유형
+                    ,FN_CMM_CD_NM('SER016', PAR_RESV_TP, #{sLangCd} , 'N') AS PAR_RESV_TP_NM --부품예약유형명
+                    ,A.REG_DT
+                    ,A.UPDT_USR_ID
+                    ,A.UPDT_DT
+                    ,REAL_ORD_DT             --실제주문일자
+                    ,SCHE_ARRY_DT            --예정도착일자
+                    ,REAL_ARRY_DT            --실제도착일자
+                    ,ARRY_ALRT_DT            --도착알람일자
+                    ,PAR_RESV_REMARK         --부품예약비고
+                    ,CANC_REASON_CD          --취소사유코드
+                    ,CANC_REASON_CONT        --취소사유내용
+                    ,REG_USR_ID              --등록자ID
+                    ,REG_DT                  --등록일자
+                    ,UPDT_USR_ID             --수정자ID
+                    ,UPDT_DT                 --수정일자
+                    ,CAU_CD1                  --원인코드1
+                    ,CAU_NM1                  --원인명1
+                    ,PHEN_CD1                 --현상코드1
+                    ,PHEN_NM1                 --현상명1
+                    ,CAU_CD2                  --원인코드2
+                    ,CAU_NM2                  --원인명2
+                    ,PHEN_CD2                 --현상코드2
+                    ,PHEN_NM2                 --현상명2
+                    ,(
+                      SELECT NVL(SUM(ITEM_TOT_AMT),0)
+                        FROM SE_0160T
+                       WHERE DLR_CD    = A.DLR_CD
+                         AND DOC_NO    = A.PAR_RESV_DOC_NO
+                         AND PREFIX_ID = #{sPreFixId}
+                     )AS PAR_AMT
+                    ,(
+                      SELECT NVL(SUM(ETC_REQ_PRC),0)
+                        FROM SE_0140T
+                       WHERE DLR_CD    = A.DLR_CD
+                         AND JOB_NO    = A.PAR_RESV_DOC_NO
+                         AND PREFIX_ID = #{sPreFixId}
+                     ) AS ETC_AMT
+                     ,(
+                      SELECT NVL(SUM(DC_AMT),0)
+                        FROM SE_0160T
+                       WHERE DLR_CD    = A.DLR_CD
+                         AND DOC_NO    = A.PAR_RESV_DOC_NO
+                         AND PREFIX_ID = #{sPreFixId}
+                     )AS DC_AMT
+                     ,(
+                      SELECT NVL(SUM(ITEM_QTY),0)
+                        FROM SE_0160T
+                       WHERE DLR_CD = A.DLR_CD
+                         AND DOC_NO = A.PAR_RESV_DOC_NO
+                         AND PREFIX_ID = 'PRE'
+                     )AS REQ_QTY
+                     ,(
+                      SELECT NVL(COUNT(ITEM_CD),0)
+                        FROM SE_0160T
+                       WHERE DLR_CD = A.DLR_CD
+                         AND DOC_NO = A.PAR_RESV_DOC_NO
+                         AND PREFIX_ID = 'PRE'
+                     )AS ITEM_CD_QTY
+                    ,PRE_AMT                  --선수금
+                    ,FN_CMM_CD_NM('PAR304' ,
+                                          (SELECT READY_STAT_CD
+                                             FROM PT_0501T
+                                            WHERE DLR_CD    = A.DLR_CD
+                                              AND RO_DOC_NO = A.PAR_RESV_DOC_NO
+                                              AND PAR_GI_TP = 'SP'
+                                          )
+                              ,#{sLangCd}
+                              ,'N'
+                     ) AS PAR_READY_STAT_CD_NM
+                    ,FN_CMM_CD_NM('SER018', CANC_REASON_CD, #{sLangCd} , 'N') AS CANC_REASON_NM
+                    ,(SELECT NVL(CAR_RUN_DIST_VAL,0) FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS CAR_RUN_DIST_VAL
+                    ,(SELECT FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_NM FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS CARLINE_NM
+                    ,(SELECT FN_GET_MODEL_NM(MODEL_CD) AS MODEL_NM FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS MODEL_NM
+                    ,(SELECT USR_NM FROM CM_0801T WHERE  DLR_CD = A.DLR_CD AND USR_ID = A.REG_USR_ID  ) AS REG_USR_NM
+                    ,(SELECT USR_NM FROM CM_0801T WHERE  DLR_CD = A.DLR_CD AND USR_ID = A.UPDT_USR_ID ) AS UPDT_USR_NM
+                    ,CASE WHEN PAR_RESV_STAT_CD = 'C' THEN A.UPDT_DT  END AS CANC_PAR_RESV_DT
+                    ,CASE WHEN PAR_RESV_STAT_CD = 'C' THEN (SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.UPDT_USR_ID AND DLR_CD = A.DLR_CD) END AS CANC_PAR_USR_NM
+                    ,CASE WHEN PAR_RESV_STAT_CD = 'F' THEN A.UPDT_DT  END AS CONFIRM_PAR_DT
+                    ,CASE WHEN PAR_RESV_STAT_CD = 'F' THEN (SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.UPDT_USR_ID AND DLR_CD = A.DLR_CD) END AS CONFIRM_PAR_USR_NM
+                    ,PAR_RESV_PRINT_DT
+                    ,PAR_RESV_ALARM_DT
+                    ,(SELECT USR_NM FROM CM_0801T WHERE  DLR_CD = A.DLR_CD AND USR_ID = A.PAR_RESV_ALARM_ID ) AS PAR_RESV_ALARM_ID
+                FROM SE_0800T A   --부품예약접수
+                WHERE 1=1
+                <if test='sDlrCd != null and sDlrCd != ""'>
+                    AND DLR_CD = #{sDlrCd}    --딜러코드
+                </if>
+                <if test='sParResvTp != null and sParResvTp != ""'>
+                    AND PAR_RESV_TP = #{sParResvTp}    --예약유형
+                </if>
+                <if test='sParResvDocNo != null and sParResvDocNo != ""'>
+                    AND PAR_RESV_DOC_NO LIKE '%'||#{sParResvDocNo}||'%'
+                </if>
+                <if test='sVinNo != null and sVinNo != ""'>
+                    AND VIN_NO LIKE '%'||#{sVinNo}||'%'
+                </if>
+                <if test='sDriverNm != null and sDriverNm != ""'>
+                    AND DRIVER_NM LIKE '%'||#{sDriverNm}||'%'
+                 </if>
+                 <if test='sCarRegNo != null and sCarRegNo != ""'>
+                    AND CAR_REG_NO LIKE '%'||#{sCarRegNo}||'%'
+                 </if>
+                 <if test='sCarOwnerNm != null and sCarOwnerNm != ""'>
+                    AND CAR_OWNER_NM LIKE '%'||#{sCarOwnerNm}||'%'
+                 </if>
+                <if test='sParResvStartDt != null'>
+                    AND A.PAR_RESV_DT <![CDATA[>=]]> #{sParResvStartDt}
+                </if>
+                <if test='sParResvEndDt != null'>
+                    AND A.PAR_RESV_DT <![CDATA[<]]> #{sParResvEndDt} + 1
+                </if>
+                <if test='sParResvStatCd != null and sParResvStatCd != ""'>
+                    AND PAR_RESV_STAT_CD = #{sParResvStatCd}
+                </if>
+                <if test='sPartNm != null and sPartNm != ""'>
+                    AND A.PAR_RESV_DOC_NO IN (SELECT DOC_NO
+                                                FROM SE_0160T
+                                               WHERE DLR_CD = #{sDlrCd}
+                                                 AND ITEM_NM LIKE '%'||#{sPartNm}||'%'
+                                                 AND PREFIX_ID = #{sPreFixId}
+                                                 GROUP BY DLR_CD, PREFIX_ID, DOC_NO)
+                </if>
+            ) T1
+            <where>
+                <if test='sRegUsrNm != null and sRegUsrNm != ""'>
+                   AND REG_USR_NM LIKE '%'|| #{sRegUsrNm} ||'%'
+                </if>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+            ORDER BY
+            <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "carRegNo"'>                   T1.CAR_REG_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                            <when test='item.field == "vinNo"'>                      T1.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                     </when>
+                            <when test='item.field == "carOwnerNm"'>                 T1.CAR_OWNER_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                            <when test='item.field == "driverNm"'>                   T1.DRIVER_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                            <when test='item.field == "carlineNm"'>                  T1.CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                            <when test='item.field == "modelNm"'>                    T1.MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                   </when>
+                            <when test='item.field == "runDistVal"'>                 T1.RUN_DIST_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                            <when test='item.field == "carRunDistVal"'>              T1.CAR_RUN_DIST_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "parResvStatNm"'>              T1.PAR_RESV_STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "parResvDocNo"'>               T1.PAR_RESV_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "parResvTpNm"'>                T1.PAR_RESV_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "regDtFormat"'>                T1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                     </when>
+                            <when test='item.field == "regUsrNm"'>                   T1.REG_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                            <when test='item.field == "parResvPrintDtFormat"'>       T1.PAR_RESV_PRINT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                            <when test='item.field == "updtDtFormat"'>               T1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                    </when>
+                            <when test='item.field == "updtUsrNm"'>                  T1.UPDT_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "cancParResvDtFormat"'>        T1.CANC_PAR_RESV_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "cancParUsrNm"'>               T1.CANC_PAR_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "cancReasonNm"'>               T1.CANC_REASON_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "confirmParDtFormat"'>         T1.CONFIRM_PAR_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "confirmParUsrNm"'>            T1.CONFIRM_PAR_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "itemCdQty"'>                  T1.ITEM_CD_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "parAmt"'>                     T1.PAR_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                    </when>
+                            <when test='item.field == "etcAmt"'>                     T1.ETC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                    </when>
+                            <when test='item.field == "sumAmt"'>                     SUM_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                       </when>
+                            <when test='item.field == "preAmt"'>                     T1.PRE_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                    </when>
+                            <when test='item.field == "parResvRemark"'>              T1.PAR_RESV_REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "reqQty"'>                     T1.REQ_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                    </when>
+                            <when test='item.field == "parResvAlarmDtFormat"'>       T1.PAR_RESV_ALARM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                            <when test='item.field == "parResvAlarmId"'>             T1.PAR_RESV_ALARM_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                            <when test='item.field == "parReadyStatCdNm"'>           T1.PAR_READY_STAT_CD_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                            <otherwise>
+                            PAR_RESV_DOC_NO DESC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                PAR_RESV_DOC_NO DESC
+                </otherwise>
+            </choose>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 부품예약 목록수를 조회. -->
+    <select id="selectPartReservationByConditionCnt" parameterType="PartReservationSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mob.api.repair.dao.PartReservationAppDAO.selectPartReservationByConditionCnt] */
+     SELECT COUNT(PAR_RESV_DOC_NO) AS VALUE
+       FROM (
+            SELECT PAR_RESV_DOC_NO
+                  ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.REG_USR_ID) AS REG_USR_NM
+              FROM SE_0800T A
+            WHERE 1=1
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND DLR_CD = #{sDlrCd}    --딜러코드
+            </if>
+            <if test='sParResvTp != null and sParResvTp != ""'>
+                AND PAR_RESV_TP = #{sParResvTp}    --예약유형
+            </if>
+            <if test='sParResvDocNo != null and sParResvDocNo != ""'>
+                AND PAR_RESV_DOC_NO LIKE '%'||#{sParResvDocNo}||'%'
+            </if>
+            <if test='sVinNo != null and sVinNo != ""'>
+                AND VIN_NO LIKE '%'||#{sVinNo}||'%'
+            </if>
+            <if test='sDriverNm != null and sDriverNm != ""'>
+                AND DRIVER_NM LIKE '%'||#{sDriverNm}||'%'
+             </if>
+             <if test='sCarRegNo != null and sCarRegNo != ""'>
+                AND CAR_REG_NO LIKE '%'||#{sCarRegNo}||'%'
+             </if>
+             <if test='sCarOwnerNm != null and sCarOwnerNm != ""'>
+                AND CAR_OWNER_NM LIKE '%'||#{sCarOwnerNm}||'%'
+             </if>
+            <if test='sParResvStartDt != null'>
+                AND A.PAR_RESV_DT <![CDATA[>=]]> #{sParResvStartDt}
+            </if>
+            <if test='sParResvEndDt != null'>
+                AND A.PAR_RESV_DT <![CDATA[<]]> #{sParResvEndDt} + 1
+            </if>
+            <if test='sParResvStatCd != null and sParResvStatCd != ""'>
+                AND PAR_RESV_STAT_CD = #{sParResvStatCd}
+            </if>
+            <if test='sPartNm != null and sPartNm != ""'>
+                AND A.PAR_RESV_DOC_NO IN (SELECT DOC_NO
+                                            FROM SE_0160T
+                                           WHERE DLR_CD = #{sDlrCd}
+                                             AND ITEM_NM LIKE '%'||#{sPartNm}||'%'
+                                             AND PREFIX_ID = #{sPreFixId}
+                                             GROUP BY DLR_CD, PREFIX_ID, DOC_NO)
+            </if>
+        )T1
+        <where>
+            <if test='sRegUsrNm != null and sRegUsrNm != ""'>
+               AND REG_USR_NM LIKE '%'|| #{sRegUsrNm} ||'%'
+            </if>
+        </where>
+    </select>
+
+   
+</mapper>

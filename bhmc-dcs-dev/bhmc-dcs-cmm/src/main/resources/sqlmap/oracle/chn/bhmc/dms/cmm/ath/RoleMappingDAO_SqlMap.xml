@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : RoleMappingDAO_SqlMap.xml
+    Description : 역할-사용자 매핑에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 1. 18.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 18.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.ath.service.dao.RoleMappingDAO">
+
+	<!-- 역할-사용자 매핑 정보를 등록한다. -->
+	<insert id="insertRoleMapping" parameterType="RoleMappingVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleMappingDAO.insertRoleMapping] */
+		INSERT INTO CM_0803T(
+			SYS_CD
+            ,ROLE_ID
+            ,REF_TP
+			,REF_ID
+            ,REG_DT
+            ,REG_USR_ID
+            ,USE_YN
+		)VALUES(
+            #{sysCd}
+			,#{roleId}
+            ,#{refTp}
+			,#{refId}
+            ,SYSDATE
+            ,#{regUsrId}
+            ,'Y'
+		)
+	</insert>
+
+    <!-- 역할ID에 해당하는 역할-사용자 매핑 정보를 삭제한다. -->
+    <update id="deleteRoleMappingByRoleId" parameterType="map">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleMappingDAO.deleteRoleMappingByRoleId] */
+        UPDATE CM_0803T SET USE_YN = 'N'
+        WHERE SYS_CD = #{sysCd}
+            AND ROLE_ID = #{roleId}
+    </update>
+
+    <!-- 참조유형, 참조ID에 해당하는 역할-사용자 매핑 정보를 삭제한다. -->
+    <delete id="delateRoleMappingByRefTpAndRefId" parameterType="map">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleMappingDAO.delateRoleMappingByRefTpAndRefId] */
+        DELETE
+        FROM CM_0803T
+        WHERE
+            SYS_CD = #{sysCd}
+            AND REF_TP = #{refTp}
+            AND REF_ID = #{refId}
+    </delete>
+
+    <!-- 역할-사용자 매핑 정보를 복사하여 등록한다. -->
+    <insert id="selectAndInsertRoleMapping" parameterType="map">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleMappingDAO.selectAndInsertRoleMapping] */
+        INSERT INTO CM_0803T(
+            SYS_CD
+            ,ROLE_ID
+            ,REF_TP
+            ,REF_ID
+            ,REG_DT
+            ,REG_USR_ID
+            ,USE_YN
+        )
+        SELECT
+            SYS_CD
+            ,ROLE_ID
+            ,REF_TP
+            ,#{destRefId}
+            ,SYSDATE
+            ,#{regUsrId}
+            ,USE_YN
+        FROM CM_0803T
+        WHERE SYS_CD = #{sysCd}
+            AND REF_TP = #{refTp}
+            AND REF_ID = #{srcRefId}
+    </insert>
+
+    <!-- 역할-사용자 매핑 여부 목록을 조회한다. -->
+    <select id="selectRoleMappings" parameterType="RoleMappingSearchVO" resultType="RoleMappingVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleMappingDAO.selectRoleMappings] */
+        SELECT
+             T1.ROLE_ID
+            ,T1.ROLE_NM
+            ,T2.ROLE_DETL_CONT
+        FROM CM_0804T T1
+        LEFT JOIN CM_0803T T2 ON T1.SYS_CD = T2.SYS_CD AND T1.ROLE_ID = T2.ROLE_ID
+        WHERE
+            T1.SYS_CD = #{sSysCd}
+            <if test='sRefTp != null and sRefTp != ""'>
+            AND T2.REF_TP = #{sRefTp}
+            </if>
+            <if test='sRefId != null and sRefId != ""'>
+            AND T2.REF_ID = #{sRefId}
+            </if>
+            AND T1.USE_YN = 'Y'
+            AND T2.USE_YN = 'Y'
+            <if test='sExcludeRoles != null and sExcludeRoles.size > 0'>
+                AND T1.ROLE_ID NOT IN
+                <foreach item="roleId" index="index" collection="sExcludeRoles" open="(" separator="," close=")">
+                    #{roleId}
+                </foreach>
+            </if>
+    </select>
+
+    <select id="selectUserRoleMappings" parameterType="RoleMappingSearchVO" resultType="RoleMappingVO">
+        /* [chn.bhmc.dms.cmm.ath.service.dao.RoleMappingDAO.selectUserRoleMappings] */
+        SELECT
+             T1.ROLE_ID
+            ,T1.ROLE_NM
+            ,T1.ROLE_DETL_CONT
+            ,T2.REF_ID
+        FROM CM_0804T T1
+        LEFT JOIN CM_0803T T2 ON T1.SYS_CD = T2.SYS_CD AND T1.ROLE_ID = T2.ROLE_ID AND T2.REF_TP = 'U' AND T2.REF_ID = #{sRefId} AND T2.USE_YN = 'Y'
+        WHERE
+            T1.SYS_CD = #{sSysCd}
+            AND T1.USE_YN = 'Y'
+            <if test='sExcludeRoles != null and sExcludeRoles.size > 0'>
+                AND T1.ROLE_ID NOT IN
+                <foreach item="roleId" index="index" collection="sExcludeRoles" open="(" separator="," close=")">
+                    #{roleId}
+                </foreach>
+            </if>
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "roleNm"'>T1.ROLE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "roleDetlCont"'>T1.ROLE_DETL_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            T1.ROLE_NM ASC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                T1.ROLE_NM ASC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 역할이 있는 사용자 목록을 조회한다. -->
+    <select id="selectUsersByRoleId" parameterType="map" resultType="UserVO">
+        SELECT
+            T2.USR_ID
+            ,T2.USR_NM
+        FROM CM_0803T T1
+        INNER JOIN CM_0801T T2 ON T1.REF_ID = T2.USR_ID AND T1.REF_TP = 'U'
+        WHERE
+            T1.SYS_CD = #{sysCd}
+            <if test='roleIdList != null and roleIdList.size > 0'>
+                AND T1.ROLE_ID IN
+                <foreach item="roleId" index="index" collection="roleIdList" open="(" separator="," close=")">
+                    #{roleId}
+                </foreach>
+            </if>
+            AND T2.DLR_CD = #{dlrCd}
+            AND T1.USE_YN = 'Y'
+            AND T2.DEL_YN = 'N'
+            AND T2.ENABLED_YN = 'Y'
+    </select>
+
+</mapper>

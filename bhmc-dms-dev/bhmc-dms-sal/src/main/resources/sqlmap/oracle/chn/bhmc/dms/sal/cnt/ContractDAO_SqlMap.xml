@@ -1,0 +1,958 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.cnt.service.dao.ContractDAO">
+
+	<!-- 조회 목록  -->
+	<select id="selectContractsByCondition" parameterType="ContractSearchVO" resultType="ContractVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A.DLR_CD                         --딜러코드
+                     , A.CONTRACT_NO                    --계약번호
+                     , A.LV2_DLR_ORD_CD                 --2급딜러조직코드
+                     , '' AS LV2_DLR_ORD_NM             --2급딜러조직
+                     , A.LV2_DLR_YN                     --2급딜러여부
+                     , A.SALE_OPPT_NO                  --판매기회번호
+                     , A.GOODS_CONTRACT_NO              --용품계약번호
+                     , A.CONTRACT_DT                    --계약일자
+                     , A.CONTRACT_TP                    --계약유형
+                     , A.CONTRACT_STAT_CD               --계약상태코드 (버튼처리)
+
+                     , A.SALE_EMP_NO                    --판매사원번호
+                     , A.CONTRACT_CUST_NO               --계약고객번호
+                     , A.REAL_DRIVER_CUST_NO            --실제운전자고객번호
+                     , A.REAL_DRIVER_SAME_YN            --실제운전자동일여부
+                     , A.INTRO_DLR_CD                   --소개딜러코드
+
+                     , A.CARLINE_CD                       --차종코드
+                     --, C1.CARLINE_NM                    --차종명
+                     , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+                     , A.MODEL_CD                         --모델코드
+                     --, C2.MODEL_NM                      --모델명
+                     , FN_GET_MODEL_NM(A.MODEL_CD) AS MODEL_NM
+                     , A.OCN_CD                           --OCN코드
+                     --, C3.OCN_NM                        --OCN명
+                     , FN_GET_OCN_NM(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+                     , A.EXT_COLOR_CD                     --외장색상코드
+                     --, D1.EXT_COLOR_NM                  --외장색명
+                     , FN_GET_EXT_COLOR_NM(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+                     , A.INT_COLOR_CD                     --내장색상코드
+                     --, D2.INT_COLOR_NM                  --내장색명
+                     , FN_GET_INT_COLOR_NM(A.INT_COLOR_CD) AS INT_COLOR_NM
+
+                     , A.CONS_TP                        --탁송유형
+                     , A.CONS_ZIP_CD                    --탁송우편번호
+                     , A.CONS_ADDR1                     --탁송주소1
+                     , A.CONS_ADDR2                     --탁송주소2
+                     , A.CONS_AMT                       --탁송금액
+
+                     , A.TAX_TP                         --과세유형
+                     , A.TOT_AMT                        --총금액
+                     , A.CAR_AMT                        --차량금액
+                     , A.DC_AMT                         --할인금액
+                     , A.GOODS_TOT_AMT                  --용품총금액(로컬옵션+용품금액)
+                     , A.VATTAX_AMT                     --증치세금액
+                     , A.OTHER_TAX_AMT                  --기타세금액
+                     , A.OTHER_AMT                      --기타금액
+
+                     , A.GOODS_NM                       --용품명
+                     , A.GOODS_AMT                      --용품금액
+                     , A.OPTION_AMT                     --옵션금액
+
+                     , A.CONTRACT_AMT_PAY_TP            --계약금지불유형
+                     , A.CONTRACT_PDPST_NM              --계약입금자명
+                     , A.CONTRACT_RCPT_NO               --계약영수증번호
+                     , A.CONTRACT_AMT                   --계약금액
+                     , A.DL_AMT_PAY_TP                  --인도금지불유형
+                     , A.DL_AMT                         --인도금액
+
+                     , A.REG_TP                         --등록유형
+                     , A.REG_DIST_CD                    --등록지역코드
+                     , A.REG_NAME_NM                    --등록명의자명
+                     , A.REG_SBODT_AMT                  --등록부대금액
+
+                     , A.INC_AAP_CD                     --보험대행여부
+                     , A.INC_CMP_CD                     --보험회사코드
+                     , A.INC_JOIN_DT                    --보험가입일자
+                     , A.INC_AMT                        --보험금액
+
+                     , A.FINC_REQ_YN                    --금융요청여부
+                     , A.FINC_CMP_CD                    --금융회사코드
+                     , A.FINC_ITEM_CD                   --금융상품코드
+                     , A.FINC_REQ_DT                    --금융요청일자
+                     , A.FINC_REQ_AMT                   --금융요청금액
+                     , A.FINC_END_DT                    --금융만기일자
+
+                     , A.ESTIMATE_NO                    --견적번호
+                     , A.UATC_CAR_PURC_YN               --중고차량매입여부
+
+                     , A.CONTRACT_APPROVE_REQ_DT        --계약승인요청일자
+                     , A.CONTRACT_APPROVE_DT            --계약승인일자
+                     , A.ALLOC_QUE_NO                   --배정큐번호
+                     , A.ALLOC_DT                       --배정일자
+                     , A.GI_REQ_DT                      --출고요청일자
+                     , A.GI_DT                          --출고일자
+
+                     , A.DL_REQ_DT                      --인도요청일자
+                     , A.DL_SCHE_DT                     --인도예정일자
+                     , A.REAL_DL_DT                     --실제인도일자
+                     , A.TOVR_NM                        --인수자명
+                     , A.TOVR_REL_CD                    --인수자관계코드
+                     , A.CANC_REQ_DT                    --취소요청일자
+                     , A.CANC_DT                        --취소일자
+                     , A.CANC_REASON_CD                 --취소사유코드
+                     , A.RETL_TP                        --소매유형
+                     , A.FILE_DOC_ID                    --파일문서ID
+                     , A.REMARK                         --비고
+                     , A.REG_USR_ID                     --등록자ID
+                     , A.REG_DT                         --등록일자
+                     , A.UPDT_USR_ID                    --수정자ID
+                     , A.UPDT_DT                        --수정일자
+
+                     , B1.CUST_CD                       -- 고객코드
+                     , B1.CUST_TP                       -- 고객유형
+                     , B1.CUST_NM                       -- 고객명
+                     , B1.TEL_NO1                       -- 전화번호1
+                     , B1.TEL_NO2                       -- 전화번호2
+                     , B1.EMAIL_NM                      -- 이메일명
+                     , B1.CRN_NO                        -- 사업자등록번호
+                     , B1.ZIP_CD                        -- 우편번호
+                     , B1.ADDR1                         -- 주소1
+                     , B1.ADDR2                         -- 주소2
+
+                     , B2.CUST_CD    as DRV_CUST_CD     -- 고객코드
+                     , B2.CUST_TP    as DRV_CUST_TP     -- 고객유형
+                     , B2.CUST_NM    as DRV_CUST_NM     -- 고객명
+                     , B2.TEL_NO1    as DRV_TEL_NO1     -- 전화번호1
+                     , B2.TEL_NO2    as DRV_TEL_NO2     -- 전화번호2
+                     , B2.EMAIL_NM   as DRV_EMAIL_NM    -- 이메일명
+                     , B2.CRN_NO     as DRV_CRN_NO      -- 사업자등록번호
+                     , B2.ZIP_CD     as DRV_ZIP_CD      -- 우편번호
+                     , B2.ADDR1      as DRV_ADDR1       -- 주소1
+                     , B2.ADDR2      as DRV_ADDR2       -- 주소2
+
+                     , E.CORP_CAR_DSTIN_CD                   -- 자사차량구분코드
+                     , E.BRAND_CD                            -- 브랜드코드
+                     , E.MODEL_NM       AS USE_OTHERS_MODEL_NM  -- 타사:모델명
+
+                     , E.CARLINE_CD     AS USE_CARLINE_CD    -- 차종코드
+                     , ( select MAX(Z.CARLINE_NM) from SA_0101T Z where Z.CARLINE_CD = E.CARLINE_CD ) AS USE_CARLINE_NM -- 중고차:차종명
+                     , E.MODEL_CD       AS USE_MODEL_CD      -- 모델코드
+                     , ( select MAX(Z.MODEL_NM) from SA_0102T Z where Z.MODEL_CD = E.MODEL_CD ) AS USE_MODEL_NM -- 중고차:모델명
+                     , E.OCN_CD         AS USE_OCN_CD        -- OCN코드
+                     , ( select MAX(Z.OCN_NM) from SA_0105T Z where Z.OCN_CD = E.OCN_CD ) AS USE_OCN_NM -- 중고차:OCN명
+                     , E.EXT_COLOR_CD   AS USE_EXT_COLOR_CD  -- 외장색상코드
+                     , ( select MAX(Z.EXT_COLOR_NM) from SA_0107T Z where Z.EXT_COLOR_CD = E.EXT_COLOR_CD ) AS USE_EXT_COLOR_NM -- 중고차:외장색명
+                     , E.INT_COLOR_CD   AS USE_INT_COLOR_CD  -- 내장색상코드
+                     , ( select MAX(Z.INT_COLOR_NM) from SA_0108T Z where Z.INT_COLOR_CD = E.INT_COLOR_CD ) AS USE_INT_COLOR_NM -- 중고차:내장색명
+
+                     , E.CAR_RUN_DIST_VAL                    -- 차량주행거리값
+                     , E.CAR_NO                              -- 차량번호
+                     , E.VIN_NO                              -- 차대번호
+                     , E.CAR_DRV_MTH_CD                      -- 차량구동방식코드
+                     , E.FUEL_CD                             -- 연료코드
+                     , E.PC_DSTIN_CD                         -- 승상용구분코드
+                     , E.CAR_LMT_VAL                         -- 차량정원값
+                     , E.CAR_YY_CD                           -- 차량연식코드
+                     , E.CAR_DISP_QTY                        -- 차량배기량
+                     , E.CAR_REG_DT                          -- 차량등록일자
+                     , E.EVAL_SCHE_DT                        -- 평가예정일자
+                  FROM SA_0201T A                     /* 계약헤더 */
+                 INNER JOIN SA_0202T B1               /* 계약고객 */
+                    ON A.DLR_CD = B1.DLR_CD
+                   and A.CONTRACT_NO = B1.CONTRACT_NO
+                   and B1.PARTNER_TP = 'C'   -- 계약자   : SAL028
+                 INNER JOIN SA_0202T B2               /* 실운전자 */
+                    ON A.DLR_CD = B2.DLR_CD
+                   and A.CONTRACT_NO = B2.CONTRACT_NO
+                   and B2.PARTNER_TP = 'D'   -- 실운전자 : SAL028
+                  LEFT OUTER JOIN SA_0101T C1         /* 차종 */
+                    ON A.CARLINE_CD = C1.CARLINE_CD
+                  LEFT OUTER JOIN SA_0102T C2         /* 모델 */
+                    ON  A.MODEL_CD = C2.MODEL_CD
+                  LEFT OUTER JOIN SA_0105T C3          /* OCN */
+                    ON A.MODEL_CD = C3.MODEL_CD
+                   and A.OCN_CD = C3.OCN_CD
+                  LEFT OUTER JOIN SA_0107T D1          /*외장색상 */
+                    ON A.EXT_COLOR_CD = D1.EXT_COLOR_CD
+                  LEFT OUTER JOIN SA_0108T D2          /*내장색상 */
+                    ON A.INT_COLOR_CD = D2.INT_COLOR_CD
+                  LEFT OUTER JOIN SA_0205T E           /* 중고차 */
+                    ON A.DLR_CD = E.DLR_CD
+                   AND A.CONTRACT_NO = E.CONTRACT_NO
+                  WHERE 1 = 1
+                  <if test='sDlrCd != null and sDlrCd != ""'>
+                    AND A.DLR_CD = #{sDlrCd}                       -- 딜러코드
+                  </if>
+                  <if test='sSaleEmpNo != null and sSaleEmpNo != ""'>
+                    AND A.SALE_EMP_NO = #{sSaleEmpNo}     -- 판매사원번호
+                  </if>
+                  <if test='sContractCustNo != null and sContractCustNo != ""'>
+                    AND ( B1.CUST_CD = #{sContractCustNo} OR B2.CUST_CD = #{sContractCustNo} )   -- 고객코드
+                  </if>
+                  <if test='sContractTp != null and sContractTp != ""'>
+                    AND A.CONTRACT_TP = #{sContractTp}        -- 계약유형
+                  </if>
+                  <if test='sContractNo != null and sContractNo != ""'>
+                  <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sContractNo,"*")'>
+                      <bind name='sContractNo' value='@org.apache.commons.lang3.StringUtils@replace(sContractNo, "*", "%")' />
+                        AND A.CONTRACT_NO LIKE #{sContractNo}       -- 계약번호
+                    </when>
+                    <otherwise>
+                        AND A.CONTRACT_NO = #{sContractNo}          -- 계약번호
+                    </otherwise>
+                  </choose>
+                  </if>
+                  <if test='sContractStatCd != null and sContractStatCd != ""'>
+                    AND A.CONTRACT_STAT_CD = #{sContractStatCd}      -- 계약상태
+                  </if>
+                  <if test='sStartContractDt != null and sEndContractDt != null'>
+                    AND A.CONTRACT_DT <![CDATA[>=]]> TRUNC(#{sStartContractDt},'DD')
+                    AND A.CONTRACT_DT <![CDATA[<]]> TRUNC(#{sEndContractDt},'DD')+1
+                  </if>
+                  <if test='sCarlineCd != null and sCarlineCd != ""'>
+                    AND A.CARLINE_CD = #{sCarlineCd}      -- 차종코드
+                  </if>
+                  <if test='sModelCd != null and sModelCd != ""'>
+                    AND A.MODEL_CD = #{sModelCd}          -- 모델코드
+                  </if>
+                  <if test='sOcnCd != null and sOcnCd != ""'>
+                    AND A.OCN_CD = #{sOcnCd}              -- OCN
+                  </if>
+                  ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "contractNo"'>A.CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractDt"'>A.CONTRACT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "contractStatCd"'>A.CONTRACT_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "custNm"'>B1.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "introDlrCd"'>A.INTRO_DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineNm"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelNm"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnNm"'>A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "extColorNm"'>A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itnColorCd"'>A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.CONTRACT_DT DESC, A.CONTRACT_NO DESC, A.CONTRACT_STAT_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.CONTRACT_DT DESC, A.CONTRACT_NO DESC, A.CONTRACT_STAT_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+	<!-- 목록 갯수  -->
+	<select id="selectContractsByConditionCnt" parameterType="ContractSearchVO" resultType="int">
+		SELECT COUNT(*)
+          FROM SA_0201T A                     /* 계약헤더 */
+         INNER JOIN SA_0202T B1               /* 계약고객 */
+            ON A.DLR_CD = B1.DLR_CD
+           and A.CONTRACT_NO = B1.CONTRACT_NO
+           and B1.PARTNER_TP = 'C'   -- 계약자   : SAL028
+         INNER JOIN SA_0202T B2               /* 실운전자 */
+            ON A.DLR_CD = B2.DLR_CD
+           and A.CONTRACT_NO = B2.CONTRACT_NO
+           and B2.PARTNER_TP = 'D'   -- 실운전자 : SAL028
+          LEFT OUTER JOIN SA_0101T C1         /* 차종 */
+            ON A.CARLINE_CD = C1.CARLINE_CD
+          LEFT OUTER JOIN SA_0102T C2         /* 모델 */
+            ON A.MODEL_CD = C2.MODEL_CD
+          LEFT OUTER JOIN SA_0105T C3          /* OCN */
+            ON A.MODEL_CD = C3.MODEL_CD
+           and A.OCN_CD = C3.OCN_CD
+          LEFT OUTER JOIN SA_0107T D1          /*외장색상 */
+            ON A.EXT_COLOR_CD = D1.EXT_COLOR_CD
+          LEFT OUTER JOIN SA_0108T D2          /*내장색상 */
+            ON A.INT_COLOR_CD = D2.INT_COLOR_CD
+          LEFT OUTER JOIN SA_0205T E           /* 중고차 */
+            ON A.DLR_CD = E.DLR_CD
+           AND A.CONTRACT_NO = E.CONTRACT_NO
+         WHERE 1 = 1
+          <if test='sDlrCd != null and sDlrCd != ""'>
+            AND A.DLR_CD = #{sDlrCd}                       -- 딜러코드
+          </if>
+          <if test='sSaleEmpNo != null and sSaleEmpNo != ""'>
+            AND A.SALE_EMP_NO = #{sSaleEmpNo}     -- 판매사원번호
+          </if>
+          <if test='sContractCustNo != null and sContractCustNo != ""'>
+            AND ( B1.CUST_CD = #{sContractCustNo} OR B2.CUST_CD = #{sContractCustNo} )   -- 고객코드
+          </if>
+          <if test='sContractTp != null and sContractTp != ""'>
+            AND A.CONTRACT_TP = #{sContractTp}        -- 계약유형
+          </if>
+          <if test='sContractNo != null and sContractNo != ""'>
+            AND A.CONTRACT_NO = #{sContractNo}        -- 계약번호
+          </if>
+          <if test='sContractStatCd != null and sContractStatCd != ""'>
+            AND A.CONTRACT_STAT_CD = #{sContractStatCd}      -- 계약상태
+          </if>
+          <if test='sStartContractDt != null and sEndContractDt != null'>
+            AND A.CONTRACT_DT <![CDATA[>=]]> TRUNC(#{sStartContractDt},'DD')
+            AND A.CONTRACT_DT <![CDATA[<]]> TRUNC(#{sEndContractDt},'DD')+1
+          </if>
+          <if test='sCarlineCd != null and sCarlineCd != ""'>
+            AND A.CARLINE_CD = #{sCarlineCd}      -- 차종코드
+          </if>
+          <if test='sModelCd != null and sModelCd != ""'>
+            AND A.MODEL_CD = #{sModelCd}          -- 모델코드
+          </if>
+          <if test='sOcnCd != null and sOcnCd != ""'>
+            AND A.OCN_CD = #{sOcnCd}              -- OCN
+          </if>
+	</select>
+
+    <!-- 계약 헤더에 저장한다.  -->
+    <insert id="insertContract" parameterType="ContractVO">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractDAO.insertContract] */
+        INSERT
+          INTO SA_0201T(
+              DLR_CD
+            , CONTRACT_NO
+            , CONTRACT_TP
+            , CONTRACT_STAT_CD
+            , CONTRACT_DT
+            , SALE_EMP_NO
+            , CONTRACT_CUST_NO
+            , REAL_DRIVER_CUST_NO
+            , REAL_DRIVER_SAME_YN
+            , INTRO_DLR_CD
+            , CARLINE_CD
+            , MODEL_CD
+            , OCN_CD
+            , EXT_COLOR_CD
+            , INT_COLOR_CD
+            , CONS_TP
+            , CONS_ZIP_CD
+            , CONS_ADDR1
+            , CONS_ADDR2
+            , CONS_AMT
+            , TAX_TP
+            , TOT_AMT
+            , CAR_AMT
+            , DC_AMT
+            , GOODS_TOT_AMT
+            , VATTAX_AMT
+            , OTHER_TAX_AMT
+            , OTHER_AMT
+            , GOODS_NM
+            , GOODS_AMT
+            , OPTION_AMT
+            , CONTRACT_AMT_PAY_TP
+            , CONTRACT_PDPST_NM
+            , CONTRACT_RCPT_NO
+            , CONTRACT_AMT
+            , DL_AMT_PAY_TP
+            , DL_AMT
+            , REG_TP
+            , REG_DIST_CD
+            , REG_NAME_NM
+            , REG_SBODT_AMT
+            , INC_AAP_CD
+            , INC_CMP_CD
+            , INC_JOIN_DT
+            , INC_AMT
+            , FINC_REQ_YN
+            , FINC_CMP_CD
+            , FINC_ITEM_CD
+            , FINC_REQ_DT
+            , FINC_REQ_AMT
+            , FINC_END_DT
+            , ESTIMATE_NO
+            , UATC_CAR_PURC_YN
+            , CONTRACT_APPROVE_REQ_DT
+            , CONTRACT_APPROVE_DT
+            , ALLOC_QUE_NO
+            , ALLOC_DT
+            , GI_REQ_DT
+            , GI_DT
+            , DL_REQ_DT
+            , DL_SCHE_DT
+            , REAL_DL_DT
+            , TOVR_NM
+            , TOVR_REL_CD
+            , CANC_REQ_DT
+            , CANC_DT
+            , CANC_REASON_CD
+            , RETL_TP
+            , FILE_DOC_ID
+            , REMARK
+            , LV2_DLR_ORD_CD
+            , LV2_DLR_YN
+            , SALE_OPPT_SEQ
+            , GOODS_CONTRACT_NO
+            , REG_USR_ID
+            , REG_DT
+            , UPDT_USR_ID
+            , UPDT_DT
+      )VALUES(
+              #{dlrCd}
+            , #{contractNo}
+            , #{contractTp}
+            , #{contractStatCd}
+            , #{contractDt}
+            , #{saleEmpNo}
+            , #{contractCustNo}
+            , #{realDriverCustNo}
+            , #{realDriverSameYn}
+            , #{introDlrCd}
+            , #{carlineCd}
+            , #{modelCd}
+            , #{ocnCd}
+            , #{extColorCd}
+            , #{intColorCd}
+            , #{consTp}
+            , #{consZipCd}
+            , #{consAddr1}
+            , #{consAddr2}
+            , #{consAmt}
+            , #{taxTp}
+            , #{totAmt}
+            , #{carAmt}
+            , #{dcAmt}
+            , #{goodsTotAmt}
+            , #{vattaxAmt}
+            , #{otherTaxAmt}
+            , #{otherAmt}
+            , #{goodsNm}
+            , #{goodsAmt}
+            , #{optionAmt}
+            , #{contractAmtPayTp}
+            , #{contractPdpstNm}
+            , #{contractRcptNo}
+            , #{contractAmt}
+            , #{dlAmtPayTp}
+            , #{dlAmt}
+            , #{regTp}
+            , #{regDistCd}
+            , #{regNameNm}
+            , #{regSbodtAmt}
+            , #{incAapCd}
+            , #{incCmpCd}
+            , #{incJoinDt}
+            , #{incAmt}
+            , #{fincReqYn}
+            , #{fincCmpCd}
+            , #{fincItemCd}
+            , #{fincReqDt}
+            , #{fincReqAmt}
+            , #{fincEndDt}
+            , #{estimateNo}
+            , #{uatcCarPurcYn}
+            , ''
+            , ''
+            , ''
+            , ''
+            , ''
+            , ''
+            , #{dlReqDt}
+            , ''
+            , ''
+            , ''
+            , ''
+            , ''
+            , ''
+            , ''
+            , ''
+            , #{fileDocId}
+            , #{remark}
+            , #{lv2DlrOrdCd}
+            , #{lv2DlrYn}
+            , #{saleOpptSeq}
+            , #{goodsContractNo}
+            , #{regUsrId}
+            , SYSDATE
+            , #{updtUsrId}
+            , SYSDATE
+      )
+    </insert>
+
+    <!-- SA_0202 : 실운전자 저장 -->
+    <insert id="insertContractCustomer" parameterType="ContractVO">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractDAO.insertContractCustomer] */
+        INSERT
+          INTO SA_0202T(
+               DLR_CD
+             , CONTRACT_NO
+             , PARTNER_TP
+             , CUST_CD
+             , CUST_TP
+             , CUST_NM
+             , TEL_NO1
+             , TEL_NO2
+             , EMAIL_NM
+             , CRN_NO
+             , ZIP_CD
+             , ADDR1
+             , ADDR2
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+          )VALUES(
+               #{dlrCd}
+             , #{contractNo}
+             , #{partnerTp}
+             , #{custCd}
+             , #{custTp}
+             , #{custNm}
+             , TRIM(#{telNo1})
+             , TRIM(#{telNo2})
+             , #{emailNm}
+             , #{crnNo}
+             , #{zipCd}
+             , #{addr1}
+             , #{addr2}
+             , #{regUsrId}
+             , SYSDATE
+             , #{updtUsrId}
+             , SYSDATE
+          )
+    </insert>
+
+    <!-- SA_0205 : 중고차 저장 -->
+    <insert id="insertUsedCar" parameterType="ContractVO">
+        /* [chn.bhmc.dms.sal.cnt.service.dao.ContractDAO.insertUsedCar] */
+        INSERT
+          INTO SA_0205T(
+               DLR_CD
+             , CONTRACT_NO
+             , CORP_CAR_DSTIN_CD
+             , BRAND_CD
+             , CARLINE_CD
+             , MODEL_CD
+             , OCN_CD
+             , EXT_COLOR_CD
+             , INT_COLOR_CD
+             , MODEL_NM
+             , CAR_RUN_DIST_VAL
+             , CAR_NO
+             , VIN_NO
+             , CAR_DRV_MTH_CD
+             , FUEL_CD
+             , PC_DSTIN_CD
+             , CAR_LMT_VAL
+             , CAR_YY_CD
+             , CAR_DISP_QTY
+             , CAR_REG_DT
+             , EVAL_SCHE_DT
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+          )VALUES(
+               #{dlrCd}
+             , #{contractNo}
+             , #{corpCarDstinCd}
+             , #{brandCd}
+             , #{useCarlineCd}
+             , #{useModelCd}
+             , #{useOcnCd}
+             , #{useExtColorCd}
+             , #{useIntColorCd}
+             , #{useOthersModelNm}
+             , #{carRunDistVal}
+             , #{carNo}
+             , #{vinNo}
+             , #{carDrvMthCd}
+             , #{fuelCd}
+             , #{pcDstinCd}
+             , #{carLmtVal}
+             , #{carYyCd}
+             , #{carDispQty}
+             , #{carRegDt}
+             , #{evalScheDt}
+             , #{regUsrId}
+             , SYSDATE
+             , #{updtUsrId}
+             , SYSDATE
+          )
+    </insert>
+
+    <!-- 계약 헤더에 수정한다.  -->
+    <update id="updateContract" parameterType="ContractVO">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractDAO.updateContract] */
+        UPDATE SA_0201T
+           SET CONTRACT_TP             = #{contractTp}
+             , CONTRACT_STAT_CD        = #{contractStatCd}
+             , CONTRACT_DT             = #{contractDt}
+             , SALE_EMP_NO             = #{saleEmpNo}
+             , CONTRACT_CUST_NO        = #{contractCustNo}
+             , REAL_DRIVER_CUST_NO     = #{realDriverCustNo}
+             , REAL_DRIVER_SAME_YN     = #{realDriverSameYn}
+             , INTRO_DLR_CD            = #{introDlrCd}
+             , CARLINE_CD              = #{carlineCd}
+             , MODEL_CD                = #{modelCd}
+             , OCN_CD                  = #{ocnCd}
+             , EXT_COLOR_CD            = #{extColorCd}
+             , INT_COLOR_CD            = #{intColorCd}
+             , CONS_TP                 = #{consTp}
+             , CONS_ZIP_CD             = #{consZipCd}
+             , CONS_ADDR1              = #{consAddr1}
+             , CONS_ADDR2              = #{consAddr2}
+             , CONS_AMT                = #{consAmt}
+             , TAX_TP                  = #{taxTp}
+             , TOT_AMT                 = #{totAmt}
+             , CAR_AMT                 = #{carAmt}
+             , DC_AMT                  = #{dcAmt}
+             , GOODS_TOT_AMT           = #{goodsTotAmt}
+             , VATTAX_AMT              = #{vattaxAmt}
+             , OTHER_TAX_AMT           = #{otherTaxAmt}
+             , OTHER_AMT               = #{otherAmt}
+             , GOODS_NM                = #{goodsNm}
+             , GOODS_AMT               = #{goodsAmt}
+             , OPTION_AMT              = #{optionAmt}
+             , CONTRACT_AMT_PAY_TP     = #{contractAmtPayTp}
+             , CONTRACT_PDPST_NM       = #{contractPdpstNm}
+             , CONTRACT_RCPT_NO        = #{contractRcptNo}
+             , CONTRACT_AMT            = #{contractAmt}
+             , DL_AMT_PAY_TP           = #{dlAmtPayTp}
+             , DL_AMT                  = #{dlAmt}
+             , REG_TP                  = #{regTp}
+             , REG_DIST_CD             = #{regDistCd}
+             , REG_NAME_NM             = #{regNameNm}
+             , REG_SBODT_AMT           = #{regSbodtAmt}
+             , INC_AAP_CD              = #{incAapCd}
+             , INC_CMP_CD              = #{incCmpCd}
+             , INC_JOIN_DT             = #{incJoinDt}
+             , INC_AMT                 = #{incAmt}
+             , FINC_REQ_YN             = #{fincReqYn}
+             , FINC_CMP_CD             = #{fincCmpCd}
+             , FINC_ITEM_CD            = #{fincItemCd}
+             , FINC_REQ_DT             = #{fincReqDt}
+             , FINC_REQ_AMT            = #{fincReqAmt}
+             , FINC_END_DT             = #{fincEndDt}
+             , ESTIMATE_NO             = #{estimateNo}
+             , UATC_CAR_PURC_YN        = #{uatcCarPurcYn}
+             , DL_REQ_DT               = #{dlReqDt}
+             , FILE_DOC_ID             = #{fileDocId}
+             , REMARK                  = #{remark}
+             , LV2_DLR_ORD_CD          = #{lv2DlrOrdCd}
+             , LV2_DLR_YN              = #{lv2DlrYn}
+             , SALE_OPPT_NO           = #{saleOpptNo}
+             , GOODS_CONTRACT_NO       = #{goodsContractNo}
+
+             , UPDT_USR_ID             = #{updtUsrId}
+             , UPDT_DT                 = SYSDATE
+         WHERE DLR_CD            = #{dlrCd}
+           AND CONTRACT_NO       = #{contractNo}
+    </update>
+
+    <!-- SA_0202 : 실운전자 수정 -->
+    <update id="updateContractCustomer" parameterType="ContractVO">
+    /* [chn.bhmc.dms.sal.cnt.service.dao.ContractDAO.updateContractCustomer] */
+        UPDATE SA_0202T
+           SET CUST_CD     = #{custCd}
+             , CUST_TP     = #{custTp}
+             , CUST_NM     = #{custNm}
+             , TEL_NO1     = TRIM(#{telNo1})
+             , TEL_NO2     = TRIM(#{telNo2})
+             , EMAIL_NM    = #{emailNm}
+             , CRN_NO      = #{crnNo}
+             , ZIP_CD      = #{zipCd}
+             , ADDR1       = #{addr1}
+             , ADDR2       = #{addr2}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT     = SYSDATE
+        WHERE DLR_CD      = #{dlrCd}
+          AND CONTRACT_NO = #{contractNo}
+          AND PARTNER_TP  = #{partnerTp}
+    </update>
+
+    <!-- SA_0205 : 중고차 수정 -->
+    <update id="updateUsedCar" parameterType="ContractVO">
+        /* [chn.bhmc.dms.sal.cnt.service.dao.ContractDAO.updateUsedCar] */
+        UPDATE SA_0205T
+           SET CORP_CAR_DSTIN_CD = #{corpCarDstinCd}
+             , BRAND_CD          = #{brandCd}
+             , CARLINE_CD        = #{useCarlineCd}
+             , MODEL_CD          = #{useModelCd}
+             , OCN_CD            = #{useOcnCd}
+             , EXT_COLOR_CD      = #{useExtColorCd}
+             , INT_COLOR_CD      = #{useIntColorCd}
+             , MODEL_NM          = #{useOthersModelNm}
+             , CAR_RUN_DIST_VAL  = #{carRunDistVal}
+             , CAR_NO            = #{carNo}
+             , VIN_NO            = #{vinNo}
+             , CAR_DRV_MTH_CD    = #{carDrvMthCd}
+             , FUEL_CD           = #{fuelCd}
+             , PC_DSTIN_CD       = #{pcDstinCd}
+             , CAR_LMT_VAL       = #{carLmtVal}
+             , CAR_YY_CD         = #{carYyCd}
+             , CAR_DISP_QTY      = #{carDispQty}
+             , CAR_REG_DT        = #{carRegDt}
+             , EVAL_SCHE_DT      = #{evalScheDt}
+             , UPDT_USR_ID       = #{updtUsrId}
+             , UPDT_DT           = SYSDATE
+         WHERE DLR_CD      = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </update>
+
+    <!-- SA_0205T : 중고차 저장된 갯수 확인 -->
+    <select id="selectUsedCarCnt" parameterType="ContractVO" resultType="int">
+        /* [chn.bhmc.dms.sal.cnt.service.dao.ContractDAO.selectUsedCarCnt] */
+        SELECT COUNT(*)
+          FROM SA_0205T
+         WHERE DLR_CD      = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </select>
+
+    <delete id="deleteUsedCar" parameterType="ContractVO">
+        /* [chn.bhmc.dms.sal.cnt.service.dao.ContractDAO.deleteUsedCar] */
+        DELETE
+          FROM SA_0205T
+         WHERE DLR_CD      = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </delete>
+
+
+    <!-- 계약된 로컬옵션 내역을 조회한다.  -->
+    <select id="selectLocalOptionListsByConditionCnt" parameterType="ContractSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0204T A
+         INNER JOIN SA_0118T B          /* 로컬옵션 */
+            ON A.OPTION_CD = B.OPTION_CD
+         WHERE A.DLR_CD = #{sDlrCd}
+           AND A.CONTRACT_NO = #{sContractNo}
+    </select>
+    <select id="selectLocalOptionListsByCondition" parameterType="ContractSearchVO" resultType="ContractLocalOptionVO">
+        SELECT A.DLR_CD
+             , A.CONTRACT_NO
+             , A.SEQ
+             , B.OPTION_NM
+             , A.OPTION_CD
+             , A.OPTION_AMT
+             , A.INST_REQ_DT
+             , A.REG_USR_ID
+             , A.REG_DT
+             , A.UPDT_USR_ID
+             , A.UPDT_DT
+          FROM SA_0204T A
+         INNER JOIN SA_0118T B          /* 로컬옵션 */
+            ON A.OPTION_CD = B.OPTION_CD
+         WHERE A.DLR_CD = #{sDlrCd}
+           AND A.CONTRACT_NO = #{sContractNo}
+    </select>
+
+
+    <!-- 계약 로컬옵션 저장 -->
+    <insert id="insertContractLocalOptions" parameterType="ContractLocalOptionVO">
+        INSERT
+          INTO SA_0204T(
+              DLR_CD
+            , CONTRACT_NO
+            , SEQ
+            , OPTION_CD
+            , OPTION_AMT
+            , REG_USR_ID
+            , REG_DT
+            , UPDT_USR_ID
+            , UPDT_DT
+          )VALUES(
+              #{dlrCd}
+            , #{contractNo}
+            , SEQ_SA_0204T.nextval
+            , #{optionCd}
+            , #{optionAmt}
+            , #{regUsrId}
+            , SYSDATE
+            , #{updtUsrId}
+            , SYSDATE
+          )
+    </insert>
+
+    <!-- 계약 로컬옵션 수정 -->
+    <update id="updateContractLocalOptions" parameterType="ContractLocalOptionVO">
+        UPDATE SA_0204T
+           SET OPTION_CD  = #{optionCd}
+            , OPTION_AMT  = #{optionAmt}
+            , UPDT_USR_ID = #{updtUsrId}
+            , UPDT_DT = SYSDATE
+         WHERE DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+           AND SEQ = #{seq}
+    </update>
+
+    <!-- 계약 로컬옵션 수정 -->
+    <delete id="deleteContractLocalOptions" parameterType="ContractLocalOptionVO">
+        DELETE
+          FROM SA_0204T
+         WHERE DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+           AND SEQ = #{seq}
+    </delete>
+
+    <!-- 계약된 프로모션 내역을 조회한다.  -->
+    <select id="selectPromotionListsByConditionCnt" parameterType="ContractSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0113T SA0113                         /* 프로모션 헤더 */
+          INNER JOIN SA_0115T SA_0115                  /* 프로모션 모델 */
+            ON SA0113.DLR_CD = SA_0115.DLR_CD
+           AND SA0113.PROMOTION_CD = SA_0115.PROMOTION_CD
+          LEFT OUTER JOIN (SELECT DLR_CD
+                                ,PROMOTION_CD
+                                ,WM_CONCAT(CONTRACT_TP) AS CONTRACT_TP  -- n: 일반판매, p:선출고판매, g:집단판매
+                            FROM SA_0116T               /* 프로모션 계약유형 */
+                           GROUP BY DLR_CD, PROMOTION_CD
+                           ) SA0116
+            ON SA0113.DLR_CD = SA0116.DLR_CD
+           AND SA0113.PROMOTION_CD = SA0116.PROMOTION_CD
+          LEFT OUTER JOIN (
+                             SELECT A.*
+                               FROM SA_0203T A               /*계약 프로모션*/
+                              WHERE CONTRACT_NO = #{sContractNo}
+                           ) SA0203
+            ON SA0113.DLR_CD = SA0203.DLR_CD
+           AND SA0113.PROMOTION_CD = SA0203.PROMOTION_CD
+         WHERE SA0113.USE_YN = 'Y'
+           AND SA0113.APPROVE_CD = 'C'
+           AND SA_0115.MODEL_CD = #{sModelCd}
+           AND #{sStartContractDt} BETWEEN SA0113.START_DT AND SA0113.END_DT    -- 계약일
+           AND SA0113.DLR_CD = #{sDlrCd}
+    </select>
+    <select id="selectPromotionListsByCondition" parameterType="ContractSearchVO" resultType="ContractPromotionVO">
+        SELECT SA0113.DLR_CD
+             ,SA0113.PROMOTION_CD
+             ,SA0113.PROMOTION_NM
+             ,SA0113.PROMOTION_TP     /* SAL010 프로모션유형 */
+             ,SA_0115.MODEL_CD
+             ,SA0113.START_DT
+             ,SA0113.END_DT
+             ,SA0113.APPLY_TP        -- 비율(R) , 금액(F)
+             ,SA0113.PROMOTION_AMT
+             ,SA0113.IMS_BUDN_RATE   -- 제조사부담율
+             ,SA0113.DLR_BUDN_RATE   -- 딜러부담율
+             ,SA0113.REG_USR_ID
+             ,SA0113.REG_DT
+             ,SA0113.UPDT_USR_ID
+             ,SA0113.UPDT_DT
+             ,SA0116.CONTRACT_TP
+             ,DECODE(SA0203.CONTRACT_NO, NULL, 'N', 'Y') AS CHK_YN
+          FROM SA_0113T SA0113                         /* 프로모션 헤더 */
+          INNER JOIN SA_0115T SA_0115                  /* 프로모션 모델 */
+            ON SA0113.DLR_CD = SA_0115.DLR_CD
+           AND SA0113.PROMOTION_CD = SA_0115.PROMOTION_CD
+          LEFT OUTER JOIN (SELECT DLR_CD
+                                , PROMOTION_CD
+                                , WM_CONCAT(CONTRACT_TP) AS CONTRACT_TP  -- n: 일반판매, p:선출고판매, g:집단판매
+                            FROM SA_0116T               /* 프로모션 계약유형 */
+                           GROUP BY DLR_CD, PROMOTION_CD
+                           ) SA0116
+            ON SA0113.DLR_CD = SA0116.DLR_CD
+           AND SA0113.PROMOTION_CD = SA0116.PROMOTION_CD
+          LEFT OUTER JOIN (
+                             SELECT A.*
+                               FROM SA_0203T A               /*계약 프로모션*/
+                              WHERE CONTRACT_NO = #{sContractNo}
+                           ) SA0203
+            ON SA0113.DLR_CD = SA0203.DLR_CD
+           AND SA0113.PROMOTION_CD = SA0203.PROMOTION_CD
+         WHERE SA0113.USE_YN = 'Y'
+           AND SA0113.APPROVE_CD = 'C'
+           AND SA_0115.MODEL_CD = #{sModelCd}
+           AND #{sStartContractDt} BETWEEN SA0113.START_DT AND SA0113.END_DT    -- 계약일
+           AND SA0113.DLR_CD = #{sDlrCd}
+
+    </select>
+
+    <!-- 계약 프로모션 저장 -->
+    <insert id="insertContractPromotions" parameterType="ContractPromotionVO">
+        INSERT
+          INTO SA_0203T(
+               DLR_CD
+             , CONTRACT_NO
+             , PROMOTION_CD
+             , PROMOTION_AMT
+             , USE_YN
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+        )VALUES(
+               #{dlrCd}
+             , #{contractNo}
+             , #{promotionCd}
+             , #{promotionAmt}
+             , 'Y'
+             , #{regUsrId}
+             , SYSDATE
+             , #{updtUsrId}
+             , SYSDATE
+        )
+    </insert>
+
+    <!-- 계약 프로모션 삭제 -->
+    <delete id="deleteContractPromotions" parameterType="ContractPromotionVO">
+        DELETE
+          FROM SA_0203T
+         WHERE DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+           AND PROMOTION_CD = #{promotionCd}
+    </delete>
+
+    <!-- 계약된 모든 프로모션 삭제 -->
+    <delete id="deleteContractAllPromotions" parameterType="ContractVO">
+        DELETE
+          FROM SA_0203T
+         WHERE DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </delete>
+
+    <!-- 계약을 삭제한다.(상태만 변경)  -->
+    <update id="deleteContract" parameterType="ContractVO">
+        UPDATE SA_0201T
+           SET CONTRACT_STAT_CD = '92'
+         WHERE DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </update>
+
+    <!-- 계약 승인요청한다.(상태만 변경)  -->
+    <update id="conRequestAppr" parameterType="ContractVO">
+        UPDATE SA_0201T
+           SET CONTRACT_STAT_CD = '20'
+         WHERE DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </update>
+
+    <!-- 계약 승인확정한다.(상태만 변경)  -->
+    <update id="approval" parameterType="ContractVO">
+        UPDATE SA_0201T
+           SET CONTRACT_STAT_CD = '21'
+         WHERE DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </update>
+
+    <!-- 계약 승인 반려한다.(상태만 변경)  -->
+    <update id="approvalRollback" parameterType="ContractVO">
+        UPDATE SA_0201T
+           SET CONTRACT_STAT_CD = '10'
+         WHERE DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </update>
+
+    <!--계약 상태 조회 (출고 처리시 조회) -->
+    <select id="selectContractStatCd" parameterType="ContractSearchVO" resultType="java.lang.String">
+        SELECT CONTRACT_STAT_CD
+          FROM SA_0201T
+          WHERE DLR_CD = #{sDlrCd}
+            AND CONTRACT_NO = #{sContractNo}
+    </select>
+</mapper>

@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : InvoiceMonthlyDAO_SqlMap.xml
+    Description : 월별 인보이스  에 관한 데이터처리
+    author Kwon Ki Hyun
+    since 2016. 03. 14.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 03. 14.  Kwon Ki Hyun     최초 생성
+-->
+
+
+<mapper namespace="chn.bhmc.dms.ser.wac.service.dao.InvoiceMonthlyDAO">
+
+
+    <!-- 월별인보이스 목록수 조회  -->
+    <select id="selectInvoiceMonthlyByConditionCnt" parameterType="InvoiceMonthlySearchVO" resultType="int" >
+        /* [chn.bhmc.dms.ser.wac.service.dao.InvoiceMonthlyDAO.selectInvoiceMonthlyByConditionCnt] */
+
+            SELECT COUNT(INVC_NO) AS VALUE
+              FROM SE_0930T    --인보이스정보
+            <where>
+               <if test='sInvcNo != null and sInvcNo != ""'>
+               AND INVC_NO = #{sInvcNo} --인보이스번호
+               </if>
+               <if test='sDlrCd  != null and sDlrCd  != ""'>
+               AND DLR_CD = #{sDlrCd} --딜러코드
+               </if>
+               <if test='sFromDt !=null'>
+                   AND INVC_DT <![CDATA[>=]]> #{sFromDt}
+               </if>
+               <if test='sToDt !=null'>
+                   AND INVC_DT <![CDATA[<=]]> #{sToDt}+1
+               </if>
+             </where>
+
+
+    </select>
+
+    <!-- 월별인보이스 목록수 조회  -->
+    <select id="selectInvoiceMonthlyByCondition"   parameterType="InvoiceMonthlySearchVO" resultType="InvoiceMonthlyVO" >
+        /* [chn.bhmc.dms.ser.wac.service.dao.InvoiceMonthlyDAO.selectPwaApproveMainsByCondition] */
+
+        SELECT *
+          FROM (
+              SELECT ROWNUM AS RNUM , T1.*
+                FROM (
+                          SELECT
+                                INVC_NO                    --인보이스번호
+                               ,DLR_CD                     --딜러코드
+                               ,INVC_DT                    --인보이스일자
+                               ,INVC_CLAIM_CNT             --인보이스클레임수량
+                               ,INVC_CLAIM_TOT_AMT         --인보이스클레임합계금액
+                               ,INVC_CLAIM_ITEM_AMT        --인보이스클레임품목금액
+                               ,INVC_CLAIM_LBR_AMT         --인보이스클레임공임금액
+                               ,INVC_CLAIM_SUB_AMT         --인보이스클레임외주금액
+                               ,DDCT_TOT_AMT               --공제합계금액
+                               ,DDCT_ITEM_AMT              --공제품목금액
+                               ,DDCT_LBR_AMT               --공제공임금액
+                               ,DDCT_SUB_AMT               --공제외주금액
+                               ,CONFIRM_TOT_AMT            --확정합계금액
+                               ,CONFIRM_ITEM_AMT           --확정품목금액
+                               ,CONFIRM_LBR_AMT            --확정공임금액
+                               ,CONFIRM_SUB_AMT            --확정외주금액
+                               ,REG_USR_ID                 --등록자ID
+                               ,REG_DT                     --등록일자
+                               ,UPDT_USR_ID                --수정자ID
+                               ,UPDT_DT                    --수정일자
+                              ,NVL((SELECT (NVL(REQ_LBR_AMT,0) + NVL(REQ_ITEM_AMT,0) + NVL(REQ_SUB_LBR_AMT,0))
+                                      FROM SE_0710T
+                                     WHERE CLAIM_STAT_CD ='A'
+                                       AND DLR_CD = A.DLR_CD
+                                       AND INVC_NO = A.INVC_NO
+                                ) ,0)AS CLAIM_REQ_AMT
+                           FROM SE_0930T A    --인보이스정보
+                         <where>
+                           <if test='sInvcNo != null and sInvcNo != ""'>
+                           AND INVC_NO = #{sInvcNo} --인보이스번호
+                           </if>
+                           <if test='sDlrCd  != null and sDlrCd  != ""'>
+                           AND DLR_CD = #{sDlrCd} --딜러코드
+                           </if>
+                           <if test='sFromDt !=null'>
+                               AND INVC_DT <![CDATA[>=]]> #{sFromDt}
+                           </if>
+                           <if test='sToDt !=null'>
+                               AND INVC_DT <![CDATA[<=]]> #{sToDt}+1
+                           </if>
+                         </where>
+                         ORDER BY
+                         <choose>
+                             <when test='sort != null'>
+                                 <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                     <choose>
+                                         <when test='item.field == "invcNo"'>             INVC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                         <when test='item.field == "dlrCd"'>              DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                         <when test='item.field == "invcDt"'>             INVC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                         <when test='item.field == "invcClaimCnt"'>       INVC_CLAIM_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                         <when test='item.field == "invcClaimTotAmt"'>    INVC_CLAIM_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                         <when test='item.field == "invcClaimItemAmt"'>   INVC_CLAIM_ITEM_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                         <when test='item.field == "invcClaimLbrAmt"'>    INVC_CLAIM_LBR_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                         <when test='item.field == "invcClaimSubAmt"'>    INVC_CLAIM_SUB_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                         <when test='item.field == "ddctTotAmt"'>         DDCT_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                         <when test='item.field == "ddctItemAmt"'>        DDCT_ITEM_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                         <when test='item.field == "ddctLbrAmt"'>         DDCT_LBR_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                         <when test='item.field == "ddctSubAmt"'>         DDCT_SUB_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                         <when test='item.field == "confirmTotAmt"'>      CONFIRM_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                         <when test='item.field == "confirmItemAmt"'>     CONFIRM_ITEM_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                         <when test='item.field == "confirmLbrAmt"'>      CONFIRM_LBR_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                         <when test='item.field == "confirmSubAmt"'>      CONFIRM_SUB_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                         <otherwise>
+                                           INVC_NO ASC ,DLR_CD ASC
+                                         </otherwise>
+                                     </choose>
+                                 </foreach>
+                             </when>
+                             <otherwise>
+                               INVC_NO ASC ,DLR_CD ASC
+                             </otherwise>
+                         </choose>
+                          ) T1
+                          <where>
+                              <if test='firstIndex != -1 and lastIndex != -1'>
+                               AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                              </if>
+                         </where>
+                     )
+                <where>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        RNUM > #{firstIndex}
+                    </if>
+                </where>
+
+    </select>
+
+    <!-- 월별인보이스 상세 목록수 조회  -->
+    <select id="selectInvoiceMonthlyDetailByConditionCnt" parameterType="InvoiceMonthlySearchVO" resultType="int" >
+        /* [chn.bhmc.dms.ser.wac.service.dao.InvoiceMonthlyDAO.selectInvoiceMonthlyDetailByConditionCnt] */
+
+            SELECT COUNT(CLAIM_DOC_NO) AS VALUE
+              FROM SE_0931T    --인보이스상세정보
+             <where>
+               <if test='sDlrCd != null and sDlrCd != ""'>
+               AND DLR_CD = #{sDlrCd} --딜러코드
+               </if>
+               <if test='sInvcNo != null and sInvcNo != ""'>
+               AND INVC_NO = #{sInvcNo} --인보이스번호
+               </if>
+             </where>
+
+    </select>
+
+    <!-- 월별인보이스 상세 목록 조회  -->
+    <select id="selectInvoiceMonthlyDetailByCondition" parameterType="InvoiceMonthlySearchVO" resultType="InvoiceMonthlyDetailVO" >
+        /* [chn.bhmc.dms.ser.wac.service.dao.InvoiceMonthlyDAO.selectInvoiceMonthlyDetailByCondition] */
+
+        SELECT *
+          FROM (
+              SELECT ROWNUM AS RNUM , T1.*
+                FROM (
+                 SELECT
+                        DLR_CD                  --딜러코드
+                       ,CLAIM_DOC_NO            --클레임문서번호
+                       ,RO_DOC_NO               --RO문서번호
+                       ,CLAIM_YY                --클레임년도
+                       ,CLAIM_VER_CD            --클레임버전코드
+                       ,CLAIM_STAT_CD           --클레임상태코드
+                       ,INVC_NO                 --인보이스번호
+                       ,CONFIRM_ITEM_AMT        --확정품목금액
+                       ,CONFIRM_LBR_AMT         --확정공임금액
+                       ,CONFIRM_SUB_AMT         --확정외주금액
+                       ,CONFIRM_TOT_AMT         --확정합계금액
+                       ,CONFIRM_VAT_AMT         --확정부가가치세금액
+                       ,CLAIM_TP                --클레임유형
+                       ,VIN_NO                  --차대번호
+                       ,JUDG_DT                 --판정일자
+                       ,BASE_RO_NO              --원RO번호
+                  FROM SE_0931T    --인보이스상세정보
+                 <where>
+                   <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND DLR_CD = #{sDlrCd} --딜러코드
+                   </if>
+                   <if test='sInvcNo != null and sInvcNo != ""'>
+                   AND INVC_NO = #{sInvcNo} --인보이스번호
+                   </if>
+                 </where>
+                 ORDER BY
+                 <choose>
+                     <when test='sort != null'>
+                         <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                             <choose>
+                                 <when test='item.field == "dlrCd"'>           DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                 <when test='item.field == "claimDocNo"'>      CLAIM_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                 <when test='item.field == "roDocNo"'>         RO_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                 <when test='item.field == "claimYy"'>         CLAIM_YY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                 <when test='item.field == "claimVerCd"'>      CLAIM_VER_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                 <when test='item.field == "claimStatCd"'>     CLAIM_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                 <when test='item.field == "invcNo"'>          INVC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                 <when test='item.field == "confirmItemAmt"'>  CONFIRM_ITEM_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "confirmLbrAmt"'>   CONFIRM_LBR_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "confirmSubAmt"'>   CONFIRM_SUB_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "confirmTotAmt"'>   CONFIRM_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "confirmVatAmt"'>   CONFIRM_VAT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "claimTp"'>         CLAIM_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                 <when test='item.field == "vinNo"'>           VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                 <when test='item.field == "judgDt"'>          JUDG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                 <when test='item.field == "baseRoNo"'>        BASE_RO_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                 <otherwise>
+                                   INVC_NO ASC ,DLR_CD ASC ,CLAIM_DOC_NO ASC ,RO_DOC_NO ASC
+                                 </otherwise>
+                             </choose>
+                         </foreach>
+                     </when>
+                     <otherwise>
+                       INVC_NO ASC ,DLR_CD ASC ,CLAIM_DOC_NO ASC ,RO_DOC_NO ASC
+                     </otherwise>
+                 </choose>
+                  ) T1
+                  <where>
+                      <if test='firstIndex != -1 and lastIndex != -1'>
+                       AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                      </if>
+                 </where>
+             )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+
+
+
+    </select>
+
+    <!-- 월별인보이스 공제내역  조회  -->
+    <select id="selectInvoiceMonthlyDeductByCondition" parameterType="InvoiceMonthlySearchVO" resultType="InvoiceMonthlyDeductVO" >
+        /* [chn.bhmc.dms.ser.wac.service.dao.InvoiceMonthlyDAO.selectInvoiceMonthlyDeductByCondition] */
+
+
+            SELECT ROWNUM AS RNUM
+                  ,A.INVC_NO
+                  ,A.DDCT_NO
+                  ,A.DDCT_REASON_CD
+                  ,A.DDCT_REASON_CONT
+                  ,A.TOT_AMT
+                  ,A.DDCT_AMT
+                  ,A.BAL_AMT
+                  ,A.DDCT_REQ_DT
+                  ,A.INVC_DT
+                  ,A.INVC_AMT
+                  ,B.CLAIM_DOC_NO
+                  ,B.RO_DOC_NO
+                  ,B.CLAIM_VER_CD
+                  ,B.DDCT_YY_MM
+                  ,B.DDCT_TOT_AMT
+                  ,B.DDCT_TOT_ITEM_AMT
+                  ,B.DDCT_TOT_LBR_AMT
+                  ,B.DDCT_TOT_SUB_AMT
+                  ,B.APPROVE_TOT_AMT
+                  ,B.APPROVE_TOT_ITEM_AMT
+                  ,B.APPROVE_TOT_LBR_AMT
+                  ,B.APPROVE_TOT_SUB_AMT
+              FROM SE_0940T A , SE_0941T B
+             WHERE A.DLR_CD = B.DLR_CD
+               AND A.DDCT_NO = B.DDCT_NO
+               AND A.DLR_CD = #{sDlrCd} --딜러코드
+               AND A.INVC_NO = #{sInvcNo} --인보이스번호
+    </select>
+
+</mapper>

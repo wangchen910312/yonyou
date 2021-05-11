@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : TestDriveCarDAO_SqlMap.xml
+    Description : 시승 차량에 관한 데이터처리
+    author in moon Lee
+    since 2016. 02. 11.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 18.     in moon Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cso.service.dao.TestDriveMgmtDAO">
+
+    <!-- 시승 예약 정보 검색조건 -->
+    <sql id="searchTestDriveResv">
+
+        INNER JOIN CR_0402T CR0402T ON CR0401T.TDRV_VIN_NO = CR0402T.TDRV_VIN_NO AND CR0401T.DLR_CD = CR0402T.DLR_CD AND CR0401T.PLT_CD = CR0402T.PLT_CD
+        INNER JOIN SA_0121T SA0121T ON CR0402T.TDRV_VIN_NO = SA0121T.VIN_NO
+        INNER JOIN CR_0101T CR0101T ON CR0401T.CUST_NO = CR0101T.CUST_NO AND CR0401T.DLR_CD = CR0101T.DLR_CD AND CR0101T.DEL_YN = 'N'
+        LEFT OUTER JOIN CM_0801T SCT ON CR0401T.SC_ID = SCT.USR_ID
+        LEFT OUTER JOIN CM_0801T USRT ON CR0401T.REG_USR_ID = USRT.USR_ID
+
+            WHERE CR0401T.DLR_CD = #{sDlrCd}
+            AND CR0401T.PLT_CD = #{sPltCd}
+
+            <!-- 담당 SC 검색 -->
+            <if test='sScId != null and sScId != ""'>
+                AND CR0401T.SC_ID = #{sScId}
+            </if>
+
+            <!-- 시승모델 검색 -->
+            <if test='sModelCd != null and sModelCd != ""'>
+                AND SA0121T.MODEL_CD = #{sModelCd}
+            </if>
+
+            <!-- 시승일 검색 -->
+            <if test='sStartDt != null'>
+                <![CDATA[
+                    AND CR0401T.RESV_DT >= #{sStartDt}
+                ]]>
+            </if>
+            <if test='sEndDt != null'>
+                <![CDATA[
+                    AND CR0401T.RESV_DT < #{sEndDt}
+                ]]>
+            </if>
+
+            <if test='sTdrvStat == "N"'>
+                AND CR0401T.TDRV_STAT_CD != '02'
+            </if>
+
+<!--
+            <if test='sTdrvSeq != null and sTdrvSeq != ""'>
+                AND CR0401T.TDRV_SEQ = #{sTdrvSeq}
+            </if>
+
+ -->
+<!--
+            고객번호
+            <if test='sCustNo != null and sCustNo != ""'>
+                AND CR0401T.CUST_NO = #{sCustNo}
+            </if>
+ -->
+
+    </sql>
+
+
+    <!-- 시승 예약 정보 목록수를 조회한다. -->
+    <select id="selectTestDriveResvsByConditionCnt" parameterType="TestDriveResvSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveMgmtDAO.selectTestDriveResvsByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_0401T CR0401T
+        <include refid="searchTestDriveResv" />
+    </select>
+
+    <!-- 시승 예약 정보 목록을 조회한다. -->
+    <select id="selectTestDriveResvsByCondition" parameterType="TestDriveResvSearchVO" resultType="TestDriveResvVO">
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveMgmtDAO.selectTestDriveResvsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                     CR0401T.DLR_CD                      --딜러코드
+                    ,CR0401T.PLT_CD                      --센터코드
+                    ,CR0401T.TDRV_SEQ                    --시승일련번호
+                    ,CR0401T.CALL_NO                     --콜일련번호
+                    ,CR0401T.LEAD_NO                     --리드일련번호
+                    ,CR0401T.SALE_OPPT_NO                --판매기회일련번호
+                    ,CR0401T.TDRV_CONTRACT_DOC_NO        --시승계약문서번호
+                    ,CR0401T.SC_ID                       --SCID
+                    ,CR0401T.CUST_NO                     --고객번호
+                    ,CR0401T.HP_NO                       --휴대폰번호
+                    ,CR0401T.RESV_DT                     --예약일자
+                    ,CR0401T.RESV_DT+TO_NUMBER(TDRV_HM_CD)/24/60 AS RESV_END_DT     --예약종료일자
+                    ,CR0401T.TDRV_HM_CD                  --시승시간코드
+                    ,CR0401T.TDRV_VIN_NO                 --시승차대번호
+                    ,CR0401T.TDRV_PATH_CD                --시승출처코드
+                    ,CR0401T.TDRV_TP_CD                  --시승유형코드
+                    ,CR0401T.TDRV_STAT_CD                --시승상태코드
+                    ,CR0401T.TDRV_CLINE_CD               --시승노선코드
+                    ,CR0401T.REMARK                      --비고
+                    ,CR0401T.CUST_STSF_CD                --고객만족도코드
+                    ,CR0401T.SALE_FCST_CD                --판매전망코드
+                    ,CR0401T.BEF_RUN_DIST_VAL            --이전주행거리값
+                    ,CR0401T.AFT_RUN_DIST_VAL            --이후주행거리값
+                    ,CR0401T.BEF_RFUEL_QTY               --이전주유량
+                    ,CR0401T.AFT_RFUEL_QTY               --이후주유량
+                    ,CR0401T.INT_PBLM_YN                 --내장이상여부
+                    ,CR0401T.EXT_PBLM_YN                 --외장이상여부
+                    ,CR0401T.REG_USR_ID                  --등록자ID
+                    ,CR0401T.REG_DT                      --등록일자
+                    ,CR0401T.UPDT_USR_ID                 --수정자ID
+                    ,CR0401T.UPDT_DT                     --수정일자
+                    ,SA0121T.CAR_REG_NO                  --차량등록번호
+                    ,CR0101T.CUST_NM                     --고객명
+                    ,CR0101T.CUST_CD                     --잠재/보유고객
+                    ,SCT.USR_NM AS SC_NM                 --SC 이름
+                    ,USRT.USR_NM AS REG_USR_NM           --등록자이름
+                FROM CR_0401T CR0401T
+                <include refid="searchTestDriveResv" />
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "carRegNo"'>            SA0121T.CAR_REG_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                <when test='item.field == "custNm"'>              CR0101T.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                <when test='item.field == "hpNo"'>                CR0401T.HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                                <when test='item.field == "resvDt"'>              CR0401T.RESV_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                <when test='item.field == "tdrvHmCd"'>            CR0401T.TDRV_HM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                <when test='item.field == "scNm"'>                SCT.USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                                <when test='item.field == "regDt"'>               CR0401T.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+
+
+                                <when test='item.field == "dlrCd"'>               CR0401T.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                                <when test='item.field == "pltCd"'>               CR0401T.PLT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                                <when test='item.field == "tdrvSeq"'>             CR0401T.TDRV_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                <when test='item.field == "callNo"'>              CR0401T.CALL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                <when test='item.field == "leadNo"'>              CR0401T.LEAD_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                <when test='item.field == "saleOpptNo"'>          CR0401T.SALE_OPPT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "tdrvContractDocNo"'>   CR0401T.TDRV_CONTRACT_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "scId"'>                CR0401T.SC_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                                <when test='item.field == "custNo"'>              CR0401T.CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                <when test='item.field == "tdrvVinNo"'>           CR0401T.TDRV_VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "tdrvPathCd"'>          CR0401T.TDRV_PATH_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "tdrvTpCd"'>            CR0401T.TDRV_TP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                <when test='item.field == "tdrvStatCd"'>          CR0401T.TDRV_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "tdrvClineCd"'>         CR0401T.TDRV_CLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "remark"'>              CR0401T.REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                                <when test='item.field == "custStsfCd"'>          CR0401T.CUST_STSF_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "saleFcstCd"'>          CR0401T.SALE_FCST_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "befRunDistVal"'>       CR0401T.BEF_RUN_DIST_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "aftRunDistVal"'>       CR0401T.AFT_RUN_DIST_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "befRfuelQty"'>         CR0401T.BEF_RFUEL_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "aftRfuelQty"'>         CR0401T.AFT_RFUEL_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "intPblmYn"'>           CR0401T.INT_PBLM_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "extPblmYn"'>           CR0401T.EXT_PBLM_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "regUsrId"'>            CR0401T.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                <when test='item.field == "updtUsrId"'>           CR0401T.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "updtDt"'>              CR0401T.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                <when test='item.field == "scId"'>                CR0206T.SC_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                                <otherwise>
+                                    CR0401T.TDRV_SEQ DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        CR0401T.TDRV_SEQ DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 시승 상세 정보 -->
+    <select id="selectTestDriveMgmtByKey" parameterType="TestDriveResvSearchVO" resultType="TestDriveResvVO">
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveMgmtDAO.selectTestDriveMgmtByKey] */
+        SELECT
+             CR0401T.DLR_CD                      --딜러코드
+            ,CR0401T.PLT_CD                      --센터코드
+            ,CR0401T.TDRV_SEQ                    --시승일련번호
+            ,CR0401T.CALL_NO                     --콜일련번호
+            ,CR0401T.LEAD_NO                     --리드일련번호
+            ,CR0401T.SALE_OPPT_NO                --판매기회일련번호
+            ,CR0401T.TDRV_CONTRACT_DOC_NO        --시승계약문서번호
+            ,CR0401T.SC_ID                       --SCID
+            ,CR0401T.CUST_NO                     --고객번호
+            ,CR0401T.HP_NO                       --휴대폰번호
+            ,CR0401T.RESV_DT                     --예약일자
+            ,CR0401T.RESV_DT+TO_NUMBER(TDRV_HM_CD)/24/60 AS RESV_END_DT     --예약종료일자
+            ,CR0401T.TDRV_HM_CD                  --시승시간코드
+            ,CR0401T.TDRV_VIN_NO                 --시승차대번호
+            ,CR0401T.TDRV_PATH_CD                --시승출처코드
+            ,CR0401T.TDRV_TP_CD                  --시승유형코드
+            ,CR0401T.TDRV_STAT_CD                --시승상태코드
+            ,CR0401T.TDRV_CLINE_CD               --시승노선코드
+            ,CR0401T.REMARK                      --비고
+            ,CR0401T.CUST_STSF_CD                --고객만족도코드
+            ,CR0401T.SALE_FCST_CD                --판매전망코드
+            -- ,CR0401T.BEF_RUN_DIST_VAL            --이전주행거리값
+            ,DECODE(CR0401T.TDRV_STAT_CD, '01', (SELECT CR0402T.RUN_DIST_VAL FROM CR_0402T WHERE TDRV_VIN_NO = CR0401T.TDRV_VIN_NO)
+                                        , '03', CR0401T.BEF_RUN_DIST_VAL
+                                        , '02', CR0401T.BEF_RUN_DIST_VAL
+            ) AS BEF_RUN_DIST_VAL                   -- 이전주행거리값 ( 시승일지 작성전이면 시승차량 마스터의 주행거리(RUN_DIST_VAL) 를 뿌려준다. )
+            ,CR0401T.AFT_RUN_DIST_VAL            --이후주행거리값
+            ,CR0401T.BEF_RFUEL_QTY               --이전주유량
+            ,CR0401T.AFT_RFUEL_QTY               --이후주유량
+            ,CR0401T.INT_PBLM_YN                 --내장이상여부
+            ,CR0401T.EXT_PBLM_YN                 --외장이상여부
+            ,CR0401T.REG_USR_ID                  --등록자ID
+            ,CR0401T.REG_DT                      --등록일자
+            ,CR0401T.UPDT_USR_ID                 --수정자ID
+            ,CR0401T.UPDT_DT                     --수정일자
+            ,CR0101T.CUST_NM                     --고객명
+            ,SA0121T.CAR_REG_NO                  --차량등록번호
+            ,SCT.USR_NM AS SC_NM                 --SC 이름
+            ,USRT.USR_NM AS REG_USR_NM           --등록자이름
+            ,FN_GET_MODEL_NM(SA0121T.MODEL_CD) AS MODEL_NM          -- 관심모델 이름
+        FROM CR_0401T CR0401T
+        INNER JOIN CR_0402T CR0402T ON CR0401T.TDRV_VIN_NO = CR0402T.TDRV_VIN_NO AND CR0401T.DLR_CD = CR0402T.DLR_CD AND CR0401T.PLT_CD = CR0402T.PLT_CD
+        INNER JOIN SA_0121T SA0121T ON CR0402T.TDRV_VIN_NO = SA0121T.VIN_NO
+        INNER JOIN CR_0101T CR0101T ON CR0401T.CUST_NO = CR0101T.CUST_NO AND CR0401T.DLR_CD = CR0101T.DLR_CD AND CR0101T.DEL_YN = 'N'
+        LEFT OUTER JOIN CM_0801T SCT ON CR0401T.SC_ID = SCT.USR_ID
+        LEFT OUTER JOIN CM_0801T USRT ON CR0401T.REG_USR_ID = USRT.USR_ID
+        WHERE CR0401T.TDRV_SEQ = #{sTdrvSeq}
+        AND CR0401T.DLR_CD = #{sDlrCd}
+        AND CR0401T.PLT_CD = #{sPltCd}
+
+    </select>
+
+    <!-- 시승 예약 중복을 확인한다. -->
+    <select id="selectTdrvResvByKeyCnt" parameterType="TestDriveResvVO" resultType="int">
+        SELECT
+            COUNT(*) AS VALUE
+        FROM CR_0401T CR0401T
+        INNER JOIN CR_0402T CR0402T ON CR0401T.TDRV_VIN_NO = CR0402T.TDRV_VIN_NO
+        INNER JOIN SA_0121T SA0121T ON CR0402T.TDRV_VIN_NO = SA0121T.VIN_NO
+        WHERE CR0401T.TDRV_STAT_CD != '02'
+        AND CR0401T.TDRV_SEQ != #{tdrvSeq}
+        AND CR0401T.DLR_CD = #{dlrCd}
+        AND CR0401T.PLT_CD = #{pltCd}
+        AND CR0401T.TDRV_VIN_NO = #{tdrvVinNo}
+        AND
+            <![CDATA[
+                (
+                    (
+                        CR0401T.RESV_DT+TO_NUMBER(TDRV_HM_CD)/24/60 > #{resvDt}
+                        and CR0401T.RESV_DT+TO_NUMBER(TDRV_HM_CD)/24/60 < #{resvEndDt}
+                    )OR(
+                        CR0401T.RESV_DT >= #{resvDt}
+                        and CR0401T.RESV_DT+TO_NUMBER(TDRV_HM_CD)/24/60 < #{resvEndDt}
+                    )OR(
+                        CR0401T.RESV_DT >= #{resvDt}
+                        and CR0401T.RESV_DT < #{resvEndDt}
+                    )OR(
+                        CR0401T.RESV_DT < #{resvDt}
+                        and CR0401T.RESV_DT+TO_NUMBER(TDRV_HM_CD)/24/60 >= #{resvEndDt}
+                    )
+                )
+            ]]>
+    </select>
+
+    <!-- 시승 예약 정보를 등록한다. -->
+    <insert id="insertTestDriveResv" parameterType="TestDriveResvVO" >
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveResvDAO.insertTestDriveResv] */
+
+        INSERT INTO DMSDB.CR_0401T    --시승
+        (
+             DLR_CD                      --딜러코드
+            ,PLT_CD                      --센터코드
+            ,TDRV_SEQ                    --시승일련번호
+            ,LEAD_NO                     --리드일련번호
+            ,SALE_OPPT_NO                --판매기회일련번호
+            ,TDRV_CONTRACT_DOC_NO        --시승계약문서번호
+            ,SC_ID                       --SCID
+            ,CUST_NO                     --고객번호
+            ,HP_NO                       --휴대폰번호
+            ,RESV_DT                     --예약일자
+            ,TDRV_HM_CD                  --시승시간코드
+            ,TDRV_VIN_NO                 --시승차대번호
+            ,TDRV_PATH_CD                --시승출처코드
+            ,TDRV_TP_CD                  --시승유형코드
+            ,TDRV_STAT_CD                --시승상태코드
+            ,TDRV_CLINE_CD               --시승노선코드
+            ,REMARK                      --비고
+            ,REG_USR_ID                  --등록자ID
+            ,REG_DT                      --등록일자
+        ) VALUES (
+             #{dlrCd}                      --딜러코드
+            ,#{pltCd}                      --센터코드
+            ,SEQ_CR_0401T.NEXTVAL          --시승일련번호
+            ,#{leadNo}                     --리드일련번호
+            ,#{saleOpptNo}                 --판매기회일련번호
+            ,#{tdrvContractDocNo}          --시승계약문서번호
+            ,#{scId}                       --SCID
+            ,#{custNo}                     --고객번호
+            ,#{hpNo}                       --휴대폰번호
+            ,#{resvDt}                     --예약일자
+            ,#{tdrvHmCd}                   --시승시간코드
+            ,#{tdrvVinNo}                  --시승차대번호
+            ,#{tdrvPathCd}                 --시승출처코드
+            ,#{tdrvTpCd}                   --시승유형코드
+            ,#{tdrvStatCd}                 --시승상태코드
+            ,#{tdrvClineCd}                --시승노선코드
+            ,#{remark}                     --비고
+            ,#{regUsrId}                   --등록자ID
+            ,SYSDATE                       --등록일자
+        )
+    </insert>
+
+    <!-- 시승 예약 정보를 수정한다. -->
+    <update id="updateTestDriveResv" parameterType="TestDriveResvVO" >
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveMgmtDAO.updateTestDriveResv] */
+
+        UPDATE DMSDB.CR_0401T SET    --시승
+             UPDT_DT              = #{updtDt}                     --수정일자
+            ,UPDT_USR_ID          = #{updtUsrId}                  --수정자ID
+            ,CALL_NO              = #{callNo}                     --콜일련번호
+            ,LEAD_NO              = #{leadNo}                     --리드일련번호
+            ,SALE_OPPT_NO         = #{saleOpptNo}                 --판매기회일련번호
+            ,TDRV_CONTRACT_DOC_NO = #{tdrvContractDocNo}          --시승계약문서번호
+            ,SC_ID                = #{scId}                       --SCID
+            ,CUST_NO              = #{custNo}                     --고객번호
+            ,HP_NO                = #{hpNo}                       --휴대폰번호
+            ,RESV_DT              = #{resvDt}                     --예약일자
+            ,TDRV_HM_CD           = #{tdrvHmCd}                   --시승시간코드
+            ,TDRV_VIN_NO          = #{tdrvVinNo}                  --시승차대번호
+            ,TDRV_PATH_CD         = #{tdrvPathCd}                 --시승출처코드
+            ,TDRV_TP_CD           = #{tdrvTpCd}                   --시승유형코드
+            ,TDRV_STAT_CD         = #{tdrvStatCd}                 --시승상태코드
+            ,TDRV_CLINE_CD        = #{tdrvClineCd}                --시승노선코드
+            ,REMARK               = #{remark}                     --비고
+        WHERE TDRV_SEQ            = #{tdrvSeq}                   --시승일련번호
+        AND DLR_CD                = #{dlrCd}                       --딜러코드
+        AND PLT_CD                = #{pltCd}                       --센터코드
+    </update>
+
+    <!-- 시승 예약 정보를 취소한다. -->
+    <update id="cancelTestDriveResv" parameterType="TestDriveResvVO" >
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveResvDAO.calcelTestDriveResv] */
+        UPDATE DMSDB.CR_0401T    --시승정보
+          SET
+             REMARK           = #{remark}                 --비고
+            ,TDRV_STAT_CD     = #{tdrvStatCd}             --시승상태코드
+            ,UPDT_USR_ID      = #{updtUsrId}              --수정자ID
+            ,UPDT_DT          = SYSDATE                   --수정일자
+         WHERE TDRV_SEQ         = #{tdrvSeq}                --시승일련번호
+    </update>
+
+    <!-- 시승 일지를 작성한다. -->
+    <update id="updateTestDriveMgmt" parameterType="TestDriveResvVO" >
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveMgmtDAO.updateTestDriveMgmt] */
+        UPDATE DMSDB.CR_0401T    --시승정보
+          SET
+             UPDT_DT                = SYSDATE             --수정일자
+            ,UPDT_USR_ID            = #{updtUsrId}        --수정자ID
+            ,TDRV_CONTRACT_DOC_NO   = #{tdrvContractDocNo}--시승계약서번호
+            ,TDRV_STAT_CD           = #{tdrvStatCd}       --시승상태
+            ,CUST_STSF_CD           = #{custStsfCd}       --고객만족도코드
+            ,SALE_FCST_CD           = #{saleFcstCd}       --판매전망코드
+            ,BEF_RUN_DIST_VAL       = #{befRunDistVal}    --이전주행거리값
+            ,AFT_RUN_DIST_VAL       = #{aftRunDistVal}    --이후주행거리값
+            ,BEF_RFUEL_QTY          = #{befRfuelQty}      --이전주유량
+            ,AFT_RFUEL_QTY          = #{aftRfuelQty}      --이후주유량
+            ,INT_PBLM_YN            = #{intPblmYn}        --내장이상여부
+            ,EXT_PBLM_YN            = #{extPblmYn}        --외장이상여부
+            ,REMARK                 = #{remark}           --비고
+         WHERE TDRV_SEQ             = #{tdrvSeq}          --시승일련번호
+    </update>
+
+    <!-- 시승 예약 캘린더 정보 목록수를 조회한다. -->
+    <select id="selectTestDriveCalendarsByConditionCnt" parameterType="TestDriveResvSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveMgmtDAO.selectTestDriveCalendarsByConditionCnt] */
+        SELECT
+             COUNT(CR0401T.RESV_DT) AS VALUE
+        FROM CR_0401T CR0401T
+        <include refid="searchTestDriveResv" />
+    </select>
+
+    <!-- 시승 예약 캘린더 정보 목록을 조회한다. -->
+    <select id="selectTestDriveCalendarsByCondition" parameterType="TestDriveResvSearchVO" resultType="TestDriveCalendarVO">
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveMgmtDAO.selectTestDriveCalendarsByCondition] */
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                      TO_DATE(RESV_DT) AS "START"
+                      , TO_DATE(RESV_DT) AS "END"
+                      , RESV_CNT
+                      , CANCEL_CNT
+                      , TESTDRIVE_CNT
+                FROM
+                (
+                    SELECT
+                        TO_CHAR(RESV_DT, 'YYYYMMDD') AS RESV_DT
+                        ,COUNT(TDRV_SEQ) AS TDRV_SEQ
+                        ,TDRV_STAT_CD
+                    FROM CR_0401T CR0401T
+                    <include refid="searchTestDriveResv" />
+                    GROUP BY TO_CHAR(CR0401T.RESV_DT, 'YYYYMMDD') , CR0401T.TDRV_STAT_CD
+                    ORDER BY RESV_DT
+                )
+                PIVOT
+                (
+                    SUM(TDRV_SEQ)
+                    FOR TDRV_STAT_CD IN ('01' AS RESV_CNT, '02' AS CANCEL_CNT, '03' AS TESTDRIVE_CNT)
+                )
+
+            ) T1
+    </select>
+
+</mapper>

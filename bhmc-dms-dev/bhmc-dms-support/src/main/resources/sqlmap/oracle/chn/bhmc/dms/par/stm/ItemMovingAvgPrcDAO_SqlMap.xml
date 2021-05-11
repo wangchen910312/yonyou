@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : ItemMovingAvgPrcDao_SqlMap.xml
+    Description : 부품이동평균가격관리.
+    author Ju Won Lee
+    since 2016. 1. 20.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 20.     Ju Won Lee     최초 생성
+-->
+<mapper namespace="chn.bhmc.dms.par.stm.service.dao.ItemMovingAvgPrcDAO">
+<!-- 현재고 정보를 추가한다. -->
+    <insert id="insertItemMovingAvgPrc" parameterType="ItemMovingAvgPrcVO">
+    <![CDATA[
+        /* [chn.bhmc.dms.par.stm.service.dao.ItemMovingAvgPrcDAO.insertItemMovingAvgPrc] */
+        INSERT INTO DMSDB.PT_0208T    --부품 이동평균가격정보(이평가는 소수2자리까지만 가져간다. MJ차장님 요청사항)
+        (
+          DLR_CD                    --딜러코드
+         ,STRGE_CD                  --창고코드
+         ,ITEM_CD                   --부품번호
+         ,GEN_DT                    --발생일자
+         ,TOT_QTY                   --총수량
+         ,MOVING_AVG_PRC            --이동평균가격
+         ,MOVING_AVG_TAX_DDCT_PRC            --이동평균가격(세금미포함)
+         ,REG_USR_ID                --등록자ID
+         ,REG_DT                    --등록일자
+        )
+        VALUES
+        (
+          #{dlrCd}                    --딜러코드
+         ,#{strgeCd}                  --창고코드
+         ,#{itemCd}                   --부품번호
+         ,sysdate                     --발생일자
+         ,#{totQty}                   --총수량
+         ,NVL(ROUND(#{movingAvgPrc},2),0)  --이동평균가격
+         ,NVL(ROUND(#{movingAvgTaxDdctPrc},2),0)  --이동평균가격(세금미포함)
+         ,#{regUsrId}                 --등록자ID
+         ,sysdate                     --등록일자
+        )
+    ]]>
+    </insert>
+
+    <!-- 부품의 이동평균가격 정보를 수정한다. -->
+    <update id="updateItemMovingAvgPrc" parameterType="ItemMovingAvgPrcVO">
+    /* [chn.bhmc.dms.par.stm.service.dao.ItemMovingAvgPrcDAO.updateItemMovingAvgPrc] */
+        UPDATE PT_0208T A
+          SET A.GEN_DT                 = sysdate
+            , A.TOT_QTY                = #{totQty}
+            , A.MOVING_AVG_PRC         = NVL(ROUND(#{movingAvgPrc},2),0)
+            , A.MOVING_AVG_TAX_DDCT_PRC  = NVL(ROUND(#{movingAvgTaxDdctPrc},2),0)
+            , A.BEF_GEN_DT             = #{befGenDt}
+            , A.BEF_TOT_QTY            = #{befTotQty}
+            , A.BEF_MOVING_AVG_PRC     = #{befMovingAvgPrc}
+            , A.BEF_MOVING_AVG_TAX_DDCT_PRC     = #{befMovingAvgTaxDdctPrc}
+            , A.UPDT_USR_ID            = #{regUsrId}
+            , A.UPDT_DT                = sysdate
+        WHERE  A.DLR_CD    = #{dlrCd}
+          AND  A.STRGE_CD  = #{strgeCd}
+          AND  A.ITEM_CD   = #{itemCd}
+    </update>
+
+    <!-- 부품 이동평균가격 정보 히스토리를 등록한다. -->
+    <insert id="insertItemMovingAvgPrcHistory" parameterType="ItemMovingAvgPrcVO">
+    <![CDATA[
+        /* [chn.bhmc.dms.par.stm.service.dao.ItemMovingAvgPrcDAO.insertItemMovingAvgPrcHistory] */
+        INSERT INTO DMSDB.PT_0208HT    --부품 이동평균가격정보(히스토리)
+        (
+          DLR_CD                    --딜러코드
+         ,STRGE_CD                  --창고코드
+         ,ITEM_CD                   --부품번호
+         ,SEQ                       --일련번호
+         ,GEN_DT                    --발생일자
+         ,TOT_QTY                   --총수량
+         ,MOVING_AVG_PRC            --이동평균가격
+         ,MOVING_AVG_TAX_DDCT_PRC   --이동평균가격(세금 미포함)
+         ,BEF_GEN_DT                --이전발생일자
+         ,BEF_TOT_QTY               --이전총수량
+         ,BEF_MOVING_AVG_PRC        --이전이동평균가격
+         ,BEF_MOVING_AVG_TAX_DDCT_PRC        --이전이동평균가격(세금 미포함)
+         ,TAX_RATE
+         ,REG_USR_ID                --등록자ID
+         ,REG_DT                    --등록일자
+        )
+        VALUES
+        (
+          #{dlrCd}                    --딜러코드
+         ,#{strgeCd}                  --창고코드
+         ,#{itemCd}                   --부품번호
+         ,#{seq}                      --일련번호
+         ,sysdate                     --발생일자
+         ,#{totQty}                   --총수량
+         ,NVL(ROUND(#{movingAvgPrc},2),0)  --이동평균가격
+         ,NVL(ROUND(#{movingAvgTaxDdctPrc},2),0)  --이동평균가격(세금미포함)
+         ,#{befGenDt}
+         ,#{befTotQty}
+         ,#{befMovingAvgPrc}
+         ,#{befMovingAvgTaxDdctPrc}
+         ,#{taxRate}                  --세율
+         ,#{regUsrId}                 --등록자ID
+         ,sysdate                     --등록일자
+        )
+    ]]>
+    </insert>
+
+    <!-- 부품이동평균가격 정보를 조회한다. -->
+    <select id="selectItemMovingAvgPrcByKey" parameterType="ItemMovingAvgPrcVO"  resultType="ItemMovingAvgPrcVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ItemMovingAvgPrcDAO.selectItemMovingAvgPrcByKey] */
+        SELECT
+            A.DLR_CD
+            ,A.STRGE_CD
+            ,A.ITEM_CD
+            ,C.ITEM_NM
+            ,A.GEN_DT
+            ,CASE WHEN A.TOT_QTY != (NVL(B.AVLB_STOCK_QTY,0) + NVL(B.RESV_STOCK_QTY,0) + NVL(B.CLAM_STOCK_QTY,0))   <!-- 이동평균 재고수량 현재고수량 비교 -->
+                  THEN  NVL(B.AVLB_STOCK_QTY,0) + NVL(B.RESV_STOCK_QTY,0) + NVL(B.CLAM_STOCK_QTY,0)                 <!-- 현재고 수량-->
+                  ELSE  A.TOT_QTY<!-- 이동평균가  수량-->
+             END TOT_QTY
+            ,A.MOVING_AVG_PRC
+            ,A.BEF_GEN_DT
+            ,A.BEF_TOT_QTY
+            ,A.BEF_MOVING_AVG_PRC
+            ,CASE WHEN A.MOVING_AVG_PRC = 0
+                    THEN 0
+                  ELSE ROUND(A.MOVING_AVG_PRC / CASE WHEN NVL(#{taxRate},-999) = 0
+                                                       THEN  1
+                                                     WHEN NVL(#{taxRate},-999) <![CDATA[>=]]> 0
+                                                       THEN ( 1 + NVL(#{taxRate},0)/100)
+                                                     ELSE ( 1 + FN_GET_VAT(null,'ALL'))
+                                                 END,2)
+              END TAX_DDCT_PRC  <!-- taxRate값이 있는 경우(구매입고) 해당 세율로 계산. 그 외에는 해당월,일에 해당하는 세율로 계산됨  -->
+             ,NVL(A.MOVING_AVG_TAX_DDCT_PRC,0) AS MOVING_AVG_TAX_DDCT_PRC
+             ,A.BEF_MOVING_AVG_TAX_DDCT_PRC
+        FROM PT_0208T A
+        LEFT JOIN PT_0301T B ON A.DLR_CD = B.DLR_CD AND A.STRGE_CD = B.STRGE_CD AND A.ITEM_CD = B.ITEM_CD       <!-- 재고 없어도 처리 가능 -->
+        LEFT JOIN PT_0201T C ON A.DLR_CD = C.DLR_CD AND A.STRGE_CD = C.GI_STRGE_CD AND A.ITEM_CD = C.ITEM_CD    <!-- 부품 없어도 처리 가능 -->
+        WHERE A.DLR_CD = #{dlrCd}
+        AND A.STRGE_CD = #{strgeCd}
+        AND A.ITEM_CD = #{itemCd}
+    </select>
+
+     <!-- 부품 이동평균 정보 Max SEQ번호를 조회한다. -->
+    <select id="selectItemMovingAvgPrcHistoryMaxLineNo" parameterType="ItemMovingAvgPrcVO" resultType="int">
+        /* [chn.bhmc.dms.par.stm.service.dao.ItemMovingAvgPrcDAO.selectItemMovingAvgPrcHistoryMaxLineNo] */
+        SELECT nvl(max(A.SEQ),0) + 1
+          FROM PT_0208HT A    --부품 이동평균가격정보(히스토리)
+         WHERE  A.DLR_CD     = #{dlrCd}                 --딜러코드
+           AND  A.STRGE_CD   = #{strgeCd}
+           AND  A.ITEM_CD    = #{itemCd}
+    </select>
+
+    <!-- 공급처별 부품판매가격 마스터 정보 카운트를 조회한다.(창고별 부품번호에 대한 조회) -->
+    <select id="selectPartsVenderSalPriceMastersByItemInfoCnt" parameterType="ItemMovingAvgPrcVO" resultType="int">
+        /* [chn.bhmc.dms.par.stm.service.dao.ItemMovingAvgPrcDAO.selectPartsVenderSalPriceMastersByItemInfoCnt] */
+        SELECT count(*)
+          FROM PT_0214T
+        WHERE DLR_CD  = #{dlrCd}
+          AND ITEM_CD = #{itemCd}
+          AND STRGE_CD = #{strgeCd}
+    </select>
+
+    <!-- 공급처별 부품판매가격 BMP구매가 정보를 조회한다.(부품번호에 대한 MAX BMP구매가 조회) -->
+    <select id="selectBmpPurcPrcByItemCd" parameterType="ItemMovingAvgPrcVO" resultType="double">
+        /* [chn.bhmc.dms.par.stm.service.dao.ItemMovingAvgPrcDAO.selectBmpPurcPrcByItemCd] */
+        SELECT NVL(MAX(SALE_PRC_AMT),0)
+          FROM PT_0214T
+        WHERE DLR_CD  = #{dlrCd}
+          AND ITEM_CD = #{itemCd}
+    </select>
+
+    <!-- 판매가대상선정 부품판매가격 마스터 정보를 추가한다. -->
+    <insert id="insertPartsVenderSalPriceTargetMaster" parameterType="ItemMovingAvgPrcVO">
+        /* [chn.bhmc.dms.par.stm.service.dao.ItemMovingAvgPrcDAO.insertPartsVenderSalPriceTargetMaster] */
+        INSERT INTO PT_0214T(
+             DLR_CD
+            ,ITEM_CD
+            ,PRC_TP
+            ,LINE_NO
+            ,APPLY_YN
+            ,SALE_PRC_AMT
+            ,PRC_QTY
+            ,PRC_QTY_UNIT_CD
+            ,START_DT
+            ,END_DT
+            ,DEL_YN
+            ,APPLY_DT
+            ,SALE_TAX_RATE
+            ,RETL_PRC
+            ,WHSL_PRC
+            ,INC_PRC
+            ,GRTE_PRC
+            ,ETC_PRC1
+            ,ETC_PRC2
+            ,ETC_PRC3
+            ,TAX_DDCT_RETL_PRC
+            ,TAX_DDCT_WHSL_PRC
+            ,TAX_DDCT_INC_PRC
+            ,TAX_DDCT_GRTE_PRC
+            ,TAX_DDCT_ETC_PRC1
+            ,TAX_DDCT_ETC_PRC2
+            ,TAX_DDCT_ETC_PRC3
+            ,BMP_OPN_PRC
+            ,RECT_GI_PRC
+            ,STD_PRC
+            ,STD_PRC_CD
+            ,RETL_ADD_TAX_RATE
+            ,WHSL_ADD_TAX_RATE
+            ,INC_ADD_TAX_RATE
+            ,GRTE_ADD_TAX_RATE
+            ,STRGE_CD
+            ,BMP_PURC_PRC
+            ,REG_USR_ID
+            ,REG_DT
+        ) VALUES (
+             #{dlrCd}
+            ,#{itemCd}
+            ,'01'
+            ,0
+            ,'Y'
+            ,#{salePrcAmt}
+            ,0
+            ,'EA'
+            ,NULL
+            ,NULL
+            ,'N'
+            ,SYSDATE
+            ,0
+            ,0<!-- 소매가 기본가격 0 -->
+            ,0<!-- 도매가 기본가격 0 -->
+            ,0<!-- 보험가 기본가격 0 -->
+            ,#{grtePrc}<!-- 보증가격 -->
+            ,0
+            ,0
+            ,0
+            ,#{taxDdctPrc}
+            ,#{taxDdctPrc}
+            ,#{taxDdctPrc}
+            ,#{bmpPurcPrc}
+            ,0
+            ,0
+            ,0
+            ,0
+            ,0
+            ,0
+            ,'03'<!-- 가격계산유형 : 최신입고가 03 -->
+            ,0
+            ,0
+            ,0
+            ,0
+            ,#{strgeCd}
+            ,#{bmpPurcPrc}
+            ,#{regUsrId}
+            ,SYSDATE
+        )
+    </insert>
+
+</mapper>

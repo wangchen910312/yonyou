@@ -1,0 +1,863 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="ds1" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sStartYyMmDd"/>
+<O>
+<![CDATA[20170801]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sEndYyMmDd"/>
+<O>
+<![CDATA[20170831]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCrNm"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0119]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCrNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[--보증클레임 차종별
+SELECT CARLINE_NM
+       ,NVL(COL01, 0) AS COL01
+       ,NVL(COL02, 0) AS COL02
+       ,NVL(COL03, 0) AS COL03
+       ,NVL(COL04, 0) AS COL04
+       ,NVL(COL05, 0) AS COL05
+       ,NVL(COL06, 0) AS COL06
+       ,NVL(COL07, 0) AS COL07
+       ,NVL(COL08, 0) AS COL08
+       ,NVL(COL09, 0) AS COL09
+       ,NVL(COL10, 0) AS COL10
+       ,NVL(COL11, 0) AS COL11
+       ,NVL(COL12, 0) AS COL12
+       ,NVL(COL13, 0) AS COL13
+       ,NVL(COL14, 0) AS COL14
+       ,NVL(COL15, 0) AS COL15
+FROM (
+    SELECT CARLINE_CD
+           ,CASE WHEN CARLINE_CD IS NOT NULL
+                 THEN NVL(FN_GET_CARLINE_NM(CARLINE_CD), 'No Name')
+                 ELSE 'Other Car' END AS CARLINE_NM
+           ,COLUMN_NM
+           ,COLUMN_VAL
+    FROM (
+        WITH T1 AS (
+            SELECT CLA.*
+            FROM (
+                SELECT CL.DLR_CD
+                       ,CL.CLAIM_DOC_NO
+                       ,CL.VIN_NO
+                       ,CL.RO_DOC_NO
+                       ,(SELECT CARLINE_CD FROM SA_0121T WHERE VIN_NO = CL.VIN_NO AND ROWNUM = 1) AS CARLINE_CD
+                       ,CL.RO_TP
+                       ,CL.REG_USR_ID
+                       ,CL.CLAIM_STAT_CD
+                       ,CL.CR_NO
+                       ,(SELECT MAK_NM
+                         FROM CR_0701T
+                         WHERE DLR_CD = CL.DLR_CD
+                         AND MAK_CD  = CL.CR_NO
+                         AND MAK_TP_CD = '03'
+                         AND HOST_CD   = '01') AS CR_NM
+                       ,CL.REQ_LBR_AMT
+                       ,CL.REQ_ITEM_AMT
+                       ,CL.REQ_VAT_AMT
+                       ,CL.REQ_SUB_LBR_AMT
+                       ,CL.REQ_SUB_ITEM_AMT
+                       ,CL.CONFIRM_LBR_AMT
+                       ,CL.CONFIRM_LBR_VAT_AMT
+                       ,CL.CONFIRM_ITEM_AMT
+                       ,CL.CONFIRM_ITEM_VAT_AMT
+                       ,CL.CONFIRM_SUB_LBR_AMT
+                       ,CL.CONFIRM_SUB_ITEM_AMT
+                       ,CL.CLAIM_VER_CD
+                  FROM SE_0710T CL, SE_0300T RO
+                 WHERE RO.DLR_CD    = CL.DLR_CD
+                   AND RO.RO_DOC_NO = CL.RO_DOC_NO
+                   AND RO.VIN_NO    = CL.VIN_NO
+                   AND RO.RO_TP     = CL.RO_TP
+                   AND CL.DLR_CD = '${sDlrCd}'
+                   AND CL.CLAIM_STAT_CD != 'C'
+                   AND TO_CHAR(CL.CLAIM_CONFIRM_DT,'YYYYMMDD') BETWEEN '${sStartYyMmDd}' AND '${sEndYyMmDd}'
+                   ${IF(LEN(sCrNo) <=0,""," AND CL.CR_NO ='" + sCrNo + "'")} -- 캠페인번호
+            ) CLA
+            WHERE 1=1
+            ${IF(LEN(sCrNm) <=0,""," AND CLA.CR_NM ='" + sCrNm + "'")} -- 캠페인명
+        )
+        SELECT CARLINE_CD, 'COL01' AS COLUMN_NM, COUNT(DISTINCT(VIN_NO)) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD = 'O'
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL02' AS COLUMN_NM, COUNT(CLAIM_DOC_NO) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD = 'O'
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL03' AS COLUMN_NM, COUNT(DISTINCT(VIN_NO)) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD != 'O'
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL04' AS COLUMN_NM, COUNT(CLAIM_DOC_NO) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD != 'O'
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL05' AS COLUMN_NM, COUNT(CLAIM_DOC_NO) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD != 'O'
+           AND TO_NUMBER(CLAIM_VER_CD) = 0
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL06' AS COLUMN_NM, COUNT(CLAIM_DOC_NO) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD = 'A'
+           AND TO_NUMBER(CLAIM_VER_CD) = 0
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL07' AS COLUMN_NM, ROUND(SUM(CASE WHEN(CLAIM_STAT_CD = 'A' AND TO_NUMBER(CLAIM_VER_CD) = 0) THEN 1 ELSE 0 END )/NULLIF(SUM(CASE WHEN(TO_NUMBER(CLAIM_VER_CD) = 0) THEN 1 ELSE 0 END),0), 2) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD != 'O'
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL08' AS COLUMN_NM, SUM(NVL(REQ_LBR_AMT, 0) + NVL(REQ_ITEM_AMT, 0) + NVL(REQ_VAT_AMT, 0) + NVL(REQ_SUB_LBR_AMT, 0) + NVL(REQ_SUB_ITEM_AMT, 0)) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD != 'O'
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL09' AS COLUMN_NM, SUM(NVL(REQ_LBR_AMT, 0)) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD != 'O'
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL10' AS COLUMN_NM, SUM(NVL(REQ_ITEM_AMT, 0)) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD != 'O'
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL11' AS COLUMN_NM, SUM(NVL(REQ_SUB_LBR_AMT, 0) + NVL(REQ_SUB_ITEM_AMT, 0) + NVL(REQ_VAT_AMT, 0)) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD != 'O'
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL12' AS COLUMN_NM, SUM(NVL(CONFIRM_LBR_AMT, 0) + NVL(CONFIRM_LBR_VAT_AMT, 0) + NVL(CONFIRM_ITEM_AMT, 0) + NVL(CONFIRM_ITEM_VAT_AMT, 0) + NVL(CONFIRM_SUB_LBR_AMT, 0) + NVL(CONFIRM_SUB_ITEM_AMT, 0)) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD = 'A'
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL13' AS COLUMN_NM, SUM(NVL(CONFIRM_LBR_AMT, 0) + NVL(CONFIRM_LBR_VAT_AMT, 0)) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD = 'A'
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL14' AS COLUMN_NM, SUM(NVL(CONFIRM_ITEM_AMT, 0) + NVL(CONFIRM_ITEM_VAT_AMT, 0)) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD = 'A'
+         GROUP BY CARLINE_CD
+        UNION ALL
+        SELECT CARLINE_CD, 'COL15' AS COLUMN_NM, SUM(NVL(CONFIRM_SUB_LBR_AMT, 0) + NVL(CONFIRM_SUB_ITEM_AMT, 0)) AS COLUMN_VAL
+          FROM T1
+         WHERE CLAIM_STAT_CD = 'A'
+         GROUP BY CARLINE_CD
+    )
+)PIVOT(
+    SUM(COLUMN_VAL)
+    FOR COLUMN_NM IN(
+         'COL01' AS "COL01"
+        ,'COL02' AS "COL02"
+        ,'COL03' AS "COL03"
+        ,'COL04' AS "COL04"
+        ,'COL05' AS "COL05"
+        ,'COL06' AS "COL06"
+        ,'COL07' AS "COL07"
+        ,'COL08' AS "COL08"
+        ,'COL09' AS "COL09"
+        ,'COL10' AS "COL10"
+        ,'COL11' AS "COL11"
+        ,'COL12' AS "COL12"
+        ,'COL13' AS "COL13"
+        ,'COL14' AS "COL14"
+        ,'COL15' AS "COL15"
+    )
+)
+ORDER BY CARLINE_CD;
+]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="0" T="0"/>
+<FR/>
+<HC/>
+<FC/>
+<UPFCR COLUMN="false" ROW="true"/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1152000,1152000,1152000,1152000,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[6286500,4752000,4752000,4752000,4752000,4752000,4752000,4752000,4752000,4752000,4752000,4752000,4752000,4752000,4752000,4752000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" s="0">
+<O>
+<![CDATA[数据名称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="0">
+<O>
+<![CDATA[等待索赔申请台数]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0" s="0">
+<O>
+<![CDATA[等待索赔申请台次]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="0">
+<O>
+<![CDATA[索赔申请台数]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0" s="0">
+<O>
+<![CDATA[索赔申请台次]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="0">
+<O>
+<![CDATA[一次索赔申请台次]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="0" s="0">
+<O>
+<![CDATA[一次索赔申请通过台次]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="0" s="0">
+<O>
+<![CDATA[索赔申请一次通过率]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="0" s="0">
+<O>
+<![CDATA[索赔申请合计金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="0" s="0">
+<O>
+<![CDATA[索赔申请工时金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="0" s="0">
+<O>
+<![CDATA[索赔申请配件金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="0" s="0">
+<O>
+<![CDATA[索赔申请其它金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="0" s="0">
+<O>
+<![CDATA[索赔审批合计金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="0" s="0">
+<O>
+<![CDATA[索赔审批工时金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="0" s="0">
+<O>
+<![CDATA[索赔审批配件金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="0" s="0">
+<O>
+<![CDATA[索赔审批其它金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1" s="1">
+<O>
+<![CDATA[合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(B4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(C4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(D4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(E4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(F4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(G4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="1" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(I4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(J4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(K4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(L4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(M4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(N4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(O4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="1" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(SUM(P4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="2" s="1">
+<O>
+<![CDATA[平均]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(B4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(C4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(D4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(E4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(F4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(G4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=G2/F2]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(I4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(J4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(K4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(L4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(M4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(N4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(O4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="2" s="2">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=ROUND(AVERAGE(P4), 2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="3" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CARLINE_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Scope val="1"/>
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="1" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL01"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL02"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL03"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL04"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL05"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL06"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL07"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL08"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL09"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="10" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL10"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL11"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="12" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL12"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="13" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL13"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL14"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="15" r="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="COL15"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="28800000" height="85536000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID/>
+</WorkBook>

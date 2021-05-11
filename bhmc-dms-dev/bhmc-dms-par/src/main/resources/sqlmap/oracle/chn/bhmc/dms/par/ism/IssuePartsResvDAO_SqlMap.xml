@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : IssuePartsResvDAO_SqlMap.xml
+    Description : 부품예약 관리.
+    author In Bo Shim
+    since 2016. 2. 18.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 02. 28.     In Bo Shim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.par.ism.service.dao.IssuePartsResvDAO">
+
+    <!-- 부품예약 정보를 추가한다. -->
+    <insert id="insertIssuePartsResv" parameterType="IssuePartsResvVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssuePartsResvDAO.insertIssuePartsResv] */
+        INSERT INTO PT_0302T(
+            DLR_CD
+            , PLT_CD
+            , STRGE_CD
+            , ITEM_CD
+            , RESV_DOC_NO
+            , RESV_DOC_LINE_NO
+            , RESV_QTY
+            , REG_USR_ID
+            , REG_DT
+        ) VALUES (
+            #{ dlrCd }
+            , #{ pltCd }
+            , #{ strgeCd }
+            , #{ itemCd }
+            , #{ resvDocNo }
+            , #{ resvDocLineNo }
+            , #{ resvQty }
+            , #{ regUsrId }
+            , SYSDATE
+        )
+    </insert>
+
+    <!-- 부품예약 정보를 수정한다. -->
+    <update id="updateIssuePartsResv" parameterType="IssuePartsResvVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssuePartsResvDAO.updateIssuePartsResv] */
+        UPDATE PT_0302T SET
+            RESV_QTY = (
+            SELECT MAX(B.RESV_QTY)+#{ resvQty } RESV_QTY FROM PT_0302T B
+            WHERE B.DLR_CD = #{dlrCd}
+            AND B.PLT_CD = #{pltCd}
+            AND B.ITEM_CD = #{itemCd}
+            AND B.STRGE_CD = #{strgeCd}
+            AND B.RESV_DOC_NO = #{ resvDocNo }
+            AND B.RESV_DOC_LINE_NO = #{ resvDocLineNo }
+            )
+            , UPDT_USR_ID = #{ updtUsrId }
+            , UPDT_DT = SYSDATE
+        WHERE DLR_CD = #{dlrCd}
+        AND PLT_CD = #{pltCd}
+        AND ITEM_CD = #{itemCd}
+        AND STRGE_CD = #{strgeCd}
+        AND RESV_DOC_NO = #{ resvDocNo }
+        AND RESV_DOC_LINE_NO = #{ resvDocLineNo }
+    </update>
+
+    <!-- 부품예약 정보를 삭제한다. -->
+    <delete id="deleteIssuePartsResv" parameterType="IssuePartsResvVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssuePartsResvDAO.deleteIssuePartsResv] */
+        DELETE FROM PT_0302T
+        WHERE DLR_CD = #{dlrCd}
+        AND PLT_CD = #{pltCd}
+        AND ITEM_CD = #{itemCd}
+        AND STEGE_CD = #{strgeCd}
+        AND RESV_DOC_NO = #{ resvDocNo }
+        AND RESV_DOC_LINE_NO = #{ resvDocLineNo }
+    </delete>
+
+    <!-- 부품예약 정보를 조회한다. -->
+    <select id="selectIssuePartsResvByKey" parameterType="map" resultType="IssuePartsResvVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssuePartsResvDAO.selectIssuePartsResvByKey] */
+        SELECT * FROM PT_0302T
+        WHERE DLR_CD = #{dlrCd}
+        AND PLT_CD = #{pltCd}
+        AND ITEM_CD = #{itemCd}
+        AND STEGE_CD = #{strgeCd}
+        AND RESV_DOC_NO = #{ resvDocNo }
+        AND RESV_DOC_LINE_NO = #{ resvDocLineNo }
+    </select>
+
+    <!-- 부품예약 정보 목록을 조회한다. -->
+    <select id="selectIssuePartsResvesByCondition" parameterType="IssuePartsResvSearchVO" resultType="IssuePartsResvVO">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssuePartsResvDAO.selectIssuePartsResvesByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT * FROM PT_0302T
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND DLR_CD LIKE '%'||#{sDlrCd}||'%'
+                    </if>
+
+                    <if test='sPltCd != null and sPltCd != ""'>
+                        AND PLT_CD LIKE '%'||#{sPltCd}||'%'
+                    </if>
+
+                    <if test='sItemCd != null and sItemCd != ""'>
+                        AND ITEM_CD LIKE '%'||#{sItemCd}||'%'
+                    </if>
+
+                    <if test='sStrgeCd != null and sStrgeCd != ""'>
+                        AND STRGE_CD LIKE '%'||#{sStrgeCd}||'%'
+                    </if>
+
+                    <if test='sResvDocNo != null and sResvDocNo != ""'>
+                        AND RESV_DOC_NO LIKE '%'||#{sResvDocNo}||'%'
+                    </if>
+
+                    <if test='sResvDocLineNo != null and sResvDocLineNo != 0'>
+                        AND RESV_DOC_LINE_NO = #{sResvDocLineNo}
+
+                    </if>
+
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "custCd"'>CUST_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "custNm"'>CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "vinNo"'>VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carNo"'>CAR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 부품예약 정보 카운트를 조회한다. -->
+    <select id="selectIssuePartsResvesByConditionCnt" parameterType="IssuePartsResvSearchVO" resultType="int">
+        /* [chn.bhmc.dms.par.ism.service.dao.IssuePartsResvDAO.selectIssuePartsResvesByConditionCnt] */
+        SELECT count(*) FROM PT_0302T
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND DLR_CD LIKE '%'||#{sDlrCd}||'%'
+            </if>
+
+            <if test='sPltCd != null and sPltCd != ""'>
+                AND PLT_CD LIKE '%'||#{sPltCd}||'%'
+            </if>
+
+            <if test='sItemCd != null and sItemCd != ""'>
+                AND ITEM_CD LIKE '%'||#{sItemCd}||'%'
+            </if>
+
+            <if test='sStrgeCd != null and sStrgeCd != ""'>
+                AND STRGE_CD LIKE '%'||#{sStrgeCd}||'%'
+            </if>
+
+            <if test='sResvDocNo != null and sResvDocNo != ""'>
+                AND RESV_DOC_NO LIKE '%'||#{sResvDocNo}||'%'
+            </if>
+
+            <if test='sResvDocLineNo != null and sResvDocLineNo != 0'>
+                AND RESV_DOC_LINE_NO = #{sResvDocLineNo}
+            </if>
+
+        </where>
+    </select>
+
+</mapper>

@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.cmm.pay.service.dao.CouponDetailsDAO">
+
+	<select id="selectCount" parameterType="CouponDetailsVO" resultType="int">
+        SELECT count(*)
+          FROM COUPON_DETAILS A        
+         WHERE 1 = 1
+         <if test='payAmount != null and payAmount != ""'>
+			AND A.PAYMENT_NO = #{payAmount}
+		</if>
+		<if test='couponUsageTimeStartStr != null'>
+			AND A.COUPON_USAGE_TIME >= #{couponUsageTimeStartStr}
+		</if>
+		<if test='couponUsageTimeEndStr != null'>
+			AND A.COUPON_USAGE_TIME <![CDATA[<]]> #{couponUsageTimeEndStr}+1
+		</if>
+		<!-- 维修委托单号 -->
+		<if test='roDocNo != null and roDocNo != ""'>
+			AND A.RO_DOC_NO = #{roDocNo}
+		</if>
+		<!-- 结算单号 -->
+		<if test='calcDocNo != null and calcDocNo != ""'>
+			AND A.CALC_DOC_NO = #{calcDocNo}
+		</if>
+		<if test='couponState != null and couponState != ""'>
+			AND A.COUPON_STATE = #{couponState}
+		</if>
+		<if test='note1 != null and note1 != ""'>
+			AND A.NOTE1 = #{note1}
+		</if>
+		<if test='note2 != null and note2 != ""'>
+			AND A.NOTE2 = #{note2}
+		</if>
+		<if test='note3 != null and note3 != ""'>
+			AND A.NOTE3 = #{note3}
+		</if>
+		<if test='note4 != null and note4 != ""'>
+			AND A.NOTE4 = #{note4}
+		</if>
+		<if test='note5 != null and note5 != ""'>
+			AND A.NOTE5 = #{note5}
+		</if>
+    </select>
+
+    <!--  优惠券明细查询-->
+    <select id="selectInfoByParams" parameterType="CouponDetailsVO" resultType="CouponDetailsVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, V1.* FROM (
+                SELECT
+					T1.COUPON_CODE,
+					T1.COUPON_NAME,
+					CASE WHEN T1.COUPON_STATE='10781001'  THEN '未使用' 
+					WHEN T1.COUPON_STATE='10781002'  THEN '已冻结' 
+					WHEN T1.COUPON_STATE='10781003'  THEN '已使用'
+					WHEN T1.COUPON_STATE='10781004'  THEN '反核销'ELSE T1.COUPON_STATE END AS COUPON_STATE,
+	                T1.TRADE_ID,
+	                T1.RO_DOC_NO,
+	                T1.CALC_DOC_NO,
+	                T1.PAYMENT_NO,
+	                T1.EFFECTIVE_DATE,
+	                T1.EXPIRY_DATE,
+	                CASE WHEN T1.COUPON_TYPE='1'  THEN '售前' 
+					WHEN T1.COUPON_TYPE='2'  THEN '售后' ELSE T1.COUPON_TYPE END AS COUPON_TYPE,
+	                T1.COUPON_CHANNEL_CODE,
+	                T1.COUPON_AMOUNT,
+	                T1.PAY_AMOUNT,
+	                T1.CARD_VOLUME_COLLECTION_TIME,
+	                T1.COUPON_USAGE_TIME,
+	                T1.CREATE_DT,
+	                T1.NOTE1,
+	                T1.NOTE2,
+	                T1.NOTE3,
+	                T1.NOTE4,
+	                T1.NOTE5
+						FROM
+					COUPON_DETAILS T1
+               		WHERE  1 = 1
+                    <if test='payAmount != null and payAmount != ""'>
+                        AND T1.PAYMENT_NO = #{payAmount}
+                    </if>
+                     <if test='couponUsageTimeStartStr != null'>
+                        AND T1.COUPON_USAGE_TIME >= #{couponUsageTimeStartStr}
+                    </if>
+                    <if test='couponUsageTimeEndStr != null'>
+                        AND T1.COUPON_USAGE_TIME <![CDATA[<]]> #{couponUsageTimeEndStr}+1
+                    </if>
+                    <if test='tradeId != null and tradeId != ""'>
+                        AND T1.TRADE_ID = #{tradeId}
+                    </if>
+                    <!-- 维修委托单号 -->
+                    <if test='roDocNo != null and roDocNo != ""'>
+          				 AND T1.RO_DOC_NO = #{roDocNo}                       
+         			</if>
+         			<!-- 结算单号 -->
+         			<if test='calcDocNo != null and calcDocNo != ""'>
+          				 AND T1.CALC_DOC_NO = #{calcDocNo}                       
+         			</if>
+         			<if test='couponState != null and couponState != ""'>
+          				 AND T1.COUPON_STATE = #{couponState}                       
+         			</if>
+                     <if test='note1 != null and note1 != ""'>
+                      AND T1.NOTE1 = #{note1}                     
+                    </if>
+                     <if test='note2 != null and note2 != ""'>
+                      AND T1.NOTE2 = #{note2}                     
+                    </if>
+                     <if test='note3 != null and note3 != ""'>
+                      AND T1.NOTE3 = #{note3}                     
+                    </if>
+                     <if test='note4 != null and note4 != ""'>
+                      AND T1.NOTE4 = #{note4}                     
+                    </if>
+                     <if test='note5 != null and note5 != ""'>
+                      AND T1.NOTE5 = #{note5}                     
+                    </if>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "tradeId"'>T1.TRADE_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "couponCode"'>T1.COUPON_CODE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "roDocNo"'>T1.RO_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "calcDocNo"'>T1.CALC_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "paymentNo"'>T1.PAYMENT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "effectiveDate"'>T1.EFFECTIVE_DATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "expiryDate"'>T1.EXPIRY_DATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "cardVolumeCollectionTime"'>T1.CARD_VOLUME_COLLECTION_TIME <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "couponUsageTime"'>T1.COUPON_USAGE_TIME <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    T1.COUPON_USAGE_TIME DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        T1.COUPON_USAGE_TIME  DESC
+                    </otherwise>
+                </choose>
+            ) V1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    
+    
+     <insert id="insertLog" parameterType="CouponDetailsVO">
+        INSERT
+          INTO COUPON_DETAILS(
+              COUPON_CODE
+            , COUPON_NAME
+            , COUPON_STATE
+            , TRADE_ID
+            , RO_DOC_NO
+            , CALC_DOC_NO
+            , PAYMENT_NO
+            , EFFECTIVE_DATE
+            , EXPIRY_DATE
+            , COUPON_TYPE
+            , COUPON_CHANNEL_CODE
+            , COUPON_AMOUNT
+            , PAY_AMOUNT
+            , CARD_VOLUME_COLLECTION_TIME
+            , COUPON_USAGE_TIME
+            , CREATE_DT
+            , NOTE1
+            , NOTE2
+            , NOTE3
+            , NOTE4
+            , NOTE5
+          )VALUES(
+            #{couponCode}
+            , #{couponName}
+            , #{couponState}
+            , #{tradeId}
+            , #{roDocNo}
+            , #{calcDocNo}
+            , #{paymentNo}
+            , #{effectiveDate}
+            , #{expiryDate}
+            , #{couponType}
+            , #{couponChannelCode}
+            , #{couponAmount}
+            , #{payAmount}
+            , #{cardVolumeCollectionTime}
+            , #{couponUsageTime}
+            ,SYSDATE
+            , #{note1}
+            , #{note2}
+            , #{note3}
+            , #{note4}
+            , #{note5}
+          )
+    </insert>
+    
+</mapper>

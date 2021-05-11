@@ -1,0 +1,487 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="serRepairContract" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sStartDt"/>
+<O>
+<![CDATA[2016]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[-- 정비위탁 리포트 시간조회    
+SELECT *
+ FROM (
+SELECT RO_TP_NM , RO_TOT_CNT, SEQ , RO_MM
+   FROM (  
+      SELECT RO_TP_NM ,RO_MM,SEQ
+            ,SUM(T2.RO_TOT_CNT) RO_TOT_CNT  
+        FROM (        
+        SELECT RO_TP_NM , RO_TP_FLAG ,SEQ , RO_MM
+              ,SUM( CASE WHEN T1.RO_TP_FLAG = '0' 
+                         THEN 
+                              (CASE WHEN T1.BASE_RO_TP = T1.RO_TP THEN 1 ELSE 0 END )
+                    WHEN T1.RO_TP_FLAG = '1'  
+                         THEN (CASE WHEN (T1.BASE_RO_TP = T1.RO_TP AND T1.TP_LBR_TP = T1.LBR_TP ) THEN 1 ELSE 0 END )
+                    ELSE 0
+                    END ) RO_TOT_CNT 
+          FROM (        
+             SELECT  TP.RO_TP AS BASE_RO_TP 
+                    ,TP.RO_TP_NM
+                    ,TP.RO_TP_FLAG 
+                    ,TP.LBR_TP AS TP_LBR_TP
+                    ,RO.RO_TP
+                    ,RO.LBR_TP 
+                    ,RO.LBR_CD
+                    ,RO.RO_DOC_NO
+                    ,RO.DLR_CD
+                    ,RO.RO_MM
+                    ,SEQ 
+             FROM (
+               SELECT  A.DLR_CD
+                      ,A.RO_DOC_NO
+                      ,A.RO_TP 
+                      ,B.LBR_CD
+                      ,B.LBR_TP 
+                      ,TO_CHAR(RO_DT , 'MM') AS RO_MM
+                 FROM SE_0300T A , SE_0170T B
+                WHERE 1=1
+                  AND B.DLR_CD = A.DLR_CD
+                  AND B.DOC_NO = A.RO_DOC_NO
+                  AND B.PREFIX_ID ='RO'
+                  AND A.DLR_CD ='D0103'
+                  AND A.RO_DOC_NO IN ('RO2017020070','RO2017020067','RO2017020068','RO2017020080','2017010052')
+                 -- AND A.RO_DOC_NO IN ('RO2017020067')
+                 -- AND TO_CHAR(A.RO_DT,'YYYYMMDD') BETWEEN '20160101' AND '20160531' 
+                  AND A.RO_STAT_CD != '06'
+                UNION ALL
+               SELECT  A.DLR_CD
+                      ,A.RO_DOC_NO
+                      ,A.RO_TP 
+                      ,'' LBR_CD
+                      ,'' LBR_TP 
+                      ,TO_CHAR(RO_DT , 'MM') AS RO_MM
+                 FROM SE_0300T A 
+                WHERE 1=1
+                  AND A.DLR_CD ='${sDlrCd}'
+                  -- AND A.RO_DOC_NO IN ('RO2017020070','RO2017020067','RO2017020068','RO2017020080','2017010052')
+                  --AND A.RO_DOC_NO IN ('RO2017020067')
+                  AND TO_CHAR(A.RO_DT,'YYYYMMDD') BETWEEN '${sStartDt}'||'0101' AND '${sStartDt}'||'1231' 
+                  AND A.RO_STAT_CD != '06'
+            )RO RIGHT OUTER JOIN ( SELECT RO_TP , RO_TP_NM ,LBR_TP, RO_TP_FLAG,SEQ FROM VW_SER_SER_TP ) TP
+                ON 1=1 
+                AND TP.RO_TP  = RO.RO_TP
+                AND (TP.LBR_TP = RO.LBR_TP OR RO.LBR_TP IS NULL)
+              ORDER BY TP.SEQ
+         )T1    
+          GROUP BY RO_TP_NM , RO_TP_FLAG ,SEQ,RO_DOC_NO,RO_MM
+         -- ORDER BY SEQ
+      )T2 GROUP BY RO_TP_NM ,SEQ,RO_MM
+     -- ORDER BY SEQ
+  ) R1 RIGHT OUTER JOIN (
+          SELECT LPAD(LEVEL , 2 ,'0') MM
+              FROM DUAL CONNECT BY LEVEL <= 12 
+  ) MON
+  ON 1=1
+  --AND R1.RO_MM = MON.MM
+  --AND (R1.RO_MM = MON.MM OR R1.RO_MM IS NULL)
+GROUP BY RO_TP_NM ,RO_TOT_CNT, SEQ ,RO_MM, MM 
+--ORDER BY SEQ,MM
+) PIVOT(
+      SUM(NVL(RO_TOT_CNT,0))
+      FOR  RO_MM IN(     '01' AS "01" 
+                        ,'02' AS "02"
+                        ,'03' AS "03"
+                        ,'04' AS "04"
+                        ,'05' AS "05"
+                        ,'06' AS "06"
+                        ,'07' AS "07"
+                        ,'08' AS "08"
+                        ,'09' AS "09"
+                        ,'10' AS "10"
+                        ,'11' AS "11"
+                        ,'12' AS "12")
+) 
+WHERE RO_TP_NM IS NOT NULL
+ORDER BY SEQ;]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="0" T="0"/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1371600,1371600,723900,723900,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[4320000,4320000,4320000,4032000,4032000,4032000,4032000,4032000,4032000,4032000,4032000,4032000,4032000,4032000,4032000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" s="0">
+<O>
+<![CDATA[数据名称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="1">
+<O>
+<![CDATA[合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0" s="1">
+<O>
+<![CDATA[平均]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="0">
+<O>
+<![CDATA[1月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0" s="0">
+<O>
+<![CDATA[2月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="0">
+<O>
+<![CDATA[3月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="0" s="0">
+<O>
+<![CDATA[4月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="0" s="0">
+<O>
+<![CDATA[5月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="0" s="0">
+<O>
+<![CDATA[6月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="0" s="0">
+<O>
+<![CDATA[7月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="0" s="0">
+<O>
+<![CDATA[8月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="0" s="0">
+<O>
+<![CDATA[9月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="0" s="0">
+<O>
+<![CDATA[10月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="0" s="0">
+<O>
+<![CDATA[11月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="0" s="0">
+<O>
+<![CDATA[12月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="serRepairContract" columnName="RO_TP_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Scope val="1"/>
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="1" r="1" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(D2:O2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="1" s="4">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=AVERAGE(D2:O2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="1" s="5">
+<O t="DSColumn">
+<Attributes dsName="serRepairContract" columnName="01"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="1" s="5">
+<O t="DSColumn">
+<Attributes dsName="serRepairContract" columnName="02"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="1" s="5">
+<O t="DSColumn">
+<Attributes dsName="serRepairContract" columnName="03"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="1" s="5">
+<O t="DSColumn">
+<Attributes dsName="serRepairContract" columnName="04"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="1" s="5">
+<O t="DSColumn">
+<Attributes dsName="serRepairContract" columnName="05"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="1" s="5">
+<O t="DSColumn">
+<Attributes dsName="serRepairContract" columnName="06"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="1" s="5">
+<O t="DSColumn">
+<Attributes dsName="serRepairContract" columnName="07"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="10" r="1" s="5">
+<O t="DSColumn">
+<Attributes dsName="serRepairContract" columnName="08"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="1" s="5">
+<O t="DSColumn">
+<Attributes dsName="serRepairContract" columnName="09"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="12" r="1" s="5">
+<O t="DSColumn">
+<Attributes dsName="serRepairContract" columnName="10"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="13" r="1" s="5">
+<O t="DSColumn">
+<Attributes dsName="serRepairContract" columnName="11"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="1" s="5">
+<O t="DSColumn">
+<Attributes dsName="serRepairContract" columnName="12"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="46368000" height="64080000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="1" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Verdana" style="1" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,###.##]]></Format>
+<FRFont name="Verdana" style="1" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

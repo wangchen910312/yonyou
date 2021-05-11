@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : MembershipGradeChgDAO_SqlMap.xml
+    Description : 멤버십 등급변경
+    author Hyun Ho Kim
+    since 2016. 04. 06.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 04. 06.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.dmm.service.dao.MembershipGradeChgDAO">
+
+    <sql id="searchMembershipGradeChg">
+        <where>
+            AND   T2.DLR_CD = #{sDlrCd}
+            <if test='(sGradeSeq != null) and (sGradeSeq != null)'>
+                AND T4.GRADE_SEQ = #{sGradeSeq}
+            </if>
+            <if test='(sMembershipGradeChgSeq != null) and (sMembershipGradeChgSeq != null)'>
+                AND T2.MEMBERSHIP_GRADE_CHG_SEQ = #{sMembershipGradeChgSeq}
+            </if>
+        </where>
+    </sql>
+
+    <!-- 멤버십 카드 관리 목록수를 조회한다. -->
+    <select id="selectMembershipGradeChgsByConditionCnt" parameterType="MembershipGradeChgSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipGradeChgDAO.selectMembershipGradeChgsByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0809T T2 INNER JOIN CR_0810T T3
+                ON T2.DLR_CD =  T3.DLR_CD
+                AND T2.MEMBERSHIP_GRADE_CHG_SEQ = T3.MEMBERSHIP_GRADE_CHG_SEQ
+                INNER JOIN CR_0801T T4
+                ON T3.DLR_CD = T4.DLR_CD
+                AND T3.MEMBERSHIP_NO = T4.MEMBERSHIP_NO
+                INNER JOIN CR_0101T T5
+                ON T4.DLR_CD = T5.DLR_CD
+                AND T4.CUST_NO = T5.CUST_NO
+        <include refid="searchMembershipGradeChg" />
+    </select>
+
+    <!-- 멤버십 카드관리 정보 목록을 조회한다. -->
+    <select id="selectMembershipGradeChgsByCondition" parameterType="MembershipGradeChgSearchVO" resultType="MembershipGradeChgVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipGradeChgDAO.selectMembershipGradeChgsByCondition] */
+        SELECT  T2.DLR_CD
+                ,T2.MEMBERSHIP_GRADE_CHG_SEQ
+                ,T2.MEMBERSHIP_GRADE_CHG_DT
+                ,T5.CUST_NM
+                ,T4.CUST_NO
+                ,T4.GRADE_CD
+                ,T4.MEMBERSHIP_NO
+                ,T3.AFT_GRADE_CD
+                ,T3.BEF_GRADE_CD
+                ,T3.VSIT_CNT
+                ,T3.PURC_CNT
+                ,T3.PURC_AMT
+                ,T3.RCHG_AMT
+                ,T3.APPLY_YN
+        FROM    CR_0809T T2 INNER JOIN CR_0810T T3
+                ON T2.DLR_CD =  T3.DLR_CD
+                AND T2.MEMBERSHIP_GRADE_CHG_SEQ = T3.MEMBERSHIP_GRADE_CHG_SEQ
+                INNER JOIN CR_0801T T4
+                ON T3.DLR_CD = T4.DLR_CD
+                AND T3.MEMBERSHIP_NO = T4.MEMBERSHIP_NO
+                INNER JOIN CR_0101T T5
+                ON T4.DLR_CD = T5.DLR_CD
+                AND T4.CUST_NO = T5.CUST_NO
+        <include refid="searchMembershipGradeChg" />
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "custNm"'>T5.CUST_NM  <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "custNo"'>T4.CUST_NO     <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "gradeCd"'>,T4.GRADE_CD        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "vsitCnt"'>T3.VSIT_CNT    <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "purcCnt"'>T3.PURC_CNT    <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "purcAmt"'>T3.PURC_AMT    <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "rchgAmt"'>T3.RCHG_AMT    <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "applyYn"'>T3.APPLY_YN    <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            T4.CUST_NO ASC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                T4.CUST_NO ASC
+            </otherwise>
+        </choose>
+        <!--
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT  T2.DLR_CD
+                            ,T5.CUST_NM
+                            ,T4.CUST_NO
+                            ,T4.GRADE_CD
+                            ,T4.MEMBERSHIP_NO
+                            ,T3.AFT_GRADE_CD
+                            ,T3.BEF_GRADE_CD
+                            ,T3.VSIT_CNT
+                            ,T3.PURC_CNT
+                            ,T3.PURC_AMT
+                            ,T3.RCHG_AMT
+                            ,T3.APPLY_YN
+                    FROM    CR_0809T T2 INNER JOIN CR_0810T T3
+                            ON T2.DLR_CD =  T3.DLR_CD
+                            AND T2.MEMBERSHIP_GRADE_CHG_SEQ = T3.MEMBERSHIP_GRADE_CHG_SEQ
+                            INNER JOIN CR_0801T T4
+                            ON T3.DLR_CD = T4.DLR_CD
+                            AND T3.MEMBERSHIP_NO = T4.MEMBERSHIP_NO
+                            INNER JOIN CR_0101T T5
+                            ON T4.DLR_CD = T5.DLR_CD
+                            AND T4.CUST_NO = T5.CUST_NO
+                    <include refid="searchMembershipGradeChg" />
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "custNm"'>T5.CUST_NM  <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "custNo"'>T4.CUST_NO     <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "gradeCd"'>,T4.GRADE_CD        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "vsitCnt"'>T3.VSIT_CNT    <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "purcCnt"'>T3.PURC_CNT    <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "purcAmt"'>T3.PURC_AMT    <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "rchgAmt"'>T3.RCHG_AMT    <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "applyYn"'>T3.APPLY_YN    <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        T4.CUST_NO ASC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            T4.CUST_NO ASC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+         -->
+    </select>
+
+    <select id="selectMasterGradeSeqByCondition" parameterType="MembershipGradeChgSearchVO" resultType="MembershipGradeChgVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipGradeChgDAO.selectMasterGradeSeqByCondition] */
+        SELECT  DLR_CD
+                ,MEMBERSHIP_GRADE_CHG_SEQ
+                ,TO_CHAR(MEMBERSHIP_GRADE_CHG_DT,'yyyy-mm-dd') AS MEMBERSHIP_GRADE_CHG_DT_STR
+                ,MEMBERSHIP_GRADE_CHG_DT
+                --,TO_CHAR(MEMBERSHIP_GRADE_CHG_DT,'yyyy-mm-dd hh24:mi:ss') AS MEMBERSHIP_GRADE_CHG_DT
+        FROM    CR_0809T
+        WHERE   DLR_CD = #{sDlrCd}
+        ORDER BY MEMBERSHIP_GRADE_CHG_SEQ DESC
+    </select>
+
+    <update id="updateApplyYn"  parameterType="MembershipGradeChgVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipGradeChgDAO.updateApplyYn] */
+        UPDATE  CR_0810T
+        SET     APPLY_YN = 'Y'
+                ,UPDT_USR_ID = #{updtUsrId}
+                ,UPDT_DT = SYSDATE
+        WHERE   DLR_CD = #{dlrCd}
+        AND     MEMBERSHIP_GRADE_CHG_SEQ = #{membershipGradeChgSeq}
+        AND     MEMBERSHIP_NO = #{membershipNo}
+    </update>
+
+    <!-- 멤버십 인원에 대해서 등급을 설정하는 프로시저 -->
+    <select id="selectMembershipGradeChgProcedure" statementType="CALLABLE" parameterType="MembershipGradeChgVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipGradeChgDAO.selectMembershipGradeChgProcedure] */
+         {call SP_CRM_MEMBERSHIP_GRADE_CHG (
+            #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{stdPridMonth, mode=IN, jdbcType=VARCHAR}
+            , #{regUsrId, mode=IN, jdbcType=VARCHAR}
+            , #{updtUsrId, mode=IN, jdbcType=VARCHAR}
+            , #{result, mode=OUT, jdbcType=VARCHAR}
+         )}
+    </select>
+
+</mapper>

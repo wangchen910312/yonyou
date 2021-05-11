@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : ClaimInfoStatusDAO_SqlMap.xml
+    Description : 클레임 정보에 관한 데이터처리
+    author Kwon Ki Hyun
+    since 2016. 02. 29.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 05. 17.  Kwon Ki Hyun     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.wac.service.dao.ClaimInfoStatusDAO">
+
+    <!-- 클레임 정보 현황을 조회한다. -->
+    <select id="selectClaimInfoStatusByCondition" parameterType="ClaimInfoStatusSearchVO" resultType="ClaimInfoStatusVO">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimInfoStatusDAO.selectClaimInfoStatusByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A.DLR_CD                      --딜러코드
+                       ,(SELECT DLR_NM
+                           FROM CM_0101T
+                          WHERE DLR_CD = A.DLR_CD) AS DLR_NM --딜러명
+                       ,CAR_OWNER_NM                --차량소유자명
+                       ,(SELECT TEL_NO
+                           FROM CR_0101T
+                          WHERE DLR_CD  = A.DLR_CD
+                            AND CUST_NO = A.CAR_OWNER_ID
+                            AND DEL_YN = 'N'
+                        )  AS CAR_OWNER_TEL_NO        --차량소유자전화번호
+                       ,A.VIN_NO                      --차대번호
+                       ,A.CAR_REG_NO                  --차량등록번호
+                       ,A.WART_DT                     --보증일자
+                       ,A.RO_DOC_NO                   --RO문서번호
+                       ,A.RO_START_DT                 --RO시작일자
+                       ,A.RO_END_DT                   --RO종료일자
+                       ,A.CLAIM_DOC_NO                --클레임문서번호
+                       ,A.CLAIM_STAT_CD               --클레임상태코드
+                       ,FN_CMM_CD_NM('SER090',A.CLAIM_STAT_CD , #{langCd} ,'N')  AS CLAIM_STAT_NM --클레임상태명칭
+                       ,FN_CMM_CD_NM('SER091',A.CLAIM_TP , #{langCd} ,'N')  AS CLAIM_TP_NM
+                       ,A.CLAIM_TP
+                       ,A.CLAIM_REQ_DT                --클레임청구일자
+                       ,A.CLAIM_CONFIRM_DT            --클레임확정일자
+                       ,A.CR_NO                       --캠페인리콜번호
+                       ,A.CAU_OPER_ATC_CD             --원인작업항목코드
+                       ,A.CAU_ITEM_CD                 --원인품목코드
+                       ,A.SUB_AMT
+                       ,A.LBR_AMT
+                       ,A.ITEM_AMT
+                       ,(SELECT ITEM_NM
+                           FROM PT_0201T
+                          WHERE DLR_CD = A.DLR_CD
+                            AND ITEM_CD = A.CAU_ITEM_CD
+                        ) AS CAU_ITEM_NM              --원인품목명칭
+                       ,(A.REQ_LBR_AMT + A.REQ_ITEM_AMT + A.REQ_SUB_LBR_AMT) AS REQ_AMT --청구금액
+                       ,(A.CONFIRM_LBR_AMT + A.CONFIRM_ITEM_AMT + A.CONFIRM_SUB_LBR_AMT) AS CONFIRM_TOT_AMT --판정금액
+                       ,A.RUN_DIST_VAL
+                  FROM SE_0710T A
+                <where>
+                    AND A.DLR_CD = #{sDlrCd}
+                <if test='sClaimReqFromDt != null and sClaimReqToDt != null'>
+                    AND TO_CHAR(A.CLAIM_REQ_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimReqFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimReqToDt},'YYYYMMDD')
+                </if>
+                <if test='sRoDocNo != null and sRoDocNo != ""'>
+                    AND A.RO_DOC_NO LIKE '%' || #{sRoDocNo} || '%'
+                </if>
+                <if test='sClaimStatCd != null and sClaimStatCd != ""'>
+                    AND A.CLAIM_STAT_CD = #{sClaimStatCd}
+                </if>
+                <if test='sClaimTp != null and sClaimTp != ""'>
+                    AND A.CLAIM_TP = #{sClaimTp}
+                </if>
+                <if test='sVinNo != null and sVinNo != ""'>
+                    AND A.VIN_NO = #{sVinNo}
+                </if>
+                <if test='sCarRegNo != null and sCarRegNo != ""'>
+                    AND A.CAR_REG_NO = #{sCarRegNo}
+                </if>
+                    AND A.CLAIM_STAT_CD != 'C'
+                </where>
+                ORDER BY
+                <choose>
+                        <when test='sort != null'>
+                                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                        <choose>
+                                                <when test='item.field == "dlrCd"'>                A.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                                <when test='item.field == "dlrNm"'>                DLR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                                <when test='item.field == "carOwnerNm"'>           A.CAR_OWNER_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                                <when test='item.field == "carOwnerTelNo"'>        CAR_OWNER_TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                                <when test='item.field == "vinNo"'>                A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                                <when test='item.field == "carRegNo"'>             A.CAR_REG_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                                <when test='item.field == "wartDtFormat"'>         A.WART_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                                <when test='item.field == "roDocNo"'>              A.RO_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                                <when test='item.field == "roStartDtFormat"'>      A.RO_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                                <when test='item.field == "roEndDtFormat"'>        A.RO_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                                <when test='item.field == "claimDocNo"'>           A.CLAIM_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                                <when test='item.field == "claimStatNm"'>          CLAIM_STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                                <when test='item.field == "claimReqDtFormat"'>     A.CLAIM_REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                                <when test='item.field == "claimConfirmDtFormat"'> A.CLAIM_CONFIRM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                                <when test='item.field == "crNo"'>                 A.CR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                                <when test='item.field == "cauOperAtcCd"'>         A.CAU_OPER_ATC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                                <when test='item.field == "cauItemNm"'>            CAU_ITEM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                                <when test='item.field == "reqAmt"'>               REQ_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                                <when test='item.field == "confirmTotAmt"'>        CONFIRM_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                                <otherwise>
+                                                DECODE(A.CLAIM_REQ_DT , NULL , 1, 0 )  , A.CLAIM_REQ_DT DESC
+                                                </otherwise>
+                                        </choose>
+                                </foreach>
+                        </when>
+                        <otherwise>
+                        DECODE(A.CLAIM_REQ_DT , NULL , 1 , 0) , A.CLAIM_REQ_DT DESC
+                        </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 클레임 정보 현황 목록수를 조회한다. -->
+    <select id="selectClaimInfoStatusByConditionCnt" parameterType="ClaimInfoStatusSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.wac.service.dao.ClaimInfoStatusDAO.selectClaimInfoStatusByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM SE_0710T
+        <where>
+            AND DLR_CD = #{sDlrCd}
+        <if test='sClaimReqFromDt != null and sClaimReqToDt != null'>
+            AND TO_CHAR(CLAIM_REQ_DT,'YYYYMMDD') BETWEEN TO_CHAR(#{sClaimReqFromDt},'YYYYMMDD') AND TO_CHAR(#{sClaimReqToDt},'YYYYMMDD')
+        </if>
+        <if test='sRoDocNo != null and sRoDocNo != ""'>
+            AND RO_DOC_NO LIKE '%' || #{sRoDocNo} || '%'
+        </if>
+        <if test='sClaimStatCd != null and sClaimStatCd != ""'>
+            AND CLAIM_STAT_CD = #{sClaimStatCd}
+        </if>
+        <if test='sClaimTp != null and sClaimTp != ""'>
+            AND CLAIM_TP = #{sClaimTp}
+        </if>
+        <if test='sVinNo != null and sVinNo != ""'>
+            AND VIN_NO = #{sVinNo}
+        </if>
+        <if test='sCarRegNo != null and sCarRegNo != ""'>
+            AND CAR_REG_NO = #{sCarRegNo}
+        </if>
+            AND CLAIM_STAT_CD != 'C'
+        </where>
+    </select>
+
+</mapper>

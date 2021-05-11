@@ -1,0 +1,470 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CustPublishInfoDAO_SqlMap.xml
+    Description :
+    author Kyo Jin Lee
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kyo Jin Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cif.service.dao.CustPublishInfoDAO">
+
+    <!-- 조회 검색조건 -->
+    <sql id="searchWhere">
+        LEFT OUTER JOIN CR_0101T CR_0101T ON CR_0825T.CUST_NO = CR_0101T.CUST_NO
+        INNER JOIN CR_0823T CR_0823T ON CR_0825T.CUPN_SEQ = CR_0823T.CUPN_SEQ
+        <where>
+            <if test='sDlrCd          != null and sDlrCd          != ""'> AND CR_0825T.DLR_CD          = #{sDlrCd}        </if>
+            <if test='sPubliNo        != null and sPubliNo        != ""'> AND CR_0825T.PUBLI_NO        = #{sPubliNo}      </if>
+            <if test='sPubliCd        != null and sPubliCd        != ""'> AND CR_0825T.PUBLI_CD        = #{sPubliCd}      </if>
+            <if test='sCupnSeq        != null and sCupnSeq        != ""'> AND CR_0825T.CUPN_SEQ        = #{sCupnSeq}      </if>
+            <if test='sPkgSeq         != null and sPkgSeq         != ""'> AND CR_0825T.PKG_SEQ         = #{sPkgSeq}       </if>
+            <if test='sCustNm         != null and sCustNm         != ""'>
+            AND CR_0825T.CUST_NM LIKE '%'||#{sCustNm}||'%'
+            </if>
+            <if test='sCustNo         != null and sCustNo         != "" and sVinNo          != null and sVinNo          != ""'>
+            AND CR_0825T.CUST_NO         = #{sCustNo}
+            OR  CR_0825T.VIN_NO          = #{sVinNo}
+            </if>
+            <if test='sCustNo         != null and sCustNo         != "" and sVinNo          == null'>
+            AND CR_0825T.CUST_NO         = #{sCustNo}
+            </if>
+            <if test='sVinNo          != null and sVinNo          != "" and sCustNo         == null'>
+            AND CR_0825T.VIN_NO LIKE '%'||#{sVinNo}||'%'
+            </if>
+            <if test='sCupnFromDt     != null and sCupnFromDt     != ""'> AND CR_0825T.CUPN_FROM_DT    = #{sCupnFromDt}   </if>
+            <if test='sCupnToDt       != null and sCupnToDt       != ""'> AND CR_0825T.CUPN_TO_DT      = #{sCupnToDt}     </if>
+            <if test='sCupnValidPrid  != null and sCupnValidPrid  != ""'> AND CR_0825T.CUPN_VALID_PRID = #{sCupnValidPrid}</if>
+            <if test='sPubliDt        != null and sPubliDt        != ""'> AND CR_0825T.PUBLI_DT        = #{sPubliDt}      </if>
+            <if test='sPubliUsrId     != null and sPubliUsrId     != ""'> AND CR_0825T.PUBLI_USR_ID    = #{sPubliUsrId}   </if>
+            <if test='sUseYn          != null and sUseYn          != ""'> AND CR_0825T.USE_YN          = #{sUseYn}        </if>
+            <if test='sRegUsrId       != null and sRegUsrId       != ""'> AND CR_0825T.REG_USR_ID      = #{sRegUsrId}     </if>
+            <if test='sRegDt          != null and sRegDt          != ""'> AND CR_0825T.REG_DT          = #{sRegDt}        </if>
+        </where>
+    </sql>
+
+    <!-- 정보 목록수를 조회한다. -->
+    <select id="selectCustCouponPublishInfoByConditionCnt" parameterType="CustPublishInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustPublishInfoDAO.selectCustCouponPublishInfoByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM CR_0825T
+         <include refid="searchWhere" />
+    </select>
+
+    <!-- 정보 목록을 조회한다. -->
+    <select id="selectCustCouponPublishInfoByCondition" parameterType="CustPublishInfoSearchVO" resultType="CustPublishInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustPublishInfoDAO.selectCustCouponPublishInfoByCondition] */
+        SELECT T2.*
+            FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A1.* FROM (
+                    SELECT
+                        CR_0825T.DLR_CD
+                        ,CR_0825T.PUBLI_NO
+                        ,CR_0825T.PUBLI_CD
+                        ,CR_0825T.CUPN_SEQ
+                        ,CR_0823T.CUPN_NM
+                        ,CR_0825T.PKG_SEQ
+                        ,CR_0825T.CUST_NO
+                        ,CR_0825T.CUST_NM
+                        ,CR_0101T.HP_NO
+                        ,CR_0825T.VIN_NO
+                        ,(
+                            SELECT
+                                MAX(SA_0121T.CAR_REG_NO) KEEP (DENSE_RANK FIRST ORDER BY SA_0121T.MANUFACT_YY_MM_DT DESC)
+                            FROM SA_0121T SA_0121T
+                            INNER JOIN SA_0123T SA_0123T
+                            ON SA_0121T.DLR_CD = SA_0123T.DLR_CD AND SA_0121T.CAR_ID = SA_0123T.CAR_ID
+                            WHERE SA_0123T.USE_YN = 'Y'
+                            --AND SA_0123T.BP_CD = CR_0825T.CUST_NO
+                            AND SA_0121T.VIN_NO = CR_0825T.VIN_NO
+                          ) AS CAR_REG_NO
+                        ,CR_0825T.CUPN_FROM_DT
+                        ,CR_0825T.CUPN_TO_DT
+                        ,CR_0825T.CUPN_VALID_PRID
+                        ,CR_0825T.PUBLI_DT
+                        ,CR_0825T.PUBLI_USR_ID
+                        ,FN_GET_USER_NM(CR_0825T.PUBLI_USR_ID) AS PUBLI_USR_NM       --발행자 이름
+                        ,CR_0825T.CHK_USR_ID
+                        ,FN_GET_USER_NM(CR_0825T.CHK_USR_ID) AS CHK_USR_NM       --집행자 이름
+                        ,CR_0825T.USE_YN
+                        ,CR_0825T.USED_DT
+                        ,CR_0825T.USE_TP
+                        ,CR_0825T.USE_NUM
+                        ,CR_0825T.REG_USR_ID
+                        ,CR_0825T.REG_DT
+                        ,CR_0825T.UPDT_USR_ID
+                        ,CR_0825T.UPDT_DT
+                    FROM CR_0825T CR_0825T
+                    <include refid="searchWhere" />
+                    ) A1
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>          A1.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "publiNo"'>        A1.PUBLI_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "publiCd"'>        A1.PUBLI_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "cupnSeq"'>        A1.CUPN_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "pkgSeq"'>         A1.PKG_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "custNo"'>         A1.CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "custNm"'>         A1.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "vinNo"'>          A1.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "cupnFromDt"'>     A1.CUPN_FROM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                <when test='item.field == "cupnToDt"'>       A1.CUPN_TO_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "cupnValidPrid"'>  A1.CUPN_VALID_PRID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "publiDt"'>        A1.PUBLI_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "publiUsrId"'>     A1.PUBLI_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                <when test='item.field == "useYn"'>          A1.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "regUsrId"'>       A1.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "regDt"'>          A1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "updtUsrId"'>      A1.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "updtDt"'>         A1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <otherwise>
+                                    A1.REG_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A1.REG_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        ) T2
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 목록을 조회한다. -->
+    <select id="selectCustCouponPublishInfoByConditionByKey" parameterType="CustPublishInfoSearchVO" resultType="CustPublishInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustPublishInfoDAO.selectCustCouponPublishInfoByConditionByKey] */
+        SELECT A1.* FROM (
+            SELECT
+                CR_0825T.DLR_CD
+                ,CR_0825T.PUBLI_NO
+                ,CR_0825T.PUBLI_CD
+                ,CR_0825T.CUPN_SEQ
+                ,CR_0825T.PKG_SEQ
+                ,CR_0825T.CUST_NO
+                ,CR_0825T.CUST_NM
+                ,CR_0101T.HP_NO
+                ,CR_0825T.VIN_NO
+                ,CR_0825T.CUPN_FROM_DT
+                ,CR_0825T.CUPN_TO_DT
+                ,CR_0825T.CUPN_VALID_PRID
+                ,CR_0825T.PUBLI_DT
+                ,CR_0825T.PUBLI_USR_ID
+                ,CR_0825T.USE_YN
+                ,CR_0825T.USE_TP
+                ,CR_0825T.USE_NUM
+                ,CR_0825T.REG_USR_ID
+                ,CR_0825T.REG_DT
+                ,CR_0825T.UPDT_USR_ID
+                ,CR_0825T.UPDT_DT
+            FROM CR_0825T CR_0825T
+            <include refid="searchWhere" />
+            ) A1
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "dlrCd"'>          A1.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                        <when test='item.field == "publiNo"'>        A1.PUBLI_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                        <when test='item.field == "publiCd"'>        A1.PUBLI_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                        <when test='item.field == "cupnSeq"'>        A1.CUPN_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                        <when test='item.field == "pkgSeq"'>         A1.PKG_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                        <when test='item.field == "custNo"'>         A1.CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                        <when test='item.field == "custNm"'>         A1.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                        <when test='item.field == "vinNo"'>          A1.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                        <when test='item.field == "cupnFromDt"'>     A1.CUPN_FROM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                        <when test='item.field == "cupnToDt"'>       A1.CUPN_TO_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "cupnValidPrid"'>  A1.CUPN_VALID_PRID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "publiDt"'>        A1.PUBLI_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                        <when test='item.field == "publiUsrId"'>     A1.PUBLI_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                        <when test='item.field == "useYn"'>          A1.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                        <when test='item.field == "regUsrId"'>       A1.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "regDt"'>          A1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                        <when test='item.field == "updtUsrId"'>      A1.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                        <when test='item.field == "updtDt"'>         A1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                        <otherwise>
+                            A1.REG_DT DESC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                A1.REG_DT DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 추가한다. -->
+    <insert id="insertCustCouponPublish" parameterType="CustPublishInfoVO" >
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustPublishInfoDAO.insertCustCouponPublish] {publiNo} */
+        INSERT INTO CR_0825T(
+            DLR_CD
+            ,PUBLI_NO
+            ,PUBLI_CD
+            ,CUPN_SEQ
+            ,PKG_SEQ
+            ,CUST_NO
+            ,CUST_NM
+            ,VIN_NO
+            ,CUPN_FROM_DT
+            ,CUPN_TO_DT
+            ,CUPN_VALID_PRID
+            ,PUBLI_DT
+            ,PUBLI_USR_ID
+            ,USE_YN
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+        ) VALUES (
+            #{dlrCd}
+            ,#{publiNo}
+            ,#{publiCd}
+            ,#{cupnSeq}
+            ,#{pkgSeq}
+            ,#{custNo}
+            ,#{custNm}
+            ,#{vinNo}
+            ,#{cupnFromDt}
+            ,#{cupnToDt}
+            ,#{cupnValidPrid}
+            ,SYSDATE
+            ,#{regUsrId}
+            ,'N'
+            ,#{regUsrId}
+            ,SYSDATE
+            ,#{updtUsrId}
+            ,SYSDATE
+        )
+    </insert>
+
+    <!-- 업데이트 한다. -->
+    <update id="updateCustCouponPublish" parameterType="CustPublishInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustPublishInfoDAO.updateCustCouponPublish] */
+        UPDATE CR_0825T SET
+            UPDT_USR_ID            = #{updtUsrId}
+            ,UPDT_DT                = SYSDATE
+            <if test='publiCd != null and publiCd != ""'>
+            ,PUBLI_CD               = #{publiCd}
+            </if>
+            <if test='cupnSeq != null and cupnSeq != ""'>
+            ,CUPN_SEQ               = #{cupnSeq}
+            </if>
+            <if test='pkgSeq != null and pkgSeq != ""'>
+            ,PKG_SEQ                = #{pkgSeq}
+            </if>
+            <if test='custNo != null and custNo != ""'>
+            ,CUST_NO                = #{custNo}
+            </if>
+            <if test='custNm != null'>
+            ,CUST_NM                = #{custNm}
+            </if>
+            <if test='vinNo != null'>
+            ,VIN_NO                 = #{vinNo}
+            </if>
+            <if test='cupnFromDt != null'>
+            ,CUPN_FROM_DT           = #{cupnFromDt}
+            </if>
+            <if test='cupnToDt != null'>
+            ,CUPN_TO_DT             = #{cupnToDt}
+            </if>
+            <if test='cupnValidPrid != null'>
+            ,CUPN_VALID_PRID        = #{cupnValidPrid}
+            </if>
+            <if test='publiDt != null'>
+            ,PUBLI_DT               = #{publiDt}
+            </if>
+            <if test='publiUsrId != null'>
+            ,PUBLI_USR_ID           = #{publiUsrId}
+            </if>
+            ,USED_DT           = #{usedDt}
+            <if test='chkUsrId != null'>
+            ,CHK_USR_ID           = #{chkUsrId}
+            </if>
+            <if test='useYn != null'>
+            ,USE_YN                 = #{useYn}
+            </if>
+            <if test='useTp != null'>
+            , USE_TP                 = #{useTp}
+            </if>
+            <if test='useNum != null'>
+            , USE_NUM                 = #{useNum}
+            </if>
+        WHERE DLR_CD = #{dlrCd}
+          AND PUBLI_NO = #{publiNo}
+    </update>
+
+    <!-- 삭제 한다. -->
+    <delete id="deleteCustCouponPublish" parameterType="CustPublishInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInfoDAO.deleteCustCouponPublish] */
+        DELETE CR_0825T
+        WHERE DLR_CD = #{dlrCd}
+          AND PUBLI_NO = #{publiNo}
+    </delete>
+
+    <!-- 조회 검색조건 -->
+    <sql id="searchWhereCouponCustConfig">
+                      WHERE CM.DLR_CD = #{sDlrCd}
+                    <if test='sCupnSeq != null and sCupnSeq != ""'>
+                        AND CM.CUPN_SEQ = #{sCupnSeq}
+                    </if>
+                    <if test='sPkgSeq != null and sPkgSeq != ""'>
+                        AND CD.PKG_SEQ = #{sPkgSeq}
+                    </if>
+                        AND (
+                               (      CD.PUBLI_CD = '01'
+                    <choose>
+                        <when test='sCustNo != null and sCustNo != "" '>
+                            AND CD.CUST_NO = #{sCustNo}
+                        </when>
+                        <otherwise>
+                            AND CD.CUST_NO = ( SELECT VON.BP_CD
+                                                 FROM SA_0121T VM
+                                                INNER JOIN SA_0123T VON
+                                                   ON VM.CAR_ID = VON.CAR_ID
+                                                WHERE VM.VIN_NO = #{sVinNo}
+                                                  AND VON.DLR_CD = #{sDlrCd}
+                                                  AND VON.USE_YN = 'Y' )
+                        </otherwise>
+                    </choose>
+                               )
+                               OR
+                               ( CD.PUBLI_CD = '02'
+                    <choose>
+                        <when test='sVinNo != null and sVinNo != "" '>
+                            AND CD.VIN_NO = #{sVinNo}
+                        </when>
+                        <otherwise>
+                            AND CD.VIN_NO IN ( SELECT VM.VIN_NO
+                                                 FROM SA_0121T VM
+                                                INNER JOIN SA_0123T VON
+                                                   ON VM.CAR_ID = VON.CAR_ID
+                                                WHERE VON.DLR_CD = #{sDlrCd}
+                                                  AND VON.BP_CD = #{sCustNo}
+                                                  AND VON.USE_YN = 'Y' )
+                        </otherwise>
+                    </choose>
+                               )
+                            )
+                    <if test='sDcUseTp != null and sDcUseTp != "" '>
+                        AND (CM.DC_USE_TP = '01' OR CM.DC_USE_TP = #{sDcUseTp})
+                    </if>
+                    <if test='sUseYn != null and sUseYn != "" '>
+                        AND CD.USE_YN = #{sUseYn}
+                    </if>
+                    <if test='sUseYn == "N" '>
+                        AND CD.CUPN_FROM_DT <![CDATA[<=]]> SYSDATE
+                        AND CD.CUPN_TO_DT <![CDATA[>=]]> SYSDATE
+                    </if>
+    </sql>
+
+    <select id="selectCouponCustConfigByConditionCnt" parameterType="CustPublishInfoSearchVO" resultType="int">
+    /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInfoDAO.selectCouponCustConfigByConditionCnt] */
+         SELECT COUNT(*)
+           FROM CR_0823T CM
+          INNER JOIN CR_0825T CD
+             ON CM.DLR_CD = CD.DLR_CD
+            AND CM.CUPN_SEQ = CD.CUPN_SEQ
+          <include refid="searchWhereCouponCustConfig" />
+    </select>
+
+    <select id="selectCouponCustConfigByCondition" parameterType="CustPublishInfoSearchVO" resultType="CustPublishInfoVO">
+    /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInfoDAO.selectCouponCustConfigByCondition] */
+        SELECT T2.*
+            FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                     SELECT CM.CUPN_NM, -- 쿠폰명
+                            CM.DC_CD, -- 할인방식 (CRM051)
+                            CM.DC_USE_TP, -- 할인사용구분 (CRM052)
+                            CM.LBR_DC_RATE, -- 공임할일율
+                            CM.LBR_DC_AMT, -- 공임할인금액
+                            CM.PAR_DC_RATE, -- 부품할인율
+                            CM.PAR_DC_AMT, -- 부품할인금액
+                            CM.TOT_DC_RATE, -- 총액할인율
+                            CM.TOT_DC_AMT, -- 총액할인금액
+                            CM.ITEM_CD, -- 용품코드
+                            CM.GOODS_CNT, -- 수량
+                            CD.PUBLI_NO, -- 발행번호
+                            CD.PUBLI_CD, -- 발행유형 (01 고객, 02 VIN)
+                            CD.CUST_NO, -- 고객번호
+                            CD.CUST_NM, -- 고객명
+                            CD.VIN_NO, -- VIN
+                            CD.PUBLI_DT, -- 발행일
+                            CD.PUBLI_USR_ID, -- 발행자
+                            FN_GET_USER_NM(CD.PUBLI_USR_ID) AS PUBLI_USR_NM, -- 발행자이름
+                            CD.CUPN_FROM_DT, -- 유효시작일
+                            CD.CUPN_TO_DT, -- 유효종료일
+                            DECODE(CD.CUPN_VALID_PRID, NULL, '-', 0, '-', CD.CUPN_VALID_PRID ) AS CUPN_VALID_PRID, --유효기간
+                            CD.USE_YN, -- 사용여부
+                            CD.USED_DT, -- 사용일
+                            CD.CHK_USR_ID, -- 처리자
+                            FN_GET_USER_NM(CD.CHK_USR_ID) AS CHK_USR_NM, -- 처리자이름
+                            CD.USE_TP, -- 사용처 (CRM052)
+                            CD.USE_NUM -- 사용번호
+                       FROM CR_0823T CM
+                      INNER JOIN CR_0825T CD
+                         ON CM.DLR_CD = CD.DLR_CD
+                        AND CM.CUPN_SEQ = CD.CUPN_SEQ
+                    <include refid="searchWhereCouponCustConfig" />
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>          CM.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "publiNo"'>        CD.PUBLI_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "publiCd"'>        CD.PUBLI_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "custNo"'>         CD.CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "custNm"'>         CD.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "vinNo"'>          CD.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "cupnFromDt"'>     CD.CUPN_FROM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                <when test='item.field == "cupnToDt"'>       CD.CUPN_TO_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "cupnValidPrid"'>  CD.CUPN_VALID_PRID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "publiDt"'>        CD.PUBLI_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "publiUsrId"'>     CD.PUBLI_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                <when test='item.field == "useYn"'>          CD.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <otherwise>
+                                    CD.PUBLI_DT
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        CD.PUBLI_DT
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        ) T2
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+</mapper>

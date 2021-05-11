@@ -1,0 +1,1036 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="membershipInfoReport" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDateFormat"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRegEndDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCustNm"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRegStartDt"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT 
+	 MEMS.*
+	,POINT.ACCM_POINT  -- 누계포인트
+	,POINT.CONSU_POINT  -- 소비포인트
+	,POINT.REST_POINT  -- 잔여포인트
+	,POINT.UP_POINT_DISP_DT	-- 최근포인트 소멸일자
+	,CARD.CARD_CNT
+	,CARD.ACCM_SUM_AMT  -- 누계금액
+	,CARD.CONSU_SUM_AMT  -- 소비금액
+	,CARD.REST_REAL_SUM_AMT   -- 잔여금액
+	,CARD.UP_AMT_DISP_DT		-- 최근충전카드 소멸일자
+	,COUPON.CUPN_CNT			-- 누계 패키지 쿠폰수
+	,COUPON.USE_CUPN_CNT        -- 기 사용 패키지 쿠폰
+	,COUPON.REST_CUPN_USE_CNT        -- 잔여 사용 패키지 쿠폰
+	,COUPON.UP_CUPN_DISP_DT --최근 패키지 소멸일자
+FROM (
+       SELECT CUST.CUST_NO,  -- 회원번호
+       		MEMS.DLR_CD,
+	        MEMS.MEMBERSHIP_NO,
+            CUST.CUST_NM,
+            DECODE(CUST.CUST_TP, '01', CUST.HP_NO, CUST.OFFICE_NO) AS HP_NO,
+            FN_GET_CMMCD_NM('COM017', CUST.SEX_CD,'zh') AS SEX_CD,
+            CUST.BIRTH_DT,
+            GRADE.GRADE_NM,
+            FN_GET_CMMCD_NM('CRM028',CUST.MARRY_CD,'zh') AS MARRY_CD_NM,
+		  ${IF (LEN(sDateFormat) == 0, "TO_CHAR(MEMS.REG_DT,'yyyy-MM-dd') AS REG_DT,", " TO_CHAR(MEMS.REG_DT,'"+sDateFormat+"') AS REG_DT,")} -- 등록이
+			(SELECT LISTAGG(HMST.GRP_NM, ', ') WITHIN GROUP (ORDER BY HMST.GRP_NM) 
+				FROM CR_0114T HMST, CR_0115T HDTL
+				WHERE 1=1
+				AND HMST.GRP_SEQ = HDTL.GRP_SEQ
+				AND HMST.GRP_TP = HDTL.GRP_TP 
+				AND HMST.GRP_TP = '003'
+				AND HDTL.CUST_NO = CUST.CUST_NO)
+			AS HOBBY_NM,
+			(SELECT 
+				ADDR.SUNG_NM || ' ' || ADDR.CITY_NM || ' ' || ADDR.DIST_NM || ' ' || ADDR.ADDR_DETL_CONT
+			FROM CR_0116T ADDR
+			WHERE ADDR.DLR_CD = '${sDlrCd}'
+			AND ADDR.REF_TABLE_NM = 'CR_0101T'
+			AND ADDR.REF_KEY_NM = CUST.CUST_NO 
+			AND ADDR.FLAG_YN = 'Y')
+			AS ADDR_FULL
+       FROM CR_0801T MEMS , CR_0101T CUST , CR_0805T GRADE
+      WHERE 1=1
+        AND MEMS.DLR_CD  = CUST.DLR_CD
+        AND MEMS.CUST_NO = CUST.CUST_NO 
+        AND MEMS.GRADE_CD = GRADE.GRADE_SEQ
+        AND MEMS.DLR_CD = '${sDlrCd}'
+	   ${IF(LEN(sRegStartDt) = 0 || LEN(sRegEndDt) = 0 || LEN(sDateFormat) = 0 , ""," AND TO_CHAR(MEMS.REG_DT,'"+sDateFormat+"') BETWEEN '"+sRegStartDt+"' AND '"+sRegEndDt+"'") } 
+	   ${IF(LEN(sCustNm) == 0, ""," AND CUST.CUST_NM LIKE '%'||'"+sCustNm+"'||'%'")} 
+
+        
+) MEMS
+	LEFT OUTER JOIN (
+		SELECT 
+			A.MEMBERSHIP_NO  , 
+		    NVL( SUM( CASE WHEN B.POINT_TP = '+' THEN NVL(B.OCCR_POINT_VAL,0) ELSE 0 END ) ,0) AS ACCM_POINT,  -- 누계포인트
+		    NVL( SUM( CASE WHEN B.POINT_TP = '-' THEN NVL(B.OCCR_POINT_VAL,0) ELSE 0 END ) ,0) AS CONSU_POINT,  -- 소비포인트
+		    NVL( SUM(B.POINT_TP||NVL(B.OCCR_POINT_VAL,0)) ,0) AS REST_POINT,  -- 잔여포인트
+		    MAX( CASE WHEN B.POINT_TP = '-' THEN ${IF (LEN(sDateFormat) == 0, "TO_CHAR(B.EXTC_DT,'yyyy-MM-dd') ", " TO_CHAR(B.EXTC_DT,'"+sDateFormat+"') ")} ELSE NULL END )  AS UP_POINT_DISP_DT
+		FROM CR_0813T A ,   -- 멤버쉽카드발급이력
+		    CR_0803T B ,   -- 멤버쉽이력(포인트/충전)
+		    CR_0801T C ,   -- 멤버십
+		    CM_0801T D     -- 사용자정보
+		WHERE 1=1
+		AND A.DLR_CD        = B.DLR_CD
+		AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+		AND A.CARD_TP_CD    = B.CARD_TP_CD
+		AND A.CARD_NO       = B.CARD_NO
+		AND A.MEMBERSHIP_NO = C.MEMBERSHIP_NO(+)
+		AND A.DLR_CD        = C.DLR_CD(+)
+		AND B.PRSN_ID       = D.USR_ID(+)
+		AND B.DLR_CD        = D.DLR_CD(+)
+		AND A.USE_YN = 'Y' 
+		AND A.CARD_TP_CD = '01'
+		AND A.DLR_CD = '${sDlrCd}'
+		GROUP BY A.DLR_CD, A.MEMBERSHIP_NO  ,  A.CARD_TP_CD
+	) POINT	-- 포인트정보
+	ON MEMS.MEMBERSHIP_NO = POINT.MEMBERSHIP_NO
+
+	LEFT OUTER JOIN (
+		SELECT 
+			A.DLR_CD,
+			A.MEMBERSHIP_NO ,
+			A.CARD_TP_CD ,
+			COUNT(1) AS CARD_CNT               ,
+			NVL( SUM( CASE WHEN B.POINT_TP = '+' THEN NVL(B.OCCR_POINT_VAL,0) ELSE 0 END ) ,0) AS ACCM_SUM_AMT,  -- 누계금액
+			NVL( SUM( CASE WHEN B.POINT_TP = '-' THEN NVL(B.OCCR_POINT_VAL,0) ELSE 0 END ) ,0) AS CONSU_SUM_AMT,  -- 소비금액
+			NVL( SUM(B.POINT_TP||NVL(B.OCCR_POINT_VAL,0)) ,0) AS REST_REAL_SUM_AMT ,   -- 잔여금액
+			MAX( CASE WHEN B.POINT_TP = '-' THEN ${IF (LEN(sDateFormat) == 0, "TO_CHAR(B.EXTC_DT,'yyyy-MM-dd') ", " TO_CHAR(B.EXTC_DT,'"+sDateFormat+"') ")} ELSE NULL END )  AS UP_AMT_DISP_DT
+		FROM CR_0813T A ,   -- 멤버쉽카드발급이력
+			CR_0803T B ,   -- 멤버쉽이력(포인트/충전)
+			CR_0801T C ,   -- 멤버십
+			CM_0801T D     -- 사죵자정보
+		WHERE 1=1
+		AND A.DLR_CD        = B.DLR_CD
+		AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+		AND A.CARD_TP_CD    = B.CARD_TP_CD
+		AND A.CARD_NO       = B.CARD_NO
+		AND A.MEMBERSHIP_NO = C.MEMBERSHIP_NO(+)
+		AND A.DLR_CD        = C.DLR_CD(+)
+		AND B.PRSN_ID       = D.USR_ID(+)
+		AND B.DLR_CD        = D.DLR_CD(+)
+		AND A.USE_YN = 'Y' 
+		AND A.CARD_TP_CD = '02'
+		AND A.DLR_CD = '${sDlrCd}'
+		GROUP BY A.DLR_CD, A.MEMBERSHIP_NO  ,  A.CARD_TP_CD
+	) CARD	-- 선불금
+	ON CARD.MEMBERSHIP_NO = POINT.MEMBERSHIP_NO
+
+	LEFT OUTER JOIN (
+		SELECT 
+			DLR_CD,
+			MEMBERSHIP_NO,
+			COUNT(1) AS CUPN_CNT,
+			NVL(SUM(CASE WHEN CUPN_USE_YN = 'Y' THEN 1 ELSE 0 END ),    0)   AS USE_CUPN_CNT,        -- 기 사용 패키지 쿠폰
+			NVL(SUM(CASE WHEN CUPN_USE_YN = 'N' THEN 1 ELSE 0 END ),    0)   AS REST_CUPN_USE_CNT,        -- 잔여 사용 패키지 쿠폰
+			--MAX(CASE WHEN CUPN_USE_YN = 'Y' THEN CUPN_USE_DT ELSE NULL END ) AS UP_CUPN_DISP_DT --최근 패키지 소멸일자
+			MAX( CASE WHEN CUPN_USE_YN = 'Y' THEN ${IF (LEN(sDateFormat) == 0, "TO_CHAR(CUPN_USE_DT,'yyyy-MM-dd') ", " TO_CHAR(CUPN_USE_DT,'"+sDateFormat+"') ")} ELSE NULL END )  AS UP_CUPN_DISP_DT --최근 패키지 소멸일자
+			
+		FROM CR_0816T
+		WHERE DLR_CD = '${sDlrCd}'
+		GROUP BY DLR_CD, MEMBERSHIP_NO            
+	) COUPON	-- 쿠폰
+	ON CARD.MEMBERSHIP_NO = COUPON.MEMBERSHIP_NO
+	WHERE MEMS.DLR_CD = '${sDlrCd}'
+	ORDER BY MEMS.REG_DT DESC
+;]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="0" T="0"/>
+<FR/>
+<HC/>
+<FC/>
+<UPFCR COLUMN="false" ROW="true"/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1728000,1152000,723900,723900,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[1143000,5760000,3600000,3600000,2160000,3600000,2880000,2880000,2880000,2880000,3600000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,4320000,8640000,3600000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" s="0">
+<O>
+<![CDATA[No]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="0">
+<O>
+<![CDATA[会员编号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0" s="0">
+<O>
+<![CDATA[会员姓名]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="0">
+<O>
+<![CDATA[会员手机]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0" s="0">
+<O>
+<![CDATA[性别]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="0">
+<O>
+<![CDATA[联系人生日]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="0" s="0">
+<O>
+<![CDATA[会员级别]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="0" s="0">
+<O>
+<![CDATA[累计积分]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="0" s="0">
+<O>
+<![CDATA[消费积分]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="0" s="0">
+<O>
+<![CDATA[剩余积分]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="0" s="0">
+<O>
+<![CDATA[最近积分失效日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="0" s="0">
+<O>
+<![CDATA[储值卡数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="0" s="0">
+<O>
+<![CDATA[累计金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="0" s="0">
+<O>
+<![CDATA[消费金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="0" s="0">
+<O>
+<![CDATA[剩余金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="0" s="0">
+<O>
+<![CDATA[最近储蓄卡失效日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="16" r="0" s="0">
+<O>
+<![CDATA[累计套餐卷数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="17" r="0" s="0">
+<O>
+<![CDATA[已使用套餐卷]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="0" s="0">
+<O>
+<![CDATA[剩余套餐卷]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="19" r="0" s="0">
+<O>
+<![CDATA[最近套餐卷失效日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="20" r="0" s="0">
+<O>
+<![CDATA[婚姻状况]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="21" r="0" s="0">
+<O>
+<![CDATA[爱好]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="22" r="0" s="0">
+<O>
+<![CDATA[联系人地址]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="23" r="0" s="0">
+<O>
+<![CDATA[会员日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1" s="1">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=seq()]]></Attributes>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0" leftParentDefault="false" left="B2" upParentDefault="false" up="A1"/>
+</C>
+<C c="1" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="MEMBERSHIP_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="2" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="CUST_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="3" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="HP_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="4" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="SEX_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="5" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="BIRTH_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="6" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="GRADE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="7" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="ACCM_POINT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="8" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="CONSU_POINT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="9" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="REST_POINT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="10" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="UP_POINT_DISP_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="11" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="CARD_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="12" r="1" s="4">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="ACCM_SUM_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="13" r="1" s="4">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="CONSU_SUM_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="14" r="1" s="4">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="REST_REAL_SUM_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="15" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="UP_AMT_DISP_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="16" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="CUPN_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="17" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="USE_CUPN_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="18" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="REST_CUPN_USE_CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="19" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="UP_CUPN_DISP_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="20" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="MARRY_CD_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="21" r="1" s="1">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="HOBBY_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="22" r="1" s="5">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="ADDR_FULL"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="23" r="1" s="6">
+<O t="DSColumn">
+<Attributes dsName="membershipInfoReport" columnName="REG_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="60480000" height="85536000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,###.##]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="java.text.SimpleDateFormat">
+<![CDATA[yyyy-MM-dd]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

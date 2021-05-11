@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.dlv.service.dao.CancDeliveryDAO">
+
+	<!-- 이월판매취소 목록  -->
+	<select id="selectCancDeliveryByCondition" parameterType="CancDeliverySearchVO" resultType="CancDeliveryVO">
+         SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A.REQ_DT
+                      ,A.REQ_STAT_CD
+                      ,A.APPROVE_DT
+                      ,A.DLR_CD
+                      ,A.REAL_DL_DT
+                      ,B.RETL_TP
+                      ,(SELECT X.CUST_NM FROM SA_0202T X WHERE X.CONTRACT_NO = B.CONTRACT_NO AND X.PARTNER_TP = 'C' AND X.DLR_CD = A.DLR_CD) AS CONTRACT_CUST_NM
+                      ,A.CONTRACT_NO
+                      ,B.CARLINE_CD
+                      ,FN_GET_CARLINE_NM_NC(B.CARLINE_CD) AS CARLINE_NM
+                      ,A.CANC_REASON_CD
+                      ,A.VIN_NO1||A.VIN_NO2 AS VIN_NO1
+                      ,B.MODEL_CD
+                      ,FN_GET_MODEL_TP_NM(B.MODEL_CD, B.OCN_CD) AS MODEL_NM
+                      ,B.OCN_CD
+                      ,FN_GET_OCN_NM_NC(B.MODEL_CD, B.OCN_CD) AS OCN_NM
+                      ,B.EXT_COLOR_CD
+                      ,FN_GET_EXT_COLOR_NM_NC(B.EXT_COLOR_CD) AS EXT_COLOR_NM
+                      ,B.INT_COLOR_CD
+                      ,FN_GET_INT_COLOR_NM_NC(B.INT_COLOR_CD) AS INT_COLOR_NM
+                      ,(SELECT Q.ORD_TP FROM SA_0121T Q WHERE Q.VIN_NO = A.VIN_NO1||A.VIN_NO2) AS ORD_TP
+                  FROM SA_0437T A, SA_0201T B
+                 WHERE A.DLR_CD = B.DLR_CD
+                   AND A.CONTRACT_NO = B.CONTRACT_NO
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                    AND A.DLR_CD = #{sDlrCd}
+                 </if>
+                 <if test='sCarlineCd != null and sCarlineCd != ""'>
+                   AND B.CARLINE_CD = #{sCarlineCd}
+                 </if>
+                 <if test='sCancReasonCd != null and sCancReasonCd != ""'>
+                   AND A.CANC_REASON_CD = #{sCancReasonCd}
+                 </if>
+                 <if test='sApproveYn != null and sApproveYn != ""'>
+                   AND A.APPROVE_YN = #{sApproveYn}
+                 </if>
+                 <if test='sReqStartDt != null and sReqEndDt != null'>
+                   AND A.REQ_DT <![CDATA[>=]]> TRUNC(#{sReqStartDt},'DD')
+                   AND A.REQ_DT <![CDATA[<]]> TRUNC(#{sReqEndDt},'DD')+1
+                 </if>
+                 <if test='sApproveStartDt != null and sApproveStartDt != null and sApproveEndDt != null and sApproveEndDt != null'>
+                   AND A.APPROVE_DT <![CDATA[>=]]> TRUNC(#{sApproveStartDt},'DD')
+                   AND A.APPROVE_DT <![CDATA[<]]> TRUNC(#{sApproveEndDt},'DD')+1
+                 </if>
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "reqDt"'>A.REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "reqStatCd"'>A.REQ_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "approveDt"'>A.APPROVE_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "dlrCd"'>A.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "realDlDt"'>A.REAL_DL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ordTp"'>ORD_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "custNm"'>CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "contractNo"'>CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "carlineNm"'>CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "cancReasonCd"'>CANC_REASON_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "vinNo1"'>VIN_NO1 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "vinNo2"'>VIN_NO2 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "modelNm"'>MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ocnNm"'>OCN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "extColorNm"'>EXT_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "intColorNm"'>INT_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            A.REQ_DT DESC NULLS LAST
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                A.REQ_DT DESC NULLS LAST
+            </otherwise>
+        </choose>
+             ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+	<!-- 이월판매취소 목록 갯수  -->
+	<select id="selectCancDeliveryByConditionCnt" parameterType="CancDeliverySearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0437T A, SA_0201T B
+         WHERE A.DLR_CD = B.DLR_CD
+           AND A.CONTRACT_NO = B.CONTRACT_NO
+         <if test='sDlrCd != null and sDlrCd != ""'>
+            AND A.DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sCarlineCd != null and sCarlineCd != ""'>
+           AND B.CARLINE_CD = #{sCarlineCd}
+         </if>
+         <if test='sCancReasonCd != null and sCancReasonCd != ""'>
+           AND A.CANC_REASON_CD = #{sCancReasonCd}
+         </if>
+         <if test='sApproveYn != null and sApproveYn != ""'>
+           AND A.APPROVE_YN = #{sApproveYn}
+         </if>
+         <if test='sReqStartDt != null and sReqStartDt != null and sReqEndDt != null and sReqEndDt != null'>
+           AND A.REQ_DT <![CDATA[>=]]> TRUNC(#{sReqStartDt},'DD')
+           AND A.REQ_DT <![CDATA[<]]> TRUNC(#{sReqEndDt},'DD')+1
+         </if>
+         <if test='sApproveStartDt != null and sApproveStartDt != null and sApproveEndDt != null and sApproveEndDt != null'>
+           AND A.APPROVE_DT <![CDATA[>=]]> TRUNC(#{sApproveStartDt},'DD')
+           AND A.APPROVE_DT <![CDATA[<]]> TRUNC(#{sApproveEndDt},'DD')+1
+         </if>
+    </select>
+
+    <!-- 이월판매취소 승인  -->
+    <update id="updateApproveCancDelivery" parameterType="CancDeliveryVO" >
+        UPDATE SA_0437T
+           SET APPROVE_YN = #{approveYn}
+              ,APPROVE_DT = SYSDATE
+          <if test='approveYn == "Y"'>
+              ,REQ_STAT_CD = 'Y'
+          </if>
+          <if test='approveYn == "N"'>
+              ,REQ_STAT_CD = 'N'
+          </if>
+              ,UPDT_USR_ID = #{updtUsrId}
+              ,UPDT_DT = SYSDATE
+         WHERE 1=1
+           AND CONTRACT_NO = #{contractNo}
+           AND DLR_CD = #{dlrCd}
+    </update>
+</mapper>

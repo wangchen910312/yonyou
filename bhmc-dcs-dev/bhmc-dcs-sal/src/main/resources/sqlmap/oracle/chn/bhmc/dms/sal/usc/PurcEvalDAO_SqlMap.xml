@@ -1,0 +1,654 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.usc.service.dao.PurcEvalDAO">
+
+    <!-- 조회 목록 - 중고차량평가목록  -->
+    <select id="selectPurcByCondition" parameterType="PurcEvalSearchVO" resultType="PurcEvalVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT SA0241.*
+                     , CR0101.CUST_NM AS PURC_CUST_NM
+                     , FN_GET_CARLINE_NM(SA0241.CARLINE_CD) AS CARLINE_NM
+                     , FN_GET_MODEL_NM(SA0241.MODEL_CD) AS MODEL_NM
+                     , FN_GET_OCN_NM(SA0241.MODEL_CD, SA0241.OCN_CD) AS OCN_NM
+                     , FN_GET_EXT_COLOR_NM(SA0241.EXT_COLOR_CD) AS EXT_COLOR_NM
+                     , FN_GET_INT_COLOR_NM(SA0241.INT_COLOR_CD) AS INT_COLOR_NM
+                  FROM SA_0241T SA0241,CR_0101T CR0101
+                 WHERE 1=1
+                   AND SA0241.PURC_CUST_NO = CR0101.CUST_NO(+)
+                 <if test='sPurcNo != null and sPurcNo != ""'>
+                   AND SA0241.PURC_NO  = #{sPurcNo}
+                 </if>
+                 <if test='sPurcCustNo != null and sPurcCustNo != ""'>
+                   AND SA0241.PURC_CUST_NO = #{sPurcCustNo}
+                 </if>
+                 <if test='sVinNo != null and sVinNo != ""'>
+                   AND SA0241.VIN_NO LIKE '%' || #{sVinNo} || '%'
+                 </if>
+                 <if test='sPurcRegStartDt != null and sPurcRegStartDt != ""'>
+                     AND SA0241.PURC_REG_DT <![CDATA[>=]]> TRUNC(#{sPurcRegStartDt},'DD')
+                 </if>
+                 <if test='sPurcRegEndDt != null and sPurcRegEndDt != ""'>
+                     AND SA0241.PURC_REG_DT <![CDATA[<]]> TRUNC(#{sPurcRegEndDt},'DD')+1
+                 </if>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+         ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "purcNo"'>PURC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "purcCustNm"'>PURC_CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "purcStatCd"'>PURC_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "corpCarDstinCd"'>CORP_CAR_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "carBrandCd"'>CAR_BRAND_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "modelNm"'>MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "carDispQty"'>CAR_DISP_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ocnNm"'>OCN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "extColorNm"'>EXT_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "intColorNm"'>INT_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "evalMthCd"'>EVAL_MTH_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "purcRegDt"'>PURC_REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "evalDt"'>EVAL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "evalAmt"'>EVAL_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "exchYn"'>EXCH_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            PURC_NO DESC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                PURC_NO DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 목록 갯수 - 중고차량평가목록  -->
+    <select id="selectPurcByConditionCnt" parameterType="PurcEvalSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0241T SA0241,CR_0101T CR0101
+         WHERE 1=1
+           AND SA0241.PURC_CUST_NO = CR0101.CUST_NO(+)
+         <if test='sPurcNo != null and sPurcNo != ""'>
+           AND SA0241.PURC_NO  = #{sPurcNo}
+         </if>
+         <if test='sPurcCustNo != null and sPurcCustNo != ""'>
+           AND SA0241.PURC_CUST_NO = #{sPurcCustNo}
+         </if>
+         <if test='sVinNo != null and sVinNo != ""'>
+           AND SA0241.VIN_NO LIKE '%' || #{sVinNo} || '%'
+         </if>
+         <if test='sPurcRegStartDt != null and sPurcRegStartDt != ""'>
+             AND SA0241.PURC_REG_DT <![CDATA[>=]]> TRUNC(#{sPurcRegStartDt},'DD')
+         </if>
+         <if test='sPurcRegEndDt != null and sPurcRegEndDt != ""'>
+             AND SA0241.PURC_REG_DT <![CDATA[<]]> TRUNC(#{sPurcRegEndDt},'DD')+1
+         </if>
+    </select>
+
+    <!-- 중고차평가매입정보 조회 (단건) -->
+    <select id="selectPurcEvalInfo" parameterType="map" resultType="PurcEvalVO">
+        SELECT SA0241.*
+             , CR0101.CUST_NM AS PURC_CUST_NM
+             , FN_GET_CARLINE_NM(SA0241.CARLINE_CD) AS CARLINE_NM
+             , FN_GET_MODEL_NM(SA0241.MODEL_CD) AS MODEL_NM
+             , FN_GET_OCN_NM(SA0241.MODEL_CD, SA0241.OCN_CD) AS OCN_NM
+             , FN_GET_EXT_COLOR_NM(SA0241.EXT_COLOR_CD) AS EXT_COLOR_NM
+             , FN_GET_INT_COLOR_NM(SA0241.INT_COLOR_CD) AS INT_COLOR_NM
+             , (SELECT USR_NM FROM CM_0801T WHERE USR_ID = SA0241.REG_USR_ID AND DEL_YN = 'N') AS REG_USR_NM
+          FROM SA_0241T SA0241,CR_0101T CR0101
+         WHERE 1=1
+           AND SA0241.PURC_CUST_NO = CR0101.CUST_NO(+)
+        <if test='purcNo != null and purcNo != ""'>
+           AND SA0241.PURC_NO = #{purcNo}
+        </if>
+    </select>
+
+
+    <!-- 중고차평가정보 - 경매(위탁) 조회 (단건) -->
+    <select id="selectAuctInfo" parameterType="map" resultType="PurcEvalVO">
+        SELECT *
+          FROM SA_0242T SA0242
+         WHERE 1=1
+        <if test='purcNo != null and purcNo != ""'>
+           AND SA0242.PURC_NO = #{purcNo}
+        </if>
+        <if test='sDlrCd != null and sDlrCd != ""'>
+           AND SA0242.DLR_CD = #{sDlrCd}
+         </if>
+    </select>
+
+
+
+
+    <!-- 조회 목록 - 중고차량평가목록  -->
+    <select id="selectAuctInfoByCondition" parameterType="PurcEvalSearchVO" resultType="PurcEvalVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT SA0242.*
+                     , SA0242.DLR_CD || SA0242.PURC_NO AS AUCT_PK
+                  FROM SA_0242T SA0242
+                 WHERE 1=1
+                 <if test='sPurcNo != null and sPurcNo != ""'>
+                   AND SA0242.PURC_NO  = #{sPurcNo}
+                 </if>
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND SA0242.DLR_CD = #{sDlrCd}
+                 </if>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+         ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "regDt"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "auctCd"'>AUCT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "auctPlaceNm"'>AUCT_PLACE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "auctAmt"'>AUCT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "goodsDetlCont"'>GOODS_DETL_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "carDlYn"'>CAR_DL_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "scheConfirmDt"'>SCHE_CONFIRM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "remark"'>REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            SEQ DESC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                SEQ DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 목록 갯수 - 중고차량평가목록  -->
+    <select id="selectAuctInfoByConditionCnt" parameterType="PurcEvalSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0242T SA0242
+         WHERE 1=1
+         <if test='sPurcNo != null and sPurcNo != ""'>
+           AND SA0242.PURC_NO  = #{sPurcNo}
+         </if>
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND SA0242.DLR_CD = #{sDlrCd}
+         </if>
+    </select>
+
+
+
+
+
+    <!-- 중고차평가매입 정보를 수정.  -->
+    <update id="updatePurcEvalMng" parameterType="PurcEvalVO">
+        UPDATE SA_0241T
+           SET
+           <if test='stat == "P" and purcStatCd == "01"'>
+               PURC_CUST_NO = #{purcCustNo}
+             , TEL_NO1 = #{telNo1}
+             , EXCH_YN = #{exchYn}
+             , CONTRACT_NO = #{contractNo}
+             , PURC_TOT_AMT = #{purcTotAmt}
+             , CAR_BRAND_CD = #{carBrandCd}
+             , CORP_CAR_DSTIN_CD = #{corpCarDstinCd}
+             , CARLINE_CD = #{carlineCd}
+             , MODEL_CD = #{modelCd}
+             , OCN_CD = #{ocnCd}
+             , EXT_COLOR_CD = #{extColorCd}
+             , INT_COLOR_CD = #{intColorCd}
+             , CAR_DISP_QTY = #{carDispQty}
+             , MANUFACT_YY_MM_DT = #{manufactYyMmDt}
+             , VIN_NO = #{vinNo}
+             , PC_DSTIN_CD = #{pcDstinCd}
+             , CAR_RUN_DIST_VAL = #{carRunDistVal}
+             , FUEL_CD = #{fuelCd}
+             , DRV_MTH_CD = #{drvMthCd}
+             , PURC_AMT = #{purcAmt}
+             , EXCH_AMT = #{exchAmt}
+             , RECOM_SALE_AMT = #{recomSaleAmt}
+             , NO_SALE_YN = #{noSaleYn}
+             , PLAT_NO = #{platNo}
+             , PLAT_AMT = #{platAmt}
+             , FCE_INC_PRID = #{fceIncPrid}
+             , CAR_TAX_PRID = #{carTaxPrid}
+             , YY_TEST_PRID = #{yyTestPrid}
+             , CMC_INC_PRID = #{cmcIncPrid}
+             , RETL_DT = #{retlDt}
+             , LAST_OWNER_NM = #{lastOwnerNm}
+          </if>
+          <if test='stat == "E" and purcStatCd == "02"'>
+               EVAL_MTH_CD = #{evalMthCd}
+             , EVAL_PRSN_NM = #{evalPrsnNm}
+             , EVAL_DT = #{evalDt}
+             , EVAL_REMARK = #{evalRemark}
+             , CAR_STAT_CD = #{carStatCd}
+             , CUST_HOPE_AMT = #{custHopeAmt}
+             , EVAL_AMT = #{evalAmt}
+             , LAST_AMT = #{lastAmt}
+             , CAR_REG_AMT = #{carRegAmt}
+          </if>
+          <if test='(stat == "P"  and (purcStatCd == "02" or purcStatCd == "03" or purcStatCd == "04" or purcStatCd == "05"))
+                     or (stat == "E"  and purcStatCd == "03") '>
+               PURC_STAT_CD = #{purcStatCd}
+          </if>
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+        WHERE 1=1
+          AND DLR_CD = #{dlrCd}
+          AND PURC_NO = #{purcNo}
+    </update>
+
+
+
+
+    <!-- 중고차평가매입 정보를 신규등록. -->
+    <insert id="insertPurcEvalMng" parameterType="PurcEvalVO">
+        INSERT INTO SA_0241T(
+               DLR_CD
+             , PURC_NO
+             , PURC_CUST_NO
+             , TEL_NO1
+             , EXCH_YN
+             , CONTRACT_NO
+             , PURC_STAT_CD
+             , PURC_REG_DT
+             , PURC_TOT_AMT
+             , CAR_BRAND_CD
+             , CORP_CAR_DSTIN_CD
+             , CARLINE_CD
+             , MODEL_CD
+             , OCN_CD
+             , EXT_COLOR_CD
+             , INT_COLOR_CD
+             , CAR_DISP_QTY
+             , MANUFACT_YY_MM_DT
+             , VIN_NO
+             , PC_DSTIN_CD
+             , CAR_RUN_DIST_VAL
+             , FUEL_CD
+             , DRV_MTH_CD
+             , PURC_AMT
+             , EXCH_AMT
+             , RECOM_SALE_AMT
+             , NO_SALE_YN
+             , PLAT_NO
+             , PLAT_AMT
+             , FCE_INC_PRID
+             , CAR_TAX_PRID
+             , YY_TEST_PRID
+             , CMC_INC_PRID
+             , REG_USR_ID
+             , REG_DT
+             , RETL_DT
+             , LAST_OWNER_NM
+        )VALUES(
+               #{dlrCd}
+             , (SELECT 'TR' || TO_CHAR(SYSDATE,'YYYY') || DECODE(MAX(PURC_NO),'',LPAD(NVL(MAX(PURC_NO),0)+1,14,0),LPAD(TO_NUMBER(SUBSTR(MAX(PURC_NO),7))+1,14,0)) FROM SA_0241T)
+             , #{purcCustNo}
+             , #{telNo1}
+             , #{exchYn}
+             , #{contractNo}
+             , '01'
+             , SYSDATE
+             , #{purcTotAmt}
+             , #{carBrandCd}
+             , #{corpCarDstinCd}
+             , #{carlineCd}
+             , #{modelCd}
+             , #{ocnCd}
+             , #{extColorCd}
+             , #{intColorCd}
+             , #{carDispQty}
+             , #{manufactYyMmDt}
+             , #{vinNo}
+             , #{pcDstinCd}
+             , #{carRunDistVal}
+             , #{fuelCd}
+             , #{drvMthCd}
+             , #{purcAmt}
+             , #{exchAmt}
+             , #{recomSaleAmt}
+             , #{noSaleYn}
+             , #{platNo}
+             , #{platAmt}
+             , #{fceIncPrid}
+             , #{carTaxPrid}
+             , #{yyTestPrid}
+             , #{cmcIncPrid}
+             , #{regUsrId}
+             , SYSDATE
+             , #{retlDt}
+             , #{lastOwnerNm}
+        )
+    </insert>
+
+
+
+    <!-- 중고차평가 정보를 조회한다. -->
+    <select id="selectAuctInfoByKey" parameterType="PurcEvalVO" resultType="PurcEvalVO">
+        SELECT * FROM SA_0242T
+        WHERE 1=1
+          AND DLR_CD = #{dlrCd}
+          AND PURC_NO = #{purcNo}
+          AND SEQ = #{seq}
+    </select>
+
+
+    <!-- 중고차평가  - 경매정보를 등록한다. -->
+    <insert id="insertAuctInfo" parameterType="PurcEvalVO">
+        INSERT INTO SA_0242T(
+               DLR_CD
+              ,PURC_NO
+              ,SEQ
+              ,AUCT_CD
+              ,AUCT_PLACE_NM
+              ,AUCT_AMT
+              ,GOODS_DETL_CONT
+              ,CAR_DL_YN
+              ,SCHE_CONFIRM_DT
+              ,REMARK
+              ,REG_USR_ID
+              ,REG_DT
+              ,UPDT_USR_ID
+              ,UPDT_DT
+        )VALUES(
+               #{dlrCd}
+              ,#{purcNo}
+              ,(SELECT NVL(MAX(SEQ),0)+1 FROM SA_0242T WHERE DLR_CD = #{dlrCd} AND PURC_NO = #{purcNo})
+              ,#{auctCd}
+              ,#{auctPlaceNm}
+              ,#{auctAmt}
+              ,#{goodsDetlCont}
+              ,#{carDlYn}
+              ,#{scheConfirmDt}
+              ,#{remark}
+              ,#{regUsrId}
+              ,SYSDATE
+              ,#{regUsrId}
+              ,SYSDATE
+        )
+    </insert>
+
+
+
+    <!-- 중고차평가 - 경매정보를 수정한다. -->
+    <update id="updateAuctInfo" parameterType="PurcEvalVO">
+        UPDATE SA_0242T SET
+               AUCT_CD = #{auctCd}
+              ,AUCT_PLACE_NM = #{auctPlaceNm}
+              ,AUCT_AMT = #{auctAmt}
+              ,GOODS_DETL_CONT = #{goodsDetlCont}
+              ,CAR_DL_YN = #{carDlYn}
+              ,SCHE_CONFIRM_DT = #{scheConfirmDt}
+              ,REMARK = #{remark}
+              ,UPDT_USR_ID = #{updtUsrId}
+              ,UPDT_DT = SYSDATE
+        WHERE 1=1
+          AND DLR_CD = #{dlrCd}
+          AND PURC_NO = #{purcNo}
+          AND SEQ = #{seq}
+    </update>
+
+
+
+    <!-- 중고차평가 - 경매정보를 삭제한다. -->
+    <delete id="deleteAuctInfo" parameterType="PurcEvalVO">
+        DELETE SA_0242T
+         WHERE 1=1
+           AND DLR_CD = #{dlrCd}
+           AND PURC_NO = #{purcNo}
+           AND SEQ = #{seq}
+    </delete>
+
+
+
+    <!-- 조회 목록 - 중고차매입/평가관리 - 평가용 이미지 데이터 조회.  -->
+    <select id="selectImageEvalVal" parameterType="PurcEvalSearchVO" resultType="PurcEvalImageVO">
+        SELECT SA0252.*
+              ,SUBSTR(COMM_INS_VALID_YY_MM,0,4) AS COMM_INS_VALID_DT_YEAR
+              ,SUBSTR(COMM_INS_VALID_YY_MM,5,2) AS COMM_INS_VALID_DT_MONTH
+              ,SUBSTR(SPC_INC_VALID_YY_MM,0,4) AS SPC_INC_VALID_DT_YEAR
+              ,SUBSTR(SPC_INC_VALID_YY_MM,5,2) AS SPC_INC_VALID_DT_MONTH
+          FROM SA_0252T SA0252
+         WHERE 1=1
+           AND SA0252.DLR_CD = #{sDlrCd}
+           AND SA0252.PURC_NO = #{sPurcNo}
+    </select>
+
+    <!-- 목록 갯수 - 중고차매입/평가관리 - 평가용 이미지 데이터 조회.  -->
+    <select id="selectImageEvalValCnt" parameterType="PurcEvalSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0252T SA0252
+         WHERE 1=1
+           AND SA0252.DLR_CD = #{sDlrCd}
+           AND SA0252.PURC_NO = #{sPurcNo}
+    </select>
+
+
+
+    <!-- 중고차매입/평가관리 - 평가용 이미지의 평가데이터를 등록. -->
+    <insert id="insertImageEval" parameterType="PurcEvalImageVO">
+        INSERT INTO SA_0252T(
+               DLR_CD
+              ,PURC_NO
+              ,DLR_NM
+              ,CUST_NM
+              ,IMS_NM
+              ,CAR_MODEL_CD
+              ,TEL_NO
+              ,CAR_NO
+              ,GI_DT
+              ,CAR_REG_DT
+              ,CAR_OWN_CHG_HIS_DT
+              ,VIN_NO
+              ,ENGIN_NO
+              ,CAR_DISP_QTY
+              ,EXT_COLOR_NM
+              ,INT_COLOR_NM
+              ,DRV_MTH_CD
+              ,TRMS_TP
+              ,FUEL_CD
+              ,CAR_USE_TP
+              ,SRF_DSTIN_CD
+              ,AIRBACK_QTY
+              ,SEAT_TP
+              ,AIRCON_TP
+              ,STC_TP
+              ,ELEC_SEAT_YN
+              ,HEAT_SEAT_YN
+              ,AIR_SEAT_YN
+              ,DVD_YN
+              ,NAVI_YN
+              ,RCAM_YN
+              ,AUTO_HLGT_YN
+              ,HID_HLAMP_YN
+              ,HALO_LAMP_YN
+              ,REG_CERT_YN
+              ,RUN_CERT_YN
+              ,PURC_TAX_CERT_YN
+              ,PURC_CERT_YN
+              ,OWN_CHG_RCPT_YN
+              ,COMM_INS_YN
+              ,SPC_INS_YN
+              ,ENV_PRTC_LABEL_YN
+              ,COMM_INS_VALID_YY_MM
+              ,SPC_INC_VALID_YY_MM
+              ,ETC_CONT
+              ,EXT_CONT
+              ,INT_CONT
+              ,VIN_CONT
+              ,MECH_CONT
+              ,STAT_CONT
+              ,TOT_EVAL_CONT
+              ,CAR_ACC_CONT
+              ,REMARK
+              ,NCAR_PLT_GUIDE_PRC
+              ,NCAR_MARKET_PRC
+              ,CUST_HOPE_PRC
+              ,EVAL_CMP_EST_PRC
+              ,LAST_CONTRACT_PRC
+              ,REG_USR_ID
+              ,REG_DT
+              ,UPDT_USR_ID
+              ,UPDT_DT
+        )VALUES(
+               #{dlrCd}
+              ,#{purcNo}
+              ,#{dlrNm}
+              ,#{custNm}
+              ,#{imsNm}
+              ,#{carModelCd}
+              ,#{telNo}
+              ,#{carNo}
+              ,#{giDt}
+              ,#{carRegDt}
+              ,#{carOwnChgHisDt}
+              ,#{vinNo}
+              ,#{enginNo}
+              ,#{carDispQty}
+              ,#{extColorNm}
+              ,#{intColorNm}
+              ,#{drvMthCd}
+              ,#{trmsTp}
+              ,#{fuelCd}
+              ,#{carUseTp}
+              ,#{srfDstinCd}
+              ,#{airbackQty}
+              ,#{seatTp}
+              ,#{airconTp}
+              ,#{stcTp}
+              ,#{elecSeatYn}
+              ,#{heatSeatYn}
+              ,#{airSeatYn}
+              ,#{dvdYn}
+              ,#{naviYn}
+              ,#{rcamYn}
+              ,#{autoHlgtYn}
+              ,#{hidHlampYn}
+              ,#{haloLampYn}
+              ,#{regCertYn}
+              ,#{runCertYn}
+              ,#{purcTaxCertYn}
+              ,#{purcCertYn}
+              ,#{ownChgRcptYn}
+              ,#{commInsYn}
+              ,#{spcInsYn}
+              ,#{envPrtcLabelYn}
+              ,#{commInsValidDtYear} || #{commInsValidDtMonth}
+              ,#{spcIncValidDtYear} || #{spcIncValidDtMonth}
+              ,#{etcCont}
+              ,#{extCont}
+              ,#{intCont}
+              ,#{vinCont}
+              ,#{mechCont}
+              ,#{statCont}
+              ,#{totEvalCont}
+              ,#{carAccCont}
+              ,#{remark}
+              ,#{ncarPltGuidePrc}
+              ,#{ncarMarketPrc}
+              ,#{custHopePrc}
+              ,#{evalCmpEstPrc}
+              ,#{lastContractPrc}
+              ,#{regUsrId}
+              ,SYSDATE
+              ,#{regUsrId}
+              ,SYSDATE
+        )
+    </insert>
+
+
+
+    <!-- 중고차매입/평가관리 - 평가용 이미지의 평가데이터를 수정. -->
+    <update id="updateImageEval" parameterType="PurcEvalImageVO">
+        UPDATE SA_0252T
+           SET DLR_CD = #{dlrCd}
+             , PURC_NO = #{purcNo}
+             , DLR_NM = #{dlrNm}
+             , CUST_NM = #{custNm}
+             , IMS_NM = #{imsNm}
+             , CAR_MODEL_CD = #{carModelCd}
+             , TEL_NO = #{telNo}
+             , CAR_NO = #{carNo}
+             , GI_DT = #{giDt}
+             , CAR_REG_DT = #{carRegDt}
+             , CAR_OWN_CHG_HIS_DT = #{carOwnChgHisDt}
+             , VIN_NO = #{vinNo}
+             , ENGIN_NO = #{enginNo}
+             , CAR_DISP_QTY = #{carDispQty}
+             , EXT_COLOR_NM = #{extColorNm}
+             , INT_COLOR_NM = #{intColorNm}
+             , DRV_MTH_CD = #{drvMthCd}
+             , TRMS_TP = #{trmsTp}
+             , FUEL_CD = #{fuelCd}
+             , CAR_USE_TP = #{carUseTp}
+             , SRF_DSTIN_CD = #{srfDstinCd}
+             , AIRBACK_QTY = #{airbackQty}
+             , SEAT_TP = #{seatTp}
+             , AIRCON_TP = #{airconTp}
+             , STC_TP = #{stcTp}
+             , ELEC_SEAT_YN = #{elecSeatYn}
+             , HEAT_SEAT_YN = #{heatSeatYn}
+             , AIR_SEAT_YN = #{airSeatYn}
+             , DVD_YN = #{dvdYn}
+             , NAVI_YN = #{naviYn}
+             , RCAM_YN = #{rcamYn}
+             , AUTO_HLGT_YN = #{autoHlgtYn}
+             , HID_HLAMP_YN = #{hidHlampYn}
+             , HALO_LAMP_YN = #{haloLampYn}
+             , REG_CERT_YN = #{regCertYn}
+             , RUN_CERT_YN = #{runCertYn}
+             , PURC_TAX_CERT_YN = #{purcTaxCertYn}
+             , PURC_CERT_YN = #{purcCertYn}
+             , OWN_CHG_RCPT_YN = #{ownChgRcptYn}
+             , COMM_INS_YN = #{commInsYn}
+             , SPC_INS_YN = #{spcInsYn}
+             , ENV_PRTC_LABEL_YN = #{envPrtcLabelYn}
+             , COMM_INS_VALID_YY_MM = #{commInsValidDtYear} || #{commInsValidDtMonth}
+             , SPC_INC_VALID_YY_MM = #{spcIncValidDtYear} || #{spcIncValidDtMonth}
+             , ETC_CONT = #{etcCont}
+             , EXT_CONT = #{extCont}
+             , INT_CONT = #{intCont}
+             , VIN_CONT = #{vinCont}
+             , MECH_CONT = #{mechCont}
+             , STAT_CONT = #{statCont}
+             , TOT_EVAL_CONT = #{totEvalCont}
+             , CAR_ACC_CONT = #{carAccCont}
+             , REMARK = #{remark}
+             , NCAR_PLT_GUIDE_PRC = #{ncarPltGuidePrc}
+             , NCAR_MARKET_PRC = #{ncarMarketPrc}
+             , CUST_HOPE_PRC = #{custHopePrc}
+             , EVAL_CMP_EST_PRC = #{evalCmpEstPrc}
+             , LAST_CONTRACT_PRC = #{lastContractPrc}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE 1=1
+           AND DLR_CD = #{dlrCd}
+           AND PURC_NO = #{purcNo}
+    </update>
+
+</mapper>

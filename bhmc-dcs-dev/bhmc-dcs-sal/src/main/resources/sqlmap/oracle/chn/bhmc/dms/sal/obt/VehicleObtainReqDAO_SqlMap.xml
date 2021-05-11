@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.obt.service.dao.VehicleObtainReqDAO">
+
+	<!-- 차량조달신청관리 목록 조회  -->
+	<select id="selectVehicleObtainReqByCondition" parameterType="VehicleObtainReqSearchVO" resultType="VehicleObtainReqVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT SA0212.OBT_NO,SA0212.DLR_CD,SA0212.REQ_DT,SA0212.REQ_STAT_CD
+                      ,SA0212.SALE_DLR_DIST_CD,SA0212.SALE_DLR_DIST_NM,SA0212.REQ_USR_ID,SA0212.REQ_USR_NM
+                      ,SA0212.TEL_NO
+                      ,SA0212.CARLINE_CD,FN_GET_CARLINE_NM(SA0212.CARLINE_CD) AS CARLINE_NM
+                      ,SA0212.MODEL_CD,FN_GET_MODEL_NM(SA0212.MODEL_CD) AS MODEL_NM
+                      ,SA0212.OCN_CD,FN_GET_OCN_NM(SA0212.MODEL_CD, SA0212.OCN_CD) AS OCN_NM
+                      ,SA0212.EXT_COLOR_CD,(SELECT EXT_COLOR_NM FROM SA_0107T WHERE EXT_COLOR_CD = SA0212.EXT_COLOR_CD) AS EXT_COLOR_NM
+                      ,SA0212.INT_COLOR_CD,(SELECT INT_COLOR_NM FROM SA_0108T WHERE INT_COLOR_CD = SA0212.INT_COLOR_CD) AS INT_COLOR_NM
+                      ,SA0212.EVAL_RSLT_YN,SA0212.PEVAL_ID,SA0212.PEVAL_NM,SA0212.TEL_NO1,SA0212.EVAL_DT
+                      ,SA0212.OBT_DLR_CD,SA0212.VIN_NO,SA0212.REMARK
+                      ,SA0212.REG_USR_ID,SA0212.REG_DT,SA0212.UPDT_USR_ID,SA0212.UPDT_DT
+                      ,'' AS DLR_NM
+                  FROM SA_0212T SA0212
+                 WHERE 1=1
+                 <if test='sSaleDlrDistCd != null and sSaleDlrDistCd != ""'>
+                    AND SA0212.SALE_DLR_DIST_CD = #{sSaleDlrDistCd}
+                 </if>
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND SA0212.DLR_CD = #{sDlrCd}
+                 </if>
+                 <if test='sStartReqDt != null'>
+                     AND SA0212.REQ_DT <![CDATA[>=]]> TRUNC(#{sStartReqDt},'DD')
+                 </if>
+                 <if test='sEndReqDt != null'>
+                     AND SA0212.REQ_DT <![CDATA[<]]> TRUNC(#{sEndReqDt},'DD')+1
+                 </if>
+                 <if test='sReqStatCd != null and sReqStatCd != ""'>
+                   AND SA0212.REQ_STAT_CD = #{sReqStatCd}
+                 </if>
+                 <if test='sEvalRsltYn != null and sEvalRsltYn != ""'>
+                   AND SA0212.EVAL_RSLT_YN = #{sEvalRsltYn}
+                 </if>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+         ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "obtNo"'>OBT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "dlrNm"'>DLR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "carlineNm"'>CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "modelNm"'>MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "extColorNm"'>EXT_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "intColorNm"'>INT_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "obtDlrCd"'>OBT_DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "obtDlrNm"'>OBT_DLR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "reqDt"'>REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "reqStatCd"'>REQ_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "evalRsltYn"'>EVAL_RSLT_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            OBT_NO DESC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                OBT_NO DESC
+            </otherwise>
+        </choose>
+	</select>
+
+
+
+	<!-- 차량조달신청관리 목록 갯수  -->
+	<select id="selectVehicleObtainReqByConditionCnt" parameterType="VehicleObtainReqSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0212T SA0212
+         WHERE 1=1
+         <if test='sSaleDlrDistCd != null and sSaleDlrDistCd != ""'>
+            AND SA0212.SALE_DLR_DIST_CD = #{sSaleDlrDistCd}
+         </if>
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND SA0212.DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sStartReqDt != null'>
+             AND SA0212.REQ_DT <![CDATA[>=]]> TRUNC(#{sStartReqDt},'DD')
+         </if>
+         <if test='sEndReqDt != null'>
+             AND SA0212.REQ_DT <![CDATA[<]]> TRUNC(#{sEndReqDt},'DD')+1
+         </if>
+         <if test='sReqStatCd != null and sReqStatCd != ""'>
+           AND SA0212.REQ_STAT_CD = #{sReqStatCd}
+         </if>
+         <if test='sEvalRsltYn != null and sEvalRsltYn != ""'>
+           AND SA0212.EVAL_RSLT_YN = #{sEvalRsltYn}
+         </if>
+	</select>
+
+
+
+    <!-- 차량조달신청 신규등록  -->
+    <insert id="insertVehicleObtainReq" parameterType="VehicleObtainReqVO">
+        INSERT INTO SA_0212T(
+               OBT_NO
+             , DLR_CD
+             , REQ_DT
+             , REQ_STAT_CD
+             , SALE_DLR_DIST_CD
+             , SALE_DLR_DIST_NM
+             , REQ_USR_ID
+             , REQ_USR_NM
+             , TEL_NO
+             , CARLINE_CD
+             , MODEL_CD
+             , OCN_CD
+             , EXT_COLOR_CD
+             , INT_COLOR_CD
+             , REG_USR_ID
+             , REG_DT
+        )VALUES(
+               'OB'||#{dlrCd}||(SELECT LPAD(NVL(MAX(SUBSTR(OBT_NO,-6)),0) + 1,'6','0') FROM SA_0212T WHERE DLR_CD = #{dlrCd})
+             , #{dlrCd}
+             , SYSDATE
+             , 'A'
+             , #{saleDlrDistCd}
+             , #{saleDlrDistNm}
+             , #{reqUsrId}
+             , #{reqUsrNm}
+             , #{telNo}
+             , #{carlineCd}
+             , #{modelCd}
+             , #{ocnCd}
+             , #{extColorCd}
+             , #{intColorCd}
+             , #{regUsrId}
+             , SYSDATE
+        )
+    </insert>
+
+
+    <!-- 차량조달신청 신규등록  -->
+    <update id="updateVehicleObtainReq" parameterType="VehicleObtainReqVO">
+        UPDATE SA_0212T
+           SET TEL_NO = #{telNo}
+             , CARLINE_CD = #{carlineCd}
+             , MODEL_CD = #{modelCd}
+             , OCN_CD = #{ocnCd}
+             , EXT_COLOR_CD = #{extColorCd}
+             , INT_COLOR_CD = #{intColorCd}
+             , REQ_STAT_CD = #{reqStatCd}
+             , EVAL_RSLT_YN = #{evalRsltYn}
+             , PEVAL_ID = #{pevalId}
+             , PEVAL_NM = #{pevalNm}
+             , EVAL_DT = #{evalDt}
+             , TEL_NO1 = #{telNo1}
+             , OBT_DLR_CD = #{obtDlrCd}
+             , VIN_NO = #{vinNo}
+             , REMARK = #{remark}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE 1=1
+           AND OBT_NO = #{obtNo}
+    </update>
+
+
+
+    <!-- 차량조달신청 삭제  -->
+    <delete id="deleteVehicleObtainReq" parameterType="VehicleObtainReqVO">
+        DELETE SA_0212T
+         WHERE 1=1
+           AND OBT_NO = #{obtNo}
+    </delete>
+
+
+    <!-- 차량조달신청(신규등록,수정,삭제) : 차량조달심사요청정보수신 프로시져  -->
+    <insert id="procObtainReq" parameterType="VehicleObtainReqVO" statementType="CALLABLE">
+        {CALL SP_SAL_DMS_P_0212T_IF(
+              'SAL098'
+            , #{obtNo, mode=IN, jdbcType=VARCHAR}
+        )}
+    </insert>
+
+    <!-- 딜러간차량교환 심사완료시 sa_0121t.dlr_cd를 바뀌는 딜러코드로 변경함.  -->
+    <update id="updateVehicleObtainReqConf" parameterType="VehicleObtainReqVO">
+        UPDATE SA_0121T
+           SET DLR_CD = #{dlrCd}
+              ,UPDT_USR_ID = #{updtUsrId}
+              ,UPDT_DT = SYSDATE
+         WHERE VIN_NO = #{vinNo}
+    </update>
+</mapper>

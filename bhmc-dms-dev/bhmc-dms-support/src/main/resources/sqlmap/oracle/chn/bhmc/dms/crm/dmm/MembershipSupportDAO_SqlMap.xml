@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : MembershipSupportDAO_SqlMap.xml
+    Description : 멤버십
+    author Lee In Moon
+    since 2016.09.03.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 03. 22.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.dmm.service.dao.MembershipSupportDAO">
+
+    <!-- 멤버십 관리 상세 조회 -->
+    <select id="selectMembershipInfoByKey" parameterType="MembershipSearchVO" resultType="MembershipVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipSupportDAO.selectMembershipInfoByKey] */
+        SELECT MB.DLR_CD
+             , MB.MEMBERSHIP_NO
+             , NVL(MB.LAST_POINT_VAL, 0) AS LAST_POINT_VAL
+             , MB.GRADE_CD
+             , GD.GRADE_NM
+             , NVL((SELECT SUM(CR0803T.OCCR_POINT_VAL) FROM CR_0803T CR0803T WHERE CR0803T.DLR_CD = #{sDlrCd} AND CR0803T.MEMBERSHIP_NO = MB.MEMBERSHIP_NO AND CR0803T.CARD_TP_CD = '01' AND POINT_TP = '-'),0) AS TOT_MINUS_POINT_VAL
+             , NVL((SELECT SUM(CR0803T.EXTC_TARG_POINT_VAL) FROM CR_0803T CR0803T WHERE CR0803T.DLR_CD = #{sDlrCd} AND CR0803T.MEMBERSHIP_NO = MB.MEMBERSHIP_NO AND CR0803T.CARD_TP_CD = '01' AND CR0803T.POINT_TP = '+' AND CR0803T.EXTC_TARG_YN = 'Y' ),0) AS POINT_EXTC_EXPC_VAL
+             , (SELECT MAX(CR0803T.EXTC_DT) FROM CR_0803T CR0803T WHERE CR0803T.DLR_CD = #{sDlrCd} AND CR0803T.MEMBERSHIP_NO = MB.MEMBERSHIP_NO AND CR0803T.CARD_TP_CD = '01' AND CR0803T.POINT_TP = '+' AND CR0803T.EXTC_TARG_YN = 'Y' AND CR0803T.EXTC_DT IS NOT NULL) AS POINT_EXTC_EXPC_DT
+             , C.CUST_NO
+             , C.CUST_NM
+             , C.CUST_TP
+             , C.CUST_CD
+             , C.HP_NO
+             , C.TEL_NO
+             , C.OFFICE_NO
+             , C.EMAIL_NM
+             , C.PREF_COMM_MTH_CD
+             , C.PREF_COMM_NO
+             , C.SSN_CRN_NO
+             , C.MATH_DOC_TP
+             , MB.REG_DT
+             , MB.FILE_DOC_NO
+             , MB.VIN_NO
+        <if test='sMembershipStan == "V"'>
+             , C.CARLINE_CD
+             , C.MODEL_CD
+             , C.CAR_REG_NO
+             , FN_GET_CARLINE_NM_NC(C.CARLINE_CD) AS CARLINE_NM
+             , FN_GET_MODEL_NM_NC(C.MODEL_CD) AS MODEL_NM
+        </if>
+             , (SELECT DECODE(A.SUNG_NM, NULL, '',  A.SUNG_NM|| ' / ' || A.CITY_NM || ' / ' || A.DIST_NM || ' ' || A.ADDR_DETL_CONT)
+                  FROM CR_0116T A
+                 WHERE A.DLR_CD = #{sDlrCd}
+                   AND A.REF_TABLE_NM = 'CR_0101T'
+                   AND A.REF_KEY_NM = MB.CUST_NO
+                   AND A.USE_YN = 'Y' AND A.FLAG_YN = 'Y') AS ADDR_FULL
+             , (SELECT A.CARD_NO FROM CR_0813T A WHERE A.DLR_CD = #{sDlrCd} AND A.CARD_TP_CD ='01' AND A.USE_YN = 'Y' AND A.MEMBERSHIP_NO = MB.MEMBERSHIP_NO ) AS CARD_NO
+             , (SELECT MAX(A.POINT_EXTC_EXPC_DT) FROM CR_0811T A WHERE A.DLR_CD = #{sDlrCd} AND A.MEMBERSHIP_NO = MB.MEMBERSHIP_NO ) AS POINT_EXTC_EXPC_DT
+             , ( SELECT SUM(LAST_POINT_VAL)
+                   FROM ( SELECT ROW_NUMBER() OVER (PARTITION BY MEMBERSHIP_NO, CARD_NO
+                           ORDER BY POINT_HIS_SEQ DESC ) NUMB, MEMBERSHIP_NO,
+                                 LAST_POINT_VAL
+                            FROM CR_0803T A
+                           WHERE A.DLR_CD = #{sDlrCd}
+                             AND A.CARD_TP_CD = '02'
+                        ) WHERE NUMB = 1 AND MEMBERSHIP_NO = MB.MEMBERSHIP_NO
+                ) AS REAL_TOT_AMT  -- 20170602 REAL_TOT_AMT 컬럼 용도 변경 ( 수납금액 입력 ) 함에 따라 최종 금액은 LAST_POINT_VAL을 사용한다.
+        FROM CR_0801T MB
+<if test='sMembershipStan != null and sMembershipStan != ""'>
+    <choose>
+    <when test='sMembershipStan == "C"'>
+        INNER JOIN CR_0101T C ON C.DLR_CD = #{sDlrCd} AND MB.CUST_NO = C.CUST_NO  -- 멤버십이 고객기준
+    </when>
+    <otherwise>
+        INNER JOIN (SELECT A.CUST_NO, A.CUST_NM, A.HP_NO, A.TEL_NO, A.CUST_TP, A.CUST_CD, A.OFFICE_NO, A.EMAIL_NM, A.PREF_COMM_MTH_CD, A.PREF_COMM_NO, A.SSN_CRN_NO, A.MATH_DOC_TP, D.VIN_NO, D.CARLINE_CD, D.MODEL_CD, D.CAR_REG_NO FROM CR_0101T A, SA_0123T B, SA_0121T D WHERE A.DLR_CD = #{sDlrCd} AND A.DLR_CD = B.DLR_CD AND A.CUST_NO = B.BP_CD AND B.USE_YN = 'Y' AND B.CAR_ID = D.CAR_ID ) C ON MB.VIN_NO = C.VIN_NO -- 멤버십 차량기준
+    </otherwise>
+    </choose>
+</if>
+        , CR_0805T GD
+        WHERE MB.DLR_CD = #{sDlrCd}
+        AND MB.DLR_CD = GD.DLR_CD
+        AND MB.GRADE_CD = GD.GRADE_SEQ
+<choose>
+    <when test='sMembershipNo != null and sMembershipNo != ""'>
+        AND MB.MEMBERSHIP_NO = #{sMembershipNo}
+    </when>
+    <otherwise>
+        <if test='sMembershipStan == "C" and sCustNo != null and sCustNo != ""'>
+            AND MB.CUST_NO = #{sCustNo}
+        </if>
+        <if test='sMembershipStan == "V"'>
+            <choose>
+                <when test='sCustNo != null and sCustNo != ""'>
+                    AND MB.CUST_NO = #{sCustNo}
+                </when>
+                <otherwise>
+                    AND C.VIN_NO LIKE '%'||#{sVinNo}||'%'
+                </otherwise>
+            </choose>
+        </if>
+    </otherwise>
+</choose>
+
+    </select>
+
+
+    <!-- 타시스템에서 사용 : 멤버십 가입정보를 조회한다. -->
+    <select id="selectMembershipJoinCondition" parameterType="MembershipSearchVO" resultType="MembershipVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipSupportDAO.selectMembershipJoinCondition] */
+    SELECT  DLR_CD
+            ,MEMBERSHIP_NO
+            ,CUST_NO
+            ,VIN_NO
+            ,GRADE_CD
+            ,FILE_DOC_NO
+            ,POINT_YN
+            ,RECHARGE_YN
+            ,RECHARGE_CD
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+            ,LAST_POINT_VAL
+    FROM    CR_0801T
+    WHERE   DLR_CD = #{sDlrCd}
+    AND     CUST_NO = #{sCustNo}
+    <if test='sMembershipNo != null and sMembershipNo != ""'>
+    AND     MEMBERSHIP_NO = #{sMembershipNo}
+    </if>
+    <if test='sVinNo != null and sVinNo != ""'>
+    AND     VIN_NO = #{sVinNo}
+    </if>
+    </select>
+
+    <!-- 타시스템에서 사용 : 멤버십 포인트 정보를 조회한다. -->
+    <select id="selectMembershipPointInfo" parameterType="MembershipSearchVO" resultType="MembershipVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.MembershipSupportDAO.selectMembershipJoinCondition] */
+    SELECT  A.DLR_CD
+            ,A.MEMBERSHIP_NO
+            ,A.CUST_NO
+            ,A.VIN_NO
+            ,A.GRADE_CD
+            ,A.FILE_DOC_NO
+            ,A.LAST_POINT_VAL
+            ,B.CARD_TP_CD
+            ,B.CARD_NO
+    FROM    CR_0801T A LEFT OUTER JOIN (
+                SELECT  DLR_CD
+                        ,MEMBERSHIP_NO
+                        ,CARD_TP_CD
+                        ,CARD_NO
+                FROM    CR_0813T
+                WHERE   DLR_CD = #{sDlrCd}
+                AND     MEMBERSHIP_NO = #{sMembershipNo}
+                AND     USE_YN = 'Y'
+                AND     CARD_TP_CD = '01'
+                <if test='sCardNo != null and sCardNo != ""'>
+                AND     CARD_NO = #{sCardNo}
+                </if>
+            ) B
+            ON A.DLR_CD = B.DLR_CD
+            AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+    WHERE   A.DLR_CD = #{sDlrCd}
+    AND     A.MEMBERSHIP_NO = #{sMembershipNo}
+    <if test='sCardNo != null and sCardNo != ""'>
+    AND     B.CARD_NO = #{sCardNo}
+    </if>
+    </select>
+
+
+</mapper>

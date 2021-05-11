@@ -1,0 +1,1181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : CampaignVinManageDAO_SqlMap.xml
+    Description : 캠페인 VIN 정보에 관한 데이터처리
+    author Kwon Ki Hyun
+    since 2016. 02. 22.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 02. 22.  Kwon Ki Hyun     최초 생성
+-->
+<mapper namespace="chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO">
+
+    <insert id="insertUsedCamapaignInfo" parameterType="CampaignSearchVO">
+    /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.insertUsedCamapaignInfo] */
+
+        MERGE INTO SE_1076T A
+         USING(
+               SELECT B.DLR_CD             --딜러코드
+                     ,B.CR_NO              --캠페인리콜번호
+                     ,B.LBR_CD             --공임코드
+                     ,A.VIN_NO             --차대번호
+                     ,B.CR_TP              --캠페인리콜유형
+                     ,B.REG_USR_ID         --등록자ID
+                     ,B.REG_DT             --등록일자
+                     ,'N' DEL_YN           --삭제여부
+                     ,A.RO_DOC_NO          --RO 문서번호
+                FROM SE_0300T A , SE_0170T B
+               WHERE A.DLR_CD    = B.DLR_CD
+                 AND A.RO_DOC_NO = B.DOC_NO
+                 AND A.DLR_CD    = #{sDlrCd}
+                 AND B.PREFIX_ID ='RO'
+                 AND A.RO_DOC_NO = #{sRoDocNo}
+                 AND A.RO_STAT_CD != '06'
+                 AND B.CR_NO IS NOT NULL
+         )B
+        ON (
+               A.DLR_CD = B.DLR_CD
+           AND A.CR_NO = B.CR_NO
+           AND A.LBR_CD = B.LBR_CD
+           AND A.VIN_NO = B.VIN_NO
+          )
+        WHEN MATCHED THEN UPDATE SET
+              A.CR_TP = B.CR_TP
+             ,A.UPDT_USR_ID = #{sRegUseId}
+             ,A.UPDT_DT = SYSDATE
+             ,A.DEL_YN = B.DEL_YN
+             ,A.RO_DOC_NO = B.RO_DOC_NO
+        WHEN NOT MATCHED THEN
+            INSERT (
+                A.DLR_CD
+               ,A.CR_NO
+               ,A.LBR_CD
+               ,A.VIN_NO
+               ,A.CR_TP
+               ,A.REG_USR_ID
+               ,A.REG_DT
+               ,A.DEL_YN
+               ,A.RO_DOC_NO
+             )VALUES(
+                B.DLR_CD
+               ,B.CR_NO
+               ,B.LBR_CD
+               ,B.VIN_NO
+               ,B.CR_TP
+               ,#{sRegUseId}
+               ,SYSDATE
+               ,B.DEL_YN
+               ,B.RO_DOC_NO
+              );
+
+    </insert>
+
+    <update id="deleteUsedCamapaignInfo" parameterType="CampaignDetailVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.deleteUsedCamapaignInfo] */
+        UPDATE SE_1076T SET DEL_YN = 'Y'
+         	, UPDT_USR_ID = #{regUseId}
+        	, UPDT_DT = SYSDATE
+         WHERE DLR_CD =  #{dlrCd}
+           AND VIN_NO = #{vinNo}
+           AND CR_NO = #{crNo}
+           AND LBR_CD = #{lbrCd}
+    </update>
+
+    <!-- 캠페인 VIN 정보 갯수 -->
+    <select id="selectCampaignUsedInfosCnt" parameterType="CampaignSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignUsedInfosCnt] */
+
+           SELECT COUNT(A.CR_NO) AS VALUE
+             FROM SE_1076T A , SE_0170T B
+            WHERE A.DLR_CD    = B.DLR_CD
+              AND A.CR_NO     = B.CR_NO
+              AND A.LBR_CD    = B.LBR_CD
+              AND A.DEL_YN    = 'N'
+              AND B.PREFIX_ID = 'RO'
+              AND B.DLR_CD    = #{sDlrCd}
+              AND B.DOC_NO    = #{sRoDocNo}
+              AND A.VIN_NO    = #{sVinNo}
+
+    </select>
+
+    <!-- 캠페인 VIN 정보 갯수 -->
+    <select id="selectCampaignVinInfosCnt" parameterType="CampaignSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignVinInfosCnt] */
+
+        SELECT COUNT(CR_NO) AS VALUE
+         FROM (
+          SELECT B.CR_NO , B.VIN_NO , '' LTS_MODEL_CD , '' LTS_MODEL_NM
+               , B.USE_YN , B.DLR_CD , B.USE_DT
+            FROM SE_1073T B
+           WHERE B.CR_NO = #{sCrNo}
+           UNION
+          SELECT A.CR_NO , '' VIN_NO , A.LTS_MODEL_CD ,
+                (SELECT
+                       <choose>
+                            <when test='sLangCd == "ko"'> LTS_EN_NM </when>
+                            <when test='sLangCd == "zh"'> LTS_CHN_NM </when>
+                            <otherwise>LTS_EN_NM</otherwise>
+                        </choose>
+                   FROM SE_1064T
+                  WHERE LTS_MODEL_CD = A.LTS_MODEL_CD) AS LTS_MODEL_NM
+               , '' AS USE_YN , '' AS DLR_CD , NULL AS USE_DT
+           FROM SE_1074T A
+          WHERE A.CR_NO = #{sCrNo}
+        )
+    </select>
+
+   <!-- 캠페인 VIN 정보  -->
+    <select id="selectCampaignVinInfos" parameterType="CampaignSearchVO" resultType="CampaignDetailVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignVinInfos] */
+
+          SELECT *
+            FROM (
+             SELECT ROWNUM AS RNUM , T1.*
+              FROM (
+                  SELECT A.CR_NO
+                        ,A.VIN_NO
+                        ,'' LTS_MODEL_CD
+                        ,'' LTS_MODEL_NM
+                        ,A.USE_YN
+                        ,A.DLR_CD
+                        ,A.USE_DT
+                    FROM SE_1073T A
+                   WHERE CR_NO = #{sCrNo}
+                   UNION
+                  SELECT A.CR_NO , '' VIN_NO , A.LTS_MODEL_CD ,
+                        (SELECT
+                            <choose>
+                                <when test='sLangCd == "ko"'> LTS_EN_NM </when>
+                                <when test='sLangCd == "zh"'> LTS_CHN_NM </when>
+                                <otherwise>LTS_EN_NM</otherwise>
+                            </choose>
+                           FROM SE_1064T
+                          WHERE LTS_MODEL_CD = A.LTS_MODEL_CD) AS LTS_MODEL_NM
+                       , '' AS USE_YN , '' AS DLR_CD , NULL AS USE_DT
+                   FROM SE_1074T A
+                  WHERE A.CR_NO = #{sCrNo}
+                  ORDER BY
+                     <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "crNo"'> CR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "vinVo"'>VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "ltsModelCd"'>LTS_MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        B.CR_NO ASC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            CR_NO ASC
+                        </otherwise>
+                    </choose>
+               )T1
+            <where>
+                  <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                  </if>
+               </where>
+          )
+             <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    RNUM > #{firstIndex}
+                </if>
+            </where>
+    </select>
+
+   <!-- 캠페인 공임 정보 갯수  -->
+    <select id="selectCampaignLbrInfosCnt" parameterType="CampaignSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignLbrInfosCnt] */
+
+            SELECT COUNT(A.CR_NO) AS VALUE
+               FROM SE_1070T A , SE_1072T B
+              WHERE A.CR_NO = #{sCrNo}
+                AND B.CR_NO = A.CR_NO
+     </select>
+   <!-- 캠페인 공임 정보  -->
+    <select id="selectCampaignLbrInfos" parameterType="CampaignSearchVO" resultType="CampaignDetailVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignLbrInfos] */
+
+           SELECT *
+              FROM (
+                SELECT ROWNUM AS RNUM , T1.*
+                 FROM (
+                    SELECT B.CR_NO
+                          ,A.PC_DSTIN_CD
+                          ,B.LBR_CD
+                          ,B.LBR_NM
+                          ,B.LBR_QTY
+                          ,B.CAU_ITEM_CD
+                          ,B.CAU_ITEM_NM
+                          ,B.CAU_CD
+                          ,B.CAU_NM
+                          ,B.PHEN_CD
+                          ,B.PHEN_NM
+                          ,B.LBR_HM
+                          ,B.LBR_AMT
+                          ,B.USE_YN
+                       FROM SE_1070T A , SE_1072T B
+                      WHERE A.CR_NO = #{sCrNo}
+                        AND B.CR_NO = A.CR_NO
+                        ORDER BY
+                     <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <when test='item.field == "crNo"'>B.CR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "lbrCd"'>B.LBR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        B.CR_NO ASC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            B.CR_NO ASC
+                        </otherwise>
+                    </choose>
+                    ) T1
+                  <where>
+                  <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                  </if>
+               </where>
+             )
+             <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    RNUM > #{firstIndex}
+                </if>
+            </where>
+
+    </select>
+
+    <!-- 캠페인 부품 정보 갯수  -->
+    <select id="selectCampaignItemsCnt" parameterType="CampaignSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignItemsCnt] */
+
+            SELECT COUNT(B.CR_NO) AS VALUE
+             FROM SE_1071T A , SE_1072T B
+            WHERE B.CR_NO   = A.CR_NO
+              AND B.LBR_CD  = A.LBR_CD
+              AND A.CR_NO   = #{sCrNo}
+    </select>
+
+    <!-- 캠페인 부품 정보   -->
+    <select id="selectCampaignItems" parameterType="CampaignSearchVO" resultType="CampaignDetailVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignItems] */
+
+       SELECT *
+         FROM(
+         SELECT ROWNUM AS RNUM , T1.*
+           FROM (
+          SELECT  B.CR_NO , B.LBR_CD , B.LTS_MODEL_CD,
+                 (SELECT
+                       <choose>
+                           <when test='sLangCd == "ko"' >LTS_EN_NM </when>
+                           <otherwise> LTS_CHN_NM</otherwise>
+                       </choose>
+                   FROM SE_1064T
+                  WHERE LTS_MODEL_CD = B.LTS_MODEL_CD) AS LTS_MODEL_NM ,
+                  B.ITEM_CD AS CAU_ITEM_CD , B.ITEM_NM AS CAU_ITEM_NM,  B.ITEM_QTY
+             FROM SE_1072T A , SE_1071T B
+            WHERE B.CR_NO  = A.CR_NO
+              AND B.LBR_CD = A.LBR_CD
+              AND A.CR_NO  = #{sCrNo}
+              ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "crNo"'>B.CR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "lbrCd"'>B.LBR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemCd"'>B.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    B.CR_NO ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        B.CR_NO ASC
+                    </otherwise>
+                </choose>
+              )T1
+          <where>
+              <if test='firstIndex != -1 and lastIndex != -1'>
+               AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+              </if>
+           </where>
+         )
+         <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 일괄 캠페인 리스트   -->
+    <select id="selectCampaignForVinInfos" parameterType="CampaignSearchVO" resultType="CampaignMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignForVinInfos] */
+
+              SELECT T1.CR_NO
+                    ,T1.CR_TP
+                    ,T1.CR_NM
+                    ,T1.CR_START_DT
+                    ,T1.CR_END_DT
+               FROM (
+                            SELECT E.*
+                                  ,ROW_NUMBER() OVER(PARTITION BY E.CR_NO , E.CR_TP   ORDER BY E.CR_NO , E.CR_TP DESC ) AS RN
+                             FROM (
+                               SELECT A.MAK_CD        AS CR_NO
+                                     ,A.MAK_SUB_TP_CD AS CR_TP
+                                     ,A.MAK_NM        AS CR_NM
+                                     ,A.START_DT      AS CR_START_DT
+                                     ,A.END_DT        AS CR_END_DT
+                                 FROM CR_0701T A, SE_1073T B , SE_1072T C
+                                WHERE A.MAK_CD = B.CR_NO
+                                  AND C.CR_NO  = A.MAK_CD
+                                  <if test='sPdiYn != null and sPdiYn == "Y" '>
+                                  -- AND A.MAK_SUB_TP_CD NOT IN ('K','T','V') -- PDI 인경우
+                                  </if>
+                                  AND A.DLR_CD = #{sDlrCd}
+                                  AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN A.START_DT AND A.END_DT
+                                  AND A.CR_END_TP = 'N'
+                                  AND A.HOST_CD   = #{sHostCd}       --주최코드  (CRM)법인 : 01 , 딜러 : 02
+                                  AND A.MAK_TP_CD = '03'              --마케팅유형코드(CRM)
+                                  AND A.DEL_YN    = 'N'
+                                  AND C.USE_YN    = 'Y'
+                                  AND A.STAT_CD   = '03'
+                                  AND B.VIN_NO    = #{sVinNo}
+                                  AND C.DLR_CD    = A.DLR_CD
+                                  AND (A.PC_DSTIN_CD IS NULL OR A.PC_DSTIN_CD = #{sCarDstinCd}  )  -- 승용 : P , TAXI : C
+                                  AND NOT EXISTS (
+                                                SELECT DLR_CD
+                                                      ,CR_NO
+                                                      ,VIN_NO
+                                                      --,LBR_CD
+                                                      ,CR_TP
+                                                  FROM SE_1076T
+                                                 WHERE CR_NO  = A.MAK_CD
+                                                   --AND LBR_CD = C.LBR_CD
+                                                   AND VIN_NO = B.VIN_NO
+                                                   AND CR_TP  = A.MAK_SUB_TP_CD
+                                                   AND DEL_YN = 'N'
+                                          )
+                                   AND NOT EXISTS(
+                                                  SELECT R.DLR_CD
+                                                        ,R.RO_DOC_NO
+                                                        --,L.LBR_CD
+                                                        ,L.CR_NO
+                                                        ,L.CR_TP
+                                                    FROM SE_0300T R , SE_0170T L
+                                                   WHERE R.DLR_CD    = L.DLR_CD
+                                                     AND R.RO_DOC_NO = L.DOC_NO
+                                                     AND R.RO_TP     = L.RO_TP
+                                                     AND L.PREFIX_ID = 'RO'
+                                                     AND R.DLR_CD    = #{sDlrCd}
+                                                     AND R.RO_STAT_CD != '06'
+                                                     AND L.CR_NO     = A.MAK_CD
+                                                     --AND L.LBR_CD    = C.LBR_CD
+                                                     AND L.CR_TP     = A.MAK_SUB_TP_CD
+                                                     AND R.VIN_NO    = B.VIN_NO
+                                   )
+                                  UNION ALL
+                                  SELECT A.MAK_CD        AS CR_NO
+                                        ,A.MAK_SUB_TP_CD AS CR_TP
+                                        ,A.MAK_NM        AS CR_NM
+                                        ,A.START_DT      AS CR_START_DT
+                                        ,A.END_DT        AS CR_END_DT
+                                    FROM CR_0701T A , SE_1074T B , SE_1072T C
+                                   WHERE A.MAK_CD        = B.CR_NO
+                                     AND (B.LTS_MODEL_CD = #{sLtsModelCd} OR B.LTS_MODEL_CD = 'ALL')
+                                     AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN A.START_DT AND A.END_DT  -- 캠페인적용일자
+                                     <if test=' sSignOffDt != null'>
+                                     AND TO_DATE(TO_CHAR( #{sSignOffDt} ,'YYYYMMDD'),'YYYYMMDD') BETWEEN  NVL(CRE_START_DT,TO_DATE('19990101','YYYYMMDD')) AND  NVL(CRE_END_DT, TO_DATE('29991231','YYYYMMDD')) -- 생산일자
+                                     </if>
+                                     <if test=' sCustSaleDt != null'>
+                                     AND TO_DATE(TO_CHAR( NVL(#{sCustSaleDt},SYSDATE ) ,'YYYYMMDD'),'YYYYMMDD') BETWEEN NVL(SALE_START_DT,TO_DATE('19990101','YYYYMMDD')) AND NVL(SALE_END_DT, TO_DATE('29991231','YYYYMMDD'))-- 판매일자
+                                     </if>
+                                     AND (A.PC_DSTIN_CD IS NULL OR A.PC_DSTIN_CD =  #{sCarDstinCd} ) -- 승용 : P , TAXI : C
+                                     AND A.CR_END_TP = 'N'
+                                     AND A.HOST_CD   = #{sHostCd}     --주최코드  (CRM)법인 : 01 , 딜러 : 02
+                                     AND A.MAK_TP_CD = '03'           --마케팅유형코드(CRM)
+                                     AND A.DEL_YN    = 'N'
+                                     AND A.STAT_CD   = '03'
+                                     AND A.DLR_CD    = #{sDlrCd}
+                                     AND C.CR_NO     = A.MAK_CD
+                                     AND C.DLR_CD    = A.DLR_CD
+                                     AND NOT EXISTS (
+                                                  SELECT R.DLR_CD
+                                                        ,R.RO_DOC_NO
+                                                        --,L.LBR_CD
+                                                        ,L.CR_NO
+                                                        ,L.CR_TP
+                                                    FROM SE_0300T R , SE_0170T L
+                                                   WHERE R.DLR_CD    = L.DLR_CD
+                                                     AND R.RO_DOC_NO = L.DOC_NO
+                                                     AND R.RO_TP     = L.RO_TP
+                                                     AND L.PREFIX_ID = 'RO'
+                                                     AND R.DLR_CD    = #{sDlrCd}
+                                                     AND R.RO_STAT_CD != '06'
+                                                     AND L.CR_NO     = A.MAK_CD
+                                                     --AND L.LBR_CD    = C.LBR_CD
+                                                     AND L.CR_TP     = A.MAK_SUB_TP_CD
+                                                     AND R.VIN_NO    = #{sVinNo}
+                                     )
+                                     AND NOT EXISTS (
+                                                SELECT DLR_CD
+                                                      ,CR_NO
+                                                      ,VIN_NO
+                                                      --,LBR_CD
+                                                      ,CR_TP
+                                                  FROM SE_1076T
+                                                 WHERE CR_NO  = A.MAK_CD
+                                                   --AND LBR_CD = C.LBR_CD
+                                                   AND CR_TP  = A.MAK_SUB_TP_CD
+                                                   AND VIN_NO = #{sVinNo}
+                                                   AND DEL_YN = 'N'
+                                    )
+                              )E
+            )T1 WHERE RN = 1
+
+    </select>
+
+    <!-- 일괄 캠페인 리스트 카운트   -->
+    <select id="selectCampaignForVinInfosCnt" parameterType="CampaignSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignForVinInfosCnt] */
+
+                SELECT COUNT(1) VALUE
+                  FROM (
+                            SELECT E.*
+                                  ,ROW_NUMBER() OVER(PARTITION BY E.CR_NO , E.CR_TP   ORDER BY E.CR_NO , E.CR_TP DESC ) AS RN
+                             FROM (
+                               SELECT A.MAK_CD        AS CR_NO
+                                     ,A.MAK_SUB_TP_CD AS CR_TP
+                                     ,A.MAK_NM        AS CR_NM
+                                     ,A.START_DT      AS CR_START_DT
+                                     ,A.END_DT        AS CR_END_DT
+                                 FROM CR_0701T A, SE_1073T B , SE_1072T C
+                                WHERE A.MAK_CD = B.CR_NO
+                                  AND C.CR_NO  = A.MAK_CD
+                                  AND A.DLR_CD = B.DLR_CD
+                                  AND B.DLR_CD = C.DLR_CD
+                                  <if test='sPdiYn != null and sPdiYn == "Y" '>
+                                  -- AND A.A.MAK_SUB_TP_CD NOT IN ('K','T','V') -- PDI 인경우
+                                  </if>
+                                  AND A.DLR_CD    = #{sDlrCd}
+                                  AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN A.START_DT AND A.END_DT
+                                  AND A.CR_END_TP = 'N'
+                                  AND A.HOST_CD   =  #{sHostCd}       --주최코드  (CRM)법인 : 01 , 딜러 : 02
+                                  AND A.MAK_TP_CD = '03'              --마케팅유형코드(CRM)
+                                  AND A.DEL_YN    = 'N'
+                                  AND C.USE_YN    = 'Y'
+                                  AND B.VIN_NO    = #{sVinNo}
+                                  AND (A.PC_DSTIN_CD IS NULL OR A.PC_DSTIN_CD = #{sCarDstinCd}  )  -- 승용 : P , TAXI : C
+                                  AND NOT EXISTS (
+                                                SELECT DLR_CD
+                                                      ,CR_NO
+                                                      ,VIN_NO
+                                                      --,LBR_CD
+                                                      ,CR_TP
+                                                  FROM SE_1076T
+                                                 WHERE CR_NO  = A.MAK_CD
+                                                   --AND LBR_CD = C.LBR_CD
+                                                   AND VIN_NO = B.VIN_NO
+                                                   AND CR_TP  = A.MAK_SUB_TP_CD
+                                                   AND DEL_YN = 'N'
+                                          )
+                                   AND NOT EXISTS(
+                                                  SELECT R.DLR_CD
+                                                        ,R.RO_DOC_NO
+                                                        --,L.LBR_CD
+                                                        ,L.CR_NO
+                                                        ,L.CR_TP
+                                                    FROM SE_0300T R , SE_0170T L
+                                                   WHERE R.DLR_CD    = L.DLR_CD
+                                                     AND R.RO_DOC_NO = L.DOC_NO
+                                                     AND R.RO_TP     = L.RO_TP
+                                                     AND L.PREFIX_ID = 'RO'
+                                                     AND R.DLR_CD    = #{sDlrCd}
+                                                     AND R.RO_STAT_CD != '06'
+                                                     AND L.CR_NO     = A.MAK_CD
+                                                     --AND L.LBR_CD    = C.LBR_CD
+                                                     AND L.CR_TP     = A.MAK_SUB_TP_CD
+                                                     AND R.VIN_NO    = B.VIN_NO
+                                   )
+                                  UNION ALL
+                                  SELECT A.MAK_CD        AS CR_NO
+                                        ,A.MAK_SUB_TP_CD AS CR_TP
+                                        ,A.MAK_NM        AS CR_NM
+                                        ,A.START_DT      AS CR_START_DT
+                                        ,A.END_DT        AS CR_END_DT
+                                    FROM CR_0701T A , SE_1074T B , SE_1072T C
+                                   WHERE A.MAK_CD        = B.CR_NO
+                                     AND A.DLR_CD = B.DLR_CD
+                                     AND B.DLR_CD = C.DLR_CD
+                                     AND (B.LTS_MODEL_CD = #{sLtsModelCd} OR B.LTS_MODEL_CD = 'ALL')
+                                     AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN A.START_DT AND A.END_DT  -- 캠페인적용일자
+                                     <if test=' sSignOffDt!= null'>
+                                     AND TO_DATE(TO_CHAR( #{sSignOffDt} ,'YYYYMMDD'),'YYYYMMDD') BETWEEN  NVL(CRE_START_DT,TO_DATE('19990101','YYYYMMDD')) AND  NVL(CRE_END_DT, TO_DATE('29991231','YYYYMMDD')) -- 생산일자
+                                     </if>
+                                     <if test=' sCustSaleDt != null' >
+                                     AND TO_DATE(TO_CHAR( NVL(#{sCustSaleDt},SYSDATE ) ,'YYYYMMDD'),'YYYYMMDD') BETWEEN NVL(SALE_START_DT,TO_DATE('19990101','YYYYMMDD')) AND NVL(SALE_END_DT, TO_DATE('29991231','YYYYMMDD'))-- 판매일자
+                                     </if>
+                                     AND (A.PC_DSTIN_CD IS NULL OR A.PC_DSTIN_CD =  #{sCarDstinCd} ) -- 승용 : P , TAXI : C
+                                     AND A.CR_END_TP = 'N'
+                                     AND A.HOST_CD   = #{sHostCd}     --주최코드  (CRM)법인 : 01 , 딜러 : 02
+                                     AND A.MAK_TP_CD = '03'           --마케팅유형코드(CRM)
+                                     AND A.DEL_YN    = 'N'
+                                     AND A.DLR_CD = #{sDlrCd}
+                                     AND C.CR_NO     = A.MAK_CD
+                                     AND NOT EXISTS (
+                                                  SELECT R.DLR_CD
+                                                        ,R.RO_DOC_NO
+                                                        --,L.LBR_CD
+                                                        ,L.CR_NO
+                                                        ,L.CR_TP
+                                                    FROM SE_0300T R , SE_0170T L
+                                                   WHERE R.DLR_CD    = L.DLR_CD
+                                                     AND R.RO_DOC_NO = L.DOC_NO
+                                                     AND R.RO_TP     = L.RO_TP
+                                                     AND L.PREFIX_ID = 'RO'
+                                                     AND R.DLR_CD    = #{sDlrCd}
+                                                     AND R.RO_STAT_CD != '06'
+                                                     AND L.CR_NO     = A.MAK_CD
+                                                     --AND L.LBR_CD    = C.LBR_CD
+                                                     AND L.CR_TP     = A.MAK_SUB_TP_CD
+                                     )
+                                     AND NOT EXISTS (
+                                                SELECT DLR_CD
+                                                      ,CR_NO
+                                                      ,VIN_NO
+                                                      --,LBR_CD
+                                                      ,CR_TP
+                                                  FROM SE_1076T
+                                                 WHERE CR_NO  = A.MAK_CD
+                                                   --AND LBR_CD = C.LBR_CD
+                                                   AND CR_TP  = A.MAK_SUB_TP_CD
+                                                   AND VIN_NO =  #{sVinNo}
+                                                   AND DEL_YN = 'N'
+                                    )
+                              )E
+            )T1 WHERE RN =1
+
+
+    </select>
+
+
+    <!-- 캠페인 팝업 공임  정보   -->
+    <select id="selectCampaignLbrInfoPopup" parameterType="CampaignSearchVO" resultType="CampaignDetailVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignLbrInfoPopup] */
+
+        SELECT ROWNUM AS RNUM
+              ,B.CR_NO
+              ,A.HOST_CD
+              ,CASE WHEN A.HOST_CD ='01' THEN 'H' ELSE 'D' END DSTIN_CD
+              ,A.MAK_NM AS CR_NM
+              ,B.LBR_CD
+              ,CASE WHEN SUBSTR(B.LBR_CD,1,2) = '99'
+                    THEN '04'
+                    ELSE '03'  END AS LBR_TP
+              ,B.CR_TP
+              ,B.LBR_NM
+              ,B.LBR_QTY
+              ,B.CAU_ITEM_CD
+              ,B.CAU_ITEM_NM
+              ,B.CAU_CD
+              ,B.CAU_NM
+              ,B.PHEN_CD
+              ,B.PHEN_NM
+              ,B.LBR_HM
+              ,B.LBR_PRC
+              ,B.LBR_AMT
+              ,(SELECT WART_RTE_RATE
+                 FROM SE_1065T
+                 WHERE DLR_CD   = #{sDlrCd}
+                 <!-- 20200507 维修委托中，由批量活动带出的“保修索赔”工时单价应当为“机电维修” RPIR_TP  = '03' from 售后it担当。updateby sunzq3 start  -->
+                 <!-- AND RPIR_TP  = '02'-->
+                 AND RPIR_TP  = '03'
+                 <!-- 20200507 维修委托中，由批量活动带出的“保修索赔”工时单价应当为“机电维修” RPIR_TP  = '03' from 售后it担当。updateby sunzq3 end  -->
+                   AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+                   AND BRAND_CD = #{sCarBrandCd}
+                   AND USE_YN   = 'Y'
+              ) AS LBR_RATE
+         FROM CR_0701T A , SE_1072T B , (
+                        SELECT CR_NO , LBR_CD
+                           FROM (
+                           SELECT B.CR_NO , B.LBR_CD
+                             FROM CR_0701T A , SE_1072T B
+                            WHERE A.MAK_CD    = B.CR_NO
+                              AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN A.START_DT AND A.END_DT
+                              AND B.USE_YN    = 'Y'
+                              AND B.CR_NO     = #{sCrNo}
+                              AND A.CR_END_TP = 'N'
+                              AND A.HOST_CD   = #{sHostCd}
+                              AND A.MAK_TP_CD = '03'
+                              AND A.DEL_YN    = 'N'
+                              AND A.DLR_CD    = #{sDlrCd}
+                            MINUS
+                           SELECT B.CR_NO , B.LBR_CD
+                             FROM CR_0701T A, SE_1076T B
+                            WHERE A.MAK_CD    = B.CR_NO
+                              AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN A.START_DT AND A.END_DT
+                              AND B.VIN_NO    = #{sVinNo}
+                              AND B.CR_NO     = #{sCrNo}
+                              AND A.CR_END_TP = 'N'
+                              AND A.HOST_CD   = #{sHostCd}
+                              AND A.MAK_TP_CD = '03'
+                              AND A.DEL_YN    = 'N'
+                              AND A.DLR_CD    = #{sDlrCd}
+                              AND B.DEL_YN    = 'N'
+                           )
+              ) C
+        WHERE A.MAK_CD = B.CR_NO
+          AND A.DLR_CD = B.DLR_CD
+          AND A.DLR_CD = #{sDlrCd}
+          AND A.MAK_CD = #{sCrNo}
+          AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN A.START_DT AND A.END_DT
+          AND B.USE_YN    = 'Y'
+          AND B.CR_NO     = C.CR_NO
+          AND B.LBR_CD    = C.LBR_CD
+          AND A.CR_END_TP = 'N'
+          AND A.HOST_CD   = #{sHostCd}
+          AND A.MAK_TP_CD = '03'
+          AND A.DEL_YN    = 'N'
+          AND NOT EXISTS (
+                     SELECT CR_NO
+                       FROM SE_0300T R1 , SE_0170T R2
+                     WHERE R1.DLR_CD    = R2.DLR_CD
+                       AND R1.RO_DOC_NO = R2.DOC_NO
+                       AND R1.RO_TP     = R2.RO_TP
+                       AND R2.PREFIX_ID = 'RO'
+                       AND R2.CR_NO IS NOT NULL
+                       AND R1.RO_STAT_CD != '06'
+                       AND R2.CR_NO     = B.CR_NO
+                       --AND R2.LBR_CD    = B.LBR_CD
+                       AND R1.VIN_NO    = #{sVinNo}
+          )
+          ORDER BY B.LBR_CD ASC
+    </select>
+
+    <!-- 딜러 캠페인 팝업 공임  정보   -->
+    <select id="selectCampaignDlrLbrInfoPopup" parameterType="CampaignSearchVO" resultType="CampaignDetailVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignDlrLbrInfoPopup] */
+
+        SELECT ROWNUM AS RNUM
+              ,B.CR_NO
+              ,A.HOST_CD
+              ,CASE WHEN A.HOST_CD ='01' THEN 'H' ELSE 'D' END DSTIN_CD
+              ,A.MAK_NM AS CR_NM
+              ,B.LBR_CD
+              ,B.LBR_TP
+              ,B.CR_TP
+              ,B.LBR_NM
+              ,B.LBR_QTY
+              ,B.CAU_ITEM_CD
+              ,B.CAU_ITEM_NM
+              ,B.CAU_CD
+              ,B.CAU_NM
+              ,B.PHEN_CD
+              ,B.PHEN_NM
+              ,B.LBR_HM
+              ,B.LBR_PRC
+              ,B.LBR_AMT
+              ,NVL(B.DS_AMT ,0) AS DC_AMT
+              ,NVL(B.DS_RATE,0) AS DC_RATE
+              ,NVL(B.LBR_TOT_AMT ,0 ) AS LBR_TOT_AMT
+         FROM CR_0701T A , SE_1072T B , (
+                        SELECT CR_NO , LBR_CD
+                           FROM (
+                           SELECT B.CR_NO , B.LBR_CD
+                             FROM CR_0701T A , SE_1072T B
+                            WHERE A.MAK_CD    = B.CR_NO
+                              AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN A.START_DT AND A.END_DT
+                              AND B.USE_YN    = 'Y'
+                              AND B.CR_NO     = #{sCrNo}
+                              AND A.CR_END_TP = 'N'
+                              AND A.HOST_CD   = #{sHostCd}
+                              AND A.MAK_TP_CD = '03'
+                              AND A.DEL_YN    = 'N'
+                              AND A.DLR_CD    = #{sDlrCd}
+                            MINUS
+                           SELECT B.CR_NO , B.LBR_CD
+                             FROM CR_0701T A, SE_1076T B
+                            WHERE A.MAK_CD    = B.CR_NO
+                              AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN A.START_DT AND A.END_DT
+                              AND B.VIN_NO    = #{sVinNo}
+                              AND B.CR_NO     = #{sCrNo}
+                              AND A.CR_END_TP = 'N'
+                              AND A.HOST_CD   = #{sHostCd}
+                              AND A.MAK_TP_CD = '03'
+                              AND A.DEL_YN    = 'N'
+                              AND A.DLR_CD    = #{sDlrCd}
+                              AND B.DEL_YN    = 'N'
+                           )
+              ) C
+        WHERE A.MAK_CD = B.CR_NO
+          AND A.DLR_CD = B.DLR_CD
+          AND A.DLR_CD = #{sDlrCd}
+          AND A.MAK_CD = #{sCrNo}
+          AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN A.START_DT AND A.END_DT
+          AND B.USE_YN    = 'Y'
+          AND B.CR_NO     = C.CR_NO
+          AND B.LBR_CD    = C.LBR_CD
+          AND A.CR_END_TP = 'N'
+          AND A.HOST_CD   = #{sHostCd}
+          AND A.MAK_TP_CD = '03'
+          AND A.DEL_YN    = 'N'
+          AND NOT EXISTS (
+                     SELECT CR_NO
+                       FROM SE_0300T R1 , SE_0170T R2
+                     WHERE R1.DLR_CD    = R2.DLR_CD
+                       AND R1.RO_DOC_NO = R2.DOC_NO
+                       AND R1.RO_TP     = R2.RO_TP
+                       AND R2.PREFIX_ID = 'RO'
+                       AND R2.CR_NO IS NOT NULL
+                       AND R1.RO_STAT_CD != '06'
+                       AND R2.CR_NO     = B.CR_NO
+                       AND R2.LBR_CD    = B.LBR_CD
+                       AND R1.VIN_NO    = #{sVinNo}
+          )
+          ORDER BY B.LBR_CD ASC
+    </select>
+
+    <!-- 제조사 캠페인 팝업 PART 정보   -->
+    <select id="selectCampaignPartInfoPopup_BACK" parameterType="CampaignSearchVO" resultType="CampaignDetailVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignPartInfoPopup] */
+
+         SELECT ROWNUM AS RNUM , T1.*
+          FROM (
+            SELECT A.CR_NO
+                  ,A.HOST_CD
+                  ,A.CR_TP
+                  ,A.CR_NM
+                  ,A.LBR_CD
+                  ,A.ITEM_CD
+                  ,NVL(A.ITEM_NM ,B.ITEM_NM) AS ITEM_NM
+                  ,A.ITEM_QTY AS GI_QTY
+                  ,B.STOCK_UNIT_CD
+                  ,ROUND(NVL(SALE_PRC_AMT,0),2) AS SALE_PRC_AMT
+                  ,ROUND(NVL(TAX_DDCT_GRTE_PRC,0),2) AS TAX_DDCT_GRTE_PRC
+                  ,ROUND(MOVING_AVG_PRC,2) AS MOVING_AVG_PRC
+                  ,B.GR_STRGE_CD
+                  ,B.GI_STRGE_CD
+             FROM (
+                    SELECT A.MAK_CD AS CR_NO
+                          ,A.HOST_CD
+                          ,A.MAK_SUB_TP_CD AS CR_TP
+                          ,A.MAK_NM AS CR_NM
+                          ,B.LBR_CD
+                          ,C.ITEM_CD
+                          ,C.ITEM_NM
+                          ,C.ITEM_QTY
+                     FROM CR_0701T A , SE_1072T B , SE_1071T C
+                    WHERE A.MAK_CD = B.CR_NO
+                      AND A.DLR_CD = B.DLR_CD
+                      AND B.DLR_CD = C.DLR_CD
+                      AND A.DLR_CD = #{sDlrCd}
+                      AND A.MAK_CD = #{sCrNo}
+                      AND B.LBR_CD = #{sLbrCd}
+                      AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN A.START_DT AND A.END_DT
+                      AND B.USE_YN    = 'Y'
+                      AND C.CR_NO     = A.MAK_CD
+                      AND C.LBR_CD    = B.LBR_CD
+                      AND A.CR_END_TP = 'N'
+                      AND A.HOST_CD   = #{sHostCd}  --주최코드  (CRM) 법인 : 01 , 딜러 : 02
+                      AND A.MAK_TP_CD = '03'        --마케팅유형코드(CRM)
+                      AND A.DEL_YN    = 'N'
+                      AND (C.LTS_MODEL_CD = ' ' OR C.LTS_MODEL_CD = #{sLtsModelCd} )
+            )A LEFT OUTER JOIN (
+              SELECT ITEM_CD
+                    ,ITEM_NM
+                    ,ITEM_EN_NM
+                    ,STOCK_UNIT_CD
+                    ,GR_STRGE_CD
+                    ,GI_STRGE_CD
+                    ,NVL(
+                        (SELECT MOVING_AVG_PRC
+                           FROM PT_0208T
+                           WHERE DLR_CD    = A.DLR_CD
+                             AND STRGE_CD  = A.GI_STRGE_CD
+                             AND ITEM_CD   = A.ITEM_CD
+                             AND ROWNUM  = 1
+                         ) , NVL(A.MOVING_AVG_PRC,0)) AS MOVING_AVG_PRC
+                    ,NVL(
+                          (SELECT NVL(TAX_DDCT_GRTE_PRC, 0) AS TAX_DDCT_GRTE_PRC
+                             FROM PT_0214T
+                            WHERE DLR_CD   = A.DLR_CD
+                              AND ITEM_CD  = A.ITEM_CD
+                              AND PRC_TP   = '01'
+                              AND APPLY_YN = 'Y'
+                              AND ROWNUM  = 1 )
+                       ,0) AS TAX_DDCT_GRTE_PRC
+                    ,NVL(
+                          (SELECT NVL(GRTE_PRC, 0) AS SALE_PRC_AMT
+                             FROM PT_0214T
+                            WHERE DLR_CD   = A.DLR_CD
+                              AND ITEM_CD  = A.ITEM_CD
+                              AND PRC_TP   = '01'
+                              AND APPLY_YN = 'Y'
+                              AND ROWNUM  = 1)
+                       ,0) AS SALE_PRC_AMT
+               FROM PT_0201T A
+              WHERE DLR_CD = #{sDlrCd}
+                --AND ITEM_DSTIN_CD = '02'
+                AND END_YN        = 'N'
+                AND SPYR_CD       = '01'
+                AND BRAND_CD      = DECODE(#{sCarBrandCd}, 'N', 'HD', 'OT')
+              )B
+              ON A.ITEM_CD = B.ITEM_CD
+              ORDER BY A.LBR_CD ASC
+          )T1
+
+    </select>
+
+    <!-- 딜러 캠페인 부품 정보  -->
+    <select id="selectCampaignDlrPartInfoPopup_BACK" parameterType="CampaignSearchVO" resultType="CampaignDetailVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignDlrPartInfoPopup] */
+
+       SELECT *
+         FROM(
+         SELECT ROWNUM AS RNUM , T1.*
+           FROM (
+                SELECT A.*
+                      ,B.GR_STRGE_CD
+                      ,B.GI_STRGE_CD
+                FROM (
+                        SELECT C1.MAK_CD AS CR_NO
+                              ,C1.HOST_CD
+                              ,C1.MAK_SUB_TP_CD AS CR_TP
+                              ,C1.MAK_NM AS CR_NM
+                              ,C2.DLR_CD
+                              ,C2.ITEM_CD
+                              ,C2.ITEM_NM
+                              ,NVL(C2.ITEM_QTY , 0)      AS GI_QTY
+                              ,NVL(C2.ITEM_UNIT_CD,'EA') AS STOCK_UNIT_CD
+                              ,NVL(C2.ITEM_PRC,0)        AS ITEM_PRC
+                              ,NVL(C2.ITEM_AMT,0)        AS SALE_PRC_AMT
+                              ,NVL(C2.ITEM_TOT_AMT,0)    AS ITEM_TOT_AMT
+                              ,NVL(C2.DS_AMT,0)          AS DC_AMT
+                              ,NVL(C2.DS_RATE,0)         AS DC_RATE
+                         FROM CR_0701T C1 , SE_1071T C2
+                         WHERE C1.MAK_CD    = C2.CR_NO
+                           AND C1.DLR_CD    = C2.DLR_CD
+                           AND C2.CR_NO     = #{sCrNo}
+                           AND C2.DLR_CD    = #{sDlrCd}
+                           AND C1.CR_END_TP = 'N'
+                           AND C1.HOST_CD   = #{sHostCd}
+                           AND C1.MAK_TP_CD = '03'        --마케팅유형코드(CRM)
+                           AND C1.DEL_YN    = 'N'
+                           AND NOT EXISTS (
+                                SELECT CR_NO
+                                  FROM SE_0300T R1 , SE_0160T R2
+                                 WHERE R1.DLR_CD      = R2.DLR_CD
+                                   AND R1.RO_DOC_NO   = R2.DOC_NO
+                                   AND R1.RO_TP       = R2.RO_TP
+                                   AND R2.PREFIX_ID   = 'RO'
+                                   AND R2.CR_NO IS NOT NULL
+                                   AND R1.RO_STAT_CD != '06'
+                                   AND R2.CR_NO       = C2.CR_NO
+                                   AND R2.ITEM_CD     = C2.ITEM_CD
+                                   AND R1.VIN_NO    = #{sVinNo}
+                           )
+                      ) A LEFT OUTER JOIN (
+                              SELECT ITEM_CD
+                                    ,ITEM_NM
+                                    ,ITEM_EN_NM
+                                    ,STOCK_UNIT_CD
+                                    ,GR_STRGE_CD
+                                    ,GI_STRGE_CD
+                                    ,NVL(
+                                        (SELECT MOVING_AVG_PRC
+                                           FROM PT_0208T
+                                           WHERE DLR_CD  = A.DLR_CD
+                                             AND STRGE_CD  = A.GI_STRGE_CD
+                                             AND ITEM_CD = A.ITEM_CD
+                                         ) , NVL(A.MOVING_AVG_PRC,0)) AS MOVING_AVG_PRC
+                                    ,NVL(
+                                          (SELECT NVL(GRTE_PRC, 0) AS SALE_PRC_AMT
+                                             FROM PT_0214T
+                                            WHERE DLR_CD   = A.DLR_CD
+                                              AND ITEM_CD  = A.ITEM_CD
+                                              AND PRC_TP   = '01'
+                                              AND APPLY_YN = 'Y')
+                                       ,0) AS SALE_PRC_AMT
+                               FROM PT_0201T A
+                              WHERE DLR_CD        = #{sDlrCd}
+                                AND ITEM_DSTIN_CD = '02'
+                                AND END_YN        = 'N'
+                                AND SPYR_CD       = '01'
+                                AND BRAND_CD      = DECODE(#{sCarBrandCd}, 'N', 'HD', 'OT')
+                              )B
+                        ON A.ITEM_CD = B.ITEM_CD
+              ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "crNo"'>A.CR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemCd"'>A.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemNm"'>A.ITEM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "giQty"'>A.GI_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.CR_NO ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.CR_NO ASC
+                    </otherwise>
+                </choose>
+              )T1
+          <where>
+              <if test='firstIndex != -1 and lastIndex != -1'>
+               AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+              </if>
+           </where>
+         )
+         <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+    <!-- 제조사 캠페인 팝업 PART 정보   -->
+    <select id="selectCampaignPartInfoPopup" parameterType="CampaignSearchVO" resultType="CampaignDetailVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignPartInfoPopup] */
+
+             SELECT ROWNUM AS RNUM
+                  , T1.GI_QTY*T1.SALE_PRC_AMT AS ITEM_TOT_AMT
+                  , T1.SALE_PRC_AMT AS ITEM_PRC
+                  , T1.*
+              FROM (
+                        SELECT A.CR_NO
+                              ,A.HOST_CD
+                              ,A.CR_TP
+                              ,A.CR_NM
+                              ,A.LBR_CD
+                              ,A.ITEM_CD
+                              ,NVL(A.ITEM_NM ,B.ITEM_NM) AS ITEM_NM
+                              ,A.ITEM_QTY AS GI_QTY
+                              ,B.STOCK_UNIT_CD
+                              ,B.GR_STRGE_CD
+                              ,B.GI_STRGE_CD
+                              ,ROUND(
+                                     NVL(
+                                        (SELECT MOVING_AVG_PRC
+                                           FROM PT_0208T
+                                           WHERE DLR_CD    = B.DLR_CD
+                                             AND STRGE_CD  = B.GI_STRGE_CD
+                                             AND ITEM_CD   = B.ITEM_CD
+                                             AND ROWNUM  = 1
+                                         ) , NVL(B.MOVING_AVG_PRC,0)
+                                      )
+                                ,2) AS MOVING_AVG_PRC
+                                ,ROUND(
+                                       NVL(
+                                          (SELECT NVL(TAX_DDCT_GRTE_PRC, 0) AS TAX_DDCT_GRTE_PRC
+                                             FROM PT_0214T
+                                            WHERE DLR_CD   = B.DLR_CD
+                                              AND ITEM_CD  = B.ITEM_CD
+                                              AND PRC_TP   = '01'
+                                              AND APPLY_YN = 'Y'
+                                              AND ROWNUM  = 1
+                                              )
+                                       ,0)
+                                ,2) AS TAX_DDCT_GRTE_PRC
+                                ,ROUND(
+                                       NVL(
+                                          (SELECT NVL(GRTE_PRC, 0) AS SALE_PRC_AMT
+                                             FROM PT_0214T
+                                            WHERE DLR_CD   = B.DLR_CD
+                                              AND ITEM_CD  = B.ITEM_CD
+                                              AND PRC_TP   = '01'
+                                              AND APPLY_YN = 'Y'
+                                              AND ROWNUM  = 1
+                                          )
+                                       ,0)
+                                 ,2)AS SALE_PRC_AMT
+                         FROM (
+                                SELECT A.MAK_CD AS CR_NO
+                                      ,A.HOST_CD
+                                      ,A.MAK_SUB_TP_CD AS CR_TP
+                                      ,A.MAK_NM AS CR_NM
+                                      ,B.LBR_CD
+                                      ,C.ITEM_CD
+                                      ,C.ITEM_NM
+                                      ,C.ITEM_QTY
+                                      ,A.DLR_CD
+                                 FROM CR_0701T A , SE_1072T B , SE_1071T C
+                                WHERE A.MAK_CD = B.CR_NO
+                                  AND A.DLR_CD = B.DLR_CD
+                                  AND B.DLR_CD = C.DLR_CD
+                                  AND A.DLR_CD = #{sDlrCd}
+                                  AND A.MAK_CD = #{sCrNo}
+                                  AND B.LBR_CD = #{sLbrCd}
+                                  AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN A.START_DT AND A.END_DT
+                                  AND B.USE_YN    = 'Y'
+                                  AND C.CR_NO     = A.MAK_CD
+                                  AND C.LBR_CD    = B.LBR_CD
+                                  AND A.CR_END_TP = 'N'
+                                  AND A.HOST_CD   = #{sHostCd}  --주최코드  (CRM) 법인 : 01 , 딜러 : 02
+                                  AND A.MAK_TP_CD = '03'        --마케팅유형코드(CRM)
+                                  AND A.DEL_YN    = 'N'
+                                  AND (C.LTS_MODEL_CD = ' ' OR C.LTS_MODEL_CD = #{sLtsModelCd} )
+                        )A LEFT OUTER JOIN PT_0201T B
+                         ON A.ITEM_CD = B.ITEM_CD
+                        AND A.DLR_CD  = B.DLR_CD
+                       WHERE B.DLR_CD = #{sDlrCd}
+                       --AND ITEM_DSTIN_CD = '02'
+                         AND B.END_YN        = 'N'
+                         AND B.SPYR_CD       = '01'
+                         AND B.BRAND_CD      = DECODE(#{sCarBrandCd}, 'N', 'HD', 'OT')
+                    ORDER BY A.LBR_CD ASC
+            ) T1
+
+    </select>
+
+    <!-- 딜러 캠페인 부품 정보  -->
+    <select id="selectCampaignDlrPartInfoPopup" parameterType="CampaignSearchVO" resultType="CampaignDetailVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectCampaignDlrPartInfoPopup] */
+
+       SELECT *
+         FROM(
+         SELECT ROWNUM AS RNUM , T1.*
+           FROM (
+                SELECT A.*
+                      ,B.GR_STRGE_CD
+                      ,B.GI_STRGE_CD
+                FROM (
+                        SELECT C1.MAK_CD AS CR_NO
+                              ,C1.HOST_CD
+                              ,C1.MAK_SUB_TP_CD AS CR_TP
+                              ,C1.MAK_NM AS CR_NM
+                              ,C2.DLR_CD
+                              ,C2.ITEM_CD
+                              ,C2.ITEM_NM
+                              ,NVL(C2.ITEM_QTY , 0)      AS GI_QTY
+                              ,NVL(C2.ITEM_UNIT_CD,'EA') AS STOCK_UNIT_CD
+                              ,NVL(C2.ITEM_PRC,0)        AS ITEM_PRC
+                              ,NVL(C2.ITEM_AMT,0)        AS SALE_PRC_AMT
+                              ,NVL(C2.ITEM_TOT_AMT,0)    AS ITEM_TOT_AMT
+                              ,NVL(C2.DS_AMT,0)          AS DC_AMT
+                              ,NVL(C2.DS_RATE,0)         AS DC_RATE
+                         FROM CR_0701T C1 , SE_1071T C2
+                         WHERE C1.MAK_CD    = C2.CR_NO
+                           AND C1.DLR_CD    = C2.DLR_CD
+                           AND C2.CR_NO     = #{sCrNo}
+                           AND C2.DLR_CD    = #{sDlrCd}
+                           AND C1.CR_END_TP = 'N'
+                           AND C1.HOST_CD   = #{sHostCd}
+                           AND C1.MAK_TP_CD = '03'        --마케팅유형코드(CRM)
+                           AND C1.DEL_YN    = 'N'
+                           AND NOT EXISTS (
+                                SELECT CR_NO
+                                  FROM SE_0300T R1 , SE_0160T R2
+                                 WHERE R1.DLR_CD      = R2.DLR_CD
+                                   AND R1.RO_DOC_NO   = R2.DOC_NO
+                                   AND R1.RO_TP       = R2.RO_TP
+                                   AND R2.PREFIX_ID   = 'RO'
+                                   AND R2.CR_NO IS NOT NULL
+                                   AND R1.RO_STAT_CD != '06'
+                                   AND R2.CR_NO       = C2.CR_NO
+                                   AND R2.ITEM_CD     = C2.ITEM_CD
+                                   AND R1.VIN_NO    = #{sVinNo}
+                           )
+                      ) A LEFT OUTER JOIN (
+                              SELECT ITEM_CD
+                                    ,ITEM_NM
+                                    ,ITEM_EN_NM
+                                    ,STOCK_UNIT_CD
+                                    ,GR_STRGE_CD
+                                    ,GI_STRGE_CD
+                                    ,NVL(
+                                        (SELECT MOVING_AVG_PRC
+                                           FROM PT_0208T
+                                           WHERE DLR_CD  = A.DLR_CD
+                                             AND STRGE_CD  = A.GI_STRGE_CD
+                                             AND ITEM_CD = A.ITEM_CD
+                                         ) , NVL(A.MOVING_AVG_PRC,0)) AS MOVING_AVG_PRC
+                                    ,NVL(
+                                          (SELECT NVL(GRTE_PRC, 0) AS SALE_PRC_AMT
+                                             FROM PT_0214T
+                                            WHERE DLR_CD   = A.DLR_CD
+                                              AND ITEM_CD  = A.ITEM_CD
+                                              AND PRC_TP   = '01'
+                                              AND APPLY_YN = 'Y')
+                                       ,0) AS SALE_PRC_AMT
+                               FROM PT_0201T A
+                              WHERE DLR_CD        = #{sDlrCd}
+                                AND ITEM_DSTIN_CD = '02'
+                                AND END_YN        = 'N'
+                                AND SPYR_CD       = '01'
+                                AND BRAND_CD      = DECODE(#{sCarBrandCd}, 'N', 'HD', 'OT')
+                              )B
+                        ON A.ITEM_CD = B.ITEM_CD
+              ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "crNo"'>A.CR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemCd"'>A.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "itemNm"'>A.ITEM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "giQty"'>A.GI_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.CR_NO ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.CR_NO ASC
+                    </otherwise>
+                </choose>
+              )T1
+          <where>
+              <if test='firstIndex != -1 and lastIndex != -1'>
+               AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+              </if>
+           </where>
+         )
+         <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 캠페인 면비보양 갯수 조회  -->
+    <select id="selectFreeRoCnt" parameterType="CampaignSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectFreeRoCnt] */
+        SELECT COUNT(CR_NO)
+          FROM SE_1076T
+         WHERE DLR_CD      = #{sDlrCd}
+           AND VIN_NO      = #{sVinNo}
+           AND RO_DOC_NO   = #{sRoDocNo}
+           AND CR_TP       = 'K'        --면비보양
+    </select>
+
+    <!-- 캠페인 처음면비보양 판단을 위한 갯수 조회  -->
+    <select id="selectFreeRoYnCnt" parameterType="CampaignSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.CampaignVinManageDAO.selectFreeRoYnCnt] */
+        SELECT COUNT(CR_NO)
+          FROM SE_1076T
+         WHERE DLR_CD      = #{sDlrCd}
+           AND VIN_NO      = #{sVinNo}
+           AND RO_DOC_NO  != #{sRoDocNo}
+           AND DEL_YN      = 'N'
+           AND CR_TP       = 'K'        --면비보양
+    </select>
+
+</mapper>

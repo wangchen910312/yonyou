@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : SpecialPointDAO_SqlMap.xml
+    Description : 블루멤버십 가입
+    author Hyun Ho Kim
+    since 2016. 04. 06.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 04. 06.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.dmm.service.dao.SpecialPointDAO">
+
+    <select id="selectSpecialPointByKey" parameterType="SpecialPointSearchVO" resultType="SpecialPointVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.selectSpecialPointByKey] */
+        SELECT  A.DLR_CD
+                ,A.SEQ
+                ,A.MEMBERSHIP_NO
+                ,A.PROVIDE_POINT_VAL
+                ,A.PROVIDE_REASON_CONT
+                ,A.SIGN_DOC_NO
+                ,A.POINT_CD
+                ,A.POINT_TP
+                ,A.REG_USR_ID
+                ,A.REG_DT
+                ,A.UPDT_USR_ID
+                ,A.UPDT_DT
+                ,C.CARD_NO
+                ,C.CARD_TP_CD
+        FROM    CR_0819T A INNER JOIN CR_0801T B
+                ON A.DLR_CD = B.DLR_CD
+                AND A.MEMBERSHIP_NO = B.MEMBERSHIP_NO
+                INNER JOIN CR_0813T C
+                ON B.DLR_CD = C.DLR_CD
+                AND B.MEMBERSHIP_NO = C.MEMBERSHIP_NO
+        WHERE A.DLR_CD = #{sDlrCd}
+        AND C.CARD_TP_CD = '01' --01:포인트, 02:충전
+        AND C.USE_YN = #{sUseYn}
+    <if test='sSeq != null and sSeq != ""'>
+        AND A.SEQ = #{sSeq}
+    </if>
+    <if test='sMembershipNo != null and sMembershipNo != ""'>
+        AND A.MEMBERSHIP_NO = #{sMembershipNo}
+    </if>
+    <if test='sSignDocNo != null and sSignDocNo != ""'>
+        AND A.SIGN_DOC_NO = #{sSignDocNo}
+    </if>
+
+    </select>
+
+    <!-- 블루멤버십 가입 목록수를 조회한다. -->
+    <insert id="insertSpecialPoint" parameterType="SpecialPointVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.insertSpecialPoint] */
+        INSERT INTO CR_0819T    --특별포인트지급
+        (
+            DLR_CD                     --딜러코드
+            ,SEQ                        --일련번호
+            ,MEMBERSHIP_NO              --멤버쉽번호
+            ,PROVIDE_POINT_VAL          --부여포인트값
+            ,PROVIDE_REASON_CONT        --부여사유내용
+            ,SIGN_DOC_NO                --결제문서번호
+            ,POINT_CD                   --포인트 출처
+            ,POINT_TP                   --포인트 유형
+            ,REG_USR_ID                 --등록자ID
+            ,REG_DT                     --등록일자
+        )
+        VALUES
+        (
+            #{dlrCd}                     --딜러코드
+            ,SEQ_CR_0819T.NEXTVAL         --일련번호
+            ,#{membershipNo}              --멤버쉽번호
+            ,#{providePointVal}           --부여포인트값
+            ,#{provideReasonCont}         --부여사유내용
+            ,#{signDocNo}                 --결제문서번호
+            ,#{pointCd}                   --포인트 출처
+            ,#{pointTp}                   --포인트 유형
+            ,#{regUsrId}                  --등록자ID
+            ,SYSDATE                     --등록일자
+        )
+    </insert>
+
+    <!-- 특별포인트 신청 검색조건 -->
+    <sql id="searchSpecialPoints">
+        <where>
+            AND CR0819T.DLR_CD = #{sDlrCd}                  --딜러코드
+            AND CR0819T.MEMBERSHIP_NO = #{sMembershipNo}    --멤버쉽번호
+        </where>
+    </sql>
+
+    <!-- 특별포인트 신청 목록수를 조회한다. -->
+    <select id="selectSpecialPointsByConditionCnt" parameterType="SpecialPointSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.dmm.SpecialPointDAO.selectSpecialPointsByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_0819T CR0819T
+        <include refid="searchSpecialPoints" />
+    </select>
+
+    <!-- 특별포인트 신청 목록을 조회한다. -->
+    <select id="selectSpecialPointsByCondition" parameterType="SpecialPointSearchVO" resultType="SpecialPointVO">
+        /* [chn.bhmc.dms.crm.dmm.SpecialPointDAO.selectSpecialPointsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                     CR0819T.DLR_CD                     --딜러코드
+                    ,CR0819T.SEQ                        --일련번호
+                    ,CR0819T.MEMBERSHIP_NO              --멤버쉽번호
+                    ,CR0819T.PROVIDE_POINT_VAL          --부여포인트값
+                    ,'('||CR0819T.POINT_TP||') '||TO_CHAR(CR0819T.PROVIDE_POINT_VAL,'FM9,999,999,999') AS PROVIDE_POINT_VAL2
+                    ,CR0819T.PROVIDE_REASON_CONT        --부여사유내용
+                    ,CR0819T.SIGN_DOC_NO                --결제문서번호
+                    ,CR0819T.POINT_CD                   --포인트 출처
+                    ,CR0819T.POINT_TP                   --포인트 유형
+                    ,CR0819T.REG_USR_ID                 --등록자ID
+                    ,CR0819T.REG_DT                     --등록일자
+                    ,CR0819T.UPDT_USR_ID                --수정자ID
+                    ,CR0819T.UPDT_DT                    --수정일자
+                    ,FN_GET_USER_NM(CR0819T.REG_USR_ID) AS REG_USR_NM           --등록자이름
+                FROM CR_0819T CR0819T
+                <include refid="searchSpecialPoints" />
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>              CR0819T.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                <when test='item.field == "seq"'>                CR0819T.SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                                <when test='item.field == "membershipNo"'>       CR0819T.MEMBERSHIP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "providePointVal"'>    CR0819T.PROVIDE_POINT_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                <when test='item.field == "providePointVal2"'>   CR0819T.PROVIDE_POINT_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                <when test='item.field == "provideReasonCont"'>  CR0819T.PROVIDE_REASON_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "signDocNo"'>          CR0819T.SIGN_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "regUsrNm"'>           REG_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                                <when test='item.field == "regDt"'>              CR0819T.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                <when test='item.field == "updtUsrId"'>          CR0819T.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "updtDt"'>             CR0819T.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                <otherwise>
+                                    REG_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        REG_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+
+</mapper>

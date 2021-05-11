@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.inv.service.dao.StockDueDAO">
+
+
+    <!-- 재고실사 생성여부 조회 -->
+    <select id="selectStockDueInfoCnt" parameterType="StockDueVO" resultType="int">
+    SELECT COUNT(*)
+      FROM SA_0210T
+     WHERE DLR_CD = #{dlrCd}
+       AND STOCK_DT = TO_DATE(TO_CHAR(SYSDATE, 'yyyy/MM/dd'), 'yyyy/MM/dd hh24:mi:ss')
+    </select>
+
+    <!-- 재고실사 정보를 생성한다.  -->
+    <insert id="insertStockDueInfo" parameterType="StockDueVO">
+        INSERT
+          INTO SA_0210T
+          ( DLR_CD
+          , CAR_ID
+          , STOCK_DT
+          , VIN_NO
+          , CARLINE_CD
+          , MODEL_CD
+          , OCN_CD
+          , EXT_COLOR_CD
+          , INT_COLOR_CD
+          , CAR_STAT_CD
+          , STRGE_CD
+          , LOC_CD
+          , MANUFACT_YY_MM_DT
+          , GR_DT
+          , SIGNOFF_DT
+          , PLT_GI_DT
+          , STOCK_AGING_CNT
+          , CONFIRM_YN
+          , REG_USR_ID
+          , REG_DT
+          )
+          SELECT A.DLR_CD
+              , A.CAR_ID
+               , TO_DATE(TO_CHAR(SYSDATE, 'yyyy/MM/dd'), 'yyyy/MM/dd hh24:mi:ss') AS STOCK_DT
+               , A.VIN_NO
+               , A.CARLINE_CD
+               , A.MODEL_CD
+               , A.OCN_CD
+               , A.EXT_COLOR_CD
+               , A.INT_COLOR_CD
+               , A.CAR_STAT_CD
+               , A.STRGE_CD
+               , A.LOC_CD
+               , A.MANUFACT_YY_MM_DT
+               , A.DLR_GR_DT
+               , A.SIGNOFF_DT
+               , A.PLT_GI_DT
+               --, NVL(A.MM_CNT, 0) AS STOCK_AGING_CNT
+               , NVL( TRUNC(MONTHS_BETWEEN(SYSDATE, A.CAR_VIN_ALLOC_DT)+1, 0) , 0) AS STOCK_AGING_CNT
+               , 'N'
+               , #{regUsrId}
+               , SYSDATE
+            FROM SA_0121T A
+           WHERE 1 = 1 
+            AND A.CAR_STAT_CD ='60'
+            AND A.ORD_DLR_CD = #{dlrCd}
+            /*
+            AND NVL(A.OWN_STAT_CD, 'O') = 'O'
+            AND A.CONTRACT_NO IS NULL
+            */
+    </insert>
+
+    <!-- 재고실사 헤더 갯수 조회 -->
+    <select id="selectStockDueListsByConditionCnt" parameterType="StockDueSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.inv.service.dao.StockDueDAO.selectStockDueListsByConditionCnt] */
+        SELECT COUNT(*)
+          FROM (
+                SELECT DLR_CD
+                     , STOCK_DT
+                  FROM SA_0210T
+                 WHERE DLR_CD = #{sDlrCd}
+                 <if test='sStockDt != null'>
+                   AND STOCK_DT = #{sStockDt}
+                 </if>
+                 <if test='sVinNo  != null and sVinNo  != ""'>
+                   AND VIN_NO LIKE '%'|| UPPER(#{sVinNo}) ||'%'
+                 </if>
+                 <if test='sAgingCntRange  != null and sAgingCntRange  != ""'>
+                    <if test='sAgingCntRange == "A" '>
+                      AND STOCK_AGING_CNT between 0 and 3
+                    </if>
+                    <if test='sAgingCntRange == "B" '>
+                      AND STOCK_AGING_CNT between 4 and 6
+                    </if>
+                    <if test='sAgingCntRange == "C" '>
+                      AND STOCK_AGING_CNT between 7 and 9
+                    </if>
+                    <if test='sAgingCntRange == "D" '>
+                      AND STOCK_AGING_CNT <![CDATA[>=]]> 10
+                    </if>
+                 </if>
+                 <if test='sConfirmYn  != null and sConfirmYn  != ""'>
+                   AND CONFIRM_YN = #{sConfirmYn}
+                 </if>
+                 GROUP BY DLR_CD, STOCK_DT
+               )
+    </select>
+
+    <!-- 재고실사 헤더 조회 -->
+    <select id="selectStockDueListsByCondition" parameterType="StockDueSearchVO" resultType="StockDueVO">
+    /* [chn.bhmc.dms.sal.inv.service.dao.StockDueDAO.selectStockDueListsByCondition] */
+        SELECT *
+          FROM (
+            SELECT ROWNUM AS RNUM, T1.*
+              FROM (
+                        SELECT DLR_CD
+                             , STOCK_DT
+                             , COUNT(VIN_NO) AS CAR_TOT
+                             , SUM(CASE WHEN NVL(CONFIRM_YN, 'N') = 'Y' THEN 1
+                                        ELSE 0
+                                    END
+                                   )  AS CON_Y
+                             , SUM(CASE WHEN NVL(CONFIRM_YN, 'N') = 'N' THEN 1
+                                        ELSE 0
+                                    END
+                                   )  AS CON_N
+                          FROM SA_0210T
+                         WHERE DLR_CD = #{sDlrCd}
+                         <if test='sStockDt != null'>
+                           AND STOCK_DT = #{sStockDt}
+                         </if>
+                         <if test='sVinNo  != null and sVinNo  != ""'>
+                           AND VIN_NO LIKE '%'|| UPPER(#{sVinNo}) ||'%'
+                         </if>
+                         <if test='sAgingCntRange  != null and sAgingCntRange  != ""'>
+                            <if test='sAgingCntRange  == "A" '>
+                              AND STOCK_AGING_CNT between 0 and 3
+                            </if>
+                            <if test='sAgingCntRange  == "B" '>
+                              AND STOCK_AGING_CNT between 4 and 6
+                            </if>
+                            <if test='sAgingCntRange  == "C" '>
+                              AND STOCK_AGING_CNT between 7 and 9
+                            </if>
+                            <if test='sAgingCntRange  == "D" '>
+                              AND STOCK_AGING_CNT <![CDATA[>=]]> 10
+                            </if>
+                         </if>
+                         <if test='sConfirmYn  != null and sConfirmYn  != ""'>
+                           AND CONFIRM_YN = #{sConfirmYn}
+                         </if>
+                         GROUP BY DLR_CD, STOCK_DT
+
+                      ) T1
+                <where>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        ROWNUM <![CDATA[<=]]> #{lastIndex}
+                    </if>
+                </where>
+                )
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    RNUM > #{firstIndex}
+                </if>
+            </where>
+    </select>
+
+    <!-- 재고실사 내역 조회 -->
+    <select id="selectStockDueDetailListsByConditionCnt" parameterType="StockDueSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.inv.service.dao.StockDueDAO.selectStockDueDetailListsByConditionCnt] */
+        SELECT COUNT(*)
+          FROM SA_0210T A           /* 재고실사 */
+         WHERE A.DLR_CD = #{sDlrCd}
+         <if test='sStockDt != null'>
+           AND A.STOCK_DT = #{sStockDt}
+         </if>
+         <if test='sVinNo  != null and sVinNo  != ""'>
+           AND A.VIN_NO LIKE '%'|| UPPER(#{sVinNo}) ||'%'
+         </if>
+         <if test='sAgingCntRange  != null and sAgingCntRange  != ""'>
+            <if test='sAgingCntRange  == "A" '>
+              AND A.STOCK_AGING_CNT between 0 and 3
+            </if>
+            <if test='sAgingCntRange  == "B" '>
+              AND A.STOCK_AGING_CNT between 4 and 6
+            </if>
+            <if test='sAgingCntRange  == "C" '>
+              AND A.STOCK_AGING_CNT between 7 and 9
+            </if>
+            <if test='sAgingCntRange  == "D" '>
+              AND A.STOCK_AGING_CNT <![CDATA[>=]]> 10
+            </if>
+         </if>
+         <if test='sConfirmYn  != null and sConfirmYn  != ""'>
+           AND A.CONFIRM_YN = #{sConfirmYn}
+         </if>
+         <if test='sConfirmYn  != null and sConfirmYn  != ""'>
+           AND A.CONFIRM_YN = #{sConfirmYn}
+         </if>
+         <if test='sIsBarCode != null and sIsBarCode != ""'>
+            AND A.STOCK_DT = TO_DATE(TO_CHAR(SYSDATE, 'yyyy/MM/dd'), 'yyyy/MM/dd hh24:mi:ss')
+            AND A.VIN_NO IN
+            <foreach item="item" index="index" collection="barcodeList" open="(" separator="," close=")" >
+               #{item}
+            </foreach>
+         </if>
+    </select>
+
+    <!-- 재고실사 내역 조회 -->
+    <select id="selectStockDueDetailListsByCondition" parameterType="StockDueSearchVO" resultType="StockDueVO">
+    /* [chn.bhmc.dms.sal.inv.service.dao.StockDueDAO.selectStockDueDetailListsByCondition] */
+        SELECT *
+          FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_CARLINE_NM_NC(T1.CARLINE_CD) AS CARLINE_NM
+                 , FN_GET_MODEL_TP_NM(T1.MODEL_CD, T1.OCN_CD) AS MODEL_NM
+                 , FN_GET_OCN_NM_NC(T1.MODEL_CD, T1.OCN_CD) AS OCN_NM
+                 , FN_GET_EXT_COLOR_NM_NC(T1.EXT_COLOR_CD) AS EXT_COLOR_NM
+                 , FN_GET_INT_COLOR_NM_NC(T1.INT_COLOR_CD) AS INT_COLOR_NM
+                 , T1.*
+              FROM (
+                 SELECT A.DLR_CD                    --딜러코드
+                      , A.STOCK_DT                  --재고일자
+                      , A.CAR_ID                    --차량ID
+                      , A.VIN_NO                    --차대번호
+                      , A.CARLINE_CD                --차종코드
+                      , A.MODEL_CD                  --모델코드
+                      , A.OCN_CD                    --OCN코드
+                      , A.EXT_COLOR_CD              --외장색상코드
+                      , A.INT_COLOR_CD              --내장색상코드
+                      , A.CAR_STAT_CD               --차량상태코드
+                      , B.CMM_CD_NM       AS  CAR_STAT_NM   -- 차량상태
+                      , A.STRGE_CD                  --창고코드
+                      , C.STRGE_NM                  --창고명
+                      , A.LOC_CD                    --위치코드
+                      , D.LOC_NM                    --위치명
+                      , A.MANUFACT_YY_MM_DT         --제작년월일자
+                      , A.PLT_GI_DT
+                      , A.SIGNOFF_DT
+                      , A.GR_DT                     --입고일자
+                      , A.STOCK_AGING_CNT           --재고월령수
+                      , A.CONFIRM_YN                --확인여부
+                      , A.STOCK_STAT_CD             --재고상태코드
+                      , A.PHOTO_FILE_PATH_NM        --사진파일경로명
+                      , A.FILE_DOC_NO               --첨부파일문서번호
+                      , A.FILE_NO                   --파일번호
+                      , A.REMARK                    --비고
+                      , A.REG_USR_ID                --등록자ID
+                      , A.REG_DT                    --등록일자
+                      , A.UPDT_USR_ID               --수정자ID
+                      , A.UPDT_DT                   --수정일자
+                  FROM SA_0210T A           /* 재고실사 */
+                  LEFT OUTER JOIN (
+                                   SELECT A.CMM_CD
+                                        , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                    FROM CM_0303T A
+                                    LEFT OUTER JOIN CM_0304T B
+                                          ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                         AND A.CMM_CD = B.CMM_CD
+                                         AND B.LANG_CD = #{sLangCd}
+                                   WHERE A.CMM_GRP_CD = 'SAL001'    /*차량상태*/
+                                     AND A.USE_YN = 'Y'
+                                   ) B
+                    ON A.CAR_STAT_CD = B.CMM_CD
+                  LEFT OUTER JOIN (
+                                    SELECT A.DLR_CD
+                                         , A.STRGE_CD
+                                         , A.STRGE_NM
+                                      FROM CM_0104T A               /* 창고 */
+                                     INNER JOIN CM_0103T B
+                                        ON A.PLT_CD = B.PLT_CD
+                                       AND A.DLR_CD = B.DLR_CD
+                                  ) C
+                    ON A.STRGE_CD = C.STRGE_CD
+                   AND A.DLR_CD   = C.DLR_CD
+                  LEFT OUTER JOIN PT_0222T D
+                    ON A.DLR_CD   = D.DLR_CD
+                   AND A.STRGE_CD = D.STRGE_CD
+                   AND A.LOC_CD   = D.LOC_CD
+
+                 WHERE A.DLR_CD = #{sDlrCd}
+                 <if test='sStockDt != null'>
+                   AND A.STOCK_DT = #{sStockDt}
+                 </if>
+                 <if test='eStockDt != null'>
+                   AND A.STOCK_DT = #{eStockDt}
+                 </if>
+                 <if test='sVinNo  != null and sVinNo  != ""'>
+                   AND A.VIN_NO LIKE '%'|| UPPER(#{sVinNo}) ||'%'
+                 </if>
+                 <if test='sAgingCntRange  != null and sAgingCntRange  != ""'>
+                    <if test='sAgingCntRange  == "A" '>
+                      AND A.STOCK_AGING_CNT between 0 and 3
+                    </if>
+                    <if test='sAgingCntRange  == "B" '>
+                      AND A.STOCK_AGING_CNT between 4 and 6
+                    </if>
+                    <if test='sAgingCntRange  == "C" '>
+                      AND A.STOCK_AGING_CNT between 7 and 9
+                    </if>
+                    <if test='sAgingCntRange  == "D" '>
+                      AND A.STOCK_AGING_CNT <![CDATA[>=]]> 10
+                    </if>
+                 </if>
+                 <if test='sConfirmYn  != null and sConfirmYn  != ""'>
+                   AND A.CONFIRM_YN = #{sConfirmYn}
+                 </if>
+                 <if test='sIsBarCode != null and sIsBarCode != ""'>
+                    AND A.STOCK_DT = TO_DATE(TO_CHAR(SYSDATE, 'yyyy/MM/dd'), 'yyyy/MM/dd hh24:mi:ss')
+                    AND A.VIN_NO IN
+                    <foreach item="item" index="index" collection="barcodeList" open="(" separator="," close=")" >
+                       #{item}
+                    </foreach>
+                 </if>
+                 ORDER BY
+                 <choose>
+                     <when test='sort != null'>
+                         <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                             <choose>
+                                 <when test='item.field == "carId"'>             A.CAR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                 <when test='item.field == "vinNo"'>             A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                 <when test='item.field == "carlineCd"'>         A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                 <when test='item.field == "carlineNm"'>         A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                 <when test='item.field == "modelCd"'>           A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                 <when test='item.field == "modelNm"'>           A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                 <when test='item.field == "ocnCd"'>             A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                 <when test='item.field == "ocnNm"'>             A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                 <when test='item.field == "extColorCd"'>        A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                 <when test='item.field == "extColorNm"'>        A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                 <when test='item.field == "intColorCd"'>        A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                 <when test='item.field == "intColorNm"'>        A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                 <when test='item.field == "carStatCd"'>         A.CAR_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                 <when test='item.field == "carStatNm"'>         CAR_STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                 <when test='item.field == "strgeCd"'>           A.STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                 <when test='item.field == "strgeNm"'>           C.STRGE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                 <when test='item.field == "locCd"'>             A.LOC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                 <when test='item.field == "locNm"'>             D.LOC_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                 <when test='item.field == "manufactYyMmDt"'>    A.MANUFACT_YY_MM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "grDt"'>              A.GR_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                 <when test='item.field == "stockAgingCnt"'>     A.STOCK_AGING_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                 <when test='item.field == "confirmYn"'>         A.CONFIRM_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                 <when test='item.field == "stockStatCd"'>       A.STOCK_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                 <when test='item.field == "photoFilePathNm"'>   A.PHOTO_FILE_PATH_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "remark"'>            A.REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                 <otherwise>
+                                  A.DLR_CD ASC, A.STOCK_DT ASC, A.CONFIRM_YN ASC
+                                 </otherwise>
+                             </choose>
+                         </foreach>
+                     </when>
+                     <otherwise>
+                       A.DLR_CD ASC, A.STOCK_DT ASC, A.CONFIRM_YN ASC
+                     </otherwise>
+                 </choose>
+                 ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+            )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+
+    </select>
+
+    <!-- 재고실사 일괄저장 -->
+    <update id="saveAllStockDue" parameterType="StockDueVO">
+    /*[chn.bhmc.dms.sal.inv.service.dao.StockDueDAO.saveAllStockDue]*/
+        UPDATE SA_0210T    /* 재고실사 */
+           SET CONFIRM_YN = #{confirmYn}     --확인여부
+         WHERE DLR_CD = #{dlrCd}                    --딜러코드
+           AND STOCK_DT = #{stockDt}
+    </update>
+
+    <!-- 재고실사 선택저장 -->
+    <update id="saveSelectStockDue" parameterType="StockDueVO">
+    /*[chn.bhmc.dms.sal.inv.service.dao.StockDueDAO.saveSelectStockDue]*/
+        UPDATE SA_0210T    /* 재고실사 */
+           SET CONFIRM_YN = #{confirmYn}     --확인여부
+         WHERE DLR_CD = #{dlrCd}                    --딜러코드
+           AND STOCK_DT = #{stockDt}
+           AND VIN_NO = #{vinNo}
+    </update>
+
+    <!-- 재고실사 저장 -->
+    <update id="updateStockDue" parameterType="StockDueVO">
+    /* [chn.bhmc.dms.sal.inv.service.dao.StockDueDAO.updateStockDue] */
+        UPDATE SA_0210T    /* 재고실사 */
+           SET CONFIRM_YN         = #{confirmYn}                --확인여부
+             , STOCK_STAT_CD      = #{stockStatCd}              --재고상태코드
+             , PHOTO_FILE_PATH_NM = #{photoFilePathNm}          --사진파일경로명
+             , FILE_DOC_NO        = #{fileDocNo}                --첨부파일문서번호
+             , FILE_NO            = #{fileNo}                   --파일번호
+             , REMARK             = #{remark}                   --비고
+             , UPDT_USR_ID        = #{updtUsrId}                --수정자ID
+             , UPDT_DT            = SYSDATE
+         WHERE 1 = 1
+           AND DLR_CD             = #{dlrCd}                    --딜러코드
+           AND STOCK_DT           = #{stockDt}                  --재고일자
+           AND CAR_ID             = #{carId}                    --차량ID
+    </update>
+
+    <!-- 모바일 재고실사 저장 -->
+    <update id="updateMobStockDue" parameterType="StockDueVO">
+    /* [chn.bhmc.dms.sal.inv.service.dao.StockDueDAO.updateMobStockDue] */
+        UPDATE SA_0210T    /* 재고실사 */
+           SET CONFIRM_YN         = #{confirmYn}                --확인여부
+             , REMARK             = #{remark}                   --비고
+             , UPDT_USR_ID        = #{updtUsrId}                --수정자ID
+             , UPDT_DT            = SYSDATE
+         WHERE 1 = 1
+           AND DLR_CD             = #{dlrCd}                    --딜러코드
+           AND STOCK_DT           = #{stockDt}                  --재고일자
+           AND CAR_ID             = #{carId}                    --차량ID
+    </update>
+
+</mapper>

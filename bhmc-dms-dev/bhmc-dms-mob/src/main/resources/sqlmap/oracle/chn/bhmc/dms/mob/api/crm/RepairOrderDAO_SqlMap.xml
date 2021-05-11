@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : RepairOrderDAO_SqlMap.xml
+    Description : RO에 관한 데이터처리
+    author KyungMok Kim
+    since 2016. 03. 14.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 03. 14.  KyungMok Kim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.crm.dao.CrmRepairOrderDAO">
+
+    <!-- 서비스이력 조회  -->
+    <select id="selectRepairOrderHistoryByCondition" parameterType="RepairOrderSearchVO" resultType="chn.bhmc.dms.mob.api.crm.vo.RepairOrderVO">
+        /* [chn.bhmc.dms.ser.ro.service.dao.RepairOrderDAO.selectRepairOrderHistoryByCondition] */
+        SELECT DLR_CD
+              ,RO_DOC_NO
+              ,RO_TP
+              ,RO_TP_NM
+              ,VIN_NO
+              ,CAR_REG_NO
+              ,CAR_OWNER_ID
+              ,CAR_OWNER_NM
+              ,DRIVER_ID
+              ,DRIVER_NM
+              ,RUN_DIST_VAL
+              ,BASE_RO_NO
+              ,RO_STAT_CD
+              ,RO_STAT_NM
+              ,RO_DT
+              ,RO_GRP_NO
+              ,RO_START_DT
+              ,RO_END_DT
+              ,RO_REMARK
+              ,CALC_REMARK
+              ,LAST_RUN_DIST_VAL
+              ,REG_USR_NM
+              ,CARLINE_NM
+              ,MODEL_NM
+              ,RO_PRINT_DT
+              ,UPDT_DT
+              ,CALC_DOC_NO
+              ,CALC_PRSN_NM
+              ,CALC_REG_DT
+              ,CALC_DT
+              ,CALC_COMP_USR_NM
+              ,FN_CMM_CD_NM('COM020',PAYM_YN,#{sLangCd},'N') AS PAYM_YN_NM
+            FROM (
+            SELECT D.* , ROW_NUMBER() OVER(PARTITION BY DLR_CD , VIN_NO , RO_DOC_NO ORDER BY DLR_CD , VIN_NO , RO_DOC_NO ) AS RN
+              FROM(
+                  SELECT A.*
+                        ,B.ITEM_CD
+                        ,B.ITEM_NM
+                        ,C.LBR_CD
+                        ,C.LBR_NM
+                    FROM (
+                         SELECT RO.DLR_CD
+                               ,RO.RO_DOC_NO
+                               ,RO.RO_TP
+                               ,FN_CMM_CD_NM('SER031',RO.RO_TP, #{sLangCd}, 'N') AS RO_TP_NM
+                               ,RO.VIN_NO
+                               ,RO.CAR_REG_NO
+                               ,RO.CAR_OWNER_ID
+                               ,RO.CAR_OWNER_NM
+                               ,RO.DRIVER_ID
+                               ,RO.DRIVER_NM
+                               ,RO.RUN_DIST_VAL
+                               ,RO.GI_RUN_DIST_VAL AS LAST_RUN_DIST_VAL
+                               ,RO.BASE_RO_NO
+                               ,RO.RO_STAT_CD
+                               ,FN_CMM_CD_NM('SER030',RO.RO_STAT_CD, #{sLangCd}, 'N') AS RO_STAT_NM
+                               ,RO.RO_DT
+                               ,RO.RO_GRP_NO
+                               ,RO.RO_START_DT
+                               ,RO.RO_END_DT
+                               ,RO.RO_REMARK
+                               ,CA.CALC_REMARK
+                               ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = RO.REG_USR_ID AND DLR_CD = RO.DLR_CD) AS REG_USR_NM
+                               ,(SELECT FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_NM FROM SA_0121T WHERE VIN_NO = RO.VIN_NO AND ROWNUM = 1) AS CARLINE_NM
+                               ,(SELECT FN_GET_MODEL_NM(MODEL_CD) AS MODEL_NM FROM SA_0121T WHERE VIN_NO = RO.VIN_NO AND ROWNUM = 1) AS MODEL_NM
+                               ,RO.RO_PRINT_DT
+                               ,RO.UPDT_DT
+                               ,CA.CALC_DOC_NO
+                               ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = CA.REG_USR_ID AND DLR_CD = CA.DLR_CD) AS CALC_PRSN_NM
+                               ,CA.REG_DT AS CALC_REG_DT
+                               ,CA.CALC_DT
+                               ,CA.CALC_COMP_USR_NM
+                               ,CASE WHEN RO.RO_STAT_CD = '05' THEN 'Y' ELSE 'N' END AS PAYM_YN
+                           FROM SE_0300T RO, SE_0500T CA, SE_0550T RCV, SA_0121T VM
+                          WHERE RO.DLR_CD = #{sDlrCd}
+                            AND CA.DLR_CD(+)     = RO.DLR_CD
+                            AND CA.RO_DOC_NO(+)  = RO.RO_DOC_NO
+                            AND RCV.DLR_CD(+)    = RO.DLR_CD
+                            AND RCV.RO_DOC_NO(+) = RO.RO_DOC_NO
+                            AND RO.VIN_NO = VM.VIN_NO
+                            AND RO.RO_DT >= VM.CUST_SALE_DT
+                            AND (RO.GOODWILL_YN != 'Y' OR RO.GOODWILL_YN IS NULL )
+                            AND RO.RO_STAT_CD IN ('00', '05')
+                            AND CA.CALC_STAT_CD(+) = '00'
+                            AND CA.CALC_CANC_YN(+) = 'N'
+                            <if test='sVinNo != null and sVinNo !=""'>
+                                AND RO.VIN_NO = #{sVinNo}
+                            </if>
+                            <if test='sDlrCd != null and sDlrCd !=""'>
+                                AND RO.DLR_CD = #{sDlrCd}
+                            </if>
+                            <if test='sRoDocNo != null and sRoDocNo !=""'>
+                                AND RO.RO_DOC_NO = #{sRoDocNo}
+                            </if>
+                            <if test='sDriverNm != null and sDriverNm !=""'>
+                                AND RO.DRIVER_NM = #{sDriverNm}
+                            </if>
+                            <if test='sRoTp != null and sRoTp !=""'>
+                                AND RO.RO_TP = #{sRoTp}
+                            </if>
+                            <if test='sRoFromDt != null'>
+                                AND RO.RO_DT <![CDATA[>=]]> #{sRoFromDt}
+                            </if>
+                            <if test='sRoToDt != null'>
+                                AND RO.RO_DT <![CDATA[<]]> #{sRoToDt} + 1
+                            </if>
+                            <if test='sCarRegNo != null and sCarRegNo !=""'>
+                                AND RO.CAR_REG_NO = #{sCarRegNo}
+                            </if>
+                            <if test='sCarOwnerId != null and sCarOwnerId !=""'>
+                                AND RO.CAR_OWNER_ID = #{sCarOwnerId}
+                            </if>
+                            <if test='sCarOwnerNm != null and sCarOwnerNm !=""'>
+                                AND RO.CAR_OWNER_NM = #{sCarOwnerNm}
+                            </if>
+                            <if test='sRoStatCd != null and sRoStatCd !=""'>
+                                AND RO.RO_STAT_CD = #{sRoStatCd}
+                            </if>
+                     )A LEFT OUTER JOIN SE_0160T B
+                     ON A.DLR_CD    = B.DLR_CD
+                    AND A.RO_DOC_NO = B.DOC_NO
+                    AND B.PREFIX_ID = 'RO'
+                    LEFT OUTER JOIN SE_0170T C
+                     ON A.DLR_CD    = C.DLR_CD
+                    AND A.RO_DOC_NO = C.DOC_NO
+                    AND C.PREFIX_ID = 'RO'
+              )D WHERE 1=1
+                 <if test='sLbrNm != null and sLbrNm !=""'>
+                    AND LBR_NM = #{sLbrNm}
+                 </if>
+                 <if test='sItemNm != null and sItemNm !=""'>
+                    AND ITEM_NM = #{sItemNm}
+                 </if>
+                 <if test='sRegUsrNm != null and sRegUsrNm !=""'>
+                    AND REG_USR_NM = #{sRegUsrNm}
+                 </if>
+        ) WHERE RN = 1
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "roDt"'>      RO_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "roPrintDt"'> RO_PRINT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "updtDt"'>    UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "calcRegDt"'> CALC_REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "calcDt"'>    CALC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            RO_START_DT DESC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                RO_START_DT DESC
+            </otherwise>
+        </choose>
+    </select>
+
+</mapper>

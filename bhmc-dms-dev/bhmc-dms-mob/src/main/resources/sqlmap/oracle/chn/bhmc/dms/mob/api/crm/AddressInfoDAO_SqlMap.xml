@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : AddressInfoDAO_SqlMap.xml
+    Description : 관심차종 관한 데이터처리
+    author Kyo Jin Lee
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kyo Jin Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.crm.dao.CrmAddressInfoDAO">
+
+	<!-- 검색조건 -->
+    <sql id="searchInfoWhere">
+        <where>
+                DLR_CD = #{sDlrCd}
+                <if test='sSeq != null and sSeq != "" '>
+                    AND SEQ = #{sSeq}
+                </if>
+                <if test='sRefTableNm != null and sRefTableNm != "" '>
+                    AND REF_TABLE_NM = #{sRefTableNm}
+                </if>
+                <if test='sRefKeyNm != null '>
+                    AND REF_KEY_NM = #{sRefKeyNm}
+                </if>
+                <if test='sAddrTp != null '>
+                    AND ADDR_TP = #{sAddrTp}
+                </if>
+                <if test='sFlagYn != null '>
+                    AND FLAG_YN = #{sFlagYn}
+                </if>
+                <if test='sUseYn != null '>
+                    AND USE_YN = #{sUseYn}
+                </if>
+        </where>
+    </sql>
+
+    <!-- 주소 수를 조회한다. -->
+    <select id="selectAddressInfoByConditionCnt" parameterType="AddressInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.AddressInfoDAO.selectAddressInfoByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM CR_0116T T1
+          <include refid="searchInfoWhere" />
+    </select>
+
+    <!-- 주소를 조회한다. -->
+    <select id="selectAddressInfoByCondition" parameterType="AddressInfoSearchVO" resultType="chn.bhmc.dms.mob.api.crm.vo.AddressInfoVO">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.AddressInfoDAO.selectAddressInfoByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT T1.*
+                FROM CR_0116T T1
+                <include refid="searchInfoWhere" />
+                ORDER BY T1.FLAG_YN DESC , T1.REG_DT DESC
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+</mapper>

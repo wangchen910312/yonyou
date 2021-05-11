@@ -1,0 +1,442 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CallCenterActionDAO_SqlMap.xml
+    Description : 콜센터실행 에 관한 데이터처리
+    author in moon Lee
+    since 2016.05.17.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016.05.17.     in moon Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cal.service.dao.CallCenterActionDAO">
+
+
+    <!-- 콜센터실행 정보 검색조건 -->
+    <sql id="searchCallCenterAction">
+
+        <where>
+            AND CR0606T.DLR_CD = #{sDlrCd}
+
+            <!-- 콜 목록은 콜센터 관리자는 전체 조회 가능, sAllView : Y인경우 전체 조회, N인경우 아이디 조회 -->
+            <if test='sAllView != null and sAllView != ""'>
+                <choose>
+                    <when test='sAllView  == "N" '>
+                        AND CR0606T.CALL_PRSN_ID = #{sCallPrsnId}
+                    </when>
+                    <when test='sAllView  == "Y" '>
+                        <if test='sCallPrsnId != null and sCallPrsnId != ""'>
+                            AND CR0606T.CALL_PRSN_ID = #{sCallPrsnId}
+                        </if>
+                    </when>
+                </choose>
+            </if>
+
+            <!-- 고객정보 like 검색 -->
+            <if test='sCust != null and sCust != ""'>
+                AND ( CR0606T.CUST_NM LIKE '%'||#{sCust}||'%'
+                    OR CR0606T.HP_NO LIKE '%'||#{sCust}||'%'
+                    OR CR0606T.TEL_NO LIKE '%'||#{sCust}||'%'
+                    )
+            </if>
+
+            <!-- 콜업무타이틀명  검색 -->
+            <if test='sCallBizTitleNm != null and sCallBizTitleNm != ""'>
+                AND CR0606T.CALL_BIZ_TITLE_NM LIKE '%'||#{sCallBizTitleNm}||'%'
+            </if>
+            <!-- 고객명 검색 -->
+            <if test='sCustNm != null and sCustNm != ""'>
+                AND CR0606T.CUST_NM LIKE '%'||#{sCustNm}||'%'
+            </if>
+            <!-- 휴대전화 검색 -->
+            <if test='sHpNo != null and sHpNo != ""'>
+                AND CR0606T.HP_NO LIKE '%'||#{sHpNo}||'%'
+            </if>
+            <!-- 전화번호 검색 -->
+            <if test='sTelNo != null and sTelNo != ""'>
+                AND CR0606T.TEL_NO LIKE '%'||#{sTelNo}||'%'
+            </if>
+            <!-- 업무구분코드 검색 -->
+            <if test='sBizCd != null and sBizCd != ""'>
+                AND CR0606T.BIZ_CD = #{sBizCd}
+            </if>
+            <!-- 업무 SUB 코드 검색 -->
+            <if test='sBizSubCd != null and sBizSubCd != ""'>
+                AND BIZ_SUB_CD = #{sBizSubCd}
+            </if>
+            <!-- 콜상태가 미완료 일때 TODO 콜상태 완료 컬럼 변경.-->
+            <if test='sCallProcEndYn != null and sCallProcEndYn != ""'>
+                <choose>
+                    <when test='sCallProcEndYn == "incomplete" '>
+                        AND CALL_PROC_END_YN = 'N'
+                    </when>
+                    <when test='sCallProcEndYn == "complete" '>
+                        AND CALL_PROC_END_YN = 'Y'
+                    </when>
+                </choose>
+            </if>
+
+            <!-- 콜 상세 조회  -->
+            <if test='sCallSeq != null and sCallSeq != ""'>
+                AND CR0606T.CALL_SEQ = #{sCallSeq}
+            </if>
+
+           <!-- 등록일 기준 기간 검색 [고객배정에서 사용]
+           TODO 등록일 기준은???? 고객케어 등록일?? 아니면 콜등록일???
+           -->
+            <if test='sStartRegDt != null'>
+            <![CDATA[
+                AND CR0606T.REG_DT >= #{sStartRegDt}
+            ]]>
+            </if>
+            <if test='sEndRegDt != null'>
+            <![CDATA[
+                AND CR0606T.REG_DT < #{sEndRegDt}
+            ]]>
+            </if>
+
+            <!-- 배정여부  [고객배정에서 사용] -->
+            <if test='sAssignYn != null and sAssignYn != ""'>
+                <if test='sAssignYn == "Y"'>
+                     AND CR0606T.CALL_PRSN_ID IS NOT NULL           -- 처리담당자 배정
+                </if >
+                <if test='sAssignYn == "N"'>
+                     AND CR0606T.CALL_PRSN_ID IS NULL               -- 처리담당자 미배정
+                </if>
+            </if>
+        </where>
+    </sql>
+
+    <!-- 콜센터실행  정보 목록수를 조회한다. -->
+    <select id="selectCallCenterActionsByConditionCnt" parameterType="CallCenterActionSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cal.service.dao.CallCenterActionDAO.selectCallCenterActionsByConditionCnt] */
+        SELECT
+            COUNT(*) AS VALUE
+        FROM CR_0606T CR0606T
+        <include refid="searchCallCenterAction" />
+    </select>
+
+    <!-- 콜센터실행  정보 목록을 조회한다. -->
+    <select id="selectCallCenterActionsByCondition" parameterType="CallCenterActionSearchVO" resultType="CallCenterActionVO">
+        /* [chn.bhmc.dms.crm.cal.service.dao.CallCenterActionDAO.selectCallCenterActionsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                     CR0606T.DLR_CD                    --딜러코드
+                    ,CR0606T.CALL_SEQ                  --콜일련번호
+                    ,CR0606T.CALL_TP                   --콜유형
+                    ,CR0606T.REF_TABLE_NM              --참조테이블명
+                    ,CR0606T.REF_KEY_NM                --참조키명
+                    ,CR0606T.BIZ_CD                    --업무코드
+                    ,FN_CMM_CD_NM('CRM361',CR0606T.BIZ_CD, #{sLangCd}, 'N') AS BIZ_CD_NM   --업무코드
+                    ,DECODE (CR0606T.BIZ_CD, '05'
+                        ,FN_CMM_CD_NM('CRM094',CR0606T.BIZ_SUB_CD, #{sLangCd}, 'N')
+                        ,'06'
+                        ,FN_CMM_CD_NM('CRM702',CR0606T.BIZ_SUB_CD, #{sLangCd}, 'N')
+                        ,''
+                    ) AS BIZ_SUB_CD_NM --업무 SUB 코드
+                    ,CR0606T.CALL_PRSN_ID              --콜담당자ID
+                    ,FN_CMM_CD_NM('CRM608',CR0606T.CALL_RSLT_CD, #{sLangCd}, 'N') AS CALL_RSLT_CD_NM   --콜결과코드
+                    ,CR0606T.REC_FILE_ID               --녹취파일ID
+                    ,CR0606T.CALL_CONT                 --콜내용
+                    ,CR0606T.SCHE_CALL_DT              --예정콜일자
+                    ,CR0606T.REAL_CALL_DT              --실제콜일자
+                    ,CR0606T.CALL_PRSN_ALLOC_DT        --콜담당자배정일자
+                    ,CR0606T.REG_USR_ID                --등록자ID
+                    ,CR0606T.REG_DT                    --등록일자
+                    ,CR0606T.UPDT_USR_ID               --수정자ID
+                    ,CR0606T.UPDT_DT                   --수정일자
+                    ,CR0606T.CALL_CNT                  --콜수
+                    ,CR0606T.EXTR_DGRE_CNT             --고객추출조건번호
+                    ,CR0606T.CUST_NO                   --고객번호
+                    ,CR0606T.TEL_NO                    --전화번호
+                    ,CR0606T.HP_NO                     --휴대폰번호
+                    ,CR0606T.WECHAT_ID                 --위챗ID
+                    ,CR0606T.EMAIL_NM                  --이메일명
+                    ,CR0606T.SUNG_NM                   --성명
+                    ,CR0606T.CITY_NM                   --도시명
+                    ,CR0606T.DIST_NM                   --지역명
+                    ,CR0606T.ZIP_CD                    --우편번호
+                    ,CR0606T.EXT_ZIP_CD                --확장우편번호
+                    ,CR0606T.ADDR_NM                   --주소명
+                    ,CR0606T.ADDR_DETL_CONT            --주소상세내용
+                    ,CR0606T.CUST_NM                   --고객명
+                    ,CR0606T.CALL_START_DT             --콜시작일자
+                    ,CR0606T.CALL_END_DT               --콜종료일자
+                    ,CR0606T.CALL_VSIT_RESV_DT         --콜내방예약일자
+                    ,CR0606T.STSF_IVST_DT              --만족도조사일자
+                    ,CR0606T.REMARK                    --비고
+                    ,CR0606T.CALL_PROC_END_YN          --콜처리완료여부
+                    ,CR0606T.CALL_BIZ_TITLE_NM         --콜업무타이틀명
+                    ,DECODE(CR0606T.CALL_PRSN_ID, NULL, 'N', 'Y') AS ASSIGN_YN
+                    ,FN_CMM_CD_NM('CRM631',DECODE(CR0606T.CALL_PRSN_ID, NULL, '02', '01'), #{sLangCd}, 'N') AS ASSIGN_YN_NM   -- 배정여부
+                    ,FN_GET_USER_NM(CR0606T.REG_USR_ID) AS REG_USR_NM           --등록자이름
+                    ,FN_GET_USER_NM(CR0606T.CALL_PRSN_ID) AS CALL_PRSN_NM       --담당자이름
+                    ,FN_GET_USER_NM(CR0606T.CALL_ASSIGN_ID) AS CALL_ASSIGN_ID_NM   --배정인
+                    ,CR0606T.MNG_USR_NM     --고객 담당자명
+                    ,CR0606T.PURC_MNG_NM    --구매담당자명
+                    ,CR0606T.USE_CUST_NM    --사용처 연계 고객명
+                    ,CR0606T.USE_HP_NO      --사용처 연계 핸드폰 번호
+                FROM CR_0606T CR0606T
+                <include refid="searchCallCenterAction" />
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+
+                                <!-- OB실행, OB배정관리 정렬완료 20180809 -->
+                                <when test='item.field == "custNm"'>            CR0606T.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "hpNo"'>              CR0606T.HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                <when test='item.field == "telNo"'>             CR0606T.TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                <when test='item.field == "callCnt"'>           CR0606T.CALL_CNT <choose><when test='item.dir == "asc"'>ASC NULLS FIRST </when><otherwise>DESC NULLS LAST</otherwise></choose>          </when>
+                                <when test='item.field == "callPrsnNm"'>        CALL_PRSN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                                <when test='item.field == "scheCallDtFormat"'>  CR0606T.SCHE_CALL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "regUsrNm"'>          REG_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                                <when test='item.field == "regDtFormat"'>       CR0606T.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+
+                                <when test='item.field == "callBizTitleNm"'>    CALL_BIZ_TITLE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "assignYnNm"'>          ASSIGN_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                                <when test='item.field == "callStartDtFormat"'> CR0606T.CALL_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "callEndDtFormat"'>   CR0606T.CALL_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+
+                                <when test='item.field == "mngUsrNm"'>          CR0606T.MNG_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "purcMngNm"'>         CR0606T.PURC_MNG_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "useCustNm"'>         CR0606T.USE_CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "useHpNo"'>           CR0606T.USE_HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "callAssignIdNm"'>    CALL_ASSIGN_ID_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+
+                                <when test='item.field == "dlrCd"'>             CR0606T.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                <when test='item.field == "callSeq"'>           CR0606T.CALL_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                <when test='item.field == "callTp"'>            CR0606T.CALL_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                                <when test='item.field == "refTableNm"'>        CR0606T.REF_TABLE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "refKeyNm"'>          CR0606T.REF_KEY_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "bizCd"'>             CR0606T.BIZ_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                <when test='item.field == "callPrsnId"'>        CR0606T.CALL_PRSN_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "callRsltCd"'>        CR0606T.CALL_RSLT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "recFileId"'>         CR0606T.REC_FILE_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "callCont"'>          CR0606T.CALL_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "callPrsnAllocDt"'>   CR0606T.CALL_PRSN_ALLOC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regUsrId"'>          CR0606T.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "updtUsrId"'>         CR0606T.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "updtDt"'>            CR0606T.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+
+
+                                <otherwise>
+                                    CR0606T.SCHE_CALL_DT ASC, CALL_SEQ DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        CR0606T.SCHE_CALL_DT ASC, CALL_SEQ DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 콜센터실행  상세 정보를 조회한다. -->
+    <select id="selectCallCenterActionByKey" parameterType="CallCenterActionSearchVO" resultType="CallCenterActionVO">
+        /* [chn.bhmc.dms.crm.cal.service.dao.CallCenterActionDAO.selectCallCenterActionByKey] */
+        SELECT
+             CR0606T.DLR_CD                    --딜러코드
+            ,CR0606T.CALL_SEQ                  --콜일련번호
+            ,CR0606T.CALL_TP                   --콜유형
+            ,CR0606T.REF_TABLE_NM              --참조테이블명
+            ,CR0606T.REF_KEY_NM                --참조키명
+            ,CR0606T.BIZ_CD                    --업무코드
+            ,CR0606T.BIZ_SUB_CD                --업무SUB코드
+            ,CR0606T.CALL_PRSN_ID              --콜담당자ID
+            ,CR0606T.CALL_RSLT_CD              --콜결과코드
+            ,CR0606T.REC_FILE_ID               --녹취파일ID
+            ,CR0606T.CALL_CONT                 --콜내용
+            ,CR0606T.SCHE_CALL_DT              --예정콜일자
+            ,CR0606T.REAL_CALL_DT              --실제콜일자
+            ,CR0606T.CALL_PRSN_ALLOC_DT        --콜담당자배정일자
+            ,CR0606T.REG_USR_ID                --등록자ID
+            ,CR0606T.REG_DT                    --등록일자
+            ,CR0606T.UPDT_USR_ID               --수정자ID
+            ,CR0606T.UPDT_DT                   --수정일자
+            ,CR0606T.CALL_CNT                  --콜수
+
+            ,CR0606T.EXTR_DGRE_CNT             --고객추출조건번호
+            ,CR0606T.CUST_NO                   --고객번호
+            ,CR0606T.TEL_NO                    --전화번호
+            ,CR0606T.HP_NO                     --휴대폰번호
+            ,CR0606T.WECHAT_ID                 --위챗ID
+            ,CR0606T.EMAIL_NM                  --이메일명
+            ,CR0606T.SUNG_NM                   --성명
+            ,CR0606T.CITY_NM                   --도시명
+            ,CR0606T.DIST_NM                   --지역명
+            ,CR0606T.ZIP_CD                    --우편번호
+            ,CR0606T.EXT_ZIP_CD                --확장우편번호
+            ,CR0606T.ADDR_NM                   --주소명
+            ,CR0606T.ADDR_DETL_CONT            --주소상세내용
+            ,CR0606T.CUST_NM                   --고객명
+            ,CR0606T.CALL_START_DT             --콜시작일자
+            ,CR0606T.CALL_END_DT               --콜종료일자
+            ,CR0606T.CALL_VSIT_RESV_DT         --콜내방예약일자
+            ,CR0606T.STSF_IVST_DT              --만족도조사일자
+            ,CR0606T.REMARK                    --비고
+            ,CR0606T.CALL_PROC_END_YN          --콜처리완료여부
+            ,CR0606T.CALL_BIZ_TITLE_NM         --콜업무타이틀명
+            ,CR0606T.CUST_TP        --고객구분(개인/법인)
+            ,CR0606T.USE_CUST_NM    --사용처 연계 고객명
+            ,CR0606T.USE_HP_NO      --사용처 연계 핸드폰 번호
+            ,CR0606T.PURC_MNG_NM    --구매담당자명
+<if test='sBizCd != null and sBizCd != "" '>
+    <!-- sBizCd : 01(고객), 02(리드), 03(판매기회), 04(VOC), 05(만족도조사), 06(캠페인), 07(멤버십), 08(내방), 09(고객케어) -->
+    <choose>
+        <when test='sBizCd eq "05"'>    <!-- 만족도조사 -->
+            ,CR0901.STSF_IVST_MTH_CD -- [만족도조사] 조사유형
+            ,CR0901.START_DT      -- [만족도조사] 시작일
+            ,CR0901.END_DT        -- [만족도조사] 종료일
+            ,CR0901.SEQ           -- [만족도조사] 번호
+            ,REF_TABLE_NM.STSF_IVST_RSLT_SEQ        -- [만족도조사] 만족도조사 결과 일련번호
+
+            FROM CR_0606T CR0606T
+            INNER JOIN CR_0905T REF_TABLE_NM ON CR0606T.REF_KEY_NM = TO_CHAR(REF_TABLE_NM.STSF_IVST_RSLT_SEQ) AND CR0606T.BIZ_CD = '05'
+            INNER JOIN CR_0901T CR0901 ON CR0901.SEQ = REF_TABLE_NM.STSF_IVST_SEQ
+
+        </when>
+        <when test='sBizCd eq "06"'>    <!-- 캠페인 -->
+            ,REF_TABLE_NM.TALK_PLAN     -- [캠페인] 화술방안
+            ,REF_TABLE_NM.ACTIVE_CONT        -- [캠페인] 요약설명
+            ,REF_TABLE_NM.ACTIVE_FILE_DOC_NO -- [캠페인] 첨부파일
+            ,REF_TABLE_NM.MAK_CD
+
+            FROM CR_0606T CR0606T
+            INNER JOIN CR_0701T REF_TABLE_NM ON CR0606T.REF_MST_KEY = REF_TABLE_NM.MAK_CD AND CR0606T.DLR_CD = REF_TABLE_NM.DLR_CD AND CR0606T.BIZ_CD = '06'
+
+        </when>
+        <when test='sBizCd eq "09"'>    <!-- 고객케어 -->
+            ,REF_TABLE_NM.CUST_CARE_CONT-- [고객케어] 고객케어내용
+
+            FROM CR_0606T CR0606T
+            INNER JOIN CR_0501T REF_TABLE_NM ON CR0606T.REF_MST_KEY = REF_TABLE_NM.CUST_CARE_SEQ AND CR0606T.BIZ_CD = '09'
+
+        </when>
+    </choose>
+</if>
+            WHERE CR0606T.DLR_CD = #{sDlrCd}
+            AND CR0606T.CALL_SEQ = #{sCallSeq}
+
+    </select>
+
+    <!-- 콜센터실행 정보 등록 -->
+    <insert id="insertCallCenterAction" parameterType="CallCenterActionVO" >
+        /* [chn.bhmc.dms.crm.cal.service.dao.CallCenterActionDAO.insertCallCenterAction] */
+
+        INSERT INTO CR_0606T (    --콜센터콜목록
+             DLR_CD                    --딜러코드
+            ,CALL_SEQ                  --콜일련번호
+            ,CALL_TP                   --콜유형
+            ,REF_TABLE_NM              --참조테이블명
+            ,REF_KEY_NM                --참조키명
+            ,BIZ_CD                    --업무코드
+            ,SCHE_CALL_DT              --예정콜일자
+            ,CALL_PRSN_ID              --콜담당자ID
+            ,CALL_CNT                  --콜수
+
+            ,EXTR_DGRE_CNT              --고객추출조건번호
+            ,CUST_NO                    --고객번호
+            ,TEL_NO                     --전화번호
+            ,HP_NO                      --휴대폰번호
+            ,WECHAT_ID                  --위챗ID
+            ,EMAIL_NM                   --이메일명
+            ,SUNG_NM                    --성명
+            ,CITY_NM                    --도시명
+            ,DIST_NM                    --지역명
+            ,ZIP_CD                     --우편번호
+            ,EXT_ZIP_CD                 --확장우편번호
+            ,ADDR_NM                    --주소명
+            ,ADDR_DETL_CONT             --주소상세내용
+
+            ,REG_USR_ID                --등록자ID
+            ,REG_DT                    --등록일자
+            ,CALL_START_DT             --콜시작일자
+            ,CALL_END_DT               --콜종료일자
+            ,CALL_VSIT_RESV_DT         --콜내방예약일자
+            ,REMARK                    --비고
+
+
+        ) VALUES (
+             #{dlrCd}                    --딜러코드
+            ,SEQ_CR_0606T.NEXTVAL        --콜일련번호
+            ,#{callTp}                   --콜유형
+            ,#{refTableNm}               --참조테이블명
+            ,#{refKeyNm}                 --참조키명
+            ,#{bizCd}                    --업무코드
+            ,#{scheCallDt}               --예정콜일자
+            ,#{callPrsnId}               --콜담당자ID
+            ,#{callCnt}                  --콜수
+
+            ,#{extrDgreCnt}              --고객추출조건번호
+            ,#{custNo}                   --고객번호
+            ,#{telNo}                    --전화번호
+            ,#{hpNo}                     --휴대폰번호
+            ,#{wechatId}                 --위챗ID
+            ,#{emailNm}                  --이메일명
+            ,#{sungNm}                   --성명
+            ,#{cityNm}                   --도시명
+            ,#{distNm}                   --지역명
+            ,#{zipCd}                    --우편번호
+            ,#{extZipCd}                 --확장우편번호
+            ,#{addrNm}                   --주소명
+            ,#{addrDetlCont}             --주소상세내용
+
+            ,#{regUsrId}                 --등록자ID
+            ,SYSDATE                     --등록일자
+
+            ,#{callStartDt}              --콜시작일자
+            ,#{callEndDt}                --콜종료일자
+            ,#{callVsitResvDt}           --콜내방예약일자
+            ,#{remark}                   --비고
+        )
+    </insert>
+
+    <!-- 콜센터실행 정보 수정 -->
+    <update id="updateCallCenterAction" parameterType="CallCenterActionVO" >
+        /* [chn.bhmc.dms.crm.cal.service.dao.CallCenterActionDAO.updateCallCenterAction] */
+        UPDATE CR_0606T SET    --콜센터콜목록
+             UPDT_USR_ID        = #{updtUsrId}                --수정자ID
+            ,UPDT_DT            = SYSDATE                     --수정일자
+            ,CALL_RSLT_CD       = #{callRsltCd}               --콜결과코드
+            ,REAL_CALL_DT       = SYSDATE                     --실제콜일자
+            ,SCHE_CALL_DT       = #{scheCallDt}               --예정콜일자
+            ,CALL_START_DT      = #{callStartDt}              --콜시작일자
+            ,CALL_END_DT        = #{callEndDt}                --콜종료일자
+            ,CALL_CONT          = #{callCont}                 --콜내용
+            ,CALL_VSIT_RESV_DT  = #{callVsitResvDt}           --콜내방예약일자
+            ,STSF_IVST_DT       = #{stsfIvstDt}               --만족도조사일자
+            ,REMARK             = #{remark}                   --비고
+            ,CALL_CNT           = #{callCnt}                  --콜횟수
+            ,CALL_PROC_END_YN   = #{callProcEndYn}            --콜처리완료여부
+        <if test='hpNo != null and hpNo != ""'>
+            ,HP_NO        = #{hpNo}                -- 휴대폰번호
+        </if>
+        <if test='recFileId != null and recFileId != ""'>
+            ,REC_FILE_ID        = #{recFileId}                --첨부파일명
+        </if>
+        <if test=' callHisSeq > 0 '>
+            ,CALL_HIS_SEQ       = #{callHisSeq}               --콜 디바이스 히스토리 번호
+        </if>
+        WHERE DLR_CD            = #{dlrCd}                    --딜러코드
+        AND CALL_SEQ            = #{callSeq}                  --콜일련번호
+    </update>
+
+</mapper>

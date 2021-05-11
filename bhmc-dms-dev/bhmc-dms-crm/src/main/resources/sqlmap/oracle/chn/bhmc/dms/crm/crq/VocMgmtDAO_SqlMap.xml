@@ -1,0 +1,1470 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : MarketingCampaignDAO_SqlMap.xml
+    Description : 마케팅 캠페인에 관한 데이터처리
+    author hyoung jun an
+    since 2016. 03. 04.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016.03.04     hyoung jun an    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO">
+
+
+    <sql id="searchVocMgmt">
+
+        <where>
+            AND CR0601T.DLR_CD = #{sDlrCd}
+            <!-- 고객정보 like 검색 -->
+            <if test='sCust != null and sCust != ""'>
+                AND ( CR0601T.CUST_NM LIKE '%'||#{sCust}||'%'
+                    OR CR0601T.HP_NO LIKE '%'||#{sCust}||'%'
+                    OR CR0601T.CUST_PREF_COMM_NO LIKE '%'||#{sCust}||'%'
+                    OR CR0601T.HOME_TEL_NO LIKE '%'||#{sCust}||'%'
+                    )
+            </if>
+
+            <!-- Permission 으로 실처리인ID 검색(제조사 : REAL_PPROC_ID / 딜러 : PPROC_ID )-->
+            <if test='sMngScId != null and sMngScId != ""'>
+                AND (
+                        CR0601T.BHMC_YN = 'Y' and CR0601T.REAL_PPROC_ID = #{sMngScId}
+                     OR CR0601T.BHMC_YN = 'N' and CR0601T.PPROC_ID = #{sMngScId}
+                )
+
+            </if>
+
+            <!-- 서비스요청출처 -->
+            <if test='sBhmcYn != null and sBhmcYn != ""'>
+                AND CR0601T.BHMC_YN = #{sBhmcYn}
+            </if>
+
+            <!-- 처리인 이름 -->
+            <if test='sPprocIdNm != null and sPprocIdNm != ""'>
+                AND CR0601T.PPROC_ID IN (SELECT USR_ID FROM CM_0801T WHERE DLR_CD = #{sDlrCd} AND USR_NM LIKE '%'||#{sPprocIdNm}||'%')
+            </if>
+
+            <!-- 서비스에서 검색 조건. -->
+            <if test='sVocSubCd != null and sVocSubCd != ""'>
+                AND (
+                    CR0601T.VOC_TP_SUB1_CD IN (SELECT CMM_CD FROM CM_0303T WHERE CMM_GRP_CD = 'CRM605' AND REMARK2 = #{sVocSubCd} )
+                    AND CR0601T.VOC_TP_SUB2_CD IN (SELECT CMM_CD FROM CM_0303T WHERE CMM_GRP_CD = 'CRM606' AND REMARK2 = #{sVocSubCd} )
+                    OR CR0601T.VOC_TP_SUB3_CD IN (SELECT CMM_CD FROM CM_0303T WHERE CMM_GRP_CD = 'CRM607' AND REMARK2 = #{sVocSubCd} )
+                )
+            </if>
+
+            <if test='sBhmcVocNo!= null and sBhmcVocNo != ""'>
+                AND CR0601T.BHMC_VOC_NO LIKE '%'||#{sBhmcVocNo}||'%'                       --제조사 VOC 번호
+            </if>
+
+            <if test='sRegStartDt != null and sRegEndDt != null'>
+                AND CR0601T.REG_DT <![CDATA[>=]]> #{sRegStartDt}
+                AND CR0601T.REG_DT <![CDATA[<=]]> #{sRegEndDt}
+            </if>
+            
+               <if test='sVocNo != null and sVocNo != ""'>
+                AND CR0601T.VOC_NO LIKE '%'||#{sVocNo}||'%'                     
+            </if>
+            
+            
+             <if test='sEvalAllocDtStart != null or sEvalAllocDtEnd != null'>
+	             <if test='sEvalAllocDtStart != null'>
+	               AND CR0601T.EVAL_ALLOC_DT <![CDATA[>=]]> trunc(#{sEvalAllocDtStart},'DD')
+	             </if>
+	             <if test='sEvalAllocDtEnd != null'>
+	                   AND CR0601T.EVAL_ALLOC_DT <![CDATA[<]]> trunc(#{sEvalAllocDtEnd},'DD')+1
+	              </if>
+             </if>
+            
+            <if test='sVocTpCd   != null and sVocTpCd   != ""'> AND CR0601T.VOC_TP_CD   = #{sVocTpCd}   </if>
+            <if test='sVocStatCd != null and sVocStatCd != ""'> AND CR0601T.VOC_STAT_CD = #{sVocStatCd} </if>
+            <if test='sCmplCauCd != null and sCmplCauCd != ""'> AND CR0601T.CMPL_CAU_CD = #{sCmplCauCd} </if>
+            <if test='sPprocDeptNm != null and sPprocDeptNm != ""'> AND CR0601T.PPROC_DEPT_NM = #{sPprocDeptNm} </if>
+            <if test='sAssignYn != null and sAssignYn != ""'>
+                <if test='sAssignYn == "Y"'>
+                     AND CR0601T.PPROC_ID IS NOT NULL           -- 처리담당자 배정
+                </if >
+                <if test='sAssignYn == "N"'>
+                     AND CR0601T.PPROC_ID IS NULL               -- 처리담당자 미배정
+                </if>
+            </if>
+        </where>
+    </sql>
+
+
+    <!-- VOC 정보를 등록한다. -->
+    <insert id="insertVocMgmt" parameterType="VocMgmtVO" >
+        /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.insertVocMgmt] */
+
+        INSERT INTO CR_0601T    --VOC마스터
+        (
+          DLR_CD                         --딜러코드
+         ,VOC_NO                         --VOC번호
+         ,VOC_STAT_CD                    --VOC상태코드
+         ,VOC_TP_CD                      --VOC유형코드
+         ,VOC_TP_SUB_CD                  --VOC유형하위코드
+         ,TEND_CD                        --성향코드
+         ,VOC_TP_SUB1_CD                 --VOC유형하위1코드
+         ,VOC_TP_SUB2_CD                 --VOC유형하위2코드
+         ,VOC_TP_SUB3_CD                 --VOC유형하위3코드
+         ,ACPT_SRC_CD                    --접수출처코드
+         ,ACTIVE_GAIN_PATH_CD            --활동획득경로코드
+         ,CMPL_CAU_CD                    --불만원인코드
+         ,PROR_CD                        --우선순위코드
+         ,PROC_LMT_CD                    --처리시한코드
+         ,VOC_END_DT                     --VOC종료일자
+         ,DLR_CMP_COMM_YN                --딜러사연락여부
+         ,EMGC_RESC_FST_CALL_YN          --긴급구조첫통화여부
+         ,EMGC_RESC_YN                   --긴급구조여부
+         ,EMGC_RESC_REASON_NM            --긴급구조원인명
+         ,EMGC_RESC_STSF_CONT            --긴급구조만족도내용
+         ,EMGC_RESC_LOC_CONT             --긴급구조위치내용
+
+         ,RECEIVE_TEL_NO                 --수신전화번호
+         ,CUST_NM                        --고객명
+         ,CUST_NO                        --고객번호
+         ,PCON_CUST_NM                   --연계인고객명
+         ,PCON_CUST_NO                   --연계인고객번호
+         ,CUST_PREF_COMM_NO              --고객선호연락번호
+         ,HP_NO                          --휴대폰번호
+         ,HOME_TEL_NO                    --집전화번호
+         ,OFFICE_TEL_NO                  --직장전화번호
+         ,PCON_CUST_MJR_TEL_NO           --연계인고객주요전화번호
+         ,PCON_CUST_HP_NO                --연계인고객휴대폰번호
+         ,PCON_CUST_HOME_TEL_NO          --연계인고객집전화번호
+         ,PCON_CUST_OFFICE_TEL_NO        --연계인고객직장전화번호
+         ,RESV_DT                        --예약일자
+         ,REPAIR_BOOK_ID                 --정비예약ID
+
+         ,SEND_TEL_NO                    --발신전화번호
+         ,PCON_REL_CD                    --연계인관계코드
+         ,PPROC_DEPT_NM                  --처리부서명
+         ,PPROC_ID                       --처리인ID
+         ,COOP_DEPT_NM                   --협조부서명
+         ,BIZ_DEPT_NM                    --사업부서명
+         ,OFFICE_NM                      --사무소명
+         ,SUNG_CD                        --성코드
+         ,SUNG_NM                        --성명
+         ,CITY_CD                        --도시코드
+         ,CITY_NM                        --도시명
+         ,CUST_REQ_CONT                  --고객요청내용
+
+         ,VIN_NO                         --차대번호
+         ,CAR_REG_NO                     --차량등록번호
+         ,CARLINE_CD                     --차종코드
+         ,CARLINE_NM                     --차종명
+         ,MODEL_CD                       --모델코드
+         ,MODEL_NM                       --모델명
+         ,OCN_CD                         --OCN코드
+         ,OCN_NM                         --OCN명
+         ,RUN_DIST_VAL                   --주행거리값
+         ,ACPT_DEPT_NM                   --접수부서
+         ,PACPT_ID                       --접수자ID
+         ,ACPT_DT                        --접수일자
+
+         ,PEVAL_ID                       --심사인ID
+         ,RETURN_CAU_CONT                --반송원인내용
+         ,PMO_CAU_CD                     --승급원인코드
+         ,REAL_PPROC_ID                  --실처리인ID
+         ,TRACE_DT                       --추적일자
+         ,PPROC_TEL_NO                   --처리인전화번호
+         ,STSF_IVST_EMP_ID               --만족도조사인ID
+         ,MTH_ACHV_HM                    --방안달성시간
+
+         ,EVAL_ALLOC_DT                  --심사배정일자
+         ,SEND_CD                        --자료전송상태
+         ,PMO_DT                         --승급일자
+         ,PROC_DT                        --처리일자
+         ,PPROC_EMAIL_NM                 --처리인이메일명
+         ,STSF_IVST_DT                   --만족도조사일자
+         ,TRACE_RSLT_CONT                --추적결과내용
+
+         ,CALL_CEN_OPN_CONT              --콜센터의견내용
+         ,REV_MTH_CONT                   --검토방안내용
+         ,PROC_RSLT_CONT                 --처리결과내용
+         ,STSF_IVST_RSLT_CONT            --만족도조사결과내용
+
+         ,CMPL_STSF_NM                   --불만만족도명
+         ,CMPL_RE_ACPT_YN                --불만재접수여부
+         ,CMPL_RE_ACPT_CNT               --불만재접수횟수
+         ,SER_REQ_NO                     --서비스요청번호
+
+         ,CMPL_DL_DEPT_NM                --불만전달부서명
+         ,CMPL_DL_EMP_ID                 --불만전달자ID
+         ,SALE_DT                        --판매일자
+         ,DSTB_NO                        --물류번호
+
+         ,SALES_ACTIVE_SRC_CD            --영업활동출처코드
+         ,REL_SALES_ACTIVE_NO            --관계영업활동번호
+
+         ,PAR_ORD_YN                     --부품오더여부
+         ,PAR_ORD_DT                     --부품오더일자
+         ,PAR_ARRV_DT                    --부품도착일자
+         ,ITEM_CD                        --품목코드
+
+         ,REG_USR_ID                     --등록자ID
+         ,REG_DT                         --등록일자
+         ,EMGC_RESC_START_YN             --긴급구조시작여부 - 사용안함, 긴급구조여부(EMGC_RESC_YN)로 대체.  DB인서트는 필수라서 VO랑 INSERT에 넣어놈
+
+         ,CALL_HIS_SEQ                   --콜센터 이력 번호
+         ,REC_FILE_ID                   --콜센터 녹음파일 명
+
+
+        )
+        VALUES
+        (
+          #{dlrCd}                         --딜러코드
+         ,#{vocNo}                         --VOC번호
+         ,#{vocStatCd}                     --VOC상태코드
+         ,#{vocTpCd}                       --VOC유형코드
+         ,#{vocTpSubCd}                    --VOC유형하위코드
+         ,#{tendCd}                        --성향코드
+         ,#{vocTpSub1Cd}                   --VOC유형하위1코드
+         ,#{vocTpSub2Cd}                   --VOC유형하위2코드
+         ,#{vocTpSub3Cd}                   --VOC유형하위3코드
+         ,#{acptSrcCd}                     --접수출처코드
+         ,#{activeGainPathCd}              --활동획득경로코드
+         ,#{cmplCauCd}                     --불만원인코드
+         ,#{prorCd}                        --우선순위코드
+         ,#{procLmtCd}                     --처리시한코드
+         ,#{vocEndDt}                      --VOC종료일자
+         ,#{dlrCmpCommYn}                  --딜러사연락여부
+         ,#{emgcRescFstCallYn}             --긴급구조첫통화여부
+         ,#{emgcRescYn}                    --긴급구조여부
+         ,#{emgcRescReasonNm}              --긴급구조원인명
+         ,#{emgcRescStsfCont}              --긴급구조만족도내용
+         ,#{emgcRescLocCont}               --긴급구조위치내용
+
+         ,#{receiveTelNo}                  --수신전화번호
+         ,#{custNm}                        --고객명
+         ,#{custNo}                        --고객번호
+         ,#{pconCustNm}                    --연계인고객명
+         ,#{pconCustNo}                    --연계인고객번호
+         ,#{custPrefCommNo}                --고객선호연락번호
+         ,#{hpNo}                          --휴대폰번호
+         ,#{homeTelNo}                     --집전화번호
+         ,#{officeTelNo}                   --직장전화번호
+         ,#{pconCustMjrTelNo}              --연계인고객주요전화번호
+         ,#{pconCustHpNo}                  --연계인고객휴대폰번호
+         ,#{pconCustHomeTelNo}             --연계인고객집전화번호
+         ,#{pconCustOfficeTelNo}           --연계인고객직장전화번호
+         ,#{resvDt}                        --예약일자
+         ,#{repairBookId}                  --정비예약ID
+
+         ,#{sendTelNo}                     --발신전화번호
+         ,#{pconRelCd}                     --연계인관계코드
+         ,#{pprocDeptNm}                   --처리부서명
+         ,#{pprocId}                       --처리인ID
+         ,#{coopDeptNm}                    --협조부서명
+         ,#{bizDeptNm}                     --사업부서명
+         ,#{officeNm}                      --사무소명
+         ,#{sungCd}                        --성코드
+         ,#{sungNm}                        --성명
+         ,#{cityCd}                        --도시코드
+         ,#{cityNm}                        --도시명
+         ,#{custReqCont}                   --고객요청내용
+
+         ,#{vinNo}                         --차대번호
+         ,#{carRegNo}                      --차량등록번호
+         ,#{carlineCd}                     --차종코드
+         ,#{carlineNm}                     --차종명
+         ,#{modelCd}                       --모델코드
+         ,#{modelNm}                       --모델명
+         ,#{ocnCd}                         --OCN코드
+         ,#{ocnNm}                         --OCN명
+         ,#{runDistVal}                    --주행거리값
+         ,#{acptDeptNm}                    --접수부서
+         ,#{pacptId}                       --접수자ID
+         ,#{acptDt}                        --접수일자
+
+         ,#{pevalId}                       --심사인ID
+         ,#{returnCauCont}                 --반송원인내용
+         ,#{pmoCauCd}                      --승급원인코드
+         ,#{realPprocId}                   --실처리인ID
+         ,#{traceDt}                       --추적일자
+         ,#{pprocTelNo}                    --처리인전화번호
+         ,#{stsfIvstEmpId}                 --만족도조사인ID
+         ,#{mthAchvHm}                     --방안달성시간
+
+         ,#{evalAllocDt}                   --심사배정일자
+         ,#{sendCd}                        --자료전송상태
+         ,#{pmoDt}                         --승급일자
+         ,#{procDt}                        --처리일자
+         ,#{pprocEmailNm}                  --처리인이메일명
+         ,#{stsfIvstDt}                    --만족도조사일자
+         ,#{traceRsltCont}                 --추적결과내용
+
+         ,#{callCenOpnCont}                --콜센터의견내용
+         ,#{revMthCont}                    --검토방안내용
+         ,#{procRsltCont}                  --처리결과내용
+         ,#{stsfIvstRsltCont}              --만족도조사결과내용
+
+         ,#{cmplStsfNm}                    --불만만족도명
+         ,#{cmplReAcptYn}                  --불만재접수여부
+         ,#{cmplReAcptCnt}                 --불만재접수횟수
+         ,#{serReqNo}                      --서비스요청번호
+
+         ,#{cmplDlDeptNm}                  --불만전달부서명
+         ,#{cmplDlEmpId}                   --불만전달자ID
+         ,#{saleDt}                        --판매일자
+         ,#{dstbNo}                        --물류번호
+
+         ,#{salesActiveSrcCd}              --영업활동출처코드
+         ,#{relSalesActiveNo}              --관계영업활동번호
+
+         ,#{parOrdYn}                      --부품오더여부
+         ,#{parOrdDt}                      --부품오더일자
+         ,#{parArrvDt}                     --부품도착일자
+         ,#{itemCd}                        --품목코드
+
+         ,#{regUsrId}                      --등록자ID
+         ,SYSDATE                          --등록일자
+         ,'N'                              --긴급구조시작여부 - 사용안함, 긴급구조여부(EMGC_RESC_YN)로 대체.  DB인서트는 필수라서 VO랑 INSERT에 넣어놓음.
+
+         ,#{callHisSeq}                      --콜센터 이력 번호
+         ,#{recFileId}                      --콜센터 녹음파일 명
+
+
+        )
+
+    </insert>
+
+<!--
+         ,EMGC_CALL_NM                   긴급콜명
+         ,PCON_TP_NM                     연계인유형명
+         ,CLOSE_DT                       CLOSE일자
+         ,BHMC_YN                        BHMC여부
+         ,BHMC_VOC_NO                    BHMCVOC번호
+         ,UPDT_USR_ID                    수정자ID
+         ,UPDT_DT                        수정일자
+
+         ,#{emgcCallNm}                  긴급콜명
+         ,#{pconTpNm}                    연계인유형명
+         ,#{closeDt}                     CLOSE일자
+         ,#{bhmcYn}                      BHMC여부
+         ,#{bhmcVocNo}                   BHMCVOC번호
+         ,#{updtUsrId}                   수정자ID
+         ,#{updtDt}                      수정일자
+          -->
+
+
+    <!-- VOC 정보를 수정한다. -->
+    <update id="updateVocMgmt" parameterType="VocMgmtVO" >
+        /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.updateVocMgmt] */
+        UPDATE CR_0601T    --VOC마스터
+          SET
+               UPDT_DT                 = SYSDATE                          --수정일자
+              ,UPDT_USR_ID             = #{updtUsrId}                     --수정자ID
+
+              ,VOC_STAT_CD             = #{vocStatCd}                     --VOC상태코드
+              ,VOC_TP_CD               = #{vocTpCd}                       --VOC유형코드
+              ,VOC_TP_SUB_CD           = #{vocTpSubCd}                    --VOC유형하위코드
+              ,TEND_CD                 = #{tendCd}                        --성향코드
+              ,VOC_TP_SUB1_CD          = #{vocTpSub1Cd}                   --VOC유형하위1코드
+              ,VOC_TP_SUB2_CD          = #{vocTpSub2Cd}                   --VOC유형하위2코드
+              ,VOC_TP_SUB3_CD          = #{vocTpSub3Cd}                   --VOC유형하위3코드
+              ,ACPT_SRC_CD             = #{acptSrcCd}                     --접수출처코드
+              ,ACTIVE_GAIN_PATH_CD     = #{activeGainPathCd}              --활동획득경로코드
+              ,CMPL_CAU_CD             = #{cmplCauCd}                     --불만원인코드
+              ,PROR_CD                 = #{prorCd}                        --우선순위코드
+              ,PROC_LMT_CD             = #{procLmtCd}                     --처리시한코드
+              ,VOC_END_DT              = #{vocEndDt}                      --VOC종료일자
+              ,DLR_CMP_COMM_YN         = #{dlrCmpCommYn}                  --딜러사연락여부
+              ,EMGC_RESC_FST_CALL_YN   = #{emgcRescFstCallYn}             --긴급구조첫통화여부
+              ,EMGC_RESC_YN            = #{emgcRescYn}                    --긴급구조여부
+              ,EMGC_RESC_REASON_NM     = #{emgcRescReasonNm}              --긴급구조원인명
+              ,EMGC_RESC_STSF_CONT     = #{emgcRescStsfCont}              --긴급구조만족도내용
+              ,EMGC_RESC_LOC_CONT      = #{emgcRescLocCont}               --긴급구조위치내용
+
+              ,RECEIVE_TEL_NO          = #{receiveTelNo}                  --수신전화번호
+              ,CUST_NM                 = #{custNm}                        --고객명
+              ,CUST_NO                 = #{custNo}                        --고객번호
+              ,PCON_CUST_NM            = #{pconCustNm}                    --연계인고객명
+              ,PCON_CUST_NO            = #{pconCustNo}                    --연계인고객번호
+              ,CUST_PREF_COMM_NO       = #{custPrefCommNo}                --고객선호연락번호
+              ,HP_NO                   = #{hpNo}                          --휴대폰번호
+              ,HOME_TEL_NO             = #{homeTelNo}                     --집전화번호
+              ,OFFICE_TEL_NO           = #{officeTelNo}                   --직장전화번호
+              ,PCON_CUST_MJR_TEL_NO    = #{pconCustMjrTelNo}              --연계인고객주요전화번호
+              ,PCON_CUST_HP_NO         = #{pconCustHpNo}                  --연계인고객휴대폰번호
+              ,PCON_CUST_HOME_TEL_NO   = #{pconCustHomeTelNo}             --연계인고객집전화번호
+              ,PCON_CUST_OFFICE_TEL_NO = #{pconCustOfficeTelNo}           --연계인고객직장전화번호
+              ,RESV_DT                 = #{resvDt}                        --예약일자
+              ,REPAIR_BOOK_ID          = #{repairBookId}                  --정비예약ID
+
+              ,SEND_TEL_NO             = #{sendTelNo}                     --발신전화번호
+              ,PCON_REL_CD             = #{pconRelCd}                     --연계인관계코드
+              ,PPROC_DEPT_NM           = #{pprocDeptNm}                   --처리부서명
+              ,PPROC_ID                = #{pprocId}                       --처리인ID
+              ,COOP_DEPT_NM            = #{coopDeptNm}                    --협조부서명
+              ,BIZ_DEPT_NM             = #{bizDeptNm}                     --사업부서명
+              ,OFFICE_NM               = #{officeNm}                      --사무소명
+              ,SUNG_CD                 = #{sungCd}                        --성코드
+              ,SUNG_NM                 = #{sungNm}                        --성명
+              ,CITY_CD                 = #{cityCd}                        --도시코드
+              ,CITY_NM                 = #{cityNm}                        --도시명
+              ,CUST_REQ_CONT           = #{custReqCont}                   --고객요청내용
+
+              ,VIN_NO                  = #{vinNo}                         --차대번호
+              ,CAR_REG_NO              = #{carRegNo}                      --차량등록번호
+              ,CARLINE_CD              = #{carlineCd}                     --차종코드
+              ,CARLINE_NM              = #{carlineNm}                     --차종명
+              ,MODEL_CD                = #{modelCd}                       --모델코드
+              ,MODEL_NM                = #{modelNm}                       --모델명
+              ,OCN_CD                  = #{ocnCd}                         --OCN코드
+              ,OCN_NM                  = #{ocnNm}                         --OCN명
+              ,RUN_DIST_VAL            = #{runDistVal}                    --주행거리값
+              ,ACPT_DEPT_NM            = #{acptDeptNm}                    --접수부서
+              ,PACPT_ID                = #{pacptId}                       --접수자ID
+              ,ACPT_DT                 = #{acptDt}                        --접수일자
+
+              ,PEVAL_ID                = #{pevalId}                       --심사인ID
+              ,RETURN_CAU_CONT         = #{returnCauCont}                 --반송원인내용
+              ,PMO_CAU_CD              = #{pmoCauCd}                      --승급원인코드
+              ,REAL_PPROC_ID           = #{realPprocId}                   --실처리인ID
+              ,TRACE_DT                = #{traceDt}                       --추적일자
+              ,PPROC_TEL_NO            = #{pprocTelNo}                    --처리인전화번호
+              ,STSF_IVST_EMP_ID        = #{stsfIvstEmpId}                 --만족도조사인ID
+              ,MTH_ACHV_HM             = #{mthAchvHm}                     --방안달성시간
+
+              ,EVAL_ALLOC_DT           = DECODE(BHMC_YN, 'Y',EVAL_ALLOC_DT,#{evalAllocDt})  --심사배정일자 제조사일 경우 그대로 유지
+
+              ,SEND_CD                 = #{sendCd}                        --자료전송상태
+              ,PMO_DT                  = #{pmoDt}                         --승급일자
+              ,PROC_DT                 = #{procDt}                        --처리일자
+              ,PPROC_EMAIL_NM          = #{pprocEmailNm}                  --처리인이메일명
+              ,STSF_IVST_DT            = #{stsfIvstDt}                    --만족도조사일자
+              ,TRACE_RSLT_CONT         = #{traceRsltCont}                 --추적결과내용
+
+              ,CALL_CEN_OPN_CONT       = #{callCenOpnCont}                --콜센터의견내용
+              ,REV_MTH_CONT            = #{revMthCont}                    --검토방안내용
+              ,PROC_RSLT_CONT          = #{procRsltCont}                  --처리결과내용
+              ,STSF_IVST_RSLT_CONT     = #{stsfIvstRsltCont}              --만족도조사결과내용
+
+              ,CMPL_STSF_NM            = #{cmplStsfNm}                    --불만만족도명
+              ,CMPL_RE_ACPT_YN         = #{cmplReAcptYn}                  --불만재접수여부
+              ,CMPL_RE_ACPT_CNT        = #{cmplReAcptCnt}                 --불만재접수횟수
+              ,SER_REQ_NO              = #{serReqNo}                      --서비스요청번호
+
+              ,CMPL_DL_DEPT_NM         = #{cmplDlDeptNm}                  --불만전달부서명
+              ,CMPL_DL_EMP_ID          = #{cmplDlEmpId}                   --불만전달자ID
+              ,SALE_DT                 = #{saleDt}                        --판매일자
+              ,DSTB_NO                 = #{dstbNo}                        --물류번호
+
+              ,SALES_ACTIVE_SRC_CD     = #{salesActiveSrcCd}              --영업활동출처코드
+              ,REL_SALES_ACTIVE_NO     = #{relSalesActiveNo}              --관계영업활동번호
+
+              ,PAR_ORD_YN              = #{parOrdYn}                      --부품오더여부
+              ,PAR_ORD_DT              = #{parOrdDt}                      --부품오더일자
+              ,PAR_ARRV_DT             = #{parArrvDt}                     --부품도착일자
+              ,ITEM_CD                 = #{itemCd}                        --품목코드
+         WHERE 1 = 1
+           AND DLR_CD                  = #{dlrCd}                         --딜러코드
+           AND VOC_NO                  = #{vocNo}                         --VOC번호
+    </update>
+
+<!--
+  ,BHMC_YN                 = #{bhmcYn}                        BHMC여부
+  ,BHMC_VOC_NO             = #{bhmcVocNo}                     BHMCVOC번호
+  ,PCON_TP_NM              = #{pconTpNm}                      연계인유형명
+  ,CLOSE_DT                = #{closeDt}                       CLOSE일자
+  ,EMGC_CALL_NM            = #{emgcCallNm}                    긴급콜명
+ -->
+    <!-- BHMC VOC 일경우 처리 결과 정보만 업데이트. -->
+    <update id="updateBhmcVocProce" parameterType="VocMgmtVO" >
+        /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.updateBHMCVocMgmt] */
+        UPDATE CR_0601T    --VOC마스터
+        SET
+         VOC_STAT_CD             = #{vocStatCd}                     --VOC상태코드
+        ,PROC_RSLT_CONT          = #{procRsltCont}                  --처리결과내용
+        ,UPDT_USR_ID             = #{updtUsrId}                     --수정자ID
+        ,UPDT_DT                 = SYSDATE                          --수정일자
+        WHERE 1 = 1
+        AND DLR_CD               = #{dlrCd}                         --딜러코드
+        AND VOC_NO               = #{vocNo}                         --VOC번호
+    </update>
+
+    <!-- SUB 유형 데이터를 조회한다. 공통으로 DropdownList에서 쓰기위함. (중복 모델 display 방지) -->
+    <select id="selectVocTpSubCdListByCondition" parameterType="VocMgmtSearchVO" resultType="CommonCodeVO">
+        SELECT
+           NVL(B.CMM_CD, A.CMM_CD) AS CMM_CD
+          ,NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+        FROM CM_0303T A, CM_0304T B
+        WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+         AND  A.CMM_CD = B.CMM_CD
+         AND  B.LANG_CD = #{langCd}
+         AND  A.CMM_GRP_CD = #{sCmmGrpCd}
+         AND  A.USE_YN = 'Y'
+         AND  A.REMARK1 = #{cmmCd}
+         ORDER BY A.SORT_ORDER ASC
+    </select>
+
+    <!-- 성코드 데이터를 조회한다. 공통으로 DropdownList에서 쓰기위함. (중복 모델 display 방지)  -->
+    <select id="selectSungCdListByCondition" parameterType="VocMgmtSearchVO" resultType="CommonCodeVO">
+        SELECT
+              SUNG_CD AS CMM_CD
+            , SUNG_NM AS CMM_CD_NM
+          FROM CM_0205T
+         WHERE USE_YN = 'Y'
+         GROUP BY SUNG_CD, SUNG_NM
+         ORDER BY SUNG_CD, SUNG_NM
+    </select>
+
+    <!-- 도시코드 데이터를 조회한다. 공통으로 DropdownList에서 쓰기위함. (중복 모델 display 방지)  -->
+    <select id="selectCityCdListByCondition" parameterType="VocMgmtSearchVO" resultType="CommonCodeVO">
+        SELECT
+              CITY_CD AS CMM_CD
+            , CITY_NM AS CMM_CD_NM
+          FROM CM_0205T
+         WHERE USE_YN = 'Y'
+           AND SUNG_CD = #{cmmCd}
+         GROUP BY CITY_CD, CITY_NM
+         ORDER BY CITY_CD, CITY_NM
+    </select>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <sql id="searchVocActive">
+
+        <where>
+            AND CR0602T.DLR_CD = #{sDlrCd}           --딜러코드
+            AND CR0602T.VOC_NO = #{sVocNo} OR CR0602T.BHMC_VOC_NO = #{sBhmcVocNo} -- vocNo or bhmcVocNo
+        </where>
+
+    </sql>
+
+    <!-- VOC활동 정보 목록을 조회한다. -->
+    <select id="selectActivesByCondition" parameterType="VocMgmtSearchVO" resultType="VocActiveVO">
+        /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.selectActivesByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                     CR0602T.VOC_ACTIVE_NO               --VOC활동번호
+                    ,CR0602T.DLR_CD                      --딜러코드
+                    ,CR0602T.VOC_NO                      --VOC번호
+                    ,CR0602T.CUST_NO                     --고객번호
+                    ,CR0602T.PCON_CUST_NO                --연계인고객번호
+                    ,CR0602T.ACTIVE_STAT_CD              --활동상태코드
+                    ,CR0602T.ACTIVE_TP_CD                --활동유형코드
+                    ,CR0602T.ACTIVE_TP_SUB_CD            --활동유형하위코드
+                    ,CR0602T.ACTIVE_RSLT_CONT            --활동결과내용
+                    ,CR0602T.ACTIVE_CD                   --활동코드
+                    ,CR0602T.START_DT                    --시작일자
+                    ,CR0602T.END_DT                      --종료일자
+                    ,CR0602T.PGSS_HM                     --진행시간
+                    ,CR0602T.EXPC_START_DT               --예정시작일자
+                    ,CR0602T.EXPC_END_DT                 --예정종료일자
+                    ,CR0602T.PROR_CD                     --우선순위코드
+                    ,CR0602T.REG_DEPT_NM                 --등록부서명
+                    ,CR0602T.REG_USR_ID                  --등록자ID
+                    ,CR0602T.REG_DT                      --등록일자
+                    ,CR0602T.UPDT_USR_ID                 --수정자ID
+                    ,CR0602T.UPDT_DT                     --수정일자
+                    ,CR0602T.BHMC_VOC_ACTIVE_NO          --BHMC VOC활동번호
+                    ,CR0602T.ACTIVE_CONT                 --활동내용
+                    ,CR0602T.ALRT_CD                     --알람코드
+                    ,CR0602T.CALL_SEQ                    --콜일련번호
+                    ,CR0602T.STSF_CONT                   --만족도내용
+                    ,CR0602T.EMAIL_SENDER_NM             --이메일전송자명
+                    ,CR0602T.EMAIL_SENDER_ADDR_NM        --이메일전송자주소명
+                    ,CR0602T.EMAIL_ACTIVE_CD             --이메일활동코드
+                    ,CR0602T.OWNER_ID                    --소유자ID
+                    ,(SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                            FROM CM_0303T A, CM_0304T B
+                           WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                             AND A.CMM_CD = B.CMM_CD
+                             AND B.LANG_CD = #{langCd}
+                             AND A.CMM_GRP_CD = 'CRM627'
+                             AND A.CMM_CD = CR0602T.ACTIVE_TP_SUB_CD)
+                         AS ACTIVE_TP_SUB_CD_NM
+                    , DECODE(CR0602T.BHMC_VOC_NO, NULL,(SELECT CUST_NM FROM CR_0101T WHERE DLR_CD = CR0602T.DLR_CD AND CUST_NO = CR0602T.CUST_NO)
+                            , CUST_NM
+                            ) AS CUST_NM
+
+                    , DECODE(CR0602T.BHMC_VOC_NO, NULL,(SELECT CUST_NM FROM CR_0101T WHERE DLR_CD = CR0602T.DLR_CD AND CUST_NO = CR0602T.PCON_CUST_NO)
+                            , PCON_CUST_NM
+                            ) AS PCON_CUST_NM
+                    , DECODE(CR0602T.BHMC_VOC_NO, NULL, FN_GET_USER_NM(CR0602T.REG_USR_ID)
+                            , REG_USR_ID
+                            ) AS REG_USR_NM --등록자ID
+                    , DECODE(CR0602T.BHMC_VOC_NO, NULL,FN_GET_USER_NM(CR0602T.OWNER_ID)
+                            , OWNER_ID
+                            ) AS OWNER_NM --소유자ID
+                    ,CR0602T.CALL_HIS_SEQ
+                    ,CR0602T.REC_FILE_ID
+                    ,CR0602T.CALL_START_DT
+                    ,CR0602T.CALL_END_DT
+                    ,CR0602T.CALL_DIAL_NUM
+            FROM CR_0602T CR0602T    --VOC활동처리정보
+            <include refid="searchVocActive" />
+            ORDER BY
+            <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "regDtFormat"'>               CR0602T.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                            <when test='item.field == "regUsrNm"'>            REG_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                            <when test='item.field == "regDeptNm"'>           CR0602T.REG_DEPT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "custNm"'>           CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "pconCustNm"'>           PCON_CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "activeRsltCont"'>      CR0602T.ACTIVE_RSLT_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                            <when test='item.field == "activeCont"'>          CR0602T.ACTIVE_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "alrtCd"'>              CR0602T.ALRT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "callSeq"'>             CR0602T.CALL_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "stsfCont"'>            CR0602T.STSF_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "emailSenderNm"'>       CR0602T.EMAIL_SENDER_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                            <when test='item.field == "emailSenderAddrNm"'>   CR0602T.EMAIL_SENDER_ADDR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "emailActiveCd"'>       CR0602T.EMAIL_ACTIVE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                            <when test='item.field == "ownerId"'>             OWNER_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "bhmcVocActiveNo"'>     CR0602T.BHMC_VOC_ACTIVE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                            <when test='item.field == "startDt"'>             CR0602T.START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "endDt"'>               CR0602T.END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                            <when test='item.field == "pgssHm"'>              CR0602T.PGSS_HM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "expcStartDt"'>         CR0602T.EXPC_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                            <when test='item.field == "expcEndDt"'>           CR0602T.EXPC_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+
+                            <when test='item.field == "vocActiveNo"'>         CR0602T.VOC_ACTIVE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                            <when test='item.field == "dlrCd"'>               CR0602T.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                            <when test='item.field == "vocNo"'>               CR0602T.VOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                            <when test='item.field == "custNo"'>              CR0602T.CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "pconCustNo"'>          CR0602T.PCON_CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                            <when test='item.field == "activeStatCd"'>        CR0602T.ACTIVE_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                            <when test='item.field == "activeTpCd"'>          CR0602T.ACTIVE_TP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                            <when test='item.field == "activeTpSubCd"'>       CR0602T.ACTIVE_TP_SUB_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                            <when test='item.field == "activeCd"'>            CR0602T.ACTIVE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "prorCd"'>              CR0602T.PROR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "updtUsrId"'>           CR0602T.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "updtDt"'>              CR0602T.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <otherwise>
+                                CR0602T.REG_DT DESC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                CR0602T.REG_DT DESC
+                </otherwise>
+            </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- VOC활동 정보 목록수를 조회한다. -->
+    <select id="selectActivesByConditionCnt" parameterType="VocMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.selectActivesByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_0602T CR0602T    --VOC활동처리정보
+        <include refid="searchVocActive" />
+    </select>
+
+
+    <!-- VOC활동 정보를 수정한다. -->
+    <update id="updateActive" parameterType="VocActiveVO" >
+        /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.updateActive] */
+        UPDATE CR_0602T    --VOC활동처리정보
+          SET
+               UPDT_DT              = SYSDATE                       --수정일자
+              ,UPDT_USR_ID          = #{updtUsrId}                  --수정자ID
+              ,CUST_NO              = #{custNo}                     --고객번호
+              ,PCON_CUST_NO         = #{pconCustNo}                 --연계인고객번호
+              ,ACTIVE_STAT_CD       = #{activeStatCd}               --활동상태코드
+              ,ACTIVE_TP_CD         = #{activeTpCd}                 --활동유형코드
+              ,ACTIVE_TP_SUB_CD     = #{activeTpSubCd}              --활동유형하위코드
+              ,ACTIVE_RSLT_CONT     = #{activeRsltCont}             --활동결과내용
+              ,ACTIVE_CD            = #{activeCd}                   --활동코드
+              ,START_DT             = #{startDt}                    --시작일자
+              ,END_DT               = #{endDt}                      --종료일자
+              ,PGSS_HM              = #{pgssHm}                     --진행시간
+              ,EXPC_START_DT        = #{expcStartDt}                --예정시작일자
+              ,EXPC_END_DT          = #{expcEndDt}                  --예정종료일자
+              ,PROR_CD              = #{prorCd}                     --우선순위코드
+              ,REG_DEPT_NM          = #{regDeptNm}                  --등록부서명
+              ,BHMC_VOC_ACTIVE_NO   = #{bhmcVocActiveNo}            --BHMC VOC활동번호
+              ,ACTIVE_CONT          = #{activeCont}                 --활동내용
+              ,ALRT_CD              = #{alrtCd}                     --알람코드
+              ,CALL_SEQ             = #{callSeq}                    --콜일련번호
+              ,STSF_CONT            = #{stsfCont}                   --만족도내용
+              ,EMAIL_SENDER_NM      = #{emailSenderNm}              --이메일전송자명
+              ,EMAIL_SENDER_ADDR_NM = #{emailSenderAddrNm}          --이메일전송자주소명
+              ,EMAIL_ACTIVE_CD      = #{emailActiveCd}              --이메일활동코드
+              ,OWNER_ID             = #{ownerId}                    --소유자ID
+         WHERE 1 = 1
+           AND VOC_ACTIVE_NO        = #{vocActiveNo}                --VOC활동번호
+           AND DLR_CD               = #{dlrCd}                      --딜러코드
+           AND VOC_NO               = #{vocNo}                      --VOC번호
+    </update>
+
+    <update id="updateVocStatCd" parameterType="VocMgmtVO" >
+        /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.updateVocStatCd] */
+
+        UPDATE CR_0601T SET    --VOC마스터
+             UPDT_DT                 = SYSDATE                          --수정일자
+            ,UPDT_USR_ID             = #{updtUsrId}                     --수정자ID
+            ,VOC_STAT_CD             = #{vocStatCd}                     --VOC상태코드
+        <if test='pprocDeptNm != null and pprocDeptNm != ""'>
+            ,PPROC_DEPT_NM           = #{pprocDeptNm}                   --처리부서명
+        </if>
+        <if test='coopDeptNm != null and coopDeptNm != ""'>
+            ,COOP_DEPT_NM            = #{coopDeptNm}                    --협조부서명
+        </if>
+        <if test='callCenOpnCont != null and callCenOpnCont != ""'>
+            ,CALL_CEN_OPN_CONT       = #{callCenOpnCont}                --콜센터의견내용
+        </if>
+        <if test='procRsltCont != null and procRsltCont != ""'>
+            ,PROC_RSLT_CONT          = #{procRsltCont}                  --처리결과내용
+        </if>
+        <if test='cmplStsfNm != null and cmplStsfNm != ""'>
+            ,CMPL_STSF_NM            = #{cmplStsfNm}                    --불만만족도명
+        </if>
+        <if test='stsfIvstRsltCont != null and stsfIvstRsltCont != ""'>
+            ,STSF_IVST_RSLT_CONT     = #{stsfIvstRsltCont}              --만족도조사결과내용 / 반송원인
+        </if>
+        <if test='revMthCont != null and revMthCont != ""'>
+            ,REV_MTH_CONT            = #{revMthCont}                    --고객내방대기방안 > 검토중인방안
+        </if>
+    <choose>
+        <when test='vocStatCd == "03" '>
+            <!-- 심사배정 상태로 변경할경우 처리인, 심사인, 심사배정일자 입력  -->
+            <if test='pprocId != null and pprocId != ""'>
+                ,PPROC_ID                = DECODE(PPROC_ID, '',#{pprocId},PPROC_ID)  --처리인ID
+            </if>
+            <if test='realPprocId != null and realPprocId != ""'>
+                ,REAL_PPROC_ID          = #{realPprocId}                   --실처리자 아이디
+                ,PEVAL_ID                   = DECODE(BHMC_YN, 'Y',PEVAL_ID,#{pevalId})                       --심사인처리인ID
+                ,EVAL_ALLOC_DT         = DECODE(BHMC_YN, 'Y',EVAL_ALLOC_DT,SYSDATE)  --심사배정일자 제조사일 경우 그대로 유지
+            </if>
+        </when>
+        <when test='vocStatCd == "05" '>
+            ,REAL_PPROC_ID               = #{realPprocId}                   --실처리자 아이디
+            ,PROC_DT                     = SYSDATE                          --처리일자
+        </when>
+        <when test='vocStatCd == "06" or vocStatCd == "07" '>
+            ,VOC_END_DT                  = SYSDATE                          --종료일자
+        </when>
+        <when test='vocStatCd == "08" '>
+            ,MTH_ACHV_HM           = SYSDATE  -- 방안달성시간 - 고객내방대기일때 방안달성시간 업데이트 항상 SYSDATE로 업데이트 20180718 서정훈
+        </when>
+    </choose>
+        WHERE 1 = 1
+        AND DLR_CD               = #{dlrCd}                         --딜러코드
+        AND VOC_NO               = #{vocNo}                         --VOC번호
+
+    </update>
+
+
+
+
+
+    <!-- VOC 정보 목록수를 조회한다. -->
+    <select id="selectVocDateTpRegCnt" parameterType="VocMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.selectVocCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_0601T CR0601T    --VOC마스터
+        WHERE CR0601T.DLR_CD = #{sDlrCd}
+<choose>
+    <when test=' sDateTp == "D" '>
+        AND TO_CHAR(TRUNC(REG_DT), 'YYYY-MM-DD') = TO_CHAR(TRUNC(#{sRegDt}), 'YYYY-MM-DD')
+    </when>
+    <when test=' sDateTp == "M" '>
+        AND TO_CHAR(TRUNC(REG_DT), 'YYYY-MM') = TO_CHAR(TRUNC(#{sRegDt}), 'YYYY-MM')
+    </when>
+</choose>
+    </select>
+
+
+
+    <!-- VOC 정보 목록수를 조회한다. -->
+    <select id="selectVocMgmtsByConditionCnt" parameterType="VocMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.selectVocMgmtsByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_0601T CR0601T    --VOC마스터
+        <include refid="searchVocMgmt" />
+    </select>
+
+    <!-- VOC 정보 목록을 조회한다. -->
+    <select id="selectVocMgmtsByCondition" parameterType="VocMgmtSearchVO" resultType="VocMgmtVO">
+        /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.selectVocMgmtsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                 SELECT
+                        CR0601T.DLR_CD                         --딜러코드
+                        ,CR0601T.VOC_NO                         --VOC번호
+                        ,CR0601T.VOC_STAT_CD                    --VOC상태코드
+                        ,CR0601T.VOC_TP_CD                      --VOC유형코드
+                        ,CR0601T.TEND_CD                        --성향코드
+                        ,CR0601T.VOC_TP_SUB1_CD                 --VOC유형하위1코드
+                        ,CR0601T.VOC_TP_SUB2_CD                 --VOC유형하위2코드
+                        ,CR0601T.VOC_TP_SUB3_CD                 --VOC유형하위3코드
+                        ,CR0601T.ACPT_SRC_CD                    --접수출처코드
+                        ,CR0601T.ACTIVE_GAIN_PATH_CD            --활동획득경로코드
+                        ,CR0601T.CMPL_CAU_CD                    --불만원인코드
+                        ,CR0601T.PROR_CD                        --우선순위코드
+                        ,CR0601T.PROC_LMT_CD                    --처리시한코드
+                        ,CR0601T.EMGC_CALL_NM                   --긴급콜명
+                        ,CR0601T.VOC_END_DT                     --VOC종료일자
+                        ,CR0601T.RECEIVE_TEL_NO                 --수신전화번호
+                        ,CR0601T.CUST_NM                        --고객명
+                        ,CR0601T.CUST_NO                        --고객번호
+                        ,CR0601T.CUST_PREF_COMM_NO              --고객선호연락번호
+                        ,CR0601T.HP_NO                          --휴대폰번호
+                        ,CR0601T.HOME_TEL_NO                    --집전화번호
+                        ,CR0601T.OFFICE_TEL_NO                  --직장전화번호
+                        ,CR0601T.PCON_CUST_NM                   --연계인고객명
+                        ,CR0601T.PCON_CUST_NO                   --연계인고객번호
+                        ,CR0601T.PCON_CUST_MJR_TEL_NO           --연계인고객주요전화번호
+                        ,CR0601T.PCON_CUST_HP_NO                --연계인고객휴대폰번호
+                        ,CR0601T.PCON_CUST_HOME_TEL_NO          --연계인고객집전화번호
+                        ,CR0601T.PCON_CUST_OFFICE_TEL_NO        --연계인고객직장전화번호
+                        ,CR0601T.RESV_DT                        --예약일자
+                        ,CR0601T.SEND_TEL_NO                    --발신전화번호
+                        ,CR0601T.PCON_REL_CD                    --연계인관계코드
+                        ,CR0601T.PPROC_DEPT_NM                  --처리부서명
+                        ,CR0601T.PPROC_ID                       --처리인ID
+                        ,CR0601T.COOP_DEPT_NM                   --협조부서명
+                        ,CR0601T.BIZ_DEPT_NM                    --사업부서명
+                        ,CR0601T.OFFICE_NM                      --사무소명
+                        ,CR0601T.SUNG_CD                        --성코드
+                        ,CR0601T.SUNG_NM                        --성명
+                        ,CR0601T.CITY_CD                        --도시코드
+                        ,CR0601T.CITY_NM                        --도시명
+                        ,CR0601T.VIN_NO                         --차대번호
+                        ,CR0601T.CAR_REG_NO                     --차량등록번호
+                        ,CR0601T.CARLINE_CD                     --차종코드
+                        ,CR0601T.CARLINE_NM                     --차종명
+                        ,CR0601T.MODEL_CD                       --모델코드
+                        ,CR0601T.MODEL_NM                       --모델명
+                        ,CR0601T.OCN_CD                         --OCN코드
+                        ,CR0601T.OCN_NM                         --OCN명
+                        ,CR0601T.RUN_DIST_VAL                   --주행거리값
+                        ,CR0601T.ACPT_DEPT_NM                   --접수부서
+                        ,CR0601T.PACPT_ID                       --접수자ID
+                        ,CR0601T.ACPT_DT                        --접수일자
+                        ,CR0601T.CUST_REQ_CONT                  --고객요청내용
+                        ,CR0601T.PEVAL_ID                       --심사인ID
+                        ,CR0601T.EVAL_ALLOC_DT                  --심사배정일자
+                        ,CR0601T.CALL_CEN_OPN_CONT              --콜센터의견내용
+                        ,CR0601T.RETURN_CAU_CONT                --반송원인내용
+                        ,CR0601T.PMO_CAU_CD                     --승급원인코드
+                        ,CR0601T.PMO_DT                         --승급일자
+                        ,CR0601T.REV_MTH_CONT                   --검토방안내용
+                        ,CR0601T.REAL_PPROC_ID                  --실처리인ID
+                        ,CR0601T.PROC_DT                        --처리일자
+                        ,CR0601T.PPROC_TEL_NO                   --처리인전화번호
+                        ,CR0601T.PPROC_EMAIL_NM                 --처리인이메일명
+                        ,CR0601T.PROC_RSLT_CONT                 --처리결과내용
+                        ,CR0601T.STSF_IVST_EMP_ID               --만족도조사인ID
+                        ,CR0601T.STSF_IVST_DT                   --만족도조사일자
+                        ,CR0601T.STSF_IVST_RSLT_CONT            --만족도조사결과내용
+                        ,CR0601T.MTH_ACHV_HM                    --방안달성시간
+                        ,CR0601T.CMPL_STSF_NM                   --불만만족도명
+                        ,CR0601T.CMPL_RE_ACPT_YN                --불만재접수여부
+                        ,CR0601T.CMPL_RE_ACPT_CNT               --불만재접수횟수
+                        ,CR0601T.SER_REQ_NO                     --서비스요청번호
+                        ,CR0601T.CMPL_DL_DEPT_NM                --불만전달부서명
+                        ,CR0601T.CMPL_DL_EMP_ID                 --불만전달자ID
+                        ,CR0601T.SALE_DT                        --판매일자
+                        ,CR0601T.DSTB_NO                        --물류번호
+                        ,CR0601T.PAR_ORD_YN                     --부품오더여부
+                        ,CR0601T.PAR_ORD_DT                     --부품오더일자
+                        ,CR0601T.PAR_ARRV_DT                    --부품도착일자
+                        ,CR0601T.ITEM_CD                        --품목코드
+                        ,CR0601T.BHMC_YN                        --BHMC여부
+                        ,DECODE(CR0601T.BHMC_YN, 'Y'
+                                ,NVL((SELECT MESG_TXT FROM CM_0501T WHERE MESG_KEY = 'crm.lbl.factory' AND USE_YN = 'Y' AND BUNDLE_NM = 'label' AND LANG_CD = #{langCd}), 'Y')
+                                ,NVL((SELECT MESG_TXT FROM CM_0501T WHERE MESG_KEY = 'ser.lbl.dealer' AND USE_YN = 'Y' AND BUNDLE_NM = 'label' AND LANG_CD = #{langCd}), 'N')
+                        ) AS BHMC_YN_NM
+                        ,CR0601T.BHMC_VOC_NO                    --BHMCVOC번호
+                        ,CR0601T.REPAIR_BOOK_ID                 --정비예약ID
+                        ,CR0601T.REG_USR_ID                     --등록자ID
+                        ,CR0601T.REG_DT                         --등록일자
+                        ,CR0601T.UPDT_USR_ID                    --수정자ID
+                        ,CR0601T.UPDT_DT                        --수정일자
+                        ,CR0601T.VOC_TP_SUB_CD                  --VOC유형하위코드
+                        ,CR0601T.PCON_TP_NM                     --연계인유형명
+                        ,CR0601T.SEND_CD                        --자료전송상태
+                        ,CR0601T.CLOSE_DT                       --CLOSE일자
+                        ,CR0601T.TRACE_DT                       --추적일자
+                        ,CR0601T.TRACE_RSLT_CONT                --추적결과내용
+                        ,CR0601T.SALES_ACTIVE_SRC_CD            --영업활동출처코드
+                        ,CR0601T.REL_SALES_ACTIVE_NO            --관계영업활동번호
+                        ,CR0601T.DLR_CMP_COMM_YN                --딜러사연락여부
+                        ,CR0601T.EMGC_RESC_FST_CALL_YN          --긴급구조첫통화여부
+                        ,NVL(CR0601T.EMGC_RESC_YN, 'N') AS EMGC_RESC_YN         --긴급구조여부
+                        ,CR0601T.EMGC_RESC_REASON_NM            --긴급구조원인명
+                        ,CR0601T.EMGC_RESC_STSF_CONT            --긴급구조만족도내용
+                        ,CR0601T.EMGC_RESC_LOC_CONT             --긴급구조위치내용
+                        ,(SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                            FROM CM_0303T A, CM_0304T B
+                           WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                             AND A.CMM_CD = B.CMM_CD
+                             AND B.LANG_CD = #{langCd}
+                             AND A.CMM_GRP_CD = 'CRM624'
+                             AND A.CMM_CD = CR0601T.VOC_STAT_CD
+                             ) AS VOC_STAT_CD_NM
+                        ,(SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                            FROM CM_0303T A, CM_0304T B
+                           WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                             AND A.CMM_CD = B.CMM_CD
+                             AND B.LANG_CD = #{langCd}
+                             AND A.CMM_GRP_CD = 'CRM604'
+                             AND A.CMM_CD = CR0601T.VOC_TP_CD)
+                         AS VOC_TP_CD_NM
+                        ,FN_GET_USER_NM(CR0601T.PPROC_ID) AS PPROC_NM     --처리인ID
+                        ,FN_GET_USER_NM(CR0601T.PACPT_ID) AS PACPT_NM     --접수자ID
+                        ,FN_GET_USER_NM(CR0601T.PEVAL_ID) AS PEVAL_NM     --심사인ID
+                        ,FN_GET_USER_NM(CR0601T.REAL_PPROC_ID) AS REAL_PPROC_NM       --실처리인ID
+                        ,FN_GET_USER_NM(CR0601T.STSF_IVST_EMP_ID) AS STSF_IVST_EMP_NM     --만족도조사인ID
+                        ,FN_GET_USER_NM(CR0601T.CMPL_DL_EMP_ID) AS CMPL_DL_EMP_NM     --불만전달자ID
+             FROM CR_0601T CR0601T    --VOC마스터
+             <include refid="searchVocMgmt" />
+            ORDER BY
+            <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "vocNo"'>                  CR0601T.VOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                            <when test='item.field == "vocStatCdNm"'>              VOC_STAT_CD_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                     </when>
+                            <when test='item.field == "custNm"'>                 CR0601T.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "custPrefCommNo"'>         CR0601T.CUST_PREF_COMM_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                            <when test='item.field == "vocTpCdNm"'>                VOC_TP_CD_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                       </when>
+                            <when test='item.field == "vocStatNm"'>              VOC_STAT_CD_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                     </when>
+                            <when test='item.field == "acptDtFormat"'>           CR0601T.ACPT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "procDtFormat"'>                 CR0601T.PROC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "pprocDeptNm"'>            CR0601T.PPROC_DEPT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                            <when test='item.field == "pprocNm"'>                PPROC_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                            <when test='item.field == "regDtFormat"'>            CR0601T.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+
+
+                            <when test='item.field == "tendCd"'>                 CR0601T.TEND_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "vocTpSub1Cd"'>            CR0601T.VOC_TP_SUB1_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "vocTpSub2Cd"'>            CR0601T.VOC_TP_SUB2_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "vocTpSub3Cd"'>            CR0601T.VOC_TP_SUB3_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "acptSrcCd"'>              CR0601T.ACPT_SRC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "activeGainPathCd"'>       CR0601T.ACTIVE_GAIN_PATH_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                            <when test='item.field == "cmplCauCd"'>              CR0601T.CMPL_CAU_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "prorCd"'>                 CR0601T.PROR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "procLmtCd"'>              CR0601T.PROC_LMT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "emgcCallNm"'>             CR0601T.EMGC_CALL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "vocEndDt"'>               CR0601T.VOC_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "receiveTelNo"'>           CR0601T.RECEIVE_TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "custNo"'>                 CR0601T.CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "hpNo"'>                   CR0601T.HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                            <when test='item.field == "homeTelNo"'>              CR0601T.HOME_TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "officeTelNo"'>            CR0601T.OFFICE_TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                            <when test='item.field == "pconCustNm"'>             CR0601T.PCON_CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "pconCustNo"'>             CR0601T.PCON_CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "pconCustMjrTelNo"'>       CR0601T.PCON_CUST_MJR_TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                            <when test='item.field == "pconCustHpNo"'>           CR0601T.PCON_CUST_HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                            <when test='item.field == "pconCustHomeTelNo"'>      CR0601T.PCON_CUST_HOME_TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                            <when test='item.field == "pconCustOfficeTelNo"'>    CR0601T.PCON_CUST_OFFICE_TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "resvDt"'>                 CR0601T.RESV_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "sendTelNo"'>              CR0601T.SEND_TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "pconRelCd"'>              CR0601T.PCON_REL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "coopDeptNm"'>             CR0601T.COOP_DEPT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "bizDeptNm"'>              CR0601T.BIZ_DEPT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "officeNm"'>               CR0601T.OFFICE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                            <when test='item.field == "sungCd"'>                 CR0601T.SUNG_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "sungNm"'>                 CR0601T.SUNG_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "cityCd"'>                 CR0601T.CITY_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "cityNm"'>                 CR0601T.CITY_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "vinNo"'>                  CR0601T.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                            <when test='item.field == "carRegNo"'>               CR0601T.CAR_REG_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "carlineCd"'>              CR0601T.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "carlineNm"'>              CR0601T.CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "modelCd"'>                CR0601T.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                            <when test='item.field == "modelNm"'>                CR0601T.MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                            <when test='item.field == "ocnCd"'>                  CR0601T.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                            <when test='item.field == "ocnNm"'>                  CR0601T.OCN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                            <when test='item.field == "runDistVal"'>             CR0601T.RUN_DIST_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "acptDeptNm"'>             CR0601T.ACPT_DEPT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "pacptId"'>                CR0601T.PACPT_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                            <when test='item.field == "custReqCont"'>            CR0601T.CUST_REQ_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                            <when test='item.field == "pevalId"'>                CR0601T.PEVAL_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                            <when test='item.field == "evalAllocDt"'>            CR0601T.EVAL_ALLOC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                            <when test='item.field == "callCenOpnCont"'>         CR0601T.CALL_CEN_OPN_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                            <when test='item.field == "returnCauCont"'>          CR0601T.RETURN_CAU_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                            <when test='item.field == "pmoCauCd"'>               CR0601T.PMO_CAU_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "pmoDt"'>                  CR0601T.PMO_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                 </when>
+                            <when test='item.field == "revMthCont"'>             CR0601T.REV_MTH_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "realPprocId"'>            CR0601T.REAL_PPROC_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                            <when test='item.field == "pprocTelNo"'>             CR0601T.PPROC_TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "pprocEmailNm"'>           CR0601T.PPROC_EMAIL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "procRsltCont"'>           CR0601T.PROC_RSLT_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "stsfIvstEmpId"'>          CR0601T.STSF_IVST_EMP_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                            <when test='item.field == "stsfIvstDt"'>             CR0601T.STSF_IVST_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "stsfIvstRsltCont"'>       CR0601T.STSF_IVST_RSLT_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                            <when test='item.field == "mthAchvHm"'>              CR0601T.MTH_ACHV_HM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "cmplStsfNm"'>             CR0601T.CMPL_STSF_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "cmplReAcptYn"'>           CR0601T.CMPL_RE_ACPT_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                            <when test='item.field == "cmplReAcptCnt"'>          CR0601T.CMPL_RE_ACPT_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                            <when test='item.field == "serReqNo"'>               CR0601T.SER_REQ_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "cmplDlDeptNm"'>           CR0601T.CMPL_DL_DEPT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                            <when test='item.field == "cmplDlEmpId"'>            CR0601T.CMPL_DL_EMP_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "saleDt"'>                 CR0601T.SALE_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "dstbNo"'>                 CR0601T.DSTB_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "parOrdYn"'>               CR0601T.PAR_ORD_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "parOrdDt"'>               CR0601T.PAR_ORD_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "parArrvDt"'>              CR0601T.PAR_ARRV_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "itemCd"'>                 CR0601T.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "bhmcYn"'>                 CR0601T.BHMC_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "bhmcVocNo"'>              CR0601T.BHMC_VOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "regUsrId"'>               CR0601T.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "updtUsrId"'>              CR0601T.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "updtDt"'>                 CR0601T.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                </when>
+                            <when test='item.field == "emgcRescFstCallYn"'>      CR0601T.EMGC_RESC_FST_CALL_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                            <when test='item.field == "emgcRescYn"'>             CR0601T.EMGC_RESC_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "emgcRescReasonNm"'>       CR0601T.EMGC_RESC_REASON_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                            <when test='item.field == "emgcRescStsfCont"'>       CR0601T.EMGC_RESC_STSF_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                            <when test='item.field == "emgcRescLocCont"'>        CR0601T.EMGC_RESC_LOC_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                            <otherwise>
+                            CR0601T.REG_DT DESC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                CR0601T.REG_DT DESC
+                </otherwise>
+            </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+    
+    <!-- 2018-11-09 add byfengdequan 添加导出功能 -->
+    <select id="selectActivesByConditionExport" parameterType="VocMgmtSearchVO" resultType="VocActiveVO">
+        /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.selectActivesByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                     CR0602T.VOC_ACTIVE_NO               --VOC활동번호
+                    ,CR0602T.DLR_CD                      --딜러코드
+                    ,CR0602T.VOC_NO                      --VOC번호
+                    ,CR0602T.CUST_NO                     --고객번호
+                    ,CR0602T.PCON_CUST_NO                --연계인고객번호
+                      ,FN_CMM_CD_NM('CRM625',CR0602T.ACTIVE_STAT_CD  ,'zh','N') AS ACTIVE_STAT_CD
+                      ,FN_CMM_CD_NM('CRM626',CR0602T.ACTIVE_TP_CD  ,'zh','N') AS ACTIVE_TP_CD
+                       ,FN_CMM_CD_NM('CRM627',CR0602T.ACTIVE_TP_SUB_CD  ,'zh','N') AS ACTIVE_TP_SUB_CD
+                    ,CR0602T.ACTIVE_RSLT_CONT            --활동결과내용
+                    ,CR0602T.ACTIVE_CD                   --활동코드
+                    ,CR0602T.START_DT                    --시작일자
+                    ,CR0602T.END_DT                      --종료일자
+                    ,CR0602T.PGSS_HM                     --진행시간
+                    ,CR0602T.EXPC_START_DT               --예정시작일자
+                    ,CR0602T.EXPC_END_DT                 --예정종료일자
+                    ,CR0602T.PROR_CD                     --우선순위코드
+                    ,CR0602T.REG_DEPT_NM                 --등록부서명
+                    ,CR0602T.REG_USR_ID                  --등록자ID
+                    ,CR0602T.REG_DT                      --등록일자
+                    ,CR0602T.UPDT_USR_ID                 --수정자ID
+                    ,CR0602T.UPDT_DT                     --수정일자
+                    ,CR0602T.BHMC_VOC_ACTIVE_NO          --BHMC VOC활동번호
+                    ,CR0602T.ACTIVE_CONT                 --활동내용
+                    ,CR0602T.ALRT_CD                     --알람코드
+                    ,CR0602T.CALL_SEQ                    --콜일련번호
+                    ,CR0602T.STSF_CONT                   --만족도내용
+                    ,CR0602T.EMAIL_SENDER_NM             --이메일전송자명
+                    ,CR0602T.EMAIL_SENDER_ADDR_NM        --이메일전송자주소명
+                    ,CR0602T.EMAIL_ACTIVE_CD             --이메일활동코드
+                    ,CR0602T.OWNER_ID                    --소유자ID
+                    ,(SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                            FROM CM_0303T A, CM_0304T B
+                           WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                             AND A.CMM_CD = B.CMM_CD
+                             AND B.LANG_CD = #{langCd}
+                             AND A.CMM_GRP_CD = 'CRM627'
+                             AND A.CMM_CD = CR0602T.ACTIVE_TP_SUB_CD)
+                         AS ACTIVE_TP_SUB_CD_NM
+                    , DECODE(CR0602T.BHMC_VOC_NO, NULL,(SELECT CUST_NM FROM CR_0101T WHERE DLR_CD = CR0602T.DLR_CD AND CUST_NO = CR0602T.CUST_NO)
+                            , CUST_NM
+                            ) AS CUST_NM
+
+                    , DECODE(CR0602T.BHMC_VOC_NO, NULL,(SELECT CUST_NM FROM CR_0101T WHERE DLR_CD = CR0602T.DLR_CD AND CUST_NO = CR0602T.PCON_CUST_NO)
+                            , PCON_CUST_NM
+                            ) AS PCON_CUST_NM
+                    , DECODE(CR0602T.BHMC_VOC_NO, NULL, FN_GET_USER_NM(CR0602T.REG_USR_ID)
+                            , REG_USR_ID
+                            ) AS REG_USR_NM --등록자ID
+                    , DECODE(CR0602T.BHMC_VOC_NO, NULL,FN_GET_USER_NM(CR0602T.OWNER_ID)
+                            , OWNER_ID
+                            ) AS OWNER_NM --소유자ID
+                    ,to_char(CR0602T.CALL_HIS_SEQ) CALL_HIS_SEQ
+                    ,CR0602T.REC_FILE_ID
+                    ,CR0602T.CALL_START_DT
+                    ,CR0602T.CALL_END_DT
+                    ,CR0602T.CALL_DIAL_NUM
+            FROM CR_0602T CR0602T    --VOC활동처리정보
+            <include refid="searchVocActive" />
+            ORDER BY
+            <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "regDtFormat"'>               CR0602T.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                            <when test='item.field == "regUsrNm"'>            REG_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>                  </when>
+                            <when test='item.field == "regDeptNm"'>           CR0602T.REG_DEPT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "custNm"'>           CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "pconCustNm"'>           PCON_CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "activeRsltCont"'>      CR0602T.ACTIVE_RSLT_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                            <when test='item.field == "activeCont"'>          CR0602T.ACTIVE_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "alrtCd"'>              CR0602T.ALRT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "callSeq"'>             CR0602T.CALL_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "stsfCont"'>            CR0602T.STSF_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "emailSenderNm"'>       CR0602T.EMAIL_SENDER_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                            <when test='item.field == "emailSenderAddrNm"'>   CR0602T.EMAIL_SENDER_ADDR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "emailActiveCd"'>       CR0602T.EMAIL_ACTIVE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                            <when test='item.field == "ownerId"'>             OWNER_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "bhmcVocActiveNo"'>     CR0602T.BHMC_VOC_ACTIVE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                            <when test='item.field == "startDt"'>             CR0602T.START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                            <when test='item.field == "endDt"'>               CR0602T.END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                            <when test='item.field == "pgssHm"'>              CR0602T.PGSS_HM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "expcStartDt"'>         CR0602T.EXPC_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                            <when test='item.field == "expcEndDt"'>           CR0602T.EXPC_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+
+                            <when test='item.field == "vocActiveNo"'>         CR0602T.VOC_ACTIVE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                            <when test='item.field == "dlrCd"'>               CR0602T.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                            <when test='item.field == "vocNo"'>               CR0602T.VOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                            <when test='item.field == "custNo"'>              CR0602T.CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "pconCustNo"'>          CR0602T.PCON_CUST_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                            <when test='item.field == "activeStatCd"'>        CR0602T.ACTIVE_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                            <when test='item.field == "activeTpCd"'>          CR0602T.ACTIVE_TP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                            <when test='item.field == "activeTpSubCd"'>       CR0602T.ACTIVE_TP_SUB_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                            <when test='item.field == "activeCd"'>            CR0602T.ACTIVE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                            <when test='item.field == "prorCd"'>              CR0602T.PROR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <when test='item.field == "updtUsrId"'>           CR0602T.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                            <when test='item.field == "updtDt"'>              CR0602T.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                            <otherwise>
+                                CR0602T.REG_DT DESC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                CR0602T.REG_DT DESC
+                </otherwise>
+            </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- VOC 상세 정보를 조회한다. -->
+    <select id="selectVocMgmtByKey" parameterType="VocMgmtSearchVO" resultType="VocMgmtVO">
+        /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.selectVocMgmtsByKey] */
+         SELECT
+                CR0601T.DLR_CD                         --딜러코드
+                ,CR0601T.VOC_NO                         --VOC번호
+                ,CR0601T.VOC_STAT_CD                    --VOC상태코드
+                ,CR0601T.VOC_TP_CD                      --VOC유형코드
+                ,CR0601T.TEND_CD                        --성향코드
+                ,CR0601T.VOC_TP_SUB1_CD                 --VOC유형하위1코드
+                ,CR0601T.VOC_TP_SUB2_CD                 --VOC유형하위2코드
+                ,CR0601T.VOC_TP_SUB3_CD                 --VOC유형하위3코드
+                ,CR0601T.ACPT_SRC_CD                    --접수출처코드
+                ,CR0601T.ACTIVE_GAIN_PATH_CD            --활동획득경로코드
+                ,CR0601T.CMPL_CAU_CD                    --불만원인코드
+                ,CR0601T.PROR_CD                        --우선순위코드
+                ,CR0601T.PROC_LMT_CD                    --처리시한코드
+                ,CR0601T.EMGC_CALL_NM                   --긴급콜명
+                ,CR0601T.VOC_END_DT                     --VOC종료일자
+                ,CR0601T.RECEIVE_TEL_NO                 --수신전화번호
+                ,CR0601T.CUST_NM                        --고객명
+                ,CR0601T.CUST_NO                        --고객번호
+                ,CR0601T.CUST_PREF_COMM_NO              --고객선호연락번호
+                ,CR0601T.HP_NO                          --휴대폰번호
+                ,CR0601T.HOME_TEL_NO                    --집전화번호
+                ,CR0601T.OFFICE_TEL_NO                  --직장전화번호
+                ,CR0601T.PCON_CUST_NM                   --연계인고객명
+                ,CR0601T.PCON_CUST_NO                   --연계인고객번호
+                ,CR0601T.PCON_CUST_MJR_TEL_NO           --연계인고객주요전화번호
+                ,CR0601T.PCON_CUST_HP_NO                --연계인고객휴대폰번호
+                ,CR0601T.PCON_CUST_HOME_TEL_NO          --연계인고객집전화번호
+                ,CR0601T.PCON_CUST_OFFICE_TEL_NO        --연계인고객직장전화번호
+                ,CR0601T.RESV_DT                        --예약일자
+                ,CR0601T.SEND_TEL_NO                    --발신전화번호
+                ,CR0601T.PCON_REL_CD                    --연계인관계코드
+                ,CR0601T.PPROC_DEPT_NM                  --처리부서명
+                ,CR0601T.PPROC_ID                       --처리인ID
+                ,CR0601T.COOP_DEPT_NM                   --협조부서명
+                ,CR0601T.BIZ_DEPT_NM                    --사업부서명
+                ,CR0601T.OFFICE_NM                      --사무소명
+                ,CR0601T.SUNG_CD                        --성코드
+                ,CR0601T.SUNG_NM                        --성명
+                ,CR0601T.CITY_CD                        --도시코드
+                ,CR0601T.CITY_NM                        --도시명
+                ,CR0601T.VIN_NO                         --차대번호
+                ,CR0601T.CAR_REG_NO                     --차량등록번호
+                ,CR0601T.CARLINE_CD                     --차종코드
+                ,CR0601T.CARLINE_NM                     --차종명
+                ,CR0601T.MODEL_CD                       --모델코드
+                ,CR0601T.MODEL_NM                       --모델명
+                ,CR0601T.OCN_CD                         --OCN코드
+                ,CR0601T.OCN_NM                         --OCN명
+                ,CR0601T.RUN_DIST_VAL                   --주행거리값
+                ,CR0601T.ACPT_DEPT_NM                   --접수부서
+                ,CR0601T.PACPT_ID                       --접수자ID
+                ,CR0601T.ACPT_DT                        --접수일자
+                ,CR0601T.CUST_REQ_CONT                  --고객요청내용
+                ,CR0601T.PEVAL_ID                       --심사인ID
+                ,CR0601T.EVAL_ALLOC_DT                  --심사배정일자
+                ,CR0601T.CALL_CEN_OPN_CONT              --콜센터의견내용
+                ,CR0601T.RETURN_CAU_CONT                --반송원인내용
+                ,CR0601T.PMO_CAU_CD                     --승급원인코드
+                ,CR0601T.PMO_DT                         --승급일자
+                ,CR0601T.REV_MTH_CONT                   --검토방안내용
+                ,CR0601T.REAL_PPROC_ID                  --실처리인ID
+                ,CR0601T.PROC_DT                        --처리일자
+                ,CR0601T.PPROC_TEL_NO                   --처리인전화번호
+                ,CR0601T.PPROC_EMAIL_NM                 --처리인이메일명
+                ,CR0601T.PROC_RSLT_CONT                 --처리결과내용
+                ,CR0601T.STSF_IVST_EMP_ID               --만족도조사인ID
+                ,CR0601T.STSF_IVST_DT                   --만족도조사일자
+                ,CR0601T.STSF_IVST_RSLT_CONT            --만족도조사결과내용
+                ,CR0601T.MTH_ACHV_HM                    --방안달성시간
+                ,CR0601T.CMPL_STSF_NM                   --불만만족도명
+                ,CR0601T.CMPL_RE_ACPT_YN                --불만재접수여부
+                ,CR0601T.CMPL_RE_ACPT_CNT               --불만재접수횟수
+                ,CR0601T.SER_REQ_NO                     --서비스요청번호
+                ,CR0601T.CMPL_DL_DEPT_NM                --불만전달부서명
+                ,CR0601T.CMPL_DL_EMP_ID                 --불만전달자ID
+                ,CR0601T.SALE_DT                        --판매일자
+                ,CR0601T.DSTB_NO                        --물류번호
+                ,CR0601T.PAR_ORD_YN                     --부품오더여부
+                ,CR0601T.PAR_ORD_DT                     --부품오더일자
+                ,CR0601T.PAR_ARRV_DT                    --부품도착일자
+                ,CR0601T.ITEM_CD                        --품목코드
+                ,CR0601T.BHMC_YN                        --BHMC여부
+                ,CR0601T.BHMC_VOC_NO                    --BHMCVOC번호
+                ,CR0601T.REPAIR_BOOK_ID                 --정비예약ID
+                ,CR0601T.REG_USR_ID                     --등록자ID
+                ,CR0601T.REG_DT                         --등록일자
+                ,CR0601T.UPDT_USR_ID                    --수정자ID
+                ,CR0601T.UPDT_DT                        --수정일자
+                ,CR0601T.VOC_TP_SUB_CD                  --VOC유형하위코드
+                ,CR0601T.PCON_TP_NM                     --연계인유형명
+                ,CR0601T.SEND_CD                        --자료전송상태
+                ,CR0601T.CLOSE_DT                       --CLOSE일자
+                ,CR0601T.TRACE_DT                       --추적일자
+                ,CR0601T.TRACE_RSLT_CONT                --추적결과내용
+                ,CR0601T.SALES_ACTIVE_SRC_CD            --영업활동출처코드
+                ,CR0601T.REL_SALES_ACTIVE_NO            --관계영업활동번호
+                ,CR0601T.DLR_CMP_COMM_YN                --딜러사연락여부
+                ,CR0601T.EMGC_RESC_FST_CALL_YN          --긴급구조첫통화여부
+                ,NVL(CR0601T.EMGC_RESC_YN, 'N') AS EMGC_RESC_YN         --긴급구조여부
+                ,CR0601T.EMGC_RESC_REASON_NM            --긴급구조원인명
+                ,CR0601T.EMGC_RESC_STSF_CONT            --긴급구조만족도내용
+                ,CR0601T.EMGC_RESC_LOC_CONT             --긴급구조위치내용
+                ,CR0601T.CALL_HIS_SEQ                   --콜센터 이력 번호
+                ,CR0601T.REC_FILE_ID                    --콜센터 녹음파일 명
+                ,(SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                    FROM CM_0303T A, CM_0304T B
+                   WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                     AND A.CMM_CD = B.CMM_CD
+                     AND B.LANG_CD = #{langCd}
+                     AND A.CMM_GRP_CD = 'CRM624'
+                     AND A.USE_YN = 'Y'
+                     AND A.CMM_CD = CR0601T.VOC_STAT_CD
+                     ) AS VOC_STAT_CD_NM
+                ,(SELECT NVL(B.CMM_CD_TXT, A.CMM_CD_NM)
+                    FROM CM_0303T A, CM_0304T B
+                   WHERE A.CMM_GRP_CD = B.CMM_GRP_CD
+                     AND A.CMM_CD = B.CMM_CD
+                     AND B.LANG_CD = #{langCd}
+                     AND A.CMM_GRP_CD = 'CRM604'
+                     AND A.USE_YN = 'Y'
+                     AND A.CMM_CD = CR0601T.VOC_TP_CD)
+                 AS VOC_TP_CD_NM
+                ,FN_GET_USER_NM(CR0601T.PPROC_ID) AS PPROC_NM     --처리인ID
+                ,FN_GET_USER_NM(CR0601T.PACPT_ID) AS PACPT_NM     --접수자ID
+                ,FN_GET_USER_NM(CR0601T.PEVAL_ID) AS PEVAL_NM     --심사인ID
+                ,FN_GET_USER_NM(CR0601T.REAL_PPROC_ID) AS REAL_PPROC_NM       --실처리인ID
+                ,FN_GET_USER_NM(CR0601T.STSF_IVST_EMP_ID) AS STSF_IVST_EMP_NM     --만족도조사인ID
+                ,FN_GET_USER_NM(CR0601T.CMPL_DL_EMP_ID) AS CMPL_DL_EMP_NM     --불만전달자ID
+     FROM CR_0601T CR0601T    --VOC마스터
+     WHERE CR0601T.DLR_CD = #{sDlrCd}
+     AND CR0601T.VOC_NO = #{sVocNo}
+     <!-- 서비스에서 검색 조건. -->
+<if test='sVocSubCd != null and sVocSubCd != ""'>
+    AND CR0601T.VOC_TP_SUB1_CD IN (SELECT CMM_CD FROM CM_0303T WHERE CMM_GRP_CD = 'CRM605' AND REMARK2 = #{sVocSubCd} )
+    AND CR0601T.VOC_TP_SUB2_CD IN (SELECT CMM_CD FROM CM_0303T WHERE CMM_GRP_CD = 'CRM606' AND REMARK2 = #{sVocSubCd} )
+     OR CR0601T.VOC_TP_SUB3_CD IN (SELECT CMM_CD FROM CM_0303T WHERE CMM_GRP_CD = 'CRM607' AND REMARK2 = #{sVocSubCd} )
+</if>
+
+    </select>
+
+
+
+    <!-- VOC활동 정보를 등록한다. -->
+    <insert id="insertActive" parameterType="VocActiveVO" >
+        /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.insertActive] */
+
+        INSERT INTO CR_0602T    --VOC활동처리정보
+        (
+              VOC_ACTIVE_NO               --VOC활동번호
+             ,VOC_NO                      --VOC번호
+             ,BHMC_VOC_NO                 --BHMC_VOC_NO
+             ,BHMC_VOC_ACTIVE_NO          --BHMC VOC활동번호
+             ,DLR_CD                      --딜러코드
+             ,CUST_NO                     --고객번호
+             ,CUST_NM                     --고객명
+             ,PCON_CUST_NO                --연계인고객번호
+             ,PCON_CUST_NM                --연계인고객명
+             ,ACTIVE_STAT_CD              --활동상태코드
+             ,ACTIVE_TP_CD                --활동유형코드
+             ,ACTIVE_TP_SUB_CD            --활동유형하위코드
+             ,ACTIVE_RSLT_CONT            --활동결과내용
+             ,ACTIVE_CD                   --활동코드
+             ,START_DT                    --시작일자
+             ,END_DT                      --종료일자
+             ,PGSS_HM                     --진행시간
+             ,EXPC_START_DT               --예정시작일자
+             ,EXPC_END_DT                 --예정종료일자
+             ,PROR_CD                     --우선순위코드
+             ,REG_DEPT_NM                 --등록부서명
+             ,REG_USR_ID                  --등록자ID
+             ,REG_DT                      --등록일자
+             ,ACTIVE_CONT                 --활동내용
+             ,ALRT_CD                     --알람코드
+             ,CALL_SEQ                    --콜일련번호
+             ,STSF_CONT                   --만족도내용
+             ,EMAIL_SENDER_NM             --이메일전송자명
+             ,EMAIL_SENDER_ADDR_NM        --이메일전송자주소명
+             ,EMAIL_ACTIVE_CD             --이메일활동코드
+             ,OWNER_ID                    --소유자ID
+             ,CALL_HIS_SEQ
+             ,REC_FILE_ID
+             ,CALL_START_DT
+             ,CALL_END_DT
+             ,CALL_DIAL_NUM
+        ) VALUES (
+              SEQ_CR_0602T.NEXTVAL          --VOC활동번호
+             ,#{vocNo}                      --VOC번호
+             ,#{bhmcVocNo}                  --BHMC_VOC_NO
+             ,#{bhmcVocActiveNo}            --BHMC VOC활동번호
+             ,#{dlrCd}                      --딜러코드
+             ,#{custNo}                     --고객번호
+             ,#{custNm}                     --고객명
+             ,#{pconCustNo}                 --연계인고객번호
+             ,#{pconCustNm}                 --연계인고객명
+             ,#{activeStatCd}               --활동상태코드
+             ,#{activeTpCd}                 --활동유형코드
+             ,#{activeTpSubCd}              --활동유형하위코드
+             ,#{activeRsltCont}             --활동결과내용
+             ,#{activeCd}                   --활동코드
+             ,#{startDt}                    --시작일자
+             ,#{endDt}                      --종료일자
+             ,#{pgssHm}                     --진행시간
+             ,#{expcStartDt}                --예정시작일자
+             ,#{expcEndDt}                  --예정종료일자
+             ,#{prorCd}                     --우선순위코드
+             ,#{regDeptNm}                  --등록부서명
+             ,#{regUsrId}                   --등록자ID
+             ,SYSDATE                       --등록시간
+             ,#{activeCont}                 --활동내용
+             ,#{alrtCd}                     --알람코드
+             ,#{callSeq}                    --콜일련번호
+             ,#{stsfCont}                   --만족도내용
+             ,#{emailSenderNm}              --이메일전송자명
+             ,#{emailSenderAddrNm}          --이메일전송자주소명
+             ,#{emailActiveCd}              --이메일활동코드
+             ,#{ownerId}                    --소유자ID
+             ,#{callHisSeq}
+             ,#{recFileId}
+             ,#{callStartDt}
+             ,#{callEndDt}
+             ,#{callDialNum}
+        )
+
+        <selectKey resultType="int" keyProperty="vocActiveNo" order="AFTER">
+            SELECT SEQ_CR_0602T.currval AS vocActiveNo FROM DUAL
+        </selectKey>
+
+    </insert>
+
+
+    <!-- VOC 요약정보 조회 ( 진행중인 상태의 전체 목록 / 검색조건이랑 상관없음 ) -->
+    <select id="selectVocTpCdSummeryCnt" parameterType="VocMgmtSearchVO" resultType="VocTpCdSummeryVO">
+    /* [chn.bhmc.dms.crm.crq.service.dao.VocMgmtDAO.selectVocTpCdSummeryCnt] */
+        SELECT
+             DLR_CD
+            ,SUM(VOC_CNT1) AS VOC_CNT1
+            ,SUM(VOC_CNT2) AS VOC_CNT2
+            ,SUM(VOC_CNT3) AS VOC_CNT3
+            ,SUM(VOC_CNT4) AS VOC_CNT4
+        FROM
+            (
+            SELECT
+                DLR_CD
+                ,(SELECT
+                    SUM(DECODE(VOC_TP_CD,'01',1,0))
+                  FROM CR_0601T
+                  WHERE CR0601T.DLR_CD = DLR_CD
+                  AND CR0601T.VOC_NO = VOC_NO
+                ) AS VOC_CNT1
+                ,(SELECT
+                    SUM(DECODE(VOC_TP_CD,'02',1,0))
+                  FROM CR_0601T
+                  WHERE CR0601T.DLR_CD = DLR_CD
+                  AND CR0601T.VOC_NO = VOC_NO
+                ) AS VOC_CNT2
+                ,(SELECT
+                    SUM(DECODE(VOC_TP_CD,'03',1,0))
+                  FROM CR_0601T
+                  WHERE CR0601T.DLR_CD = DLR_CD
+                  AND CR0601T.VOC_NO = VOC_NO
+                ) AS VOC_CNT3
+                ,(SELECT
+                    SUM(DECODE(VOC_TP_CD,'04',1,0))
+                  FROM CR_0601T
+                  WHERE CR0601T.DLR_CD = DLR_CD
+                  AND CR0601T.VOC_NO = VOC_NO
+                ) AS VOC_CNT4
+            FROM CR_0601T CR0601T
+            WHERE DLR_CD = #{sDlrCd}
+            AND VOC_STAT_CD NOT IN ( '06','07' )        -- 상태가 미완료인것.
+            )
+        GROUP BY  DLR_CD
+    </select>
+
+</mapper>

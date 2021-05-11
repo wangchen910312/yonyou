@@ -1,0 +1,827 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20170720" releaseVersion="9.0.0">
+<TableDataMap>
+<TableData name="selectResvSerTimeSearchDs" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sStartDt"/>
+<O>
+<![CDATA[2019]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDriverNm"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D1201]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCarlineCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[
+SELECT COLUMN_SEQ
+       ,COLUMN_NM
+       ,(SELECT case when count(*) = 0  THEN 0
+                ELSE  ROUND(sum(scount) / count(*),2) end
+                FROM (
+		                SELECT case when RESV_STAT_CD = 'F' then 1
+		                       else  0 end scount
+		                       ,(SELECT CARLINE_CD FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS CARLINE_CD
+		                FROM SE_0100T A
+		                WHERE 
+		                TO_CHAR(SER_RESV_START_DT ,'YYYYMMDD') BETWEEN '${sStartDt}'||'0101' AND '${sStartDt}'||'1231'
+		                AND DLR_CD = '${sDlrCd}' 
+		              )
+		              where 1=1 
+		              ${IF(LEN(sCarlineCd) <=0 , "", "AND CARLINE_CD LIKE '%"+ sCarlineCd +"%'")}
+		         ) AS YJWCL
+       ,NVL(M1, 0) AS M1
+       ,NVL(M2, 0) AS M2
+       ,NVL(M3, 0) AS M3
+       ,NVL(M4, 0) AS M4
+       ,NVL(M5, 0) AS M5
+       ,NVL(M6, 0) AS M6
+       ,NVL(M7, 0) AS M7
+       ,NVL(M8, 0) AS M8
+       ,NVL(M9, 0) AS M9
+       ,NVL(M10, 0) AS M10
+       ,NVL(M11, 0) AS M11
+       ,NVL(M12, 0) AS M12
+FROM (
+    SELECT * FROM (
+        WITH TA1 AS (
+            SELECT *
+            FROM (
+                SELECT DLR_CD
+                       ,RESV_DOC_NO
+                       ,VIN_NO
+                       ,RESV_DT
+                       ,RESV_STAT_CD
+                       ,SER_RESV_START_DT
+                       ,TO_CHAR(RESV_DT, 'MM') AS RESV_MM
+                       ,(SELECT CARLINE_CD FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS CARLINE_CD
+                       ,CASE WHEN RESV_STAT_CD = 'F' THEN A.UPDT_DT ELSE SYSDATE END AS SER_RESV_CNFM_DT
+                       ,(SELECT DECODE(RESV_KEEP_HM_CD, '01', 15, '02', 30, '03', 45, '04', 60, 0) FROM SE_1010T WHERE DLR_CD = A.DLR_CD) AS KEEP_HM
+                       ,(SELECT DECODE(RESV_NKEEP_HM_CD , '01', 1, '02', 2, '03', 3, '04', 4, 0) FROM SE_1010T WHERE DLR_CD = A.DLR_CD) AS NKEEP_HM
+                FROM SE_0100T A
+                WHERE TO_CHAR(SER_RESV_START_DT ,'YYYYMMDD') BETWEEN '${sStartDt}'||'0101' AND '${sStartDt}'||'1231'
+                AND DLR_CD = '${sDlrCd}'
+                ${IF(LEN(sDriverNm) <=0 , "", "AND DRIVER_NM LIKE '%"+ sDriverNm +"%'")}
+            )
+            WHERE 1=1
+            ${IF(LEN(sCarlineCd) <=0 , "", "AND CARLINE_CD LIKE '%"+ sCarlineCd +"%'")}
+        )
+        SELECT '01' AS COLUMN_SEQ, '维修预约台数' AS COLUMN_NM, COUNT(DISTINCT(VIN_NO)) AS CNT, RESV_MM, 'A' AS VAL_TYPE
+        FROM TA1
+        WHERE RESV_STAT_CD != 'C'
+        GROUP BY RESV_MM    --수리예약대수(수리예약문서 발행의 차량수(취소한 수리예약문서 미포함))
+        UNION ALL
+        SELECT '01' AS COLUMN_SEQ, '维修预约台数' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+        UNION
+
+        SELECT '02' AS COLUMN_SEQ, '维修预约台次' AS COLUMN_NM, COUNT(RESV_DOC_NO) AS CNT, RESV_MM, 'A' AS VAL_TYPE
+        FROM TA1
+        WHERE RESV_STAT_CD != 'C'
+        GROUP BY RESV_MM    --수리예약대차(수리예약문서 발행의 수량(취소한 수리예약문서 미포함))
+        UNION ALL
+        SELECT '02' AS COLUMN_SEQ, '维修预约台次' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+
+        UNION
+
+        SELECT '03' AS COLUMN_SEQ, '取消预约台数' AS COLUMN_NM, COUNT(DISTINCT(VIN_NO)) AS CNT, RESV_MM, 'A' AS VAL_TYPE
+        FROM TA1
+        WHERE RESV_STAT_CD = 'C'
+        GROUP BY RESV_MM    --예약취소대수(수리예약문서 취소 차량수)
+        UNION ALL
+        SELECT '03' AS COLUMN_SEQ, '取消预约台数' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+
+        UNION
+
+        SELECT '04' AS COLUMN_SEQ, '取消预约台次' AS COLUMN_NM, COUNT(RESV_DOC_NO) AS CNT, RESV_MM, 'A' AS VAL_TYPE
+        FROM TA1
+        WHERE RESV_STAT_CD = 'C'
+        GROUP BY RESV_MM    --예약취소대차(수리예약문서 취소 수량)
+        UNION ALL
+        SELECT '04' AS COLUMN_SEQ, '取消预约台次' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+
+        UNION
+
+        SELECT '05' AS COLUMN_SEQ, '    预约失约台次' AS TABLE_NM, COUNT(TA1.RESV_DOC_NO) AS CNT, TA1.RESV_MM, 'A' AS VAL_TYPE
+        FROM TA1
+        WHERE TO_CHAR(TA1.SER_RESV_START_DT + (1/24)*(KEEP_HM/60) + (1/24)*NKEEP_HM, 'YYYYMMDDHH24MI') < TO_CHAR(TA1.SER_RESV_CNFM_DT, 'YYYYMMDDHH24MI')
+        AND TA1.RESV_STAT_CD != 'C'
+        GROUP BY RESV_MM    --예약약속어김대차(수리예약대차 중, 규정시간 초과하여 예약완료 실행된 수리예약 대차 )
+        UNION ALL
+        SELECT '05' AS COLUMN_SEQ, '    预约失约台次' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+
+        UNION
+
+        SELECT '06' AS COLUMN_SEQ, '    预约失约率(%)' AS TABLE_NM
+        --, ROUND((F_CNT/CNT), 2) AS CNT
+        ,ROUND(CASE WHEN CNT  > 0 THEN F_CNT/CNT ELSE 0 END,2)  AS CNT  -- R19021500879问题分母不能为 0 贾明 2019-2-15
+        , RESV_MM, 'P' AS VAL_TYPE
+        FROM (
+            SELECT SUM(F_CNT) AS F_CNT, SUM(CNT) AS CNT, RESV_MM FROM (
+                SELECT 0 AS F_CNT, COUNT(RESV_DOC_NO) AS CNT, RESV_MM
+                FROM TA1
+                WHERE RESV_STAT_CD != 'C'
+                GROUP BY RESV_MM
+
+                UNION ALL
+
+                SELECT COUNT(TA1.RESV_DOC_NO) AS F_CNT, 0 AS CNT, RESV_MM
+                FROM TA1
+                WHERE TO_CHAR(TA1.SER_RESV_START_DT + (1/24)*(KEEP_HM/60) + (1/24)*NKEEP_HM, 'YYYYMMDDHH24MI') < TO_CHAR(TA1.SER_RESV_CNFM_DT, 'YYYYMMDDHH24MI')
+                AND TA1.RESV_STAT_CD != 'C'
+                GROUP BY RESV_MM
+            )
+            GROUP BY RESV_MM    --예약약속어김율(예약약속어김대차/수리예약대차)
+        )
+
+        UNION
+
+        SELECT '07' AS COLUMN_SEQ, '    预约完成台次' AS TABLE_NM, COUNT(RESV_DOC_NO) AS CNT, RESV_MM, 'A' AS VAL_TYPE
+        FROM TA1
+        WHERE RESV_STAT_CD = 'F'
+        GROUP BY RESV_MM    --예약완성대차(수리예약대차 중, 예약완료 상태인 수리예약문서 수량)
+        UNION ALL
+        SELECT '07' AS COLUMN_SEQ, '    预约完成台次' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+
+        UNION
+
+        SELECT '08' AS COLUMN_SEQ, '    预约完成率(%)' AS TABLE_NM
+        --, ROUND((F_CNT/CNT), 2) AS CNT
+        ,ROUND(CASE WHEN CNT  > 0 THEN F_CNT/CNT ELSE 0 END,2)  AS CNT  -- R19021500879问题分母不能为 0 贾明 2019-2-15
+        , RESV_MM, 'P' AS VAL_TYPE
+        FROM (
+            SELECT SUM(F_CNT) AS F_CNT, SUM(CNT) AS CNT, RESV_MM FROM (
+                SELECT 0 AS F_CNT, COUNT(RESV_DOC_NO) AS CNT, RESV_MM FROM TA1
+                WHERE RESV_STAT_CD != 'C'
+                GROUP BY RESV_MM
+                UNION ALL
+                SELECT COUNT(RESV_DOC_NO) AS F_CNT, 0 AS CNT, RESV_MM FROM TA1
+                WHERE RESV_STAT_CD = 'F'
+                GROUP BY RESV_MM
+            ) GROUP BY RESV_MM
+        )
+
+        UNION
+
+        SELECT '09' AS COLUMN_SEQ, '        预约提前台次' AS TABLE_NM, COUNT(TA1.RESV_DOC_NO) AS CNT, TA1.RESV_MM, 'A' AS VAL_TYPE
+        FROM TA1
+        WHERE TO_CHAR(TA1.SER_RESV_START_DT, 'YYYYMMDDHH24MI') > TO_CHAR(TA1.SER_RESV_CNFM_DT, 'YYYYMMDDHH24MI')
+        AND TA1.RESV_STAT_CD = 'F'
+        GROUP BY RESV_MM
+        UNION ALL
+        SELECT '09' AS COLUMN_SEQ, '        预约提前台次' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+
+        UNION
+
+        SELECT '10' AS COLUMN_SEQ, '        预约提前率(%)' AS TABLE_NM
+        --, ROUND((F_CNT/CNT), 2) AS CNT
+        ,ROUND(CASE WHEN CNT  > 0 THEN F_CNT/CNT ELSE 0 END,2)  AS CNT  -- R19021500879问题分母不能为 0 贾明 2019-2-15
+        , RESV_MM, 'P' AS VAL_TYPE
+        FROM (
+            SELECT SUM(F_CNT) AS F_CNT, SUM(CNT) AS CNT, RESV_MM FROM (
+                SELECT 0 AS F_CNT, COUNT(RESV_DOC_NO) AS CNT, RESV_MM FROM TA1
+                WHERE RESV_STAT_CD = 'F'
+                GROUP BY RESV_MM
+                UNION ALL
+                SELECT COUNT(TA1.RESV_DOC_NO) AS F_CNT, 0 AS CNT, RESV_MM
+                  FROM TA1
+                 WHERE TO_CHAR(TA1.SER_RESV_START_DT, 'YYYYMMDDHH24MI') > TO_CHAR(TA1.SER_RESV_CNFM_DT, 'YYYYMMDDHH24MI')
+                   AND TA1.RESV_STAT_CD = 'F'
+                GROUP BY RESV_MM
+            ) GROUP BY RESV_MM
+        )
+
+        UNION
+
+        SELECT '11' AS COLUMN_SEQ, '        预约准时台次' AS TABLE_NM, COUNT(TA1.RESV_DOC_NO) AS CNT, TA1.RESV_MM, 'A' AS VAL_TYPE
+        FROM TA1
+        WHERE TO_CHAR(TA1.SER_RESV_CNFM_DT, 'YYYYMMDDHH24MI') BETWEEN TO_CHAR(SER_RESV_START_DT, 'YYYYMMDDHH24MI') AND TO_CHAR(SER_RESV_START_DT + (1/24)*(KEEP_HM/60), 'YYYYMMDDHH24MI')
+        AND TA1.RESV_STAT_CD = 'F'
+        GROUP BY RESV_MM
+        UNION ALL
+        SELECT '11' AS COLUMN_SEQ, '        预约准时台次' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+
+        UNION
+        SELECT '12' AS COLUMN_SEQ, '        预约准时率(%)' AS TABLE_NM
+        --, ROUND((F_CNT/CNT), 2) AS CNT
+        ,ROUND(CASE WHEN CNT  > 0 THEN F_CNT/CNT ELSE 0 END,2)  AS CNT  -- R19021500879问题分母不能为 0 贾明 2019-2-15
+        , RESV_MM, 'P' AS VAL_TYPE
+        FROM (
+            SELECT SUM(F_CNT) AS F_CNT, SUM(CNT) AS CNT, RESV_MM FROM (
+                SELECT 0 AS F_CNT, COUNT(RESV_DOC_NO) AS CNT, RESV_MM FROM TA1
+                WHERE RESV_STAT_CD = 'F'
+                GROUP BY RESV_MM
+                UNION ALL
+                SELECT COUNT(TA1.RESV_DOC_NO) AS F_CNT, 0 AS CNT, RESV_MM
+                  FROM TA1
+                 WHERE TO_CHAR(TA1.SER_RESV_CNFM_DT, 'YYYYMMDDHH24MI') BETWEEN TO_CHAR(SER_RESV_START_DT, 'YYYYMMDDHH24MI') AND TO_CHAR(SER_RESV_START_DT + (1/24)*(KEEP_HM/60), 'YYYYMMDDHH24MI')
+                   AND TA1.RESV_STAT_CD = 'F'
+                GROUP BY RESV_MM
+            ) GROUP BY RESV_MM
+        )
+
+        UNION
+
+        SELECT '13' AS COLUMN_SEQ, '        预约延迟台次' AS TABLE_NM, COUNT(TA1.RESV_DOC_NO) AS CNT, TA1.RESV_MM, 'A' AS VAL_TYPE
+        FROM TA1
+        WHERE TO_CHAR(SER_RESV_START_DT + (1/24)*(KEEP_HM/60), 'YYYYMMDDHH24MI')  < TO_CHAR(TA1.SER_RESV_CNFM_DT, 'YYYYMMDDHH24MI')
+        AND TA1.RESV_STAT_CD = 'F'
+        GROUP BY RESV_MM
+        UNION ALL
+        SELECT '13' AS COLUMN_SEQ, '        预约延迟台次' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+
+        UNION
+
+        SELECT '14' AS COLUMN_SEQ, '        预约延迟率(%)' AS TABLE_NM
+        --, ROUND((F_CNT/CNT), 2) AS CNT
+        ,ROUND(CASE WHEN CNT  > 0 THEN F_CNT/CNT ELSE 0 END,2)  AS CNT  -- R19021500879问题分母不能为 0 贾明 2019-2-15
+        , RESV_MM, 'P' AS VAL_TYPE
+        FROM (
+            SELECT SUM(F_CNT) AS F_CNT, SUM(CNT) AS CNT, RESV_MM
+            FROM (
+                SELECT 0 AS F_CNT, COUNT(RESV_DOC_NO) AS CNT, RESV_MM FROM TA1
+                WHERE RESV_STAT_CD = 'F'
+                GROUP BY RESV_MM
+                UNION ALL
+                SELECT COUNT(TA1.RESV_DOC_NO) AS F_CNT, 0 AS CNT, RESV_MM
+                  FROM TA1
+                 WHERE TO_CHAR(SER_RESV_START_DT + (1/24)*(KEEP_HM/60), 'YYYYMMDDHH24MI')  < TO_CHAR(TA1.SER_RESV_CNFM_DT, 'YYYYMMDDHH24MI')
+                   AND TA1.RESV_STAT_CD = 'F'
+                GROUP BY RESV_MM
+            ) GROUP BY RESV_MM
+        )
+
+        UNION
+
+        SELECT '15' AS COLUMN_SEQ, '维修预约率(%)' AS TABLE_NM
+        --, ROUND((F_CNT/CNT), 2) AS CNT
+        ,ROUND(CASE WHEN CNT  > 0 THEN F_CNT/CNT ELSE 0 END,2)  AS CNT  -- R19021500879问题分母不能为 0 贾明 2019-2-15
+        , RESV_MM, 'P' AS VAL_TYPE
+        FROM (
+            SELECT SUM(F_CNT) AS F_CNT, SUM(CNT) AS CNT, RESV_MM
+            FROM (
+                SELECT 0 AS F_CNT, COUNT(DISTINCT(VIN_NO)) AS CNT, RESV_MM
+                FROM (
+                    SELECT * FROM (
+                        SELECT RO_DOC_NO
+                               ,VIN_NO
+                               ,TO_CHAR(RO_DT, 'MM') AS RESV_MM
+                               ,(SELECT CARLINE_CD FROM SA_0121T WHERE VIN_NO = RO.VIN_NO AND ROWNUM = 1) AS CARLINE_CD
+                        FROM SE_0300T RO
+                        WHERE RO_STAT_CD != '06'
+                        AND TO_CHAR(RO_DT ,'YYYYMMDD') BETWEEN '${sStartDt}'||'0101' AND '${sStartDt}'||'1231'
+                        AND RO.DLR_CD = '${sDlrCd}'
+                     ${IF(LEN(sDriverNm) <=0 , "", "AND DRIVER_NM LIKE '%"+ sDriverNm +"%'")}
+                    )WHERE CARLINE_CD IS NOT NULL
+                  ${IF(LEN(sCarlineCd) <=0 , "", "AND CARLINE_CD LIKE '%"+ sCarlineCd +"%'")}
+                )
+                GROUP BY RESV_MM
+                UNION ALL
+                SELECT COUNT(DISTINCT(VIN_NO)) AS F_CNT, 0 AS CNT , RESV_MM FROM(
+                SELECT TA1.*,TO_CHAR(B.RO_DT, 'MM') AS RESV_MM
+                  FROM (SELECT *
+            FROM (
+                SELECT DLR_CD
+                       ,RESV_DOC_NO
+                       ,VIN_NO
+                       ,RESV_DT
+                       ,RESV_STAT_CD
+                       ,SER_RESV_START_DT
+                       ,(SELECT CARLINE_CD FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS CARLINE_CD
+                       ,CASE WHEN RESV_STAT_CD = 'F' THEN A.UPDT_DT ELSE SYSDATE END AS SER_RESV_CNFM_DT
+                       ,(SELECT DECODE(RESV_KEEP_HM_CD, '01', 15, '02', 30, '03', 45, '04', 60, 0) FROM SE_1010T WHERE DLR_CD = A.DLR_CD) AS KEEP_HM
+                       ,(SELECT DECODE(RESV_NKEEP_HM_CD , '01', 1, '02', 2, '03', 3, '04', 4, 0) FROM SE_1010T WHERE DLR_CD = A.DLR_CD) AS NKEEP_HM
+                FROM SE_0100T A
+                WHERE  1=1
+                AND DLR_CD = '${sDlrCd}'
+                 ${IF(LEN(sDriverNm) <=0 , "", "AND DRIVER_NM LIKE '%"+ sDriverNm +"%'")}
+            )
+            WHERE 1=1
+            ${IF(LEN(sCarlineCd) <=0 , "", "AND CARLINE_CD LIKE '%"+ sCarlineCd +"%'")}
+            )TA1
+             INNER JOIN SE_0300T B
+                    ON TA1.DLR_CD = B.DLR_CD
+                   AND TA1.RESV_DOC_NO = B.RESV_DOC_NO
+                   AND TA1.RESV_STAT_CD = 'F'
+                   AND B.RO_STAT_CD != '06'
+                   AND TO_CHAR(B.RO_DT ,'YYYYMMDD') BETWEEN '${sStartDt}'||'0101' AND '${sStartDt}'||'1231'
+               )GROUP BY RESV_MM
+            ) GROUP BY RESV_MM
+        )
+    )
+
+    UNION
+
+    SELECT *
+    FROM (
+        WITH TA1 AS (
+            SELECT *
+            FROM (
+                SELECT DLR_CD
+                       ,PAR_RESV_DOC_NO
+                       ,VIN_NO
+                       ,PAR_RESV_DT
+                       ,PAR_RESV_STAT_CD
+                       ,TO_CHAR(PAR_RESV_DT, 'MM') AS RESV_MM
+                       ,PRE_AMT
+                       ,(SELECT CARLINE_CD FROM SA_0121T WHERE VIN_NO = A.VIN_NO AND ROWNUM = 1) AS CARLINE_CD
+                  FROM SE_0800T A
+                 WHERE DLR_CD = '${sDlrCd}'
+                 AND TO_CHAR(PAR_RESV_DT ,'YYYYMMDD') BETWEEN '${sStartDt}'||'0101' AND '${sStartDt}'||'1231'
+                ${IF(LEN(sDriverNm) <=0 , "", "AND DRIVER_NM LIKE '%"+ sDriverNm +"%'")}
+            ) F
+            WHERE 1=1
+            ${IF(LEN(sCarlineCd) <=0 , "", "AND CARLINE_CD LIKE '%"+ sCarlineCd +"%'")}
+        )
+        SELECT '16' AS COLUMN_SEQ, '配件预约台次' AS COLUMN_NM, COUNT(PAR_RESV_DOC_NO) AS CNT, RESV_MM, 'A' AS VAL_TYPE
+        FROM TA1
+        WHERE PAR_RESV_STAT_CD != 'C'
+        GROUP BY RESV_MM
+        UNION ALL
+        SELECT '16' AS COLUMN_SEQ, '配件预约台次' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+
+        UNION
+
+        SELECT '17' AS COLUMN_SEQ, '取消配件预约台次' AS COLUMN_NM, COUNT(PAR_RESV_DOC_NO) AS CNT, RESV_MM, 'A' AS VAL_TYPE
+        FROM TA1
+        WHERE PAR_RESV_STAT_CD = 'C'
+        GROUP BY RESV_MM
+        UNION ALL
+        SELECT '17' AS COLUMN_SEQ, '取消配件预约台次' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+
+        UNION
+
+        SELECT '18' AS COLUMN_SEQ, '配件预约品种' AS TABLE_NM, SUM(CNT) AS CNT, RESV_MM, 'A' AS VAL_TYPE
+        FROM (
+            SELECT COUNT(ITEM_CD) AS CNT, RESV_MM FROM TA1
+            INNER JOIN SE_0160T B
+            ON TA1.DLR_CD = B.DLR_CD AND TA1.PAR_RESV_DOC_NO = B.DOC_NO AND B.PREFIX_ID = 'PRE'
+            WHERE TA1.PAR_RESV_STAT_CD != 'C'
+            GROUP BY RESV_MM, ITEM_CD
+        )
+        GROUP BY RESV_MM
+        UNION ALL
+        SELECT '18' AS COLUMN_SEQ, '配件预约品种' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+
+        UNION
+
+        SELECT '19' AS COLUMN_SEQ, '配件预约数量' AS TABLE_NM, SUM(B.ITEM_QTY), RESV_MM, 'A' AS VAL_TYPE
+        FROM TA1
+        INNER JOIN SE_0160T B
+        ON TA1.DLR_CD = B.DLR_CD AND TA1.PAR_RESV_DOC_NO = B.DOC_NO AND B.PREFIX_ID = 'PRE'
+        WHERE TA1.PAR_RESV_STAT_CD != 'C'
+        GROUP BY RESV_MM
+        UNION ALL
+        SELECT '19' AS COLUMN_SEQ, '配件预约数量' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+
+        UNION
+
+        SELECT '20' AS COLUMN_SEQ, '配件预收款金额' AS COLUMN_NM, SUM(PRE_AMT) AS CNT, RESV_MM, 'A' AS VAL_TYPE
+        FROM TA1
+        WHERE PAR_RESV_STAT_CD != 'C'
+        GROUP BY RESV_MM
+        UNION ALL
+        SELECT '20' AS COLUMN_SEQ, '配件预收款金额' AS COLUMN_NM, 0 AS CNT, '00' AS RESV_MM, 'A' AS VAL_TYPE
+        FROM DUAL
+
+    )
+
+    --UNION
+
+    --SELECT * FROM (
+        --WITH TA1 AS (
+            --SELECT DLR_CD, RESC_DOC_NO, VIN_NO, RESC_DT, RESC_STAT_CD, RESV_MM, LTS_MODEL_CD FROM (
+                --SELECT DLR_CD, RESC_DOC_NO, VIN_NO, RESC_DT, RESC_STAT_CD, TO_CHAR(RESC_DT, 'MM') AS RESV_MM, FN_SER_LTS_MODEL_CD(A.VIN_NO) AS LTS_MODEL_CD
+                  --FROM SE_0900T A
+                 --WHERE TO_CHAR(RESC_DT ,'YYYYMMDD') BETWEEN '${sStartDt}'||'0101' AND '${sStartDt}'||'1231'
+                   --AND DLR_CD = '${sDlrCd}'
+                --${IF(LEN(sDriverNm) <=0 , "", "AND DRIVER_NM LIKE '%"+ sDriverNm +"%'")}
+            --)
+            --WHERE 1=1
+            --${IF(LEN(sCarlineCd) <=0 , "", "AND LTS_MODEL_CD LIKE '%"+ sCarlineCd +"%'")}
+        --)
+        --SELECT '21' AS COLUMN_SEQ, '外出服务台数' AS COLUMN_NM, COUNT(DISTINCT(VIN_NO)) AS CNT, RESV_MM FROM TA1
+        --WHERE RESC_STAT_CD != 'C'
+        --GROUP BY RESV_MM
+        --UNION
+        --SELECT '22' AS COLUMN_SEQ, '外出服务台次' AS COLUMN_NM, COUNT(RESC_DOC_NO) AS CNT, RESV_MM FROM TA1
+        --WHERE RESC_STAT_CD != 'C'
+        --GROUP BY RESV_MM
+    --)
+)
+PIVOT(
+    SUM(NVL(CNT,0))
+    FOR RESV_MM IN(
+        '01' AS "M1"
+        ,'02' AS "M2"
+        ,'03' AS "M3"
+        ,'04' AS "M4"
+        ,'05' AS "M5"
+        ,'06' AS "M6"
+        ,'07' AS "M7"
+        ,'08' AS "M8"
+        ,'09' AS "M9"
+        ,'10' AS "M10"
+        ,'11' AS "M11"
+        ,'12' AS "M12"
+    )
+)
+ORDER BY COLUMN_SEQ;
+]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="0" T="0"/>
+<FR/>
+<HC/>
+<FC/>
+<UPFCR COLUMN="false" ROW="true"/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1152000,1152000,723900,723900,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[0,5760000,3168000,3168000,3168000,3168000,3168000,3168000,3168000,3168000,3168000,3168000,3168000,3168000,3168000,3168000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="YJWCL"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="0">
+<O>
+<![CDATA[数据名称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0" s="1">
+<O>
+<![CDATA[合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="1">
+<O>
+<![CDATA[平均]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0" s="0">
+<O>
+<![CDATA[1月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="0">
+<O>
+<![CDATA[2月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="0" s="0">
+<O>
+<![CDATA[3月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="0" s="0">
+<O>
+<![CDATA[4月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="0" s="0">
+<O>
+<![CDATA[5月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="0" s="0">
+<O>
+<![CDATA[6月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="0" s="0">
+<O>
+<![CDATA[7月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="0" s="0">
+<O>
+<![CDATA[8月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="0" s="0">
+<O>
+<![CDATA[9月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="0" s="0">
+<O>
+<![CDATA[10月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="0" s="0">
+<O>
+<![CDATA[11月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="0" s="0">
+<O>
+<![CDATA[12月]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="COLUMN_SEQ"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="1" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="COLUMN_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Scope val="1"/>
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="2" r="1" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[= IF(OR(A2 = 6, A2 = 10, A2 = 12, A2 = 14, A2 = 15),"",
+IF(A2 = 8,A1,SUM(E2:P2))
+	            )]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="1" s="3">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=AVERAGE(E2:P2)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="M1"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="M2"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="M3"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="M4"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="M5"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="M6"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="10" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="M7"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="11" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="M8"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="12" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="M9"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="13" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="M10"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="14" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="M11"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="15" r="1" s="3">
+<O t="DSColumn">
+<Attributes dsName="selectResvSerTimeSearchDs" columnName="M12"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="36000000" height="53280000"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0" useParamsTemplate="false"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="1" size="72" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Verdana" style="0" size="72" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="JAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID/>
+<TemplateIdAttMark class="com.fr.base.iofileattr.TemplateIdAttrMark">
+<TemplateIdAttMark TemplateId="1618e7d3-6802-4f19-9b85-fd8e1ec8b81e"/>
+</TemplateIdAttMark>
+</WorkBook>

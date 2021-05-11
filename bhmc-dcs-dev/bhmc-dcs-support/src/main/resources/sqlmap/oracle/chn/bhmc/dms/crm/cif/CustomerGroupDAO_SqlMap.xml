@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CustomerGroupDAO_SqlMap.xml
+    Description : 고객그룹 관한 데이터처리
+    author Kyo Jin Lee
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kyo Jin Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO">
+
+    <!-- 고객 조회 검색조건 -->
+    <sql id="searchWhere">
+        WHERE 1=1
+        AND DLR_CD = #{sDlrCd}
+        <if test='sGrpTp != null and sGrpTp != ""'>
+            AND GRP_TP = #{sGrpTp}
+        </if>
+        <if test='sGrpNm != null and sGrpNm != ""'>
+            AND GRP_NM = #{sGrpNm}
+        </if>
+        <if test='sUsrId != null and sUsrId != ""'>
+            AND USR_ID = #{sUsrId}
+        </if>
+        <if test='sDelYn != null and sDelYn != ""'>
+            AND DEL_YN = #{sDelYn}
+        </if>
+    </sql>
+
+    <!-- 그룹 정보 목록수를 조회한다. -->
+    <select id="selectCustomerGroupByConditionCnt" parameterType="CustomerGroupSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO.selectCustomerGroupByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM CR_0114T
+         <include refid="searchWhere" />
+    </select>
+
+    <!-- 그룹 정보 목록을 조회한다. -->
+    <select id="selectCustomerGroupByCondition" parameterType="CustomerGroupSearchVO" resultType="CustomerGroupVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO.selectCustomerGroupByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    GRP_SEQ
+                    , USR_ID
+                    , GRP_NM
+                    , SORT_ORDER
+                    , DEL_YN
+                    , GRP_TP
+                    , (SELECT COUNT(*) FROM CR_0115T WHERE GRP_SEQ=T1.GRP_SEQ) AS GROUP_CNT
+                FROM CR_0114T T1
+                <include refid="searchWhere" />
+                ORDER BY SORT_ORDER ASC
+            ) T1
+            WHERE 1=1
+        <if test='firstIndex != -1 and lastIndex != -1'>
+            AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+        </if>
+        )
+        <where>
+        <if test='firstIndex != -1 and lastIndex != -1'>
+            RNUM > #{firstIndex}
+        </if>
+        </where>
+    </select>
+
+    <!-- 고객의 그룹 목록을 조회한다. -->
+    <select id="selectCustomerGroupByKey" parameterType="CustomerGroupVO" resultType="CustomerGroupVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO.selectCustomerGroupByKey] */
+        SELECT  T1.*, T2.GRP_NM
+          FROM  CR_0115T T1, CR_0114T T2
+         WHERE  T1.DLR_CD = #{dlrCd}
+           AND  T1.CUST_NO = #{custNo}
+           AND  T1.DLR_CD = T2.DLR_CD
+           AND  T2.DEL_YN = 'N'
+        <if test='grpTp != null and grpTp != ""'>
+           AND  T1.GRP_TP = #{grpTp}
+        </if>
+           AND  T1.GRP_SEQ = T2.GRP_SEQ(+)
+    </select>
+
+    <!-- 그룹을 추가한다. -->
+    <insert id="insertCustomerGroup" parameterType="CustomerGroupVO" >
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO.insertCustomerGroup] */
+        INSERT INTO CR_0114T(
+              GRP_SEQ
+            , DLR_CD
+            , USR_ID
+            , GRP_NM
+            , SORT_ORDER
+            , DEL_YN
+            , GRP_TP
+            , REG_USR_ID
+            , REG_DT
+        ) VALUES (
+              SEQ_CR_0114T.NEXTVAL
+            , #{dlrCd}
+            , #{usrId}
+            , #{grpNm}
+            , #{sortOrder}
+            , 'N'
+            , #{grpTp}
+            , #{regUsrId}
+            , SYSDATE
+        )
+    </insert>
+
+    <!-- 그룹 정보를 업데이트 한다. -->
+    <update id="updateCustomerGroup" parameterType="CustomerGroupVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO.updateCustomerGroup] */
+        UPDATE CR_0114T SET
+              GRP_NM = #{grpNm}
+            , SORT_ORDER = #{sortOrder}
+        WHERE GRP_SEQ = #{grpSeq}
+          AND DLR_CD = #{dlrCd}
+    </update>
+
+    <!-- 고객의 그룹을 등록한다. -->
+    <insert id="insertCustomerGroupInfo" parameterType="CustomerGroupVO" >
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO.insertCustomerGroupInfo] */
+        INSERT INTO CR_0115T(
+              CUST_NO
+            , DLR_CD
+            , GRP_SEQ
+            , GRP_TP
+            , REG_USR_ID
+            , REG_DT
+        ) VALUES (
+              #{custNo}
+            , #{dlrCd}
+            , #{grpSeq}
+            , #{grpTp}
+            , #{regUsrId}
+            , SYSDATE
+        )
+    </insert>
+
+    <!-- 고객의 그룹을 삭제한다. -->
+    <delete id="deleteCustomerGroupInfo" parameterType="map">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO.deleteCustomerGroupInfo] */
+        DELETE FROM CR_0115T
+        WHERE CUST_NO = #{custNo}
+          AND DLR_CD = #{dlrCd}
+          AND GRP_TP = #{grpTp}
+    </delete>
+
+    <!-- 고객의 그룹 정보를 업데이트 한다. -->
+    <update id="updateCustomerGroupChg" parameterType="CustomerGroupVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO.updateCustomerGroupChg] */
+        UPDATE  CR_0115T
+           SET  GRP_SEQ = #{grpSeq}
+         WHERE  CUST_NO = #{custNo}
+           AND  DLR_CD = #{dlrCd}
+    </update>
+
+    <!--  그룹/태그 정보를 삭제한다. -->
+    <delete id="deleteCustomerGroup" parameterType="CustomerGroupVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO.deleteCustomerGroup] */
+        DELETE FROM CR_0114T
+        WHERE GRP_SEQ = #{grpSeq}
+          AND DLR_CD = #{dlrCd}
+    </delete>
+
+    <!--  그룹에 속한 고객의 목록 수 를 조회한다. -->
+    <select id="selectCustomerInGroupByConditionCnt" parameterType="CustomerGroupSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO.selectCustomerInGroupByConditionCnt] */
+        SELECT
+               COUNT(*) AS VALUE
+          FROM CR_0114T T1, CR_0115T T2, CR_0101T T3
+         WHERE 1=1
+        <if test='sGrpTp != null and sGrpTp != ""'>
+           AND T1.GRP_TP = #{sGrpTp}
+        </if>
+           AND T1.DLR_CD = #{sDlrCd}
+           AND T1.GRP_SEQ = #{sGrpSeq}
+           AND T1.DLR_CD = T2.DLR_CD
+           AND T1.GRP_SEQ = T2.GRP_SEQ
+           AND T1.DLR_CD = T3.DLR_CD(+)
+           AND T2.CUST_NO = T3.CUST_NO(+)
+    </select>
+
+    <!--  그룹에 속한 고객의 목록을 조회한다. -->
+    <select id="selectCustomerInGroupByCondition" parameterType="CustomerGroupSearchVO" resultType="CustomerGroupVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerGroupDAO.selectCustomerInGroupByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    T1.GRP_SEQ
+                    , T2.CUST_NO
+                    , T3.CUST_NM
+                    , T3.TEL_NO
+                    , T3.HP_NO
+                    , T3.MNG_SC_ID
+                  FROM CR_0114T T1, CR_0115T T2, CR_0101T T3
+                 WHERE 1=1
+                <if test='sGrpTp != null and sGrpTp != ""'>
+                   AND T1.GRP_TP = #{sGrpTp}
+                </if>
+                   AND T1.DLR_CD = #{sDlrCd}
+                   AND T1.GRP_SEQ = #{sGrpSeq}
+                   AND T1.DLR_CD = T2.DLR_CD
+                   AND T1.GRP_SEQ = T2.GRP_SEQ
+                   AND T1.DLR_CD = T3.DLR_CD(+)
+                   AND T2.CUST_NO = T3.CUST_NO(+)
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+</mapper>

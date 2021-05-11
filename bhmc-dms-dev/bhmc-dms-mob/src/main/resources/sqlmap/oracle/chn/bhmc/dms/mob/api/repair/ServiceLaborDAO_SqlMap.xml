@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : ServiceLaborDAO_SqlMap.xml
+    Description : 공통공임에 관한 데이터처리
+    author KyungMok Kim
+    since 2016. 08. 23.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 08. 23.  KyungMok Kim     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.repair.dao.RepairServiceLaborDAO">
+    <!-- 공임 목록 조회. -->
+    <select id="selectServiceLaborsByCondition" parameterType="TabInfoSearchVO" resultType="chn.bhmc.dms.mob.api.repair.vo.ServiceLaborVO">
+        /* [chn.bhmc.dms.mob.api.repair.dao.ServiceLaborAppDAO.selectServiceLaborsByCondition] */
+        SELECT
+            A.DLR_CD                                  --딜러코드
+           ,A.PREFIX_ID                               --PREFIX ID
+           ,A.DOC_NO                                  --문서번호
+           ,A.LINE_NO                                 --라인번호
+           ,A.RO_TP                                   --RO유형
+           ,A.LBR_CD                                  --공임코드
+           ,A.LBR_NM                                  --공임명
+           ,A.PKG_ITEM_CD                             --패키지품목코드
+           ,A.LBR_TP                                  --공임유형
+           ,NVL(A.LBR_PRC,0) AS LBR_PRC               --공임단가
+           ,NVL(A.LBR_QTY,1) AS LBR_QTY               --공임수량
+           ,A.LBR_HM                                  --공임시간
+           ,NVL((SELECT LBR_HM
+               FROM SE_1061T
+              WHERE DSTIN_CD       = A.DSTIN_CD
+                AND LBR_CD         = A.LBR_CD
+                AND ( LTS_MODEL_CD = #{sLtsModelCd} OR LTS_MODEL_CD ='ALL')
+                AND ROWNUM = 1
+              ),A.LBR_HM) AS LBR_ORG_HM                --백업 공임시간(RO 유형이 변경될때 대비)
+           ,NVL(A.DSTB_HM , A.LBR_HM) AS DSTB_HM       --배분시간
+           ,NVL(A.DC_AMT ,0) AS DC_AMT                 --할인금액
+           ,NVL(A.DC_RATE,0) AS DC_RATE                --할인율
+           ,CASE WHEN A.CR_NO IS NOT NULL THEN A.LBR_TOT_AMT ELSE (A.LBR_PRC * A.LBR_QTY * A.LBR_HM ) END AS LBR_AMT             --공임금액
+           ,NVL(A.LBR_TOT_AMT,0) AS LBR_TOT_AMT       --공임합계금액
+           ,A.CR_NO                                   --캠페인리콜번호
+           ,A.CR_NM                                   --캠페인리콜명
+           ,A.CR_TP                                   --캠페인리콜유형
+           ,A.FMS_CUPN_ITEM_CD                        --FMS쿠폰품목코드
+           ,A.FMS_ITEM_CD                             --FMS품목코드
+           ,A.SUB_BP_CD                               --점검코드
+           ,A.SUB_BP_NM                               --의견번호
+           ,A.PAY_CMP_NM                              --지불회사명
+           ,A.PAYM_CD                                  --결제자번호
+           ,A.PAYM_TP                                 --결제자유형
+           ,A.PAYM_USR_NM                             --결제자명
+           ,A.REMARK                                  --비고
+           ,A.CAU_CD                                  --원인코드
+           ,A.CAU_NM                                  --원인명
+           ,A.PHEN_CD                                 --현상코드
+           ,A.PHEN_NM                                 --현상명
+           ,A.REG_USR_ID                              --등록자ID
+           ,A.REG_DT                                  --등록일자
+           ,A.UPDT_USR_ID                             --수정자ID
+           ,A.UPDT_DT                                 --수정일자
+           ,A.DSTIN_CD                                --구분코드
+           ,A.WRK_ALLOC_HM                            --작업배분공임시간
+           ,B.REAL_TEC_NM                             --정비사
+           ,B.WKGRP_NO                                --소조번호
+           ,B.WKGRP_NM                                --소조명
+           ,B.BAY_NO                                  --BAY NO
+           ,(SELECT BAY_NM
+               FROM SE_1012T
+              WHERE DLR_CD = A.DLR_CD
+                AND BAY_NO = B.BAY_NO) AS BAY_NM     --BAY 명
+            ,B.SHT_CNT                               --정비건수
+            ,B.SHT_CNT AS SER_CNT                    --정비건수
+            ,B.PAINT_CNT                             --페인트 갯수
+            ,B.LBR_CNT                               --공임계수
+            ,B.DIFF_VAL                              --난의도계수
+            ,'N' AS CAU_LBR_YN
+            ,(
+              SELECT 'N'
+                FROM SE_1140T
+               WHERE LTS_MODEL_CD = #{sLtsModelCd}
+                 AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+                 AND SUB_LBR_CD   = A.LBR_CD
+             ) AS REL_CAU_LBR_YN
+             ,B.ALLOC_STAT_CD
+             ,B.WRK_STAT_CD
+        FROM SE_0170T A  LEFT OUTER JOIN SE_0330T B
+         ON B.DLR_CD     = A.DLR_CD
+         AND B.RO_DOC_NO = A.DOC_NO
+         AND B.RPIR_CD   = A.LBR_CD
+         WHERE A.DLR_CD  = #{sDlrCd}
+         AND A.PREFIX_ID = #{sPreFixId}
+         AND A.DOC_NO    = #{sDocNo}
+        <if test='sCrYn == "Y"'>
+           AND CR_NO IS NOT NULL
+        </if>
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                <choose>
+                    <when test='item.field == "dlrCd"'>           DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                    <when test='item.field == "preFixId"'>        PREFIX_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                    <when test='item.field == "docNo"'>           DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                    <when test='item.field == "lineNo"'>          LINE_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                    <when test='item.field == "roTp"'>            RO_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                    <when test='item.field == "lbrCd"'>           LBR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                    <when test='item.field == "lbrNm"'>           LBR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                    <when test='item.field == "pkgItemCd"'>       PKG_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                    <when test='item.field == "lbrTp"'>           LBR_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                    <when test='item.field == "lbrPrc"'>          LBR_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                    <when test='item.field == "lbrQty"'>          LBR_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                    <when test='item.field == "lbrHm"'>           LBR_HM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                    <when test='item.field == "dstbHm"'>          DSTB_HM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                    <when test='item.field == "dcAmt"'>           DC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                    <when test='item.field == "dcRate"'>          DC_RATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                    <when test='item.field == "lbrTotAmt"'>       LBR_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                    <when test='item.field == "crNo"'>            CR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                    <when test='item.field == "crNm"'>            CR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                    <when test='item.field == "crTp"'>            CR_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>           </when>
+                    <when test='item.field == "fmsCupnItemCd"'>   FMS_CUPN_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                    <when test='item.field == "fmsItemCd"'>       FMS_ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                    <when test='item.field == "subBpCd"'>         SUB_BP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                    <when test='item.field == "subBpNm"'>         SUB_BP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                    <when test='item.field == "payCmpNm"'>        PAY_CMP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                    <when test='item.field == "paymTp"'>          PAYM_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                    <when test='item.field == "paymUsrNm"'>       PAYM_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                    <when test='item.field == "remark"'>          REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                    <when test='item.field == "cauCd"'>           CAU_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                    <when test='item.field == "cauNm"'>           CAU_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                    <when test='item.field == "phenCd"'>          PHEN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                    <when test='item.field == "phenNm"'>          PHEN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                    <when test='item.field == "regUsrId"'>        REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                    <when test='item.field == "regDt"'>           REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                    <when test='item.field == "updtUsrId"'>       UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                    <when test='item.field == "updtDt"'>          UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                    <otherwise>
+                        DLR_CD ASC ,DOC_NO ASC ,LINE_NO ASC
+                    </otherwise>
+                </choose>
+            </foreach>
+            </when>
+            <otherwise>
+                DLR_CD ASC ,DOC_NO ASC ,LINE_NO ASC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 공임 목록수를 조회. -->
+    <select id="selectServiceLaborsByConditionCnt" parameterType="TabInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mob.api.repair.dao.ServiceLaborAppDAO.selectServiceLaborsByConditionCnt] */
+        SELECT COUNT(DOC_NO)
+          FROM SE_0170T    --정비항목
+         WHERE DLR_CD = #{sDlrCd}
+           AND PREFIX_ID = #{sPreFixId}
+           AND DOC_NO = #{sDocNo}
+        <if test='sCrYn == "Y"'>
+           AND CR_NO IS NOT NULL
+        </if>
+    </select>
+
+</mapper>

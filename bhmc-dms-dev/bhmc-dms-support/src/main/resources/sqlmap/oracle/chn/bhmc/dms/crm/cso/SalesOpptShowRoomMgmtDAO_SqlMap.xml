@@ -1,0 +1,623 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : SalesOpptShowRoomMgmtDAO_SqlMap.xml
+    Description : 전시장유동량 관리
+    author kyo jin LEE
+    since 2016.03.07.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016.03.07.     kyo jin Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cso.service.dao.SalesOpptShowRoomMgmtDAO">
+
+    <!-- 전시장 정보 검색조건 -->
+    <sql id="searchWhere">
+        LEFT OUTER JOIN CR_0211T LOPPT ON T1.CUST_NO = LOPPT.CUST_NO AND T1.DLR_CD = LOPPT.DLR_CD
+        <where>
+            AND T1.DEL_YN = 'N'
+            AND T1.DLR_CD = #{sDlrCd}
+            <if test='sCustNo != null and sCustNo != ""'>
+                AND T1.CUST_NO = #{sCustNo}
+            </if>
+            <if test='sSeq != null and sSeq != ""'>
+                AND T1.SEQ = #{sSeq}
+            </if>
+            <if test='sCust != null and sCust != ""'>
+                AND ( T1.CUST_NM LIKE '%'||#{sCust}||'%'
+                    OR T1.HP_NO LIKE '%'||#{sCust}||'%'
+                    OR T1.TEL_NO LIKE '%'||#{sCust}||'%' )
+            </if>
+            <if test='sCustNm != null and sCustNm != ""'>
+                AND T1.CUST_NM LIKE '%'||#{sCustNm}||'%'
+            </if>
+            <if test='sHpNo != null and sHpNo != ""'>
+                AND T1.HP_NO LIKE '%'||#{sHpNo}||'%'
+            </if>
+            <if test='sMngScId != null and sMngScId != ""'>
+                AND T1.MNG_SC_ID = #{sMngScId}
+            </if>
+            <if test='sHoldTp != null and sHoldTp != ""'>
+                AND T1.HOLD_TP = #{sHoldTp}
+            </if>
+            <if test='sTestDrvYn != null and sTestDrvYn != ""'>
+                <if test='sTestDrvYn == "N"'>
+                    AND (T1.TEST_DRV_YN = #{sTestDrvYn}
+                        OR T1.TEST_DRV_YN IS NULL)
+                </if>
+                <if test='sTestDrvYn == "Y"'>
+                    AND T1.TEST_DRV_YN = #{sTestDrvYn}
+                </if>
+            </if>
+            <if test='sLeadStatCd != null and sLeadStatCd != ""'>
+                AND T1.LEAD_STAT_CD = #{sLeadStatCd}
+            </if>
+            <if test='sBhmcYn != null and sBhmcYn != ""'>
+                AND T1.BHMC_YN = #{sBhmcYn}
+            </if>
+            <if test='sInfoTp != null and sInfoTp != ""'>
+                AND T1.INFO_TP = #{sInfoTp}
+            </if>
+            <if test='sVsitDtFrom != null'>
+                <![CDATA[
+                    AND T1.VSIT_DT >= #{sVsitDtFrom}   -- 방문일
+                ]]>
+            </if>
+            <if test='sVsitDtTo != null'>
+                <![CDATA[
+                    AND T1.VSIT_DT <= #{sVsitDtTo}      -- 방문일
+                ]]>
+            </if>
+            <if test='sRegDtFrom != null'>
+                <![CDATA[
+                    AND T1.REG_DT >= #{sRegDtFrom}   -- Reg DT 일자
+                ]]>
+            </if>
+            <if test='sRegDtTo != null'>
+                <![CDATA[
+                    AND T1.REG_DT <= #{sRegDtTo}      -- Reg DT 일자
+                ]]>
+            </if>
+            <if test='sIntrCarlineCd != null and sIntrCarlineCd != ""'>
+                AND T1.INTR_CARLINE_CD = #{sIntrCarlineCd}
+            </if>
+            <if test='sIntrModelCd != null and sIntrModelCd != ""'>
+                AND T1.INTR_MODEL_CD = #{sIntrModelCd}
+            </if>
+            <if test='sIntrFscpModtpCd != null and sIntrFscpModtpCd != ""'>
+                AND T1.INTR_FSCP_MODTP_CD = #{sIntrFscpModtpCd}
+            </if>
+            <if test='sTraceGradeCd != null and sTraceGradeCd != ""'>
+                AND T1.TRACE_GRADE_CD = #{sTraceGradeCd}
+            </if>
+        </where>
+    </sql>
+
+    <!-- 전시장 정보 목록수를 조회한다. -->
+    <select id="selectSalesOpptShowRoomMgmtsByConditionCnt" parameterType="SalesOpptShowRoomMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptShowRoomMgmtDAO.selectSalesOpptShowRoomMgmtsByConditionCnt] */
+        SELECT COUNT(T1.SEQ) AS VALUE
+        FROM CR_0214T T1
+        <include refid="searchWhere" />
+    </select>
+
+    <!-- 전시장 정보 목록을 조회한다. -->
+    <select id="selectSalesOpptShowRoomMgmtsByCondition" parameterType="SalesOpptShowRoomMgmtSearchVO" resultType="SalesOpptShowRoomMgmtVO">
+    /*
+    [chn.bhmc.dms.crm.cso.service.dao.SalesOpptShowRoomMgmtDAO.selectSalesOpptShowRoomMgmtsByCondition]
+    */
+    SELECT T3.*
+         , FN_GET_CMMCD_NM('CRM380', T3.RVSIT_YN, 'zh') AS RVSIT_YN_NM  --재방문여부 NM
+         , (SELECT HOLD_DETL_TP_NM FROM CR_0215T WHERE DLR_CD = T3.DLR_CD AND HOLD_SEQ = T3.HOLD_DETL_TP_SEQ) AS HOLD_DETL_TP_SEQ_NM
+         , (
+            SELECT
+            '('||ZIP_CD||') '||SUNG_NM || ' ' || CITY_NM || ' ' || DIST_NM || ' ' || ADDR_DETL_CONT
+            FROM CR_0116T WHERE REF_TABLE_NM='CR_0214T' AND REF_KEY_NM = T3.SEQ AND FLAG_YN ='Y' AND ROWNUM = 1
+        ) AS ADDR_FULL
+    FROM (
+    SELECT ROWNUM AS RNUM, T2.* FROM (
+        SELECT
+             T1.SEQ                             --일련번호
+            ,T1.DLR_CD                          --딜러코드
+            ,T1.CUST_NO                         --고객번호
+            ,T1.MNG_SC_ID                       --관리SCID
+            ,FN_GET_USER_NM(T1.MNG_SC_ID) AS MNG_SC_NM --MNG_SC_NM
+            ,T1.DEL_YN                          --삭제여부
+            ,T1.BHMC_YN                         --BHMC여부
+            ,T1.SIEBEL_ROW_ID                   --SIEBEL ROW ID
+            ,T1.DOC_ID                          --문서ID
+            ,T1.WITH_PRSN_NM                    --동행자명
+            ,T1.RVSIT_YN                        --재방문여부
+            ,T1.VSIT_RESV_DT                    --방문예약일자
+            ,T1.VSIT_DT                         --방문일자
+            ,T1.VSIT_PRSN_CNT                   --방문자수
+            ,T1.VSIT_END_DT                     --방문종료일자
+            ,TRUNC(T1.VSIT_END_DT-T1.VSIT_DT)*24*60+TRUNC(MOD((T1.VSIT_END_DT-T1.VSIT_DT),1)*24)*60+TRUNC(MOD((T1.VSIT_END_DT-T1.VSIT_DT)*24,1)*60) AS VIST_PRDMM
+            ,T1.INFO_TP                         --정보유형
+            ,T1.PAY_TP                          --지불유형
+            ,T1.INTR_BRAND_CD                   --관심브랜드코드
+            ,T1.INTR_CARLINE_CD                 --관심차종코드
+            ,T1.INTR_MODEL_CD                   --관심모델코드
+            ,T1.LOCAL_CAR_REG_NO_YN             --현지번호판예정번호
+            ,T1.ESTIMATE_CONT                   --견적내용
+            ,T1.SALES_CONT                      --영업내용
+            ,T1.REMARK                          --비고
+            ,T1.LEAD_LVL_CD                     --리드레벨코드
+            ,T1.LEAD_STAT_CD                    --리드상태코드
+            ,T1.INTR_COLOR_CD                   --선호색상코드
+            ,T1.TRACE_GRADE_CD                  --추적등급코드
+            ,T1.VALID_GRADE_CD                  --유효등급코드
+            ,T1.INVALID_CAU_CD                  --무효원인코드
+            ,T1.FAIL_CAU_CD                     --실패원인코드
+            ,T1.FAIL_CAU_REASON_CONT            --실패원인사유내용
+            ,T1.PURC_SEL_CARLINE_CD             --구매선택차종코드
+            ,T1.PURC_SEL_MODEL_CD               --구매선택모델코드
+            ,T1.EXPC_PURC_HM_CD                 --예상구매시간코드
+            ,T1.EXPC_PURC_DT                    --예상구매일자
+            ,T1.EXPC_DEAL_PRC                   --예상거래가격
+            ,T1.TRACE_DT                        --추적일자
+            ,T1.TRACE_MTH_CD                    --추적방법코드
+            ,T1.NEXT_TRACE_DT                   --다음추적일자
+            ,T1.NEXT_TRACE_MTH_CD               --다음추적방법코드
+            ,T1.PREF_CONTACT_HM_CD              --선호접촉시간코드
+            ,T1.HOLD_TP                         --정보수집경로
+            ,T1.HOLD_DETL_TP_SEQ                --정보수집경로상세
+            ,T1.SALE_OPPT_SEQ                   --판매기회 일련번호
+            ,'' AS EXHV_FLAK_SEQ                --전시장유동량 일련번호
+            ,NVL(T1.CUST_NM, ' ') AS CUST_NM    --고객명
+            ,T1.CUST_TP                         --고객유형
+            ,T1.EMAIL_NM                        --이메일명
+            ,T1.WECHAT_ID                       --위챗ID
+            ,T1.PREF_COMM_MTH_CD                --선호연락방법코드
+            ,T1.PREF_COMM_NO                    --선호연락번호
+            ,T1.PREF_CONTACT_MTH_CD             --선호접촉방법코드
+            ,T1.TEL_NO                          --전화번호
+            ,T1.HP_NO                           --휴대폰번호
+            ,T1.OFFICE_NM                       --직장명
+            ,T1.DEPT_NM                         --부서명
+            ,T1.OFFICE_TEL_NO                   --직장전화번호
+            ,T1.OFFICE_FAX_NO                   --직장팩스번호
+            ,T1.OWN_RGST_NM                     --대표자명
+            , T1.SEX_CD                         --성별코드
+            , '' AS MATH_DOC_TP
+            , '' AS SSN_CRN_NO
+            ,FN_CMM_CD_NM('CRM001',T1.CUST_TP, #{sLangCd}, 'N') AS CUST_TP_NM
+            ,FN_CMM_CD_NM('CRM022',T1.PREF_COMM_MTH_CD, #{sLangCd}, 'N') AS PREF_COMM_MTH_NM
+            ,FN_CMM_CD_NM('CRM038',T1.PREF_CONTACT_MTH_CD, #{sLangCd}, 'N') AS PREF_CONTACT_MTH_NM
+            ,FN_CMM_CD_NM('CRM027',T1.PREF_CONTACT_HM_CD, #{sLangCd}, 'N') AS PREF_CONTACT_HM_NM
+            ,FN_CMM_CD_NM('COM017',T1.SEX_CD, #{sLangCd}, 'N') AS SEX_NM
+            ,FN_CMM_CD_NM('CRM366',T1.INFO_TP, #{sLangCd}, 'N') AS INFO_TP_NM
+            ,FN_CMM_CD_NM('CRM008',T1.HOLD_TP, #{sLangCd}, 'N') AS HOLD_TP_NM
+            ,FN_CMM_CD_NM('CRM368',T1.PAY_TP, #{sLangCd}, 'N') AS PAY_TP_NM
+            ,FN_CMM_CD_NM('CRM374',T1.LEAD_LVL_CD, #{sLangCd}, 'N') AS LEAD_LVL_NM
+            ,FN_CMM_CD_NM('CRM375',T1.LEAD_STAT_CD, #{sLangCd}, 'N') AS LEAD_STAT_NM
+            ,FN_CMM_CD_NM('CRM363',T1.TRACE_GRADE_CD, #{sLangCd}, 'N') AS TRACE_GRADE_NM
+            ,FN_CMM_CD_NM('CRM364',T1.VALID_GRADE_CD, #{sLangCd}, 'N') AS VALID_GRADE_NM
+            ,FN_CMM_CD_NM('CRM365',T1.INVALID_CAU_CD, #{sLangCd}, 'N') AS INVALID_CAU_NM
+            ,FN_CMM_CD_NM('CRM369',T1.FAIL_CAU_CD, #{sLangCd}, 'N') AS FAIL_CAU_NM
+            ,FN_CMM_CD_NM('CRM372',T1.EXPC_PURC_HM_CD, #{sLangCd}, 'N') AS EXPC_PURC_HM_NM
+            ,FN_CMM_CD_NM('CRM321',T1.TRACE_MTH_CD, #{sLangCd}, 'N') AS TRACE_MTH_NM
+            ,FN_CMM_CD_NM('CRM321',T1.NEXT_TRACE_MTH_CD, #{sLangCd}, 'N') AS NEXT_TRACE_MTH_NM
+            ,NVL2(T1.INTR_CARLINE_CD,FN_GET_CARLINE_NM(T1.INTR_CARLINE_CD), ' ') AS INTR_CARLINE_NM             --관심차종코드
+            ,NVL2(T1.INTR_MODEL_CD,FN_GET_MODEL_NM(T1.INTR_MODEL_CD), ' ') AS INTR_MODEL_NM
+            ,NVL2(T1.PURC_SEL_CARLINE_CD,FN_GET_CARLINE_NM(T1.PURC_SEL_CARLINE_CD), ' ') AS PURC_SEL_CARLINE_NM --구매선택차종코드
+            ,NVL2(T1.PURC_SEL_MODEL_CD,FN_GET_MODEL_NM(T1.PURC_SEL_MODEL_CD), ' ') AS PURC_SEL_MODEL_NM         --구매선택모델코드
+            ,NVL2(T1.INTR_COLOR_CD,FN_GET_EXT_COLOR_NM(T1.INTR_COLOR_CD), ' ') AS INTR_COLOR_NM                 --선호색상코드
+            ,NVL(T1.TEST_DRV_YN,'N') AS TEST_DRV_YN
+            ,T1.REG_USR_ID      --등록자ID
+            ,T1.REG_DT          --등록일자
+            ,T1.UPDT_USR_ID     --수정자ID
+            ,T1.UPDT_DT         --수정일자
+            ,T1.PURC_MNG_NM
+            ,LOPPT.LEAD_STAT_CD AS CU_LEAD_STAT_CD
+            ,T1.INTR_FSCP_MODTP_CD
+            , FN_GET_FSC_NM(T1.INTR_CARLINE_CD , T1.INTR_FSCP_MODTP_CD) AS INTR_FSCP_MODTP_NM
+        FROM CR_0214T T1
+                <include refid="searchWhere" />
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "custNm"'>            T1.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "hpNo"'>              T1.HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "mngScId"'>           T1.MNG_SC_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "telNo"'>             T1.TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "wechatId"'>          T1.WECHAT_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitResvDt"'>        T1.VSIT_RESV_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitDt"'>            T1.VSIT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitPrsnCnt"'>       T1.VSIT_PRSN_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "rvsitYn"'>           T1.RVSIT_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitEndDt"'>         T1.VSIT_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "localCarRegNoYn"'>   T1.LOCAL_CAR_REG_NO_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "estimateCont"'>      T1.ESTIMATE_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "salesCont"'>         T1.SALES_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "remark"'>            T1.REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "failCauReasonCont"'> T1.FAIL_CAU_REASON_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "expcPurcDt"'>        T1.EXPC_PURC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "expcDealPrc"'>       T1.EXPC_DEAL_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "custTpNm"'>          CUST_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "prefCommMthNm"'>     PREF_COMM_MTH_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "prefContactMthNm"'>  PREF_CONTACT_MTH_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "prefContactHmNm"'>   PREF_CONTACT_HM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "sexNm"'>             SEX_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "infoTpNm"'>          INFO_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "holdTpNm"'>          HOLD_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "payTpNm"'>           PAY_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "leadLvlNm"'>         LEAD_LVL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "leadStatNm"'>        LEAD_STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "traceGradeNm"'>      TRACE_GRADE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "validGradeNm"'>      VALID_GRADE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "invalidCauNm"'>      INVALID_CAU_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "failCauNm"'>         FAIL_CAU_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "expcPurcHmNm"'>      EXPC_PURC_HM_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "traceMthNm"'>        TRACE_MTH_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "mngScNm"'>           MNG_SC_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "intrCarlineNm"'>     INTR_CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "intrModelNm"'>       INTR_MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "purcSelCarlineNm"'>  PURC_SEL_CARLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "purcSelModelNm"'>    PURC_SEL_MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitDtFormat"'>      T1.VSIT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitResvDtFormat"'>  T1.VSIT_RESV_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vsitEndDtFormat"'>   T1.VSIT_END_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "traceDtFormat"'>     T1.TRACE_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "nextTraceDtFormat"'> T1.NEXT_TRACE_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "regDtFormat"'>       T1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "updtDtFormat"'>      T1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "submitDtFormat"'>    T1.SUBMIT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "siebelLeadRowId"'>   T1.SIEBEL_LEAD_ROW_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "intrFscpModtpNm"'>   INTR_FSCP_MODTP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "bhmcYn"'>            BHMC_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "holdDetlTpSeqNm"'>   HOLD_DETL_TP_SEQ_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "intrColorNm"'>       INTR_COLOR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "leadStartDtFormat"'> T1.LEAD_START_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "vistPrdmm"'>         VIST_PRDMM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "testDrvYn"'>         TEST_DRV_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <otherwise>
+<!--                                      T1.VSIT_DT DESC, T1.VSIT_END_DT DESC-->
+                                    TO_CHAR(T1.VSIT_DT,'YYYYMMDD') DESC, T1.VSIT_END_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        TO_CHAR(T1.VSIT_DT,'YYYYMMDD') DESC, T1.VSIT_END_DT DESC
+                    </otherwise>
+                </choose>
+            ) T2
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        ) T3
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 전시장정보를 저장한다. -->
+    <insert id="insertSalesOpptShowRoomMgmt" parameterType="SalesOpptShowRoomMgmtVO">
+    /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptShowRoomMgmtDAO.insertSalesOpptShowRoomMgmt] */
+
+        <selectKey resultType="string" keyProperty="seq" order="AFTER">
+            SELECT SEQ_CR_0214T.currval AS SEQ FROM DUAL
+        </selectKey>
+
+    INSERT INTO CR_0214T          --전시장관리
+    (
+      SEQ                         --일련번호
+     ,CUST_NM                     -- 고객명
+     ,DLR_CD                      --딜러코드
+     ,CUST_NO                     --고객번호
+     ,DEL_YN                      --삭제여부
+     ,BHMC_YN                     --BHMC여부
+     ,SIEBEL_ROW_ID               --SIEBEL ROW ID
+     ,DOC_ID                      --문서ID
+     ,WITH_PRSN_NM                --동행자명
+     ,RVSIT_YN                    --재방문여부
+     ,VSIT_RESV_DT                --방문예약일자
+     ,VSIT_DT                     --방문일자
+     ,VSIT_PRSN_CNT               --방문자수
+     ,VSIT_END_DT                 --방문종료일자
+     ,INFO_TP                     --정보유형
+     ,HOLD_TP                     --정보경로
+     ,HOLD_DETL_TP_SEQ            --정보경로상세
+     ,PAY_TP                      --지불유형
+     ,INTR_CARLINE_CD             --관심차종코드
+     ,INTR_MODEL_CD               --관심모델코드
+     ,LOCAL_CAR_REG_NO_YN         --현지번호판예정번호
+     ,ESTIMATE_CONT               --견적내용
+     ,SALES_CONT                  --영업내용
+     ,REMARK                      --비고
+     ,LEAD_LVL_CD                 --리드레벨코드
+     ,LEAD_STAT_CD                --리드상태코드
+     ,INTR_COLOR_CD               --선호색상코드
+     ,TRACE_GRADE_CD              --추적등급코드
+     ,VALID_GRADE_CD              --유효등급코드
+     ,INVALID_CAU_CD              --무효원인코드
+     ,FAIL_CAU_CD                 --실패원인코드
+     ,FAIL_CAU_REASON_CONT        --실패원인사유내용
+     ,PURC_SEL_CARLINE_CD         --구매선택차종코드
+     ,PURC_SEL_MODEL_CD           --구매선택모델코드
+     ,EXPC_PURC_HM_CD             --예상구매시간코드
+     ,EXPC_PURC_DT                --예상구매일자
+     ,EXPC_DEAL_PRC               --예상거래가격
+     ,TRACE_DT                    --추적일자
+     ,TRACE_MTH_CD                --추적방법코드
+     ,NEXT_TRACE_DT               --다음추적일자
+     ,NEXT_TRACE_MTH_CD           --다음추적방법코드
+     ,MNG_SC_ID                   --관리직원
+     ,HP_NO
+     ,TEL_NO
+     ,WECHAT_ID
+     ,EMAIL_NM
+     ,SEX_CD
+     ,SALE_OPPT_SEQ
+     ,OFFICE_TEL_NO
+     ,CUST_TP
+     ,BIRTH_DT
+     ,DEPT_NM
+     ,OFFICE_NM
+     ,PURC_MNG_NM
+     ,TEST_DRV_YN
+     ,INTR_FSCP_MODTP_CD
+     ,REG_USR_ID                  --등록자ID
+     ,REG_DT                      --등록일자
+     ,UPDT_USR_ID                 --수정자ID
+     ,UPDT_DT                     --수정일자
+    )
+    VALUES
+    (
+      SEQ_CR_0214T.NEXTVAL          --일련번호
+     ,#{custNm}                     --고객명
+     ,#{dlrCd}                      --딜러코드
+     ,#{custNo}                     --고객번호
+     ,'N'                           --삭제여부
+     ,#{bhmcYn}                     --BHMC여부
+     ,#{siebelRowId}                --SIEBEL ROW ID
+     ,#{docId}                      --문서ID
+     ,#{withPrsnNm}                 --동행자명
+     ,#{rvsitYn}                    --재방문여부
+     ,#{vsitResvDt}                 --방문예약일자
+     ,#{vsitDt}                     --방문일자
+     ,#{vsitPrsnCnt}                --방문자수
+     ,#{vsitEndDt}                  --방문종료일자
+     ,#{infoTp}                     --정보유형
+     ,#{holdTp}                 --정보경로
+     ,#{holdDetlTpSeq}              --정보경로상세
+     ,#{payTp}                      --지불유형
+     ,#{intrCarlineCd}              --관심차종코드
+     ,#{intrModelCd}                --관심모델코드
+     ,#{localCarRegNoYn}               --현지번호판예정번호
+     ,#{estimateCont}               --견적내용
+     ,#{salesCont}                  --영업내용
+     ,#{remark}                     --비고
+     ,#{leadLvlCd}                  --리드레벨코드
+     ,#{leadStatCd}                 --리드상태코드
+     ,#{intrColorCd}                --선호색상코드
+     ,#{traceGradeCd}               --추적등급코드
+     ,#{validGradeCd}               --유효등급코드
+     ,#{invalidCauCd}               --무효원인코드
+     ,#{failCauCd}                  --실패원인코드
+     ,#{failCauReasonCont}          --실패원인사유내용
+     ,#{purcSelCarlineCd}           --구매선택차종코드
+     ,#{purcSelModelCd}             --구매선택모델코드
+     ,#{expcPurcHmCd}               --예상구매시간코드
+     ,#{expcPurcDt}                 --예상구매일자
+     ,#{expcDealPrc}                --예상거래가격
+     ,#{traceDt}                    --추적일자
+     ,#{traceMthCd}                 --추적방법코드
+     ,#{nextTraceDt}                --다음추적일자
+     ,#{nextTraceMthCd}             --다음추적방법코드
+     ,#{mngScId}                    --관리직원ID
+     ,#{hpNo}
+     ,#{telNo}
+     ,#{wechatId}
+     ,#{emailNm}
+     ,#{sexCd}
+     ,#{saleOpptSeq}
+     ,#{officeTelNo}
+     ,#{custTp}
+     ,#{birthDt}
+     ,#{deptNm}
+     ,#{officeNm}
+     ,#{purcMngNm}
+     ,#{testDrvYn}
+     ,#{intrFscpModtpCd}
+     ,#{regUsrId}                   --등록자ID
+     , SYSDATE                      --등록일자
+     ,#{regUsrId}                   --수정자ID
+     , SYSDATE                      --수정일자
+    )
+    </insert>
+
+    <!-- 전시장정보를 업데이트 한다. -->
+    <update id="updateSalesOpptShowRoomMgmt" parameterType="SalesOpptShowRoomMgmtVO">
+    /* [chn.bhmc.dms.crm.cso.service.dao.SalesOpptShowRoomMgmtDAO.updateSalesOpptShowRoomMgmt] */
+    UPDATE CR_0214T    --전시장관리
+      SET
+             SEQ                  = #{seq}                        --일련번호
+          <if test='custNm != null '>
+            ,CUST_NM              = #{custNm}                     --BHMC여부
+          </if>
+          <if test='custNo != null '>
+            ,CUST_NO              = #{custNo}                     --고객번호
+          </if>
+          <if test='bhmcYn != null '>
+            ,BHMC_YN              = #{bhmcYn}                     --BHMC여부
+          </if>
+          <if test='siebelRowId != null '>
+            ,SIEBEL_ROW_ID        = #{siebelRowId}                --SIEBEL ROW ID
+          </if>
+          <if test='docId != null '>
+            ,DOC_ID               = #{docId}                      --문서ID
+          </if>
+          <if test='withPrsnNm != null '>
+            ,WITH_PRSN_NM         = #{withPrsnNm}                 --동행자명
+          </if>
+          <if test='rvsitYn != null '>
+            ,RVSIT_YN             = #{rvsitYn}                    --재방문여부
+          </if>
+          <if test='vsitResvDt != null '>
+            ,VSIT_RESV_DT         = #{vsitResvDt}                 --방문예약일자
+          </if>
+          <if test='vsitDt != null '>
+              ,VSIT_DT              = #{vsitDt}                     --방문일자
+          </if>
+          <if test='vsitPrsnCnt != null '>
+             ,VSIT_PRSN_CNT        = #{vsitPrsnCnt}                --방문자수
+          </if>
+          <if test='vsitEndDt != null '>
+             ,VSIT_END_DT          = #{vsitEndDt}                  --방문종료일자
+          </if>
+          <if test='infoTp != null '>
+             ,INFO_TP              = #{infoTp}                     --정보유형
+          </if>
+          <if test='holdTp != null '>
+             ,HOLD_TP              = #{holdTp}             --정보경로
+          </if>
+          <if test='holdDetlTpSeq != null '>
+             ,HOLD_DETL_TP_SEQ              = #{holdDetlTpSeq}      --정보경로상세
+          </if>
+          <if test='payTp != null '>
+              ,PAY_TP               = #{payTp}                      --지불유형
+          </if>
+          <if test='intrCarlineCd != null '>
+              ,INTR_CARLINE_CD      = #{intrCarlineCd}              --관심차종코드
+          </if>
+          <if test='intrModelCd != null '>
+              ,INTR_MODEL_CD        = #{intrModelCd}                --관심모델코드
+          </if>
+          <if test='localCarRegNoYn != null '>
+              ,LOCAL_CAR_REG_NO_YN      = #{localCarRegNoYn}               --현지번호판예정번호
+          </if>
+          <if test='estimateCont != null '>
+              ,ESTIMATE_CONT        = #{estimateCont}               --견적내용
+          </if>
+          <if test='salesCont != null '>
+              ,SALES_CONT           = #{salesCont}                  --영업내용
+          </if>
+          <if test='remark != null '>
+             ,REMARK               = #{remark}                     --비고
+          </if>
+          <if test='leadLvlCd != null '>
+              ,LEAD_LVL_CD          = #{leadLvlCd}                  --리드레벨코드
+          </if>
+          <if test='leadStatCd != null '>
+              ,LEAD_STAT_CD         = #{leadStatCd}                 --리드상태코드
+          </if>
+          <if test='intrColorCd != null '>
+              ,INTR_COLOR_CD        = #{intrColorCd}                --선호색상코드
+          </if>
+          <if test='traceGradeCd != null '>
+              ,TRACE_GRADE_CD       = #{traceGradeCd}               --추적등급코드
+          </if>
+          <if test='validGradeCd != null '>
+             ,VALID_GRADE_CD       = #{validGradeCd}               --유효등급코드
+          </if>
+          <if test='invalidCauCd != null '>
+             ,INVALID_CAU_CD       = #{invalidCauCd}               --무효원인코드
+          </if>
+          <if test='failCauCd != null '>
+              ,FAIL_CAU_CD          = #{failCauCd}                  --실패원인코드
+          </if>
+          <if test='failCauReasonCont != null '>
+             ,FAIL_CAU_REASON_CONT = #{failCauReasonCont}          --실패원인사유내용
+          </if>
+          <if test='purcSelCarlineCd != null '>
+             ,PURC_SEL_CARLINE_CD  = #{purcSelCarlineCd}           --구매선택차종코드
+          </if>
+          <if test='purcSelModelCd != null '>
+             ,PURC_SEL_MODEL_CD    = #{purcSelModelCd}             --구매선택모델코드
+          </if>
+          <if test='expcPurcHmCd != null '>
+             ,EXPC_PURC_HM_CD      = #{expcPurcHmCd}               --예상구매시간코드
+          </if>
+          <if test='expcPurcDt != null '>
+             ,EXPC_PURC_DT         = #{expcPurcDt}                 --예상구매일자
+          </if>
+          <if test='expcDealPrc != null '>
+             ,EXPC_DEAL_PRC        = #{expcDealPrc}                --예상거래가격
+          </if>
+          <if test='traceDt != null '>
+             ,TRACE_DT             = #{traceDt}                    --추적일자
+          </if>
+          <if test='traceMthCd != null '>
+             ,TRACE_MTH_CD         = #{traceMthCd}                 --추적방법코드
+          </if>
+          <if test='nextTraceDt != null '>
+             ,NEXT_TRACE_DT        = #{nextTraceDt}                --다음추적일자
+          </if>
+          <if test='nextTraceMthCd != null '>
+             ,NEXT_TRACE_MTH_CD    = #{nextTraceMthCd}             --다음추적방법코드
+          </if>
+          <if test='mngScId != null '>
+             ,MNG_SC_ID    = #{mngScId}             --담당자
+          </if>
+          <if test='hpNo != null '>
+             ,HP_NO         = #{hpNo}
+          </if>
+          <if test='telNo != null '>
+             ,TEL_NO         = #{telNo}
+          </if>
+          <if test='wechatId != null '>
+             ,WECHAT_ID         = #{wechatId}
+          </if>
+          <if test='emailNm != null '>
+             ,EMAIL_NM         = #{emailNm}
+          </if>
+          <if test='sexCd != null '>
+             ,SEX_CD         = #{sexCd}
+          </if>
+          <if test='saleOpptSeq != null '>
+             ,SALE_OPPT_SEQ         = #{saleOpptSeq}
+          </if>
+          <if test='officeTelNo != null '>
+             ,OFFICE_TEL_NO         = #{officeTelNo}
+          </if>
+          <if test='custTp != null '>
+             ,CUST_TP         = #{custTp}
+          </if>
+          <if test='birthDt != null '>
+             ,BIRTH_DT         = #{birthDt}
+          </if>
+          <if test='deptNm != null '>
+             ,DEPT_NM         = #{deptNm}
+          </if>
+          <if test='officeNm != null '>
+             ,OFFICE_NM         = #{officeNm}
+          </if>
+          <if test='purcMngNm != null '>
+             ,PURC_MNG_NM         = #{purcMngNm}
+          </if>
+          <if test='testDrvYn != null '>
+             ,TEST_DRV_YN         = #{testDrvYn}
+          </if>
+          <if test='intrFscpModtpCd != null '>
+             ,INTR_FSCP_MODTP_CD         = #{intrFscpModtpCd}
+          </if>
+            ,UPDT_USR_ID          = #{updtUsrId}                  --수정자ID
+            ,UPDT_DT              = SYSDATE                     --수정일자
+     WHERE 1 = 1
+       AND DLR_CD               = #{dlrCd}                      --딜러코드
+       AND SEQ                  = #{seq}                        --일련번호
+    </update>
+
+    <!-- 전시장 정보 목록을 조회한다. -->
+    <select id="selectSalesOpptShowRoomSummaryCntByCondition" parameterType="SalesOpptShowRoomMgmtSearchVO" resultType="SalesOpptShowRoomMgmtVO">
+    /*
+    [chn.bhmc.dms.crm.cso.service.dao.SalesOpptShowRoomMgmtDAO.selectSalesOpptShowRoomSummaryCntByCondition]
+    */
+        SELECT SUM(DECODE(T1.VSIT_END_DT,'',1,0)) AS STAY_ROOM_CNT
+            , SUM(DECODE(T1.VSIT_END_DT,'',0,1)) AS LEAVE_ROOM_CNT
+        FROM CR_0214T T1
+        <include refid="searchWhere" />
+    </select>
+
+</mapper>

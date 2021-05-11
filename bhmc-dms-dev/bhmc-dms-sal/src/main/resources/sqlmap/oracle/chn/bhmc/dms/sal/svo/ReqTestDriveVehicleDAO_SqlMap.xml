@@ -1,0 +1,661 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.svo.service.dao.ReqTestDriveVehicleDAO">
+
+    <!-- 목록 갯수  -->
+    <select id="selectReqTestDriveVehicleByConditionCnt" parameterType="ReqTestDriveVehicleSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0424T A                   /* 특수차판매신청 HEADER */
+          LEFT OUTER JOIN (
+                      SELECT DLR_CD
+                           , USR_ID
+                           , REQ_NO
+                           , MAX(CARLINE_CD) AS CARLINE_CD
+                           , MAX(MODEL_CD) AS MODEL_CD
+                           , MAX(OCN_CD) AS OCN_CD
+                           , MAX(EXT_COLOR_CD) AS EXT_COLOR_CD
+                           , MAX(INT_COLOR_CD) AS INT_COLOR_CD
+                           , SUM(SPC_CAR_QTY) AS SPC_CAR_QTY          -- 수량 합계
+                        FROM SA_0422T
+                       WHERE 1=1
+                        AND DLR_CD = #{sDlrCd}              -- 딜러코드
+                       GROUP BY  DLR_CD, USR_ID, REQ_NO
+                      ) B                   /* 특수차판매신청 DETAIL */
+             ON A.DLR_CD = B.DLR_CD
+            AND A.USR_ID = B.USR_ID
+            AND A.REQ_NO = B.REQ_NO
+           LEFT OUTER JOIN ( SELECT DLR_CD
+                             , USR_ID
+                             , REQ_NO
+                             , MAX(EVAL_DT) AS EVAL_DT        -- 심사일자
+                             , MAX(EVAL_RSLT_YN) AS EVAL_RSLT_YN
+                          FROM SA_0423T
+                         WHERE DLR_CD = #{sDlrCd}              -- 딜러코드
+                           GROUP BY DLR_CD, USR_ID, REQ_NO
+                      ) C
+             ON A.DLR_CD = C.DLR_CD
+            AND A.USR_ID = C.USR_ID
+            AND A.REQ_NO = C.REQ_NO
+          WHERE A.TP_CD = 'N7'
+            AND A.DEL_YN != 'Y'
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND A.DLR_CD = #{sDlrCd}              -- 딜러코드
+         </if>
+         <if test='sApproveCd != null and sApproveCd != ""'>
+           AND A.APPROVE_CD = #{sApproveCd}  -- 상태
+         </if>
+         <if test='sTpCd != null and sTpCd != ""'>
+           AND A.TP_CD = #{sTpCd}            -- 차량유형
+         </if>
+         <if test='sStartReqDt != null and sEndReqDt != null' >
+           AND A.REQ_DT <![CDATA[>=]]> TRUNC(#{sStartReqDt},'DD')
+           AND A.REQ_DT <![CDATA[<]]> TRUNC(#{sEndReqDt},'DD')+1
+         </if>
+         <if test='sStartEvalDt != null and sEndEvalDt != null' >
+           AND C.EVAL_DT <![CDATA[>=]]> TRUNC(#{sStartEvalDt},'DD')
+           AND C.EVAL_DT <![CDATA[<]]> TRUNC(#{sEndEvalDt},'DD')+1
+         </if>
+         <if test='sEvalRsltYn != null and sEvalRsltYn != ""'>
+           AND C.EVAL_RSLT_YN = #{sEvalRsltYn}            -- 차량유형
+         </if>
+         <if test='sCarlineCd != null and sCarlineCd != ""'>
+           AND B.CARLINE_CD   = #{sCarlineCd}
+         </if>
+         <if test='sModelCd != null and sModelCd != ""'>
+           AND B.MODEL_CD     = #{sModelCd}
+         </if>
+         <if test='sOcnCd != null and sOcnCd != ""'>
+           AND B.OCN_CD       = #{sOcnCd}
+         </if>
+         <if test='sExtColorCd != null and sExtColorCd != ""'>
+           AND B.EXT_COLOR_CD = #{sExtColorCd}
+         </if>
+         <if test='sIntColorCd != null and sIntColorCd != ""'>
+           AND B.INT_COLOR_CD = #{sIntColorCd}
+         </if>
+         <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = B.MODEL_CD AND X.OCN_CD = B.OCN_CD)  = #{sFscCd}
+         </if>
+         <if test='sFscCd == "None"'>
+           AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = B.MODEL_CD AND X.OCN_CD = B.OCN_CD) IS NULL
+         </if>
+    </select>
+
+	<!-- 조회 목록  -->
+	<select id="selectReqTestDriveVehicleByCondition" parameterType="ReqTestDriveVehicleSearchVO" resultType="ReqTestDriveVehicleVO">
+        SELECT * FROM
+        ( SELECT ROWNUM AS RNUM
+               , FN_GET_CARLINE_NM_NC(T1.CARLINE_CD) AS CARLINE_NM
+               , FN_GET_MODEL_TP_NM(T1.MODEL_CD, T1.OCN_CD) AS MODEL_NM
+               , FN_GET_OCN_NM_NC(T1.MODEL_CD, T1.OCN_CD) AS OCN_NM
+               , FN_GET_EXT_COLOR_NM_NC(T1.EXT_COLOR_CD) AS EXT_COLOR_NM
+               , FN_GET_INT_COLOR_NM_NC(T1.INT_COLOR_CD) AS INT_COLOR_NM
+               , T1.*
+            FROM
+               (
+                SELECT A.DLR_CD
+                     , (SELECT DLR_NM FROM CM_0101T WHERE DLR_CD = A.DLR_CD) AS DLR_NM
+                     , A.USR_ID
+                     , (SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.USR_ID) AS USR_NM
+                     , A.REQ_NO
+                     , A.REQ_CAR_NO
+                     , A.REQ_DT
+                     , A.EVAL_GRADE_CD
+                     , A.SALE_PRSN_NM
+                     , A.SALE_PRSN_TEL_NO
+                     , A.TP_CD
+                     , A.REQ_TP
+                     , A.UPLOAD_SEQ_RENEWAL
+                     , A.UPLOAD_SEQ
+                     , A.REMARK
+                     , A.APPROVE_CD
+                     , A.APPROVE_END_DT
+                     , A.LAST_APPROVE_CNT
+                     , A.LAST_APPROVE_DT
+                     , A.DEL_YN
+                     , A.FSDM_AGR_YN
+                     , A.FSMD_AGR_DT
+                     , A.FSDM_AGR_REMARK
+                     , A.EVAL_REMARK
+                     , A.REG_USR_ID
+                     , A.REG_DT
+                     , A.UPDT_USR_ID
+                     , A.UPDT_DT
+                     , B.SPC_CAR_QTY
+                     , C.EVAL_DT
+                     , C.EVAL_RSLT_YN
+                     , DECODE(NVL(A.UPLOAD_SEQ, 'N'), 'N', 'N', 'Y') AS FILE_YN
+                     , (
+                         SELECT MAX(UPDT_DT)
+                           FROM CM_0902T
+                          WHERE FILE_DOC_NO = A.UPLOAD_SEQ
+                            AND DEL_YN = 'N'
+                          GROUP BY FILE_DOC_NO
+                     ) AS FILE_UP_DT
+                     , (
+                         SELECT MAX(FILE_NM)
+                           FROM CM_0902T
+                          WHERE FILE_DOC_NO = A.UPLOAD_SEQ
+                            AND DEL_YN = 'N'
+                          GROUP BY FILE_DOC_NO
+                     ) AS FILE_UP_NM
+                     , B.CARLINE_CD
+                     , B.MODEL_CD
+                     , B.OCN_CD
+                     , B.EXT_COLOR_CD
+                     , B.INT_COLOR_CD
+                     ,(
+                       SELECT MAX(SA0417.ORD_DT)
+                         FROM SA_0417T SA0417
+                            , SA_0416T SA0416
+                        WHERE SA0417.ORD_TP = 'N7'
+                          and SA0417.ORD_STAT_CD = '1G'
+                          and SA0417.DLR_CD = A.DLR_CD
+                          and SA0417.ORD_DT   <![CDATA[<]]> DECODE(A.APPROVE_CD, 'C', NVL(A.LAST_APPROVE_DT, SYSDATE), SYSDATE)
+                          AND SA0417.CARLINE_CD = B.CARLINE_CD
+                          and SA0417.DLR_CD            = SA0416.DLR_CD
+                          AND SA0417.ORD_YY_MM_DT      = SA0416.ORD_YYMM
+                          AND SA0417.ORD_TP            = SA0416.SORD
+                          AND SA0417.ORD_PRID          = SA0416.ORD_WEEK
+                          AND SA0417.CARLINE_CD        = SA0416.CARLINE_CD
+                          AND TO_NUMBER(SA0417.ORD_NO) = SA0416.ORD_SEQ
+                       ) AS AS_ORD_DT
+                     ,(
+                        SELECT MAX(SA0121.PLT_GI_DT)
+                         FROM SA_0417T SA0417
+                            , SA_0416T SA0416
+                            , SA_0121T SA0121
+                        WHERE SA0417.ORD_TP = 'N7'
+                          AND SA0417.ORD_STAT_CD = '1G'
+                          AND SA0417.DLR_CD = A.DLR_CD
+                          AND SA0417.ORD_DT   <![CDATA[<]]> DECODE(A.APPROVE_CD, 'C', NVL(A.LAST_APPROVE_DT, SYSDATE), SYSDATE)
+                          AND SA0417.CARLINE_CD = B.CARLINE_CD
+                          AND SA0417.DLR_CD            = SA0416.DLR_CD
+                          AND SA0417.ORD_YY_MM_DT      = SA0416.ORD_YYMM
+                          AND SA0417.ORD_TP            = SA0416.SORD
+                          AND SA0417.ORD_PRID          = SA0416.ORD_WEEK
+                          AND SA0417.CARLINE_CD        = SA0416.CARLINE_CD
+                          AND TO_NUMBER(SA0417.ORD_NO) = SA0416.ORD_SEQ
+                          AND SA0416.VIN_NO1 = SA0121.VIN_NO1
+                          AND SA0416.VIN_NO2 = SA0121.VIN_NO2
+                       ) AS AS_PLT_GI_DT
+                  FROM SA_0424T A                   /* 특수차판매신청 HEADER */
+                  LEFT OUTER JOIN (
+                              SELECT DLR_CD
+                                   , USR_ID
+                                   , REQ_NO
+                                   , MAX(CARLINE_CD) AS CARLINE_CD
+                                   , MAX(MODEL_CD) AS MODEL_CD
+                                   , MAX(OCN_CD) AS OCN_CD
+                                   , MAX(EXT_COLOR_CD) AS EXT_COLOR_CD
+                                   , MAX(INT_COLOR_CD) AS INT_COLOR_CD
+                                   , SUM(SPC_CAR_QTY) AS SPC_CAR_QTY          -- 수량 합계
+                                FROM SA_0422T
+                               WHERE 1=1
+                                 AND DLR_CD = #{sDlrCd}              -- 딜러코드
+                                GROUP BY  DLR_CD, USR_ID, REQ_NO
+                              ) B                   /* 특수차판매신청 DETAIL */
+                     ON A.DLR_CD = B.DLR_CD
+                    AND A.USR_ID = B.USR_ID
+                    AND A.REQ_NO = B.REQ_NO
+                   LEFT OUTER JOIN ( SELECT DLR_CD
+                                     , USR_ID
+                                     , REQ_NO
+                                     , MAX(EVAL_DT) AS EVAL_DT        -- 심사일자
+                                     , MAX(EVAL_RSLT_YN) AS EVAL_RSLT_YN  -- 합격여부
+                                  FROM SA_0423T
+                                  WHERE DLR_CD = #{sDlrCd}              -- 딜러코드
+                                 GROUP BY DLR_CD, USR_ID, REQ_NO
+                              ) C
+                     ON A.DLR_CD = C.DLR_CD
+                    AND A.USR_ID = C.USR_ID
+                    AND A.REQ_NO = C.REQ_NO
+                  WHERE A.TP_CD = 'N7'
+                    AND A.DEL_YN != 'Y'
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND A.DLR_CD = #{sDlrCd}              -- 딜러코드
+                 </if>
+                 <if test='sApproveCd != null and sApproveCd != ""'>
+                   AND A.APPROVE_CD = #{sApproveCd}  -- 상태
+                 </if>
+                 <if test='sTpCd != null and sTpCd != ""'>
+                   AND A.TP_CD = #{sTpCd}            -- 차량유형
+                 </if>
+                 <if test='sStartReqDt != null and sEndReqDt != null' >
+                   AND A.REQ_DT <![CDATA[>=]]> TRUNC(#{sStartReqDt},'DD')
+                   AND A.REQ_DT <![CDATA[<]]> TRUNC(#{sEndReqDt},'DD')+1
+                 </if>
+                 <if test='sStartEvalDt != null and sEndEvalDt != null' >
+                   AND C.EVAL_DT <![CDATA[>=]]> TRUNC(#{sStartEvalDt},'DD')
+                   AND C.EVAL_DT <![CDATA[<]]> TRUNC(#{sEndEvalDt},'DD')+1
+                 </if>
+                 <if test='sEvalRsltYn != null and sEvalRsltYn != ""'>
+                   AND C.EVAL_RSLT_YN = #{sEvalRsltYn}            -- 합격여부
+                 </if>
+                 <if test='sCarlineCd != null and sCarlineCd != ""'>
+                   AND B.CARLINE_CD   = #{sCarlineCd}
+                 </if>
+                 <if test='sModelCd != null and sModelCd != ""'>
+                   AND B.MODEL_CD     = #{sModelCd}
+                 </if>
+                 <if test='sOcnCd != null and sOcnCd != ""'>
+                   AND B.OCN_CD       = #{sOcnCd}
+                 </if>
+                 <if test='sExtColorCd != null and sExtColorCd != ""'>
+                   AND B.EXT_COLOR_CD = #{sExtColorCd}
+                 </if>
+                 <if test='sIntColorCd != null and sIntColorCd != ""'>
+                   AND B.INT_COLOR_CD = #{sIntColorCd}
+                 </if>
+                 <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                   AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = B.MODEL_CD AND X.OCN_CD = B.OCN_CD)  = #{sFscCd}
+                 </if>
+                 <if test='sFscCd == "None"'>
+                   AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = B.MODEL_CD AND X.OCN_CD = B.OCN_CD) IS NULL
+                 </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "reqNo"'>A.REQ_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "tpCd"'>A.TP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "salePrsnNm"'>A.SALE_PRSN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "salePrsnTelNo"'>A.SALE_PRSN_TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "reqTp"'>A.REQ_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "reqDt"'>A.REQ_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "evalDt"'>C.EVAL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "spcCarQty"'>B.SPC_CAR_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "approveCd"'>A.APPROVE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "evalRsltYn"'>C.EVAL_RSLT_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.TP_CD ASC, A.REQ_NO DESC
+                                </otherwise>
+                            </choose>
+                         </foreach>
+                    </when>
+                    <otherwise>
+                            A.TP_CD ASC, A.REQ_NO DESC
+                    </otherwise>
+                </choose>
+                ) T1
+                <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+                </where>
+         )
+         <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+    <!-- 시승차량 상세 조회  -->
+    <select id="selectReqTestDriveVehiclePopupContainCnt" parameterType="ReqTestDriveVehicleSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0424T A
+        WHERE A.DLR_CD = #{sDlrCd}
+          AND A.USR_ID = #{sUsrId}
+          AND A.REQ_NO = #{sReqNo}
+    </select>
+    <select id="selectReqTestDriveVehiclePopupContain" parameterType="ReqTestDriveVehicleSearchVO" resultType="ReqTestDriveVehicleVO">
+        SELECT A.DLR_CD
+             , (SELECT DLR_NM FROM CM_0101T WHERE DLR_CD = A.DLR_CD) AS DLR_NM
+             , A.USR_ID
+             , (SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.USR_ID) AS USR_NM
+             , A.REQ_NO
+             , A.REQ_DT
+             , A.EVAL_GRADE_CD
+             , A.SALE_PRSN_NM
+             , A.SALE_PRSN_TEL_NO
+             , A.TP_CD
+             , A.REQ_TP
+             , A.UPLOAD_SEQ_RENEWAL
+             , A.UPLOAD_SEQ
+             , A.REMARK
+             , A.APPROVE_CD
+             , A.APPROVE_END_DT
+             , A.LAST_APPROVE_CNT
+             , A.LAST_APPROVE_DT
+             , A.DEL_YN
+             , A.FSDM_AGR_YN
+             , A.FSMD_AGR_DT
+             , A.EVAL_REMARK
+             , A.FSDM_AGR_REMARK
+             , A.REG_USR_ID
+             , A.REG_DT
+             , A.UPDT_USR_ID
+             , A.UPDT_DT
+             , A.POLICY_NOTICE AS POLICY_CONT
+             , B.CARLINE_CD
+          FROM SA_0424T A
+          LEFT OUTER JOIN (
+                          SELECT DLR_CD
+                               , USR_ID
+                               , REQ_NO
+                               , MAX(CARLINE_CD) AS CARLINE_CD
+                               , MAX(MODEL_CD) AS MODEL_CD
+                               , MAX(OCN_CD) AS OCN_CD
+                               , MAX(EXT_COLOR_CD) AS EXT_COLOR_CD
+                               , MAX(INT_COLOR_CD) AS INT_COLOR_CD
+                               , SUM(SPC_CAR_QTY) AS SPC_CAR_QTY
+                            FROM SA_0422T
+                           GROUP BY  DLR_CD, USR_ID, REQ_NO
+                          ) B
+            ON A.DLR_CD = B.DLR_CD
+           AND A.USR_ID = B.USR_ID
+           AND A.REQ_NO = B.REQ_NO
+         WHERE A.DLR_CD = #{sDlrCd}
+           AND A.USR_ID = #{sUsrId}
+           AND A.REQ_NO = #{sReqNo}
+    </select>
+
+    <!-- 시승차량 신청 팝업 차량유형 설명조회 -->
+    <select id="selectReqTestDriveVehiclePopupContsByConditionCnt" parameterType="ReqTestDriveVehicleSearchVO" resultType="int">
+    SELECT COUNT(*)
+      FROM SA_0171T
+     WHERE 1 = 1
+     <if test='sTpCd != null and sTpCd != ""' >
+       AND POLICY_TP = #{sTpCd}
+     </if>
+    </select>
+
+    <select id="selectReqTestDriveVehiclePopupContsByCondition" parameterType="ReqTestDriveVehicleSearchVO" resultType="ReqTestDriveVehiclePopupCarVO">
+        SELECT POLICY_CONT
+          FROM SA_0171T
+         WHERE 1 = 1
+         <if test='sTpCd != null and sTpCd != ""' >
+           AND POLICY_TP = #{sTpCd}
+         </if>
+    </select>
+
+    <!-- 시승차량 신청 차량내역 조회 -->
+    <select id="selectReqTestDriveVehiclePopupCarsByConditionCnt" parameterType="ReqTestDriveVehicleSearchVO" resultType="int">
+        SELECT COUNT(*)
+         FROM SA_0422T     --특수차판매신청명세
+        where DLR_CD = #{sDlrCd}
+          and USR_ID = #{sUsrId}
+          and REQ_NO = #{sReqNo}
+    </select>
+    <select id="selectReqTestDriveVehiclePopupCarsByCondition" parameterType="ReqTestDriveVehicleSearchVO" resultType="ReqTestDriveVehiclePopupCarVO">
+        SELECT A.DLR_CD              --딜러코드
+             , (SELECT DLR_NM FROM CM_0101T WHERE DLR_CD = A.DLR_CD) AS DLR_NM
+             , A.USR_ID              --사용자ID
+             , (SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.USR_ID) AS USR_NM
+             , A.REQ_NO              --요청번호
+             , A.REQ_SEQ             --요청일련번호
+             , A.CARLINE_CD          --차종코드
+             , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+             , A.MODEL_CD            --모델코드
+             , FN_GET_MODEL_TP_CD(A.MODEL_CD, A.OCN_CD) AS FSC_CD
+             , FN_GET_MODEL_TP_NM(A.MODEL_CD, A.OCN_CD) AS FSC_NM
+             , FN_GET_MODEL_NM(A.MODEL_CD) AS MODEL_NM
+             , A.OCN_CD              --OCN코드
+             , FN_GET_OCN_NM(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+             , A.EXT_COLOR_CD        --외장색상코드
+             , FN_GET_EXT_COLOR_NM(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+             , A.INT_COLOR_CD        --내장색상코드
+             , FN_GET_INT_COLOR_NM_NC(A.INT_COLOR_CD) AS INT_COLOR_NM
+             , A.SPC_CAR_QTY         --특수차량수량
+             , A.ORD_NO              --오더번호
+             , A.BEF_ORD_NO          --이전오더번호
+         FROM SA_0422T A    --특수차판매신청명세
+        WHERE A.DLR_CD = #{sDlrCd}
+          AND A.USR_ID = #{sUsrId}
+          AND A.REQ_NO = #{sReqNo}
+    </select>
+
+    <!-- 시승차량 신청 심사내역 조회 -->
+    <select id="selectReqTestDriveVehiclePopupEvlsByConditionCnt" parameterType="ReqTestDriveVehicleSearchVO" resultType="int">
+        SELECT COUNT(*)
+         FROM SA_0423T     --특수차판매신청명세
+        where DLR_CD = #{sDlrCd}
+          and USR_ID = #{sUsrId}
+          and REQ_NO = #{sReqNo}
+    </select>
+    <select id="selectReqTestDriveVehiclePopupEvlsByCondition" parameterType="ReqTestDriveVehicleSearchVO" resultType="ReqTestDriveVehiclePopupEvlVO">
+      SELECT A.DLR_CD              --딜러코드
+           ,A.USR_ID              --사용자ID
+           ,A.REQ_NO              --요청번호
+           ,A.SPC_ORD_SEQ         --특수오더일련번호
+           ,FN_CMM_CD_NM('SAL131',EVAL_RSLT_YN, #{sLangCd},'N') AS  EVAL_RSLT_YN        --심사결과여부
+           ,SUBSTR(PEVAL_ID,INSTR(PEVAL_ID,',')+1, LENGTH(PEVAL_ID) ) PEVAL_ID
+           ,A.EVAL_DT             --심사일자
+           ,A.REMARK              --비고
+           ,A.REG_USR_ID          --등록자ID
+           ,A.REG_DT              --등록일자
+           ,A.UPDT_USR_ID         --수정자ID
+           ,A.UPDT_DT             --수정일자
+      FROM SA_0423T A    --특수차판매심사정보
+     where DLR_CD = #{sDlrCd}
+       and USR_ID = #{sUsrId}
+       and REQ_NO = #{sReqNo}
+    </select>
+
+    <!-- 시승차 이전내역 조회 -->
+    <select id="selectTestDriveBeforDtContain" parameterType="ReqTestDriveVehicleSearchVO" resultType="ReqTestDriveVehicleVO">
+        SELECT A.ORD_DT      AS AS_ORD_DT
+             , ( SELECT MAX(PLT_GI_DT)
+                 FROM SA_0121T C
+                WHERE C.VIN_NO1 = B.VIN_NO1
+                  AND C.VIN_NO2 = B.VIN_NO2
+                GROUP BY VIN_NO, VIN_NO1, VIN_NO2
+             ) AS AS_PLT_GI_DT
+          FROM (
+                 SELECT * FROM (
+                         SELECT *
+                            FROM SA_0417T
+                           WHERE DLR_CD = #{sDlrCd}
+                           <if test='sLastApproveDt != null' >
+                             AND ORD_DT <![CDATA[<]]> NVL(#{sLastApproveDt}+1, SYSDATE)
+                           </if>
+                             AND CARLINE_CD = #{sCarlineCd}
+                             AND ORD_TP = 'N7'
+                             AND ORD_STAT_CD = '1G'
+                           ORDER BY ORD_DT DESC
+                        ) WHERE ROWNUM = 1
+               ) A
+             , SA_0416T B
+         WHERE A.DLR_CD            = B.DLR_CD
+           AND A.ORD_YY_MM_DT      = B.ORD_YYMM
+           AND A.ORD_TP            = B.SORD
+           AND A.ORD_PRID          = B.ORD_WEEK
+           AND A.CARLINE_CD        = B.CARLINE_CD
+           AND TO_NUMBER(A.ORD_NO) = B.ORD_SEQ
+    </select>
+
+    <!-- 시승차량 신청 팝업 차량 저장 -->
+    <insert id="insertReqTestDriveVehiclePopupCars" parameterType="ReqTestDriveVehiclePopupCarVO">
+        INSERT
+          INTO SA_0422T(
+               DLR_CD
+             , USR_ID
+             , REQ_NO
+             , REQ_SEQ
+             , CARLINE_CD
+             , MODEL_CD
+             , OCN_CD
+             , EXT_COLOR_CD
+             , INT_COLOR_CD
+             , SPC_CAR_QTY
+             , ORD_NO
+             , BEF_ORD_NO
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+         )VALUES(
+               #{dlrCd}
+             , #{usrId}
+             , #{reqNo}
+             /*, SEQ_SA_0422T.NEXTVAL*/
+             , (SELECT NVL(MAX(REQ_SEQ),0)+1 FROM SA_0422T WHERE DLR_CD = #{dlrCd} AND USR_ID = #{usrId} AND REQ_NO = #{reqNo})
+             , #{carlineCd}
+             , #{modelCd}
+             , #{ocnCd}
+             , #{extColorCd}
+             , #{intColorCd}
+             , #{spcCarQty}
+             , ''
+             , ''
+             , #{regUsrId}
+             , SYSDATE
+             , #{updtUsrId}
+             , SYSDATE
+        )
+         <selectKey resultType="String" keyProperty="reqSeq" order="AFTER">
+            SELECT MAX(REQ_SEQ) AS reqSeq FROM SA_0422T WHERE DLR_CD = #{dlrCd} AND USR_ID = #{usrId} AND REQ_NO = #{reqNo}
+         </selectKey>
+    </insert>
+
+    <!-- 시승차량신청 팝업 차량 수정 -->
+    <update id="updateReqTestDriveVehiclePopupCars" parameterType="ReqTestDriveVehiclePopupCarVO">
+        UPDATE SA_0422T
+           set CARLINE_CD = #{carlineCd}
+             , MODEL_CD = #{modelCd}
+             , OCN_CD = #{ocnCd}
+             , EXT_COLOR_CD = #{extColorCd}
+             , INT_COLOR_CD = #{intColorCd}
+             , SPC_CAR_QTY = #{spcCarQty}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE DLR_CD = #{dlrCd}
+           AND USR_ID = #{usrId}
+           AND REQ_NO = #{reqNo}
+           AND REQ_SEQ = #{reqSeq}
+    </update>
+
+    <!-- 시승차량신청 팝업 차량 삭제 -->
+    <delete id="deleteReqTestDriveVehiclePopupCars" parameterType="ReqTestDriveVehiclePopupCarVO">
+        DELETE
+          FROM SA_0422T
+         WHERE DLR_CD = #{dlrCd}
+           AND USR_ID = #{usrId}
+           AND REQ_NO = #{reqNo}
+           AND REQ_SEQ = #{reqSeq}
+    </delete>
+
+    <!-- 시승차량 신청 저장 -->
+    <insert id="insertReqTestDriveVehicle" parameterType="ReqTestDriveVehicleVO">
+        INSERT
+          INTO SA_0424T(
+             DLR_CD
+           , USR_ID
+           , REQ_NO
+           , REQ_DT
+           , EVAL_GRADE_CD
+           , SALE_PRSN_NM
+           , SALE_PRSN_TEL_NO
+           , TP_CD
+           , REQ_TP
+           , UPLOAD_SEQ_RENEWAL
+           , UPLOAD_SEQ
+           , REMARK
+           , APPROVE_CD
+           , DEL_YN
+           , REG_USR_ID
+           , REG_DT
+           , UPDT_USR_ID
+           , UPDT_DT
+           , POLICY_NOTICE
+           , REQ_CAR_NO
+          )VALUES(
+             #{dlrCd}
+           , #{usrId}
+           , #{reqNo}
+           , #{reqDt}
+           , (SELECT GRADE_CD FROM SA_0435T WHERE WRK_DSTIN_CD = '03')
+           , #{salePrsnNm}
+           , #{salePrsnTelNo}
+           , #{tpCd}
+           , #{reqTp}
+           , #{uploadSeqRenewal}
+           , #{uploadSeq}
+           , #{remark}
+           , 'A'
+           , 'N'
+           , #{regUsrId}
+           , SYSDATE
+           , #{updtUsrId}
+           , SYSDATE
+           , (SELECT POLICY_CONT FROM SA_0171T WHERE POLICY_TP = 'N7')
+           , (SELECT #{dlrCd} || TO_CHAR(SYSDATE, 'YYMM') || LPAD(TO_CHAR(NVL(SUBSTR(MAX(REQ_CAR_NO),10,12), 0)+1), 3, '0' ) FROM SA_0424T WHERE DLR_CD = #{dlrCd} AND SUBSTR(REQ_CAR_NO, 1, 9) = #{dlrCd}||TO_CHAR(SYSDATE, 'YYMM') )
+          )
+    </insert>
+
+    <!-- 구원/대부차량 신청 수정 -->
+    <update id="updateReqTestDriveVehicle" parameterType="ReqTestDriveVehicleVO">
+        UPDATE SA_0424T
+           SET REQ_DT = #{reqDt}
+             , SALE_PRSN_NM = #{salePrsnNm}
+             , SALE_PRSN_TEL_NO = #{salePrsnTelNo}
+             , TP_CD = #{tpCd}
+             , REQ_TP = #{reqTp}
+             , UPLOAD_SEQ_RENEWAL = #{uploadSeqRenewal}
+             , UPLOAD_SEQ = #{uploadSeq}
+             , REMARK = #{remark}
+             , EVAL_REMARK = #{evalRemark}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+             , POLICY_NOTICE = (SELECT POLICY_CONT FROM SA_0171T WHERE POLICY_TP = 'N7')
+         WHERE DLR_CD = #{dlrCd}
+           AND USR_ID = #{usrId}
+           AND REQ_NO = #{reqNo}
+    </update>
+
+    <!-- 시승차량 신청 삭제 -->
+    <update id="deleteReqTestDriveVehicle" parameterType="ReqTestDriveVehicleSearchVO">
+        UPDATE SA_0424T
+           SET DEL_YN = 'Y'
+         WHERE DLR_CD = #{sDlrCd}
+           AND USR_ID = #{sUsrId}
+           AND REQ_NO = #{sReqNo}
+    </update>
+
+    <!-- 시승차량 신청 확정 -->
+    <update id="confirmReqTestDriveVehicle" parameterType="ReqTestDriveVehicleSearchVO">
+        UPDATE SA_0424T
+           SET APPROVE_CD = 'B'
+         WHERE DLR_CD = #{sDlrCd}
+           AND USR_ID = #{sUsrId}
+           AND REQ_NO = #{sReqNo}
+    </update>
+
+    <!-- 시승차량신청 2차심사요청 요청 -->
+    <update id="secondSaveReqTestDriveVehiclePopup" parameterType="ReqTestDriveVehicleVO">
+        UPDATE SA_0424T
+           SET EVAL_REMARK = #{evalRemark}
+             , UPLOAD_SEQ = #{uploadSeq}
+         WHERE DLR_CD = #{dlrCd}
+           AND USR_ID = #{usrId}
+           AND REQ_NO = #{reqNo}
+    </update>
+
+    <!-- 시승차량신청 팝업 차량 수정. : 시승차주문정보수신1 프로시져  -->
+    <insert id="procDemoCarReq1" parameterType="ReqTestDriveVehiclePopupCarVO" statementType="CALLABLE">
+        {CALL SP_SAL_DMS_P_0422T_IF(
+              'SAL091'
+            , #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{usrId, mode=IN, jdbcType=VARCHAR}
+            , #{reqNo, mode=IN, jdbcType=NUMERIC}
+        )}
+    </insert>
+
+
+    <!-- 시승차량 신청 확정. : 시승차주문정보수신1 프로시져  -->
+    <insert id="procDemoCarReq2" parameterType="ReqTestDriveVehiclePopupCarVO" statementType="CALLABLE">
+        {CALL SP_SAL_DMS_P_0424T_IF(
+              'SAL092'
+            , #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{usrId, mode=IN, jdbcType=VARCHAR}
+            , #{reqNo, mode=IN, jdbcType=NUMERIC}
+        )}
+    </insert>
+
+
+
+</mapper>

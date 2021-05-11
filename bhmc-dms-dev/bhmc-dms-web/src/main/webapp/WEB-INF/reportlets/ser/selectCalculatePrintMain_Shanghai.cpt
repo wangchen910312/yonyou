@@ -1,0 +1,1810 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20170715" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="SE0001" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sTelShowYn"/>
+<O>
+<![CDATA[Y]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0119]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCalcDocNo"/>
+<O>
+<![CDATA[CA2017110307]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT 
+       '承修方（盖章）:  '||T1.DLR_NM AS DLR_NMS
+       ,T1.*
+      ,( SELECT CMM_CD_TXT
+           FROM CM_0304T
+          WHERE CMM_GRP_CD = 'COM017'
+            AND LANG_CD    = 'zh'
+            AND CMM_CD     = D.SEX_CD
+         )AS DRIVER_SEX_NM                           --방문자 성별
+        ,D.SSN_CRN_NO AS DRIVER_SSN_CRN_NO           --방문자증서번호
+        ,${IF(sTelShowYn = 'Y', "D.TEL_NO", "''")} AS DRIVER_TEL_NO     --방문자 전화
+        ,${IF(sTelShowYn = 'Y', "D.HP_NO", "''")} AS DRIVER_HP_NO     --방문자 핸드폰
+        ,D.CUST_NM    AS DRIVER_NM
+        ,(T1.LBR_WH_DC_AMT + T1.PAR_WH_DC_AMT + T1.ETC_WH_DC_AMT) AS DC_WH_TOT_DC_AMT
+        ,SYSDATE AS PRINT_DT
+   FROM (
+      SELECT
+            C.CALC_DOC_NO
+           ,A.DLR_CD                          --딜러코드
+           ,(SELECT CALL_CEN_TEL_NO FROM CM_0101T WHERE DLR_CD = A.DLR_CD) AS CALL_CEN_TEL_NO
+		 ,(SELECT EMGC_CEN_TEL_NO FROM CM_0101T WHERE DLR_CD = A.DLR_CD) AS EMGC_CEN_TEL_NO
+		 ,(SELECT SER_DLR_TEL_NO FROM CM_0101T WHERE DLR_CD = A.DLR_CD) AS SER_DLR_TEL_NO
+           ,(SELECT DLR_NM FROM CM_0101T WHERE DLR_CD = A.DLR_CD ) AS DLR_NM --딜러명
+           ,(SELECT SER_DLR_ADDR1_NM FROM CM_0101T WHERE DLR_CD = A.DLR_CD ) AS SER_DLR_ADDR1_NM --정비딜러주소
+           ,(SELECT FAX_NO FROM CM_0101T WHERE DLR_CD = A.DLR_CD ) AS FAX_NO
+           ,(SELECT HOMEPAGE_NM FROM CM_0101T WHERE DLR_CD = A.DLR_CD ) AS HOMEPAGE_NM
+           ,(SELECT EMAIL_NM FROM CM_0101T WHERE DLR_CD = A.DLR_CD ) AS EMAIL_NM
+           ,(SELECT BANK_NM FROM CM_0101T WHERE DLR_CD = A.DLR_CD ) AS BANK_NM
+           ,(SELECT BANK_AC_NO FROM CM_0101T WHERE DLR_CD = A.DLR_CD ) AS BANK_AC_NO
+           ,A.RO_DOC_NO                       --정비위탁번호
+           ,A.RO_TP                           --정비위탁유형
+           ,(SELECT CMM_CD_TXT
+                FROM CM_0304T
+               WHERE CMM_GRP_CD = 'SER031'
+                 AND LANG_CD    = 'zh'
+                 AND CMM_CD     = A.RO_TP
+              ) AS RO_TP_NM                   --정비위탁유형명칭
+           ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.REG_USR_ID AND DLR_CD = A.DLR_CD) AS RO_USR_NM --정비위탁자
+           ,TO_CHAR(A.RO_DT, 'YYYY-MM-DD HH24:MI') AS RO_DT                        --RO일자  --위탁확인시간
+           ,A.DIAG_DOC_NO                     --사전점검번호
+           ,TO_CHAR(A.GI_RUN_DIST_VAL,'FM999,999,999') AS GI_RUN_DIST_VAL --인도체크 주행거리
+           ,TO_CHAR(C.REG_DT, 'YYYY-MM-DD HH24:MI') AS CALC_REG_DT --정산등록시간
+           ,TO_CHAR(C.CALC_DT, 'YYYY-MM-DD HH24:MI') AS CALC_DT --정산완료시간
+           ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = C.REG_USR_ID AND DLR_CD = C.DLR_CD) AS CALC_USR_NM
+           ,A.VIN_NO                          --차대번호
+           ,A.CAR_REG_NO                      --차량등록번호
+           ,( SELECT CMM_CD_TXT
+                FROM CM_0304T
+               WHERE CMM_GRP_CD = 'COM019'
+                 AND LANG_CD    = 'zh'
+                 AND CMM_CD     = NCAR_DSTIN_CD
+            ) AS BRAND_NM                     --차량브랜드
+           ,A.ENGIN_NO                        --엔진번호
+           ,FN_GET_MODEL_NM_NC(V.MODEL_CD) AS MODEL_NM --모델명
+           ,TO_CHAR(V.CAR_REG_DT, 'YYYY-MM-DD HH24:MI') AS CAR_REG_DT --차량등록일자
+           ,TO_CHAR(V.CUST_SALE_DT, 'YYYY-MM-DD') AS CUST_SALE_DT   --차량판매일자
+           ,A.CAR_OWNER_ID                         --차량소유자ID
+           ,A.CAR_OWNER_NM                         --차량소유자명
+           ,${IF(sTelShowYn = 'Y', "(SELECT TEL_NO
+               FROM CR_0101T
+              WHERE DLR_CD  = A.DLR_CD
+                AND CUST_NO = A.CAR_OWNER_ID
+                AND DEL_YN  ='N'
+            )", "''")} AS CAR_OWNER_TEL_NO      --소유자 유선전화
+            ,${IF(sTelShowYn = 'Y', "(SELECT HP_NO
+                FROM CR_0101T
+               WHERE DLR_CD  = A.DLR_CD
+                 AND CUST_NO = A.CAR_OWNER_ID
+                 AND DEL_YN  ='N'
+             )", "''")} AS CAR_OWNER_HP_NO                   --소유자핸드폰
+            ,(
+              SELECT SUNG_NM || CITY_NM || DIST_NM || ADDR_DETL_CONT AS ADDR
+                FROM CR_0116T
+               WHERE REF_TABLE_NM = 'CR_0101T'
+                 AND FLAG_YN    = 'Y'
+                 AND DLR_CD     = A.DLR_CD
+                 AND REF_KEY_NM = A.CAR_OWNER_ID
+             ) AS   CAR_OWNER_ADDR                  --소유자 주소
+           ,A.DRIVER_ID
+           ,C.CALC_REMARK                     --서비스정산 비고
+           ,C.EXPC_CHK_DT                     --예상보양시간
+           ,TO_CHAR(C.EXPC_CHK_RUN_DIST_VAL,'FM999,999,999') AS EXPC_CHK_RUN_DIST_VAL           --예상보양주행거리
+           ,( SELECT CMM_CD_TXT
+                FROM CM_0304T
+               WHERE CMM_GRP_CD = 'CRM038'
+                 AND LANG_CD    = 'zh'
+                 AND CMM_CD     = NVL(C.MAIN_CTNO_TP, '')
+            ) AS MAIN_CTNO_NM                 --메인연락유형
+           ,( SELECT CMM_CD_TXT
+                FROM CM_0304T
+               WHERE CMM_GRP_CD = 'CRM027'
+                 AND LANG_CD    = 'zh'
+                 AND CMM_CD     = NVL(C.MAIN_CTNO_DT_TP, '')
+            ) AS MAIN_CTNO_DT                 --메인연락시간
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.LBR_CALC_AMT END AS LBR_CALC_AMT                        --정산금액(공임)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.LBR_DC_AMT END AS LBR_DC_AMT                            --할인금액(공임)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE (C.LBR_CALC_AMT - C.LBR_DC_AMT) END AS LBR_WH_DC_AMT      --할인후금액(공임)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.LBR_POINT_USE_AMT END AS LBR_POINT_USE_AMT              --회원포인트사용금액(공임)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.LBR_BM_POINT_USE_AMT END AS LBR_BM_POINT_USE_AMT        --BM포인트사용금액(공임)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.LBR_BM_CUPN_USE_AMT END AS LBR_BM_CUPN_USE_AMT        --BM포인트사용금액(공임)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.LBR_ETC_DC_AMT END AS LBR_ETC_DC_AMT                    --기타할인금액(공임)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE (C.LBR_DC_AMT + C.LBR_POINT_USE_AMT + C.LBR_BM_POINT_USE_AMT + C.LBR_BM_CUPN_USE_AMT + C.LBR_ETC_DC_AMT) END AS LBR_DC_SUM_AMT                    --총할인금액(공임)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.LBR_CALC_SUM_AMT END AS LBR_CALC_SUM_AMT                --최종정산금액(공임)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.PAR_CALC_AMT END AS PAR_CALC_AMT                        --정산금액(부품)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.PAR_DC_AMT END AS PAR_DC_AMT                            --할인금액(부품)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE (C.PAR_CALC_AMT - C.PAR_DC_AMT) END AS PAR_WH_DC_AMT      --할인후금액(부품)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.PAR_POINT_USE_AMT END AS PAR_POINT_USE_AMT              --회원포인트사용금액(부품)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.PAR_BM_POINT_USE_AMT END AS PAR_BM_POINT_USE_AMT        --BM포인트사용금액(부품)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.PAR_BM_CUPN_USE_AMT END AS PAR_BM_CUPN_USE_AMT        --BM포인트사용금액(부품)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.PAR_ETC_DC_AMT END AS PAR_ETC_DC_AMT                    --기타할인금액(부품)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE (C.PAR_DC_AMT + C.PAR_POINT_USE_AMT + C.PAR_BM_POINT_USE_AMT + C.PAR_BM_CUPN_USE_AMT + C.PAR_ETC_DC_AMT) END AS PAR_DC_SUM_AMT                    --총할인금액(부품)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.PAR_CALC_SUM_AMT END AS PAR_CALC_SUM_AMT                --최종정산금액(부품)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.ETC_CALC_AMT END AS ETC_CALC_AMT                        --정산금액(기타)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.ETC_DC_AMT END AS ETC_DC_AMT                            --할인금액(기타)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE (C.ETC_CALC_AMT - C.ETC_DC_AMT) END AS ETC_WH_DC_AMT      --할인후금액(기타)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.ETC_POINT_USE_AMT END AS ETC_POINT_USE_AMT              --회원포인트사용금액(기타)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.ETC_BM_POINT_USE_AMT END AS ETC_BM_POINT_USE_AMT        --BM포인트사용금액(기타)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.ETC_BM_CUPN_USE_AMT END AS ETC_BM_CUPN_USE_AMT        --BM포인트사용금액(기타)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.ETC_OTHER_DC_AMT END AS ETC_OTHER_DC_AMT                --기타할인금액(기타)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE (C.ETC_DC_AMT + C.ETC_POINT_USE_AMT + C.ETC_BM_POINT_USE_AMT + C.ETC_BM_CUPN_USE_AMT + C.ETC_OTHER_DC_AMT) END AS ETC_DC_SUM_AMT                    --총할인금액(기타)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.ETC_CALC_SUM_AMT END AS ETC_CALC_SUM_AMT                --최종정산금액(기타)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.CALC_TOT_AMT END AS CALC_TOT_AMT                        --정산금액(서비스비합계)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.DC_TOT_AMT END AS DC_TOT_AMT                            --할인금액(서비스비합계)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.POINT_TOT_AMT END AS POINT_TOT_AMT                      --회원포인트사용금액(서비스비합계)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.BM_POINT_TOT_AMT END AS BM_POINT_TOT_AMT                --BM포인트사용금액(서비스비합계)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.BM_CUPN_TOT_AMT END AS BM_CUPN_TOT_AMT                --BM쿠폰사용금액(서비스비합계)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.ETC_TOT_AMT END AS ETC_TOT_AMT                          --기타할인금액(서비스비합계)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE (C.DC_TOT_AMT + C.POINT_TOT_AMT + C.BM_POINT_TOT_AMT + C.BM_CUPN_TOT_AMT + C.ETC_TOT_AMT) END AS DC_SUM_AMT                    --총할인금액(서비스합계)
+            ,CASE WHEN C.RO_TP = '02' THEN 0 ELSE C.LAST_CALC_TOT_AMT END AS LAST_CALC_TOT_AMT              --최종정산금액(서비스비합계)
+            ,(SELECT CMM_CD_TXT
+ 			FROM CM_0304T
+		    WHERE CMM_GRP_CD = 'SER044'
+  			 AND LANG_CD    = 'zh'
+  			 AND CMM_CD     = A.DLR_RO_TP
+		 ) AS DLR_RO_TP_NM                --DLR_RO_TP_NM
+		 ,FN_GET_CARLINE_NM_NC(V.CARLINE_CD) AS CARLINE_NM
+		 ,V.CONTRACT_NO				--계약번호
+		 ,V.CERT_NO					--합격증번호
+		 ,V.PLT_GI_DT
+		 ,V.CAR_DSTIN_CD
+      FROM SE_0300T A
+      INNER JOIN SE_0500T C
+         ON A.DLR_CD = C.DLR_CD
+        AND A.RO_DOC_NO = C.RO_DOC_NO
+      LEFT JOIN SA_0121T V --RO관리
+        ON V.DLR_CD = A.DLR_CD
+       AND V.VIN_NO = A.VIN_NO
+       AND V.DEL_YN = 'N'
+      WHERE C.DLR_CD = '${sDlrCd}'       --PARAMETER
+        AND C.CALC_DOC_NO = '${sCalcDocNo}'  --PARAMETER
+        AND C.CALC_STAT_CD != '07'
+        AND C.CALC_CANC_YN = 'N'
+  )T1
+  LEFT OUTER JOIN CR_0101T D
+     ON D.DLR_CD      = T1.DLR_CD
+    AND D.CUST_NO     = T1.DRIVER_ID]]></Query>
+</TableData>
+<TableData name="SE0002" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0119]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCalcDocNo"/>
+<O>
+<![CDATA[CA2017110318]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT
+  ( SELECT CMM_CD_TXT
+      FROM CM_0304T
+     WHERE CMM_GRP_CD = 'SER060'
+       AND LANG_CD    = 'zh'
+       AND CMM_CD     = NVL(B.PAYM_TP, '')
+  ) AS PAYM_TP_NM                 --지불유형
+  ,B.PAYM_USR_NM                  --지불자
+  ,B.PAYM_PRID                    --지불기한
+  ,( SELECT CMM_CD_TXT
+      FROM CM_0304T
+     WHERE CMM_GRP_CD = 'SER062'
+       AND LANG_CD    = 'zh'
+       AND CMM_CD     = NVL(PAYM_PRID, '')
+   )AS PAYM_PRID_NM
+  ,CASE WHEN B.PAYM_TP = '01' THEN 0 ELSE B.CALC_AMT END AS CALC_AMT    --최종정산금액
+  ,CASE WHEN B.PAYM_TP = '01' THEN 0 ELSE B.PAYM_AMT END AS PAYM_AMT    --받을금액
+  ,B.DEMIC_POINT_CUT_AMT          --정산제로금액
+  ,B.WON_UNIT_CUT_AMT             --정산절사금액
+  ,B.PAYM_REMARK
+FROM SE_0500T A
+INNER JOIN SE_0530T B
+ON A.DLR_CD = B.DLR_CD
+AND A.CALC_DOC_NO = B.CALC_DOC_NO
+WHERE A.DLR_CD = '${sDlrCd}'
+AND A.CALC_DOC_NO = '${sCalcDocNo}']]></Query>
+</TableData>
+<TableData name="SE0003" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRoDocNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT LINE_NO              --라인번호(의견코드)
+             ,CUST_REQ_CONT        --고객요청내용
+         FROM SE_0130T
+        WHERE 1 = 1
+           AND DLR_CD        = '${sDlrCd}'              --딜러코드
+           AND JOB_NO        = '${sRoDocNo}'       --업무번호
+           AND PREFIX_ID     = 'RO'                  --PREFIX ID
+         ORDER BY LINE_NO]]></Query>
+</TableData>
+<TableData name="SE0004" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRoDocNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT
+            PREFIX_ID           --PREFIX ID
+           ,DLR_CD              --딜러코드
+           ,JOB_NO              --업무번호
+           ,LINE_NO             --라인번호
+           ,ETC_TP_CD           --기타유형코드
+           ,ETC_TP_NM           --기타유형명
+           ,ETC_REQ_CONT        --기타요청내용
+           ,ETC_REQ_PRC         --기타요청가격
+           ,PAYM_TP             --결제유형
+           ,PAYM_USR_NM         --결제자명
+           ,REG_USR_ID          --등록자ID
+           ,REG_DT              --등록일자
+           ,UPDT_USR_ID         --수정자ID
+           ,UPDT_DT             --수정일자
+           ,ETC_ATC_TP_CD       --기타사항유형코드
+           ,PAYM_CD             --결제자코드
+       FROM SE_0140T            --정비기타항목
+      WHERE PREFIX_ID    = 'RO'          --PREFIX ID
+        AND DLR_CD       = '${sDlrCd}'       --딜러코드 (PARAMETER)
+        AND JOB_NO       = '${sRoDocNo}'  --업무번호 (PARAMETER)
+     ORDER BY REG_DT DESC]]></Query>
+</TableData>
+<TableData name="SE0005" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRoDocNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT
+		  ROWNUM AS RNUM
+           ,A.DLR_CD                                  --딜러코드
+           ,A.LBR_CD                                  --수리코드
+           ,A.LBR_NM                                  --수리명칭
+           ,CASE WHEN A.RO_TP = '02' THEN 0 ELSE NVL(A.LBR_PRC,0) END AS LBR_PRC               --공임단가
+           ,A.LBR_HM                                  --유료공임간
+           ,CASE WHEN A.RO_TP = '02' THEN 0 ELSE NVL(A.DC_AMT ,0) END AS DC_AMT                --할인금액
+           ,CASE WHEN A.RO_TP = '02' THEN 0 ELSE NVL(A.LBR_TOT_AMT,0) END  AS LBR_TOT_AMT       --예상 공임비
+           ,CASE WHEN A.RO_TP = '02' THEN '索赔' ELSE '' END  AS LBR_CLAIM_YN
+        FROM SE_0170T A
+       WHERE A.DLR_CD    = '${sDlrCd}'
+         AND A.PREFIX_ID = 'RO'
+         AND A.DOC_NO    = '${sRoDocNo}'
+      ORDER BY  DLR_CD ASC ,DOC_NO ASC ,LINE_NO ASC]]></Query>
+</TableData>
+<TableData name="SE0006" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sRoDocNo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT
+		 ROWNUM AS RNUM
+		,T1.*
+	FROM (
+		SELECT
+			A.DLR_CD                                 --딜러코드
+           ,A.ITEM_CD                                --부품코드
+           ,A.ITEM_NM                                --부품명칭
+           ,A.CALC_UNIT_CD
+           ,CASE WHEN A.RO_TP = '02' THEN 0 ELSE NVL(A.ITEM_PRC,0) END AS ITEM_PRC            --부품단가
+           ,NVL(A.ITEM_QTY,0 )AS ITEM_QTY            --부품수량
+           ,CASE WHEN A.RO_TP = '02' THEN 0 ELSE NVL(A.ITEM_QTY,0 ) * NVL(ITEM_PRC,0) END AS ITEM_AMT --품목금액
+           ,CASE WHEN A.RO_TP = '02' THEN 0 ELSE NVL(A.DC_AMT,0) END AS DC_AMT               --할인금액
+           ,CASE WHEN A.RO_TP = '02' THEN 0 ELSE NVL(A.ITEM_TOT_AMT,0) END  AS ITEM_TOT_AMT    --예상 부품비
+           ,CASE WHEN A.RO_TP = '02' THEN '索赔' ELSE '' END  AS ITEM_CLAIM_YN
+           ,FN_GET_CMMCD_NM('PAR136',B.ITEM_DSTIN_AMOS_CD,'zh') AS ITEM_DSTIN_AMOS_NM
+        FROM SE_0160T A LEFT OUTER JOIN PT_0201T B
+        ON A.DLR_CD = B.DLR_CD
+        AND A.ITEM_CD = B.ITEM_CD
+       WHERE A.DLR_CD = '${sDlrCd}'
+         AND A.PREFIX_ID = 'RO'
+         AND A.DOC_NO = '${sRoDocNo}'
+        ORDER BY A.DLR_CD ASC ,A.DOC_NO DESC ,A.LINE_NO ASC
+        ) T1]]></Query>
+</TableData>
+<TableData name="SE1010" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT 	T1.*
+FROM SE_1010T T1
+WHERE DLR_CD = '${sDlrCd}']]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="服务结算单RS">
+<ReportPageAttr>
+<HR/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[800100,1143000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,864000,1143000,1143000,864000,864000,864000,864000,864000,1714500,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[3162300,3848100,1600200,5448300,1866900,2628900,2933700,3848100,2438400,3009900,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" cs="10" s="0">
+<O>
+<![CDATA[上海市机动车维修结算清单]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1" cs="11" s="1">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="DLR_NMS"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="2" s="2">
+<O>
+<![CDATA[地址：]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="2" cs="4" s="1">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="SER_DLR_ADDR1_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="2" s="2">
+<O>
+<![CDATA[电话:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="2" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="SER_DLR_TEL_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="2" s="2">
+<O>
+<![CDATA[传真:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="2" cs="2" s="1">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="FAX_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="3" s="2">
+<O>
+<![CDATA[开户银行:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="3" cs="4" s="1">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="BANK_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="3" s="2">
+<O>
+<![CDATA[E-mail : ]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="3" cs="5" s="1">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="EMAIL_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="4" s="3">
+<O>
+<![CDATA[账号:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="4" cs="4" s="4">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="BANK_AC_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="4" s="3">
+<O>
+<![CDATA[网址:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="4" cs="5" s="4">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="HOMEPAGE_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="5" s="5">
+<O>
+<![CDATA[        委托方:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="5" cs="5" s="4">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="CAR_OWNER_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="5" s="3">
+<O>
+<![CDATA[送修人]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="5" s="3">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="DRIVER_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="5" s="3">
+<O>
+<![CDATA[联系电话:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="5" cs="2" s="3">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="DRIVER_TEL_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="6" s="2">
+<O>
+<![CDATA[施工编号:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="6" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="RO_DOC_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="6" s="2">
+<O>
+<![CDATA[进厂日期:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="6" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="RO_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="6" s="2">
+<O>
+<![CDATA[出厂里程:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="6" s="2">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="GI_RUN_DIST_VAL"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="6" s="2">
+<O>
+<![CDATA[工时定额：]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="6" cs="2" s="6">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="7" s="2">
+<O>
+<![CDATA[车辆牌照:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="7" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="CAR_REG_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="7" s="2">
+<O>
+<![CDATA[厂牌型号:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="7" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="MODEL_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="7" s="2">
+<O>
+<![CDATA[出厂日期:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="7" s="2">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="PLT_GI_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="7" s="7">
+<O>
+<![CDATA[执行标准：]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="7" cs="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="8" s="2">
+<O>
+<![CDATA[合同编号:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="8" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="CONTRACT_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="8" s="2">
+<O>
+<![CDATA[合格证号:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="8" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="CERT_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="8" s="2">
+<O>
+<![CDATA[分类代码:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="8" s="2">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="CAR_DSTIN_CD"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="8" s="7">
+<O>
+<![CDATA[车辆编号：]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="8" cs="2" s="2">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="VIN_NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="9" cs="11" s="8">
+<O>
+<![CDATA[一、 收费结算 (单位: 元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="10" s="2">
+<O>
+<![CDATA[序号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="10" cs="4" s="2">
+<O>
+<![CDATA[名称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="10" s="1">
+<O>
+<![CDATA[金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="10" s="1">
+<O>
+<![CDATA[优惠]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="10" s="1">
+<O>
+<![CDATA[实收]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="10" cs="3" s="2">
+<O>
+<![CDATA[备注]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="11" s="9">
+<O t="I">
+<![CDATA[1]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="11" cs="4" s="10">
+<O>
+<![CDATA[工时费]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="11" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="LBR_CALC_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="11" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="LBR_DC_SUM_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="11" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="LBR_CALC_SUM_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="11" cs="3" s="9">
+<O>
+<![CDATA[工时 * 工时单价]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="12" s="9">
+<O t="I">
+<![CDATA[2]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="12" cs="4" s="10">
+<O>
+<![CDATA[材料费]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="12" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="PAR_CALC_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="12" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="PAR_DC_SUM_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="12" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="PAR_CALC_SUM_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="12" cs="3" s="9">
+<O>
+<![CDATA[附材料清单]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="13" s="9">
+<O t="I">
+<![CDATA[3]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="13" cs="4" s="10">
+<O>
+<![CDATA[外加工费]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="13" s="11">
+<O>
+<![CDATA[0.00 ]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="13" s="11">
+<O>
+<![CDATA[0.00 ]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="13" s="11">
+<O>
+<![CDATA[0.00 ]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="13" cs="3" s="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="14" s="9">
+<O t="I">
+<![CDATA[4]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="14" cs="4" s="10">
+<O>
+<![CDATA[其他]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="14" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="ETC_CALC_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="14" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="ETC_DC_SUM_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="14" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="ETC_CALC_SUM_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="14" cs="3" s="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="15" s="9">
+<O t="I">
+<![CDATA[5]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="15" cs="4" s="9">
+<O>
+<![CDATA[合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="15" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="CALC_TOT_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="15" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="DC_SUM_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="15" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="LAST_CALC_TOT_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="15" cs="3" s="9">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="16" cs="11" s="12">
+<O>
+<![CDATA[二、工时费]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="17" s="9">
+<O>
+<![CDATA[序号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="17" s="13">
+<O>
+<![CDATA[项目编码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="17" cs="3" s="13">
+<O>
+<![CDATA[维修项目]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="17" s="13">
+<O>
+<![CDATA[结算工时]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="17" s="13">
+<O>
+<![CDATA[单价(元/工时)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="17" s="9">
+<O>
+<![CDATA[金额(元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="17" s="9">
+<O>
+<![CDATA[索赔]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="17" cs="2" s="9">
+<O>
+<![CDATA[备注]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="18" s="9">
+<O t="DSColumn">
+<Attributes dsName="SE0005" columnName="RNUM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="18" s="13">
+<O t="DSColumn">
+<Attributes dsName="SE0005" columnName="LBR_CD"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="18" cs="3" s="13">
+<O t="DSColumn">
+<Attributes dsName="SE0005" columnName="LBR_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="18" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0005" columnName="LBR_HM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="18" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0005" columnName="LBR_PRC"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="18" s="14">
+<O t="DSColumn">
+<Attributes dsName="SE0005" columnName="LBR_TOT_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="18" s="9">
+<O t="DSColumn">
+<Attributes dsName="SE0005" columnName="LBR_CLAIM_YN"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="18" cs="2" s="10">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="19" s="9">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="19" s="10">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="19" cs="3" s="9">
+<O>
+<![CDATA[工时合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="19" s="11">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(F19)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="19" s="13">
+<O>
+<![CDATA[工时费合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="19" s="14">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(H19)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="19" s="10">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="19" cs="2" s="10">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="20" cs="11" s="12">
+<O>
+<![CDATA[三、材料费]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="21" s="15">
+<O>
+<![CDATA[编号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="21" s="16">
+<O>
+<![CDATA[配件编码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="21" cs="2" s="16">
+<O>
+<![CDATA[配件项目]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="21" s="16">
+<O>
+<![CDATA[单位]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="21" s="16">
+<O>
+<![CDATA[数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="21" s="16">
+<O>
+<![CDATA[单价(元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="21" s="16">
+<O>
+<![CDATA[金额(元)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="21" s="16">
+<O>
+<![CDATA[索赔]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="21" cs="2" s="16">
+<O>
+<![CDATA[配件类型]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="22" s="13">
+<O t="DSColumn">
+<Attributes dsName="SE0006" columnName="RNUM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="1" r="22" s="13">
+<O t="DSColumn">
+<Attributes dsName="SE0006" columnName="ITEM_CD"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="22" cs="2" s="13">
+<O t="DSColumn">
+<Attributes dsName="SE0006" columnName="ITEM_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="22" s="13">
+<O t="DSColumn">
+<Attributes dsName="SE0006" columnName="CALC_UNIT_CD"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="22" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0006" columnName="ITEM_QTY"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="22" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0006" columnName="ITEM_PRC"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="22" s="11">
+<O t="DSColumn">
+<Attributes dsName="SE0006" columnName="ITEM_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="8" r="22" s="13">
+<O t="DSColumn">
+<Attributes dsName="SE0006" columnName="ITEM_CLAIM_YN"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="22" cs="2" s="13">
+<O t="DSColumn">
+<Attributes dsName="SE0006" columnName="ITEM_DSTIN_AMOS_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="23" cs="7" s="5">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="23" s="3">
+<O>
+<![CDATA[合计]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="23" s="17">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(H23)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="23" cs="2" s="5">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="24" cs="11" s="12">
+<O>
+<![CDATA[四、质量保证期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="25" cs="11" s="18">
+<O>
+<![CDATA[请您关注下次保养时间或里程。预约保养热线电话:021-57786188转2]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="26" cs="11" s="6">
+<O>
+<![CDATA[该车按双方约定进行维修并经检验合格。维修竣工车辆实行质量保证,保证期为车辆行驶2000公里或10日。质量保证期中行驶里 程和日期指标以先达到者为准。保证期从维修竣工出厂之日起计算。因维修质量原因造成机动车无法正常使用,由本厂负责无偿 返修,在原维修范围内修浚,交委修方。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="27" cs="11" s="5">
+<O>
+<![CDATA[在三包车辆的保修期内,因产品质量问题每次修理时间(包括等待修理配件时间)超过5日的,从第6日起,由本店为您提供代步 车,本店不能提供代步车的,则给予合理的交通费用补偿,补偿标准由北京现代汽车有限公司制定。修理时间自消费者与本店确 定修理之时起,至完成修理之时止。]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="28" cs="11" s="10">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="29" cs="11" s="12">
+<O>
+<![CDATA[五、托修方支付费用更换的旧配件]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="30" cs="11" s="10">
+<O>
+<![CDATA[                      口 旧配件已确认,并由托修方收回:     口 旧配件已确认,托作方声明放弃:    口 无旧配件]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="31" s="6">
+<O>
+<![CDATA[结算员签名: ]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="31" s="6">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="31" s="6">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="31" s="6">
+<O>
+<![CDATA[客户签名: ]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="31" s="6">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="31" s="6">
+<O>
+<![CDATA[]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="31" s="6">
+<O>
+<![CDATA[结算日期:]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="31" cs="2" s="1">
+<O t="DSColumn">
+<Attributes dsName="SE0001" columnName="CALC_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="31" s="6">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="32" cs="11" s="6">
+<O>
+<![CDATA[                                                (《上海市机动车维修结算清单》至少一式二联,一联承修方留存,另一联交托修方。)]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="33" cs="11" s="6">
+<O>
+<![CDATA[本次保养里程:4912公里:建议下次保养里程为:9912公里,或保养日期:2019-04-8.在三包车辆的保修期内,因产品质量问题每次修理时间(包括等待修理配件时间)超过5日的,从第6日起,由本店为您提供代步 车,本店不能提供代步车的,则给予合理的交通费用补偿,补偿标准由北京现代汽车有限公司制定。修理时间自消费者与本店确定 修理之时起,至完成修理之时止。  ]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings isHorizontalCenterOnPage="true" headerHeight="0" footerHeight="0">
+<PaperSetting>
+<PaperSize width="33912000" height="46411200"/>
+<Margin top="144000" left="144000" bottom="144000" right="144000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="1" size="88"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1" color="-16777216"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="微软雅黑" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top color="-16777216"/>
+<Bottom color="-16777216"/>
+<Left color="-16777216"/>
+<Right color="-16777216"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="1" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingRight="3">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.00]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="1" size="64"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingRight="3">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.00]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1" paddingRight="3">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.00]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Bottom style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID TemplateID="8f2c5fc8-8350-4faa-a96c-23b2be30fdd1"/>
+</WorkBook>

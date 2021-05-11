@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : BlueMembershipJoinHistoryDAO_SqlMap.xml
+    Description : 블루멤버십 인증 히스토리
+    author Lee In Moon
+    since 2016.09.28.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016.09.28.    Lee In Moon    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.dmm.service.dao.BlueMembershipJoinHistorySupportDAO">
+
+    <sql id="searchBlueMembership">
+        LEFT OUTER JOIN CM_0801T USRT ON CR_0822T.REG_USR_ID = USRT.USR_ID
+        <where>
+            AND CR_0822T.DLR_CD = #{sDlrCd}
+            <if test='sCustNm != null and sCustNm != ""'>
+                AND ( CR_0822T.CUST_NM LIKE '%'||#{sCustNm}||'%'
+                    OR CR_0822T.HP_NO LIKE '%'||#{sCustNm}||'%'
+                    )
+            </if>
+            <if test='sBlueMembershipNo != null and sBlueMembershipNo != ""'>
+                AND CR_0822T.BLUE_MEMBERSHIP_NO LIKE '%'||#{sBlueMembershipNo}||'%'
+            </if>
+            <!-- 시작일 기준 기간 검색 -->
+            <if test='sStartDt != null'>
+            <![CDATA[
+                AND CR_0822T.REG_DT >= trunc(#{sStartDt},'DD')
+            ]]>
+            </if>
+            <if test='sEndDt != null'>
+            <![CDATA[
+                AND CR_0822T.REG_DT < trunc(#{sEndDt},'DD')+1
+            ]]>
+            </if>
+        </where>
+    </sql>
+
+    <!-- 블루멤버십 가입 목록수를 조회한다. -->
+    <select id="selectBlueMembershipJoinHistorysByConditionCnt" parameterType="BlueMembershipJoinSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.BlueMembershipJoinHistoryDAO.selectBlueMembershipJoinHistorysByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0822T CR_0822T
+        <include refid="searchBlueMembership" />
+
+    </select>
+
+    <!-- 블루멤버십 가입 정보 목록을 조회한다. -->
+    <select id="selectBlueMembershipJoinHistorysByCondition" parameterType="BlueMembershipJoinSearchVO" resultType="BlueMembershipJoinVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.BlueMembershipJoinHistoryDAO.selectBlueMembershipJoinHistorysByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT
+                         CR_0822T.DLR_CD                     --딜러코드
+                        ,CR_0822T.SEQ
+                        ,CR_0822T.CUST_NM                    --고객명
+                        ,CR_0822T.MATH_DOC_TP                --신분증 유형
+                        ,CR_0822T.SSN_CRN_NO                 --신분증 번호
+                        ,CR_0822T.HP_NO                      --핸드폰번호
+                        ,CR_0822T.AMOUNT                     --지불금액
+                        ,CR_0822T.BLUE_MEMBERSHIP_ID         --블루멤버십 ID
+                        ,CR_0822T.BLUE_MEMBERSHIP_NO         --블루멤버십 번호
+                        ,CR_0822T.BLUE_AVLB_POINT_VAL        --POINT
+                        ,CR_0822T.BLUE_GRADE_NM              --BM GRADE
+                        ,FN_CMM_CD_NM('CRM806',CR_0822T.BLUE_GRADE_NM,#{sLangCd},'N') AS BLUE_GRADE_NAME --蓝缤等级  缴费获取积分记录下载功能   贾明 2018-10-22
+                        ,CR_0822T.BLUE_MEMBERSHIP_JOIN_DT    --BM 가입일
+                        ,CR_0822T.BLUE_MEMBERSHIP_INVALID_DT --BM 유효시간
+                        ,CR_0822T.REG_USR_ID                 --등록자ID
+                        ,USRT.USR_NM AS REG_USR_NM           --등록자이름
+                        ,CR_0822T.REG_DT                     --등록일자
+                    FROM    CR_0822T CR_0822T
+                    <include refid="searchBlueMembership" />
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <!-- 20170424 지불 포인트 취득 기록 -->
+                                    <when test='item.field == "custNm"'> CR_0822T.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                    <when test='item.field == "ssnCrnNo"'> CR_0822T.SSN_CRN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                    <when test='item.field == "hpNo"'> CR_0822T.HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>              </when>
+                                    <when test='item.field == "blueMembershipNo"'> CR_0822T.BLUE_MEMBERSHIP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>            </when>
+                                    <when test='item.field == "blueGradeNm"'> CR_0822T.BLUE_GRADE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                    <when test='item.field == "blueAvlbPointVal"'> CR_0822T.BLUE_AVLB_POINT_VAL <choose><when test='item.dir == "asc"'>ASC NULLS FIRST</when><otherwise>DESC NULLS LAST</otherwise></choose></when>
+                                    <when test='item.field == "amount"'> CR_0822T.AMOUNT <choose><when test='item.dir == "asc"'>ASC NULLS FIRST</when><otherwise>DESC NULLS LAST</otherwise></choose></when>
+                                    <when test='item.field == "regUsrNm"'> USRT.USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>               </when>
+                                    <when test='item.field == "regDtFormat"'> CR_0822T.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>             </when>
+                                    <otherwise>
+                                        CR_0822T.REG_DT DESC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            CR_0822T.REG_DT DESC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+</mapper>

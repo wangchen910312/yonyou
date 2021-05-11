@@ -1,0 +1,1482 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.veh.service.dao.VehicleMasterDAO">
+
+    <select id="selectWrrntEndDt" parameterType="VehicleMasterSearchVO" resultType="VehicleMasterVO">
+        SELECT ADD_MONTHS(#{sCustSaleDt} ,CASE WHEN #{sCarDstinCd} ='P' THEN LMT_MM ELSE TAXI_LMT_MM END ) AS WRRNT_END_DT
+         FROM (SELECT CASE WHEN LMT_MM IS NULL THEN A_LMT_MM ELSE LMT_MM END LMT_MM
+                     ,CASE WHEN TAXI_LMT_MM IS NULL THEN A_TAXI_LMT_MM ELSE TAXI_LMT_MM END TAXI_LMT_MM
+                 FROM (SELECT MAX(CASE WHEN A.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(#{sVinNo}) FROM DUAL) THEN LMT_MM END)                AS LMT_MM
+                             ,MAX(CASE WHEN A.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(#{sVinNo}) FROM DUAL) THEN LMT_RUN_DIST_VAL END)      AS LMT_RUN_DIST_VAL
+                             ,MAX(CASE WHEN A.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(#{sVinNo}) FROM DUAL) THEN TAXI_LMT_RUN_DIST_VAL END) AS TAXI_LMT_RUN_DIST_VAL
+                             ,MAX(CASE WHEN A.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(#{sVinNo}) FROM DUAL) THEN TAXI_LMT_MM END)           AS TAXI_LMT_MM
+                             ,MAX(CASE WHEN A.LTS_MODEL_CD ='ALL' THEN LMT_MM END)                          AS A_LMT_MM
+                             ,MAX(CASE WHEN A.LTS_MODEL_CD ='ALL' THEN LMT_RUN_DIST_VAL END)                AS A_LMT_RUN_DIST_VAL
+                             ,MAX(CASE WHEN A.LTS_MODEL_CD ='ALL' THEN TAXI_LMT_RUN_DIST_VAL END)           AS A_TAXI_LMT_RUN_DIST_VAL
+                             ,MAX(CASE WHEN A.LTS_MODEL_CD ='ALL' THEN TAXI_LMT_MM END)                     AS A_TAXI_LMT_MM
+                         FROM SE_1120T A
+                        WHERE (A.LTS_MODEL_CD = (SELECT FN_SER_LTS_MODEL_CD(#{sVinNo}) FROM DUAL) OR LTS_MODEL_CD ='ALL' )
+                          AND TO_DATE( TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+                          AND WART_RPIR_TP ='W'
+                )
+            )
+    </select>
+
+    <!-- 차량마스터 목록  -->
+    <select id="selectVehicleMasterByCondition" parameterType="VehicleMasterSearchVO" resultType="VehicleMasterVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_CARLINE_NM_NC(T1.CARLINE_CD) AS CARLINE_NM
+                 , FN_GET_MODEL_TP_NM(T1.MODEL_CD, T1.OCN_CD) AS MODEL_NM
+                 , FN_GET_OCN_NM_NC(T1.MODEL_CD, T1.OCN_CD) AS OCN_NM
+                 , FN_GET_EXT_COLOR_NM_NC(T1.EXT_COLOR_CD) AS EXT_COLOR_NM
+                 , FN_GET_INT_COLOR_NM_NC(T1.INT_COLOR_CD) AS INT_COLOR_NM
+                 , T1.* FROM (
+                SELECT A.CAR_ID
+                     , A.VIN_NO
+                     , A.NCAR_DSTIN_CD
+                     , ( SELECT Z1.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL112'   /*신차구분*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z1
+                         WHERE A.NCAR_DSTIN_CD = Z1.CMM_CD
+                       ) AS NCAR_DSTIN_NM
+                     , A.CARLINE_CD
+                     , A.MODEL_CD
+                     , A.OCN_CD
+                     , A.EXT_COLOR_CD
+                     , A.INT_COLOR_CD
+                     , A.CAR_STAT_CD
+                     , ( SELECT Z2.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL001'   /*차량상태*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z2
+                         WHERE A.CAR_STAT_CD = Z2.CMM_CD
+                       ) AS CAR_STAT_NM             -- 차량상태
+                     , A.OWN_STAT_CD
+                     , ( SELECT Z3.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL149'   /*보유상태*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z3
+                         WHERE A.OWN_STAT_CD = Z3.CMM_CD
+                       ) AS OWN_STAT_NM             -- 보유상태
+                     , A.STOCK_TP
+                     , ( SELECT Z4.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL074'   /*재고유형*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z4
+                         WHERE A.STOCK_TP = Z4.CMM_CD
+                       ) AS STOCK_NM             --재고유형
+                     , A.CAR_DSTIN_CD
+                     , ( SELECT Z5.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL120'   /*승 상용*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z5
+                         WHERE A.CAR_DSTIN_CD = Z5.CMM_CD
+                       ) AS CAR_DSTIN_NM             --승/상용
+                     , A.STRGE_CD        -- 창고
+                     ,(SELECT STRGE_NM FROM CM_0104T WHERE DLR_CD = A.ORD_DLR_CD AND STRGE_CD = A.STRGE_CD AND STRGE_TP = '02') AS STRGE_NM
+                     , A.LOC_CD            -- 위치
+                     , (SELECT LOC_NM FROM PT_0222T WHERE DLR_CD = A.ORD_DLR_CD AND STRGE_CD = A.STRGE_CD AND LOC_CD = A.LOC_CD AND ROWNUM = 1) AS LOC_NM
+                     , A.ORD_DLR_CD   AS DLR_CD         -- 판매딜러
+                     /*, A.SALE_TP*/
+                     , ( SELECT Z6.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL003'   /*판매유형*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z6
+                         WHERE A.SALE_TP = Z6.CMM_CD
+                       ) AS SALE_TP             --판매유형
+                     , A.CONTRACT_NO  -- 계약번호
+                     , A.GREY_YN     -- 자사여부
+                     , A.CAR_REG_NO -- 차량등록번호
+                     , A.MANUFACT_YY_MM_DT
+                     , A.GRTE_START_DT
+                     , A.GRTE_END_DT
+                     , A.DISUSE_DT
+                     , A.GRTE_STD_CD
+                     , A.CAR_REG_DT
+                     , A.CORP_CAR_DSTIN_CD
+                     , A.ORD_DLR_CD
+                     , A.CMP_CAR_YN
+                     , A.CMP_CAR_DSTIN_CD
+                     , (SELECT Z7.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL053'   /*회사차구분*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z7
+                         WHERE A.CMP_CAR_DSTIN_CD = Z7.CMM_CD
+                       ) AS CMP_CAR_DSTIN_NM             --회사차구분
+                     , A.TEC_ID
+                     , A.ORD_TP
+                     , ( SELECT Z8.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL137'   /*오더유형*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z8
+                         WHERE A.ORD_TP = Z8.CMM_CD
+                       ) AS ORD_TP_NM             --오더유형
+                     , A.LV2_DLR_STOCK_YN
+                     , A.LV2_DLR_ORG_CD
+                     , A.LV2_DLR_STOCK_GR_DT
+                     , A.RFID_NO
+                     , A.ENGIN_MODEL_CD
+                     , A.ENGIN_SERIAL_NO
+                     , A.CERT_NO
+                     , A.KEY_NO
+                     , CASE WHEN A.NCAR_DSTIN_CD = 'N' THEN 'BHMC'
+                            ELSE ( SELECT Z8.CMM_CD_NM
+                                     FROM (SELECT A.CMM_CD
+                                                , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                             FROM CM_0303T A
+                                        LEFT OUTER JOIN CM_0304T B
+                                                    ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                                   AND A.CMM_CD = B.CMM_CD
+                                                   AND B.LANG_CD = #{sLangCd}
+                                             WHERE A.CMM_GRP_CD = 'COM019'   /*브랜드*/
+                                               AND A.USE_YN = 'Y'
+                                             ) Z8
+                                     WHERE A.CAR_BRAND_CD = Z8.CMM_CD
+                                   ) END CAR_BRAND_CD
+                     , A.CAR_NM
+                     , A.CAR_DISP_QTY
+                     , NVL(A.CAR_RUN_DIST_VAL,0) AS CAR_RUN_DIST_VAL
+                     , A.REMARK
+                     , A.PRE_GI_YN
+                     , A.DAMAGE_CD
+                     , A.MM_CNT
+                     , A.DD_CNT
+                     , A.RETL_PRC
+                     , A.WHSL_PRC
+                     , A.DDCT_RATE
+                     , A.BLOCK_SALE_ADV_NO
+                     , A.CERT_SECU2_CD
+                     , A.JEONGPAN_NO
+                     , A.SALE_EMP_NO
+                     ,( SELECT J.USR_NM FROM CM_0801T J WHERE A.SALE_EMP_NO = J.USR_ID AND A.ORD_DLR_CD = J.DLR_CD ) AS SALE_EMP_NM  /* 사원 */
+                     , DECODE(A.OPEN_YN,'Y','01','02') AS OPEN_YN
+                     , (SELECT Q.FSCP_REG_GRADE FROM SA_0105T Q WHERE Q.MODEL_CD = A.MODEL_CD AND Q.OCN_CD = A.OCN_CD) AS FSCP_REG_GRADE
+                      ,(SELECT C.MS_PRC
+                          FROM SA_0110T C
+                         WHERE C.MODEL_CD = A.MODEL_CD
+                           AND C.OCN_CD = A.OCN_CD
+                           AND END_DT >= TO_CHAR(SYSDATE,'YYYYMMDD')) AS MS_PRC        --지도가
+                      ,(SELECT B.DAMT
+                          FROM SA_0416T B
+                         WHERE B.VIN_NO1||B.VIN_NO2 = A.VIN_NO) AS DAMT        --공제금액
+                      ,(SELECT CASE WHEN (B.DAMT > 0 OR B.DAMT IS NOT NULL) THEN ((B.DAMT*-1)+B.AAMT)/(B.DAMT*-1)
+                                    ELSE 0 END
+                          FROM SA_0416T B
+                         WHERE B.VIN_NO1||B.VIN_NO2 = A.VIN_NO) AS DAMT_RATE   --공제율
+                      ,DECODE(A.NCAR_DSTIN_CD,'N','N','Y') AS PURC_YN  --중고차여부
+                      ,TRUNC(SYSDATE - A.DLR_GR_DT) AS STOCK_DAYS       --입고재고년령(일)
+                      ,TRUNC(SYSDATE - A.PLT_GI_DT) AS FAC_OFF_DAYS     --공장출고재고년령(일)
+                      ,(SELECT B.REG_USR_ID
+                          FROM SA_0416T B
+                         WHERE B.SALES_NO = LPAD(A.ERP_ORD_NO,10,0)
+                           AND B.DLR_CD = A.ORD_DLR_CD) AS REG_USR_ID        --주문자
+                      ,A.STR_YN            --선출고여부
+                      ,A.VINM_F20010       --창패번호(제조공장)
+                      ,A.REG_DT             --차량등기일자
+                      ,A.INVC_PUBL_DT       --보증시작일
+                      ,A.CUST_SALE_DT           -- 소매일자
+                      ,A.DLR_GR_DT AS GR_DT     -- 입고일자
+                      ,A.PLT_GI_DT              -- 공장출고일자
+                      ,A.SIGNOFF_DT             -- 생산일자
+                  FROM SA_0121T A
+                 WHERE 1=1
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND A.ORD_DLR_CD = #{sDlrCd}
+                 </if>
+                 <!-- <if test='sVinNo1 != null and sVinNo1 != ""'>
+                   AND A.VIN_NO1 LIKE #{sVinNo1}
+                 </if>
+                 <if test='sVinNo2 != null and sVinNo2 != ""'>
+                   AND A.VIN_NO2 = #{sVinNo2}
+                 </if> -->
+                 <if test='sVinNo != null and sVinNo != ""'>
+                   AND A.VIN_NO LIKE  '%' || #{sVinNo} || '%'
+                 </if>
+<!--                  <if test='sVinNo1 != null and sVinNo1 != ""'>
+                    <choose>
+                      <when test='@org.apache.commons.lang3.StringUtils@contains(sVinNo1,"*")'>
+                         <bind name='sVinNo1' value='@org.apache.commons.lang3.StringUtils@replace(sVinNo1, "*", "%")' />
+                          AND A.VIN_NO1 LIKE #{sVinNo1}
+                      </when>
+                      <otherwise>
+                          AND A.VIN_NO1 = #{sVinNo1}
+                      </otherwise>
+                    </choose>
+                  </if>
+                  <if test='sVinNo2 != null and sVinNo2 != ""'>
+                    <choose>
+                      <when test='@org.apache.commons.lang3.StringUtils@contains(sVinNo2,"*")'>
+                         <bind name='sVinNo2' value='@org.apache.commons.lang3.StringUtils@replace(sVinNo2, "*", "%")' />
+                          AND A.VIN_NO2 LIKE #{sVinNo2}
+                      </when>
+                      <otherwise>
+                          AND A.VIN_NO2 = #{sVinNo2}
+                      </otherwise>
+                    </choose>
+                  </if> -->
+                  <if test='sCarStatCd != null and sCarStatCd != ""'>
+                    AND A.CAR_STAT_CD = #{sCarStatCd}
+                  </if>
+                  <if test='sOwnStatCd != null and sOwnStatCd != ""'>
+                    AND A.OWN_STAT_CD = #{sOwnStatCd}
+                  </if>
+                  <if test='sCarlineCd != null and sCarlineCd != ""'>
+                    AND A.CARLINE_CD = #{sCarlineCd}
+                  </if>
+                  <if test='sModelCd != null and sModelCd != ""'>
+                    AND A.MODEL_CD = #{sModelCd}
+                  </if>
+                  <if test='sOcnCd != null and sOcnCd != ""'>
+                    AND A.OCN_CD = #{sOcnCd}
+                  </if>
+                  <if test='sExtColorCd != null and sExtColorCd != ""'>
+                    AND A.EXT_COLOR_CD = #{sExtColorCd}
+                  </if>
+                  <if test='sIntColorCd != null and sIntColorCd != ""'>
+                    AND A.INT_COLOR_CD = #{sIntColorCd}
+                  </if>
+                  <if test='sCarId != null and sCarId != ""'>
+                    <choose>
+                      <when test='@org.apache.commons.lang3.StringUtils@contains(sCarId,"*")'>
+                         <bind name='sCarId' value='@org.apache.commons.lang3.StringUtils@replace(sCarId, "*", "%")' />
+                          AND A.CAR_ID LIKE #{sCarId}
+                      </when>
+                      <otherwise>
+                          AND A.CAR_ID = #{sCarId}
+                      </otherwise>
+                    </choose>
+                  </if>
+                   <if test='sCustSaleDtFrDt != null' >
+                     AND A.CUST_SALE_DT <![CDATA[ >= ]]> #{sCustSaleDtFrDt}
+                   </if>
+                   <if test='sCustSaleDtToDt != null' >
+                     AND A.CUST_SALE_DT <![CDATA[ < ]]> #{sCustSaleDtToDt} +1
+                   </if>
+                   <if test='sPltGiDtFrDt != null' >
+                     AND A.PLT_GI_DT <![CDATA[ >= ]]> #{sPltGiDtFrDt}
+                   </if>
+                   <if test='sPltGiDtToDt != null' >
+                     AND A.PLT_GI_DT <![CDATA[ < ]]> #{sPltGiDtToDt} +1
+                   </if>
+                   <if test='sCarVinAllocFrDt != null' >
+                     AND A.CAR_VIN_ALLOC_DT <![CDATA[ >= ]]> #{sCarVinAllocFrDt}
+                   </if>
+                   <if test='sCarVinAllocToDt != null' >
+                     AND A.CAR_VIN_ALLOC_DT <![CDATA[ < ]]> #{sCarVinAllocToDt} +1
+                   </if>
+                   <if test='sDlrGrDtFrDt != null' >
+                     AND A.DLR_GR_DT <![CDATA[ >= ]]> #{sDlrGrDtFrDt}
+                   </if>
+                   <if test='sDlrGrDtToDt != null' >
+                     AND A.DLR_GR_DT <![CDATA[ < ]]> #{sDlrGrDtToDt} +1
+                   </if>
+                   <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+                     AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD)  = #{sFscCd}
+                   </if>
+                   <if test='sFscCd == "None"'>
+                     AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+                   </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "vinNo"'>A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carId"'>A.CAR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carStatNm"'>A.CAR_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineNm"'>A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "modelNm"'>A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "ocnNm"'>A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "extColorNm"'>A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "intColorNm"'>A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "mmCnt"'>A.MM_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    A.CNTNCAR_DSTIN_CD ASC NULLS LAST, A.CAR_ID DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A.NCAR_DSTIN_CD ASC NULLS LAST, A.CAR_ID DESC
+                    </otherwise>
+                </choose>
+            ) T1
+                <where>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        ROWNUM <![CDATA[<=]]> #{lastIndex}
+                    </if>
+                </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+    <!-- 차량마스터 목록 갯수  -->
+    <select id="selectVehicleMasterByConditionCnt" parameterType="VehicleMasterSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0121T A
+         WHERE 1=1
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND A.ORD_DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sVinNo != null and sVinNo != ""'>
+           AND A.VIN_NO LIKE '%' || #{sVinNo} || '%'
+         </if>
+         <!-- <if test='sVinNo != null and sVinNo != ""'>
+            <choose>
+              <when test='@org.apache.commons.lang3.StringUtils@contains(sVinNo,"*")'>
+                 <bind name='sVinNo' value='@org.apache.commons.lang3.StringUtils@replace(sVinNo, "*", "%")' />
+                  AND A.VIN_NO LIKE #{sVinNo}
+              </when>
+              <otherwise>
+                  AND A.VIN_NO = #{sVinNo}
+              </otherwise>
+            </choose>
+          </if> -->
+          <if test='sCarStatCd != null and sCarStatCd != ""'>
+            AND A.CAR_STAT_CD = #{sCarStatCd}
+          </if>
+          <if test='sOwnStatCd != null and sOwnStatCd != ""'>
+            AND A.OWN_STAT_CD = #{sOwnStatCd}
+          </if>
+          <if test='sCarlineCd != null and sCarlineCd != ""'>
+            AND A.CARLINE_CD = #{sCarlineCd}
+          </if>
+          <if test='sModelCd != null and sModelCd != ""'>
+            AND A.MODEL_CD = #{sModelCd}
+          </if>
+          <if test='sOcnCd != null and sOcnCd != ""'>
+            AND A.OCN_CD = #{sOcnCd}
+          </if>
+          <if test='sExtColorCd != null and sExtColorCd != ""'>
+            AND A.EXT_COLOR_CD = #{sExtColorCd}
+          </if>
+          <if test='sIntColorCd != null and sIntColorCd != ""'>
+            AND A.INT_COLOR_CD = #{sIntColorCd}
+          </if>
+          <if test='sCarId != null and sCarId != ""'>
+            <choose>
+              <when test='@org.apache.commons.lang3.StringUtils@contains(sCarId,"*")'>
+                 <bind name='sCarId' value='@org.apache.commons.lang3.StringUtils@replace(sCarId, "*", "%")' />
+                  AND A.CAR_ID LIKE #{sCarId}
+              </when>
+              <otherwise>
+                  AND A.CAR_ID = #{sCarId}
+              </otherwise>
+            </choose>
+          </if>
+           <if test='sCustSaleDtFrDt != null' >
+             AND A.CUST_SALE_DT <![CDATA[ >= ]]> #{sCustSaleDtFrDt}
+           </if>
+           <if test='sCustSaleDtToDt != null' >
+             AND A.CUST_SALE_DT <![CDATA[ < ]]> #{sCustSaleDtToDt} +1
+           </if>
+           <if test='sPltGiDtFrDt != null' >
+             AND A.PLT_GI_DT <![CDATA[ >= ]]> #{sPltGiDtFrDt}
+           </if>
+           <if test='sPltGiDtToDt != null' >
+             AND A.PLT_GI_DT <![CDATA[ < ]]> #{sPltGiDtToDt} +1
+           </if>
+           <if test='sCarVinAllocFrDt != null' >
+             AND A.CAR_VIN_ALLOC_DT <![CDATA[ >= ]]> #{sCarVinAllocFrDt}
+           </if>
+           <if test='sCarVinAllocToDt != null' >
+             AND A.CAR_VIN_ALLOC_DT <![CDATA[ < ]]> #{sCarVinAllocToDt} +1
+           </if>
+           <if test='sDlrGrDtFrDt != null' >
+             AND A.DLR_GR_DT <![CDATA[ >= ]]> #{sDlrGrDtFrDt}
+           </if>
+           <if test='sDlrGrDtToDt != null' >
+             AND A.DLR_GR_DT <![CDATA[ < ]]> #{sDlrGrDtToDt} +1
+           </if>
+           <if test='sFscCd != null and sFscCd != "" and sFscCd != "None"'>
+             AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD)  = #{sFscCd}
+           </if>
+           <if test='sFscCd == "None"'>
+             AND (SELECT X.FSCP_MODTP_CD FROM SA_0105T X WHERE X.MODEL_CD = A.MODEL_CD AND X.OCN_CD = A.OCN_CD) IS NULL
+           </if>
+    </select>
+
+    <!-- CRM : 차량 계약자 정보 조회 -->
+    <select id="selectVehicleCustomerInfoByConditionCnt" parameterType="VehicleMasterSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0123T A
+         INNER JOIN SA_0121T B
+            ON A.CAR_ID = B.CAR_ID
+          LEFT OUTER JOIN CM_0101T C
+            ON B.ORD_DLR_CD = C.DLR_CD
+         WHERE A.USE_YN = 'Y'
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND A.DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sCustNo != null and sCustNo != ""'>
+           and A.BP_CD = #{sCustNo}
+         </if>
+         <if test='sNcarDstinCd != null and sNcarDstinCd != ""'>
+           and B.NCAR_DSTIN_CD = #{sNcarDstinCd}
+         </if>
+    </select>
+    <select id="selectVehicleCustomerInfoByCondition" parameterType="VehicleMasterSearchVO" resultType="VehicleCustomerInfoVO">
+        SELECT B.VIN_NO
+             , B.NCAR_DSTIN_CD
+             , B.DLR_CD
+             , ( SELECT Z1.DLR_NM FROM CM_0101T Z1 WHERE Z1.DLR_CD = B.ORD_DLR_CD ) AS DLR_NM
+             , B.CAR_REG_NO
+             , B.CARLINE_CD
+             , FN_GET_CARLINE_NM_NC(B.CARLINE_CD) AS CARLINE_NM
+             , B.MODEL_CD
+             , FN_GET_MODEL_NM_NC(B.MODEL_CD) AS MODEL_NM
+             , B.OCN_CD
+             , FN_GET_OCN_NM_NC(B.MODEL_CD, B.OCN_CD) AS OCN_NM
+             , B.EXT_COLOR_CD
+             , FN_GET_EXT_COLOR_NM_NC(B.EXT_COLOR_CD) AS EXT_COLOR_NM
+             , B.INT_COLOR_CD
+             , FN_GET_INT_COLOR_NM_NC(B.INT_COLOR_CD) AS INT_COLOR_NM
+             , B.CORP_CAR_DSTIN_CD    -- 자사차량구분코드
+             , B.CAR_BRAND_CD         -- 브랜드코드
+             , B.CAR_NM               -- 차량명(중고차)
+             , B.ENGIN_NO
+             , B.CUST_SALE_DT
+             , B.ORD_DLR_CD  -- 주문딜러
+             , ( SELECT Z2.DLR_NM FROM CM_0101T Z2 WHERE Z2.DLR_CD = B.ORD_DLR_CD ) AS ORD_DLR_NM
+             , B.ENGIN_SERIAL_NO
+             , B.INVC_PUBL_DT
+          FROM SA_0123T A
+         INNER JOIN SA_0121T B
+            ON A.CAR_ID = B.CAR_ID
+         WHERE A.USE_YN = 'Y'
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND A.DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sCustNo != null and sCustNo != ""'>
+           and A.BP_CD = #{sCustNo}
+         </if>
+         <if test='sNcarDstinCd != null and sNcarDstinCd != ""'>
+           and B.NCAR_DSTIN_CD = #{sNcarDstinCd}
+         </if>
+    </select>
+
+    <!-- 차량마스터 저장.  -->
+    <update id="updateVehicleMasterMain" parameterType="VehicleMasterVO">
+        UPDATE SA_0121T
+           SET UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+             <if test='grteStartDt != null'>
+             , GRTE_START_DT = #{grteStartDt}                               --보증시작일자
+             </if>
+             <if test='grteEndDt != null'>
+             , GRTE_END_DT = #{grteEndDt}                                   --보증종료일자
+             </if>
+             <if test='disuseDt != null'>
+             , DISUSE_DT = #{disuseDt}                                      --폐기일자
+             </if>
+             <if test='carRegDt != null'>
+             , CAR_REG_DT = #{carRegDt}                                     --차량등록일자
+             </if>
+             , LV2_DLR_STOCK_GR_DT = #{lv2DlrStockGrDt}
+             <if test='strgeCd != null and strgeCd != ""'>
+             , STRGE_CD = #{strgeCd}                                        --창고코드
+             </if>
+             <if test='locCd != null and locCd != ""'>
+             , LOC_CD = #{locCd}                                            --위치코드
+             </if>
+             <if test='greyYn != null and greyYn != ""'>
+             , GREY_YN = #{greyYn}                                          --그레이여부
+             </if>
+             <if test='carRegNo != null and carRegNo != ""'>
+             , CAR_REG_NO = #{carRegNo}                                     --차량등록번호
+             </if>
+             <if test='grteStdCd != null and grteStdCd != ""'>
+             , GRTE_STD_CD = #{grteStdCd}                                   --보증기준코드
+             </if>
+             <if test='corpCarDstinCd != null and corpCarDstinCd != ""'>
+             , CORP_CAR_DSTIN_CD = #{corpCarDstinCd}                        --법인차량구분
+             </if>
+             <if test='lv2DlrStockYn != null and lv2DlrStockYn != ""'>
+             , LV2_DLR_STOCK_YN = #{lv2DlrStockYn}                          --2급딜러재고여부
+             </if>
+             <if test='lv2DlrOrgCd != null and lv2DlrOrgCd != ""'>
+             , LV2_DLR_ORG_CD = #{lv2DlrOrgCd}                              --2급딜러기관코드
+             </if>
+             <if test='enginModelCd != null and enginModelCd != ""'>
+             , ENGIN_MODEL_CD = #{enginModelCd}                             --엔진모델코드
+             </if>
+             <if test='enginSerialNo != null and enginSerialNo != ""'>
+             , ENGIN_SERIAL_NO = #{enginSerialNo}                           --엔진시리얼번호
+             </if>
+             <if test='carBrandCd != null and carBrandCd != ""'>
+             , CAR_BRAND_CD = #{carBrandCd}                                 --차량브랜드코드
+             </if>
+             <if test='carNm != null and carNm != ""'>
+             , CAR_NM = #{carNm}                                            --차량명
+             </if>
+             <if test='carDispQty != null and carDispQty != ""'>
+             , CAR_DISP_QTY = #{carDispQty}                                 --차량배기량
+             </if>
+             <if test='carRunDistVal != null and carRunDistVal != ""'>
+             , CAR_RUN_DIST_VAL = #{carRunDistVal}                          --차량주행거리값
+             </if>
+             <if test='remark != null and remark != ""'>
+             , REMARK = #{remark}                                           --비고
+             </if>
+             <if test='preGiYn != null and preGiYn != ""'>
+             , PRE_GI_YN = #{preGiYn}                                       --선출고여부
+             </if>
+             <if test='damageCd != null and damageCd != ""'>
+             , DAMAGE_CD = #{damageCd}                                      --손상코드
+             </if>
+             <if test='certSecu2Cd != null and certSecu2Cd != ""'>
+             , CERT_SECU2_CD = #{certSecu2Cd}                               --합격증저당2번호
+             </if>
+            <if test='jeongpanNo != null and jeongpanNo != ""'>
+             , JEONGPAN_NO = #{jeongpanNo}                                  --정판형호번호
+             </if>
+            <if test='saleEmpNo != null and saleEmpNo != ""'>
+             , SALE_EMP_NO = #{saleEmpNo}                                   --판매사원번호
+             </if>
+            <if test='openYn != null and openYn != ""'>
+             , OPEN_YN = #{openYn}                                          --공개여부
+             </if>
+             <if test='expcChkDt != null'>
+             , EXPC_CHK_DT = #{expcChkDt}                                   --예정점검일자
+             </if>
+             <if test='expcChkRunDistVal != null and expcChkRunDistVal != ""'>
+             , EXPC_CHK_RUN_DIST_VAL = #{expcChkRunDistVal}                 --예정점검일자
+             </if>
+             <if test='custSaleDt != null'>
+             , CUST_SALE_DT = #{custSaleDt}                                 --판매출고일자
+             </if>
+        WHERE CAR_ID = #{carId}
+    </update>
+
+    <!-- 차량소유자 목록 -->
+    <select id="selectVehicleMasterOwnerByConditionCnt" parameterType="VehicleMasterSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0123T A,CR_0101T B
+         WHERE 1=1
+           AND A.DLR_CD = B.DLR_CD
+           AND A.BP_CD = B.CUST_NO
+           AND A.DLR_CD = #{sDlrCd}
+           AND A.CAR_ID = #{sCarId}
+           <if test='sBpCd != null and sBpCd != ""'>
+           AND A.BP_CD = #{sBpCd}
+           </if>
+           <if test='sUseYn != null and sUseYn != ""'>
+           AND A.USE_YN = #{sUseYn}
+           </if>
+           ORDER BY A.SEQ DESC
+    </select>
+    <!-- 차량소유자 목록  -->
+    <select id="selectVehicleMasterOwnerByCondition" parameterType="VehicleMasterSearchVO" resultType="VehicleMasterVO">
+        SELECT
+               A.DLR_CD || A.CAR_ID || A.SEQ AS OWNER_PK
+             , A.DLR_CD
+             , A.CAR_ID
+             , A.VIN_NO
+             , A.SEQ
+             , A.BP_CD
+             , B.CUST_NM AS BP_NM
+             , A.USE_YN
+             , A.TXT_OBJECT_CD
+             , A.REG_USR_ID
+             , A.REG_DT
+          FROM SA_0123T A,CR_0101T B
+         WHERE 1=1
+           AND A.DLR_CD = B.DLR_CD
+           AND A.BP_CD = B.CUST_NO
+           AND A.DLR_CD = #{sDlrCd}
+           AND A.CAR_ID = #{sCarId}
+           <if test='sBpCd != null and sBpCd != ""'>
+           AND A.BP_CD = #{sBpCd}
+           </if>
+           <if test='sUseYn != null and sUseYn != ""'>
+           AND A.USE_YN = #{sUseYn}
+           </if>
+         ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "bpCd"'>BP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "bpNm"'>BP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "useYn"'>USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "txtObjectCd"'>TXT_OBJECT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "regUsrId"'>REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "regDt"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            REG_DT DESC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                REG_DT DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 차량소유자 정보를 등록한다. -->
+    <insert id="insertVehicleOwner" parameterType="VehicleMasterVO">
+        <selectKey resultType="int" keyProperty="seq" order="BEFORE">
+        SELECT NVL(MAX(SEQ), 0) + 1 AS SEQ FROM SA_0123T
+         WHERE DLR_CD = #{dlrCd}
+           AND CAR_ID = #{carId}
+        </selectKey>
+        INSERT INTO SA_0123T(
+               DLR_CD
+             , CAR_ID
+             , VIN_NO
+             , SEQ
+             , BP_CD
+             , TXT_OBJECT_CD
+             , USE_YN
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+        )VALUES(
+               #{dlrCd}
+             , #{carId}
+             , #{vinNo}
+             , (SELECT NVL(MAX(SEQ),0)+1 FROM SA_0123T WHERE DLR_CD = #{dlrCd} AND CAR_ID = #{carId})
+             , #{bpCd}
+             , #{txtObjectCd}
+             , #{useYn}
+             , #{regUsrId}
+             , SYSDATE
+             , #{updtUsrId}
+             , SYSDATE
+        )
+    </insert>
+
+    <!-- 차량소유자의 사용여부 N으로 변경  -->
+    <update id="updateOwnerNonUsed" parameterType="VehicleMasterVO">
+        UPDATE SA_0123T
+           SET USE_YN = 'N'
+          WHERE DLR_CD  = #{dlrCd}
+            AND CAR_ID = #{carId}
+            AND SEQ != #{seq}
+    </update>
+
+    <!-- 차량소유자 수정 -->
+    <update id="updateVehicleOwner" parameterType="VehicleMasterVO">
+        UPDATE SA_0123T
+           SET BP_CD = #{bpCd}
+             , USE_YN = #{useYn}
+             , TXT_OBJECT_CD = #{txtObjectCd}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+          WHERE DLR_CD  = #{dlrCd}
+            AND CAR_ID = #{carId}
+            AND SEQ = #{seq}
+    </update>
+
+    <!-- 차량운전자 목록 -->
+    <select id="selectVehicleMasterDriverByConditionCnt" parameterType="VehicleMasterSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0122T A
+          LEFT OUTER JOIN CR_0101T B
+            ON A.DLR_CD = B.DLR_CD
+           AND A.BP_CD = B.CUST_NO
+         WHERE 1 = 1
+           AND A.DLR_CD = #{sDlrCd}
+           and A.CAR_ID = #{sCarId}
+           <if test='sBpCd != null and sBpCd != ""'>
+           AND A.BP_CD = #{sBpCd}
+           </if>
+           <if test='sUseYn != null and sUseYn != ""'>
+           AND A.USE_YN = #{sUseYn}
+           </if>
+           AND A.MDRIVER_YN ='Y'
+           ORDER BY A.REG_DT DESC
+    </select>
+    <!-- 차량운전자 목록  -->
+    <select id="selectVehicleMasterDriverByCondition" parameterType="VehicleMasterSearchVO" resultType="VehicleMasterVO">
+        SELECT
+               A.DLR_CD || A.CAR_ID || A.SEQ AS DRIVER_PK
+             , A.DLR_CD
+             , A.CAR_ID
+             , A.VIN_NO
+             , A.SEQ
+             , A.BP_CD
+             , B.CUST_NM AS BP_NM
+             , A.USE_YN
+             , A.MDRIVER_YN
+             , A.TXT_OBJECT_CD
+             , A.REG_USR_ID
+             , A.REG_DT
+          FROM SA_0122T A
+          LEFT OUTER JOIN CR_0101T B
+            ON A.DLR_CD = B.DLR_CD
+           AND A.BP_CD = B.CUST_NO
+         WHERE 1 = 1
+           AND A.DLR_CD = #{sDlrCd}
+           and A.CAR_ID = #{sCarId}
+           <if test='sBpCd != null and sBpCd != ""'>
+           AND A.BP_CD = #{sBpCd}
+           </if>
+           <if test='sUseYn != null and sUseYn != ""'>
+           AND A.USE_YN = #{sUseYn}
+           </if>
+         ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "bpCd"'>BP_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "bpNm"'>BP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "useYn"'>USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "mdriverYn"'>MDRIVER_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "txtObjectCd"'>TXT_OBJECT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "regUsrId"'>REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "regDt"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            REG_DT DESC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                REG_DT DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 차량운전자 정보를 등록한다. -->
+    <insert id="insertVehicleDriver" parameterType="VehicleMasterVO">
+        <selectKey resultType="int" keyProperty="seq" order="BEFORE">
+        SELECT NVL(MAX(SEQ), 0) + 1 AS SEQ FROM SA_0122T
+         WHERE DLR_CD = #{dlrCd}
+           AND CAR_ID = #{carId}
+        </selectKey>
+        INSERT INTO SA_0122T(
+               DLR_CD
+             , CAR_ID
+             , VIN_NO
+             , SEQ
+             , BP_CD
+             , USE_YN
+             , MDRIVER_YN
+             , TXT_OBJECT_CD
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+             , CAR_OWNER_REL_CD
+        )VALUES(
+               #{dlrCd}
+             , #{carId}
+             , #{vinNo}
+             , (SELECT NVL(MAX(SEQ),0)+1 FROM SA_0122T WHERE DLR_CD = #{dlrCd} AND CAR_ID = #{carId})
+             , #{bpCd}
+             , #{useYn}
+             , #{mdriverYn}
+             , #{txtObjectCd}
+             , #{regUsrId}
+             , SYSDATE
+             , #{updtUsrId}
+             , SYSDATE
+             , #{carOwnerRelCd}
+        )
+    </insert>
+
+    <!-- 차량운전자를 수정한다. -->
+    <update id="updateVehicleDriver" parameterType="VehicleMasterVO">
+        UPDATE SA_0122T
+           SET BP_CD = #{bpCd}
+             , USE_YN = #{useYn}
+             , VIN_NO = #{vinNo}
+             , MDRIVER_YN = #{mdriverYn}
+             , TXT_OBJECT_CD = #{txtObjectCd}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+             , CAR_OWNER_REL_CD = #{carOwnerRelCd}
+          WHERE DLR_CD  = #{dlrCd}
+            AND CAR_ID = #{carId}
+            AND SEQ = #{seq}
+    </update>
+
+    <!-- [서비스모듈] 차량운전자의 주운전자여부를 N으로 일괄 변경  -->
+    <update id="updateNonMdriver" parameterType="VehicleMasterVO">
+        UPDATE SA_0122T
+           SET MDRIVER_YN = 'N'
+          WHERE DLR_CD  = #{dlrCd}
+            AND CAR_ID = #{carId}
+            AND SEQ != #{seq}
+    </update>
+
+    <!-- 옵션 목록 -->
+    <select id="selectVehicleMasterOptionsByConditionCnt" parameterType="VehicleMasterSearchVO" resultType="int">
+         SELECT COUNT(*)
+           FROM SA_0124T A
+           LEFT OUTER JOIN (
+                          SELECT A.OPTION_CD
+                               , A.OPTION_NM
+                               , A.OPTION_EN_NM
+                            FROM SA_0103T A
+                           INNER JOIN SA_0106T B
+                              ON A.OPTION_CD = B.OPTION_CD
+                           WHERE B.MODEL_CD = #{sModelCd}
+                             AND B.OCN_CD   = #{sOcnCd}
+                         ) B
+            ON A.PKG_CD = B.OPTION_CD
+         WHERE 1 = 1
+           AND A.DLR_CD = #{sDlrCd}
+           AND A.CAR_ID = #{sCarId}
+    </select>
+    <!-- 옵션 목록  -->
+    <select id="selectVehicleMasterOptionsByCondition" parameterType="VehicleMasterSearchVO" resultType="VehicleMasterVO">
+         SELECT A.DLR_CD
+              , A.VIN_NO
+              , A.PKG_CD
+              , B.OPTION_NM AS PKG_NM
+              , A.USE_YN
+              , A.REG_USR_ID
+              , A.REG_DT
+           FROM SA_0124T A
+           LEFT OUTER JOIN (
+                          SELECT A.OPTION_CD
+                               , A.OPTION_NM
+                               , A.OPTION_EN_NM
+                            FROM SA_0103T A
+                           INNER JOIN SA_0106T B
+                              ON A.OPTION_CD = B.OPTION_CD
+                           WHERE B.MODEL_CD = #{sModelCd}
+                             AND B.OCN_CD   = #{sOcnCd}
+                         ) B
+            ON A.PKG_CD = B.OPTION_CD
+         WHERE 1 = 1
+           AND A.DLR_CD = #{sDlrCd}
+           AND A.CAR_ID = #{sCarId}
+        ORDER BY A.REG_DT DESC
+    </select>
+
+    <!-- 옵션 정보를 등록한다. -->
+    <insert id="insertVehicleOption" parameterType="VehicleMasterVO">
+        INSERT INTO SA_0124T(
+               DLR_CD
+             , CAR_ID
+             , VIN_NO
+             , PKG_CD
+             , USE_YN
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+        )VALUES(
+               #{dlrCd}
+             , #{carId}
+             , #{vinNo}
+             , #{pkgCd}
+             , #{useYn}
+             , #{regUsrId}
+             , SYSDATE
+             , #{updtUsrId}
+             , SYSDATE
+        )
+    </insert>
+
+    <!-- 옵션을 수정한다. -->
+    <update id="updateVehicleOption" parameterType="VehicleMasterVO">
+        UPDATE SA_0124T
+           SET PKG_CD = #{pkgCd}
+             , USE_YN = #{useYn}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+          WHERE DLR_CD  = #{dlrCd}
+            AND CAR_ID = #{carId}
+    </update>
+
+    <!-- 계약 -->
+    <select id="selectVehicleMasterContractsByConditionCnt" parameterType="VehicleMasterSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0201T B,SA_0202T C1,SA_0121T A  /* 계약고객 */
+         WHERE 1=1
+           AND B.DLR_CD = C1.DLR_CD
+           AND B.CONTRACT_NO = C1.CONTRACT_NO
+           AND B.DLR_CD = A.ORD_DLR_CD
+           AND B.CONTRACT_NO = A.CONTRACT_NO
+           AND C1.PARTNER_TP = 'C'   -- 계약자 : SAL028
+           AND B.DLR_CD = #{sDlrCd}
+           AND A.CAR_ID = #{sCarId}
+    </select>
+    <select id="selectVehicleMasterContractsByCondition" parameterType="VehicleMasterSearchVO" resultType="VehicleMasterVO">
+        SELECT
+               B.CONTRACT_NO    -- 계약번호
+             , B.CONTRACT_DT    -- 계약일자
+             , B.SALE_EMP_NO    --판매사원번호
+             , C1.CUST_CD
+             , C1.CUST_NM
+             , '[' || C1.ZIP_CD || ']' || C1.SUNG_NM || ' ' || C1.CITY_NM || ' ' || C1.DIST_NM || ' ' || C1.ADDR_NM || ' ' || C1.ADDR_DETL_CONT AS ADDR
+             , B.REG_TP   -- 차량등록
+             , B.INC_AAP_TP --보험대행
+             , B.INC_AMT   --보험금액
+             , C.INC_CMP_CD --보험회사
+          FROM SA_0201T B,SA_0202T C1,SA_0121T A,SA_0221T C  /* 계약고객 */
+         WHERE 1=1
+           AND B.DLR_CD = C1.DLR_CD(+)
+           AND B.CONTRACT_NO = C1.CONTRACT_NO(+)
+           AND B.DLR_CD = A.ORD_DLR_CD(+)
+           AND B.CONTRACT_NO = A.CONTRACT_NO(+)
+           AND B.DLR_CD = C.DLR_CD(+)
+           AND B.CONTRACT_NO = C.CONTRACT_NO(+)
+           AND C1.PARTNER_TP = 'C'   -- 계약자 : SAL028
+           AND B.DLR_CD = #{sDlrCd}
+           AND A.CAR_ID = #{sCarId}
+    </select>
+
+    <!-- 주문 -->
+    <select id="selectVehicleMasterOrdersByConditionCnt" parameterType="VehicleMasterSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0121T A
+          LEFT OUTER JOIN (
+                          SELECT MODEL_CD,OCN_CD,WH_PRC
+                           FROM SA_0110T
+                           WHERE USE_YN = 'Y'
+                           GROUP BY MODEL_CD,OCN_CD,END_DT,WH_PRC
+                          )B
+            ON A.MODEL_CD = B.MODEL_CD
+           AND A.OCN_CD = B.OCN_CD
+          WHERE A.CAR_ID = #{sCarId}
+
+    </select>
+    <select id="selectVehicleMasterOrdersByCondition" parameterType="VehicleMasterSearchVO" resultType="VehicleMasterVO">
+        SELECT A.ORD_DLR_CD         -- 주문딜러
+             , A.ORD_DLR_YY_MM_DT   -- 주문년월
+             , A.ORD_MM_DT          -- 주문월일자
+             , A.ORD_SEQ            -- 주문일련번호
+             , NVL(B.WH_PRC, 0) AS WH_PRC
+             , A.DLR_ORD_REQ_DT     -- 주문요청일
+             , A.CAR_DUMP_CD
+             , A.ERP_ORD_NO
+             , A.TRSF_DLR_CD
+             , A.SALE_EMP_NO
+             , J.USR_NM AS SALE_EMP_NM
+            -- , A.CAR_VIN_ALLOC_DT
+            -- , A.CAR_ALLOC_CANC_DT
+            -- , A.INVC_PUBL_DT
+            ,A.CAR_ID
+          FROM SA_0121T A
+          LEFT OUTER JOIN (
+                          SELECT MODEL_CD,OCN_CD,WH_PRC
+                           FROM SA_0110T
+                           WHERE USE_YN = 'Y'
+                           GROUP BY MODEL_CD,OCN_CD,END_DT,WH_PRC
+                          )B
+            ON A.MODEL_CD = B.MODEL_CD
+           AND A.OCN_CD = B.OCN_CD
+          LEFT OUTER JOIN CM_0801T J           /* 사원 */
+            ON A.SALE_EMP_NO = J.USR_ID
+           AND A.ORD_DLR_CD = J.DLR_CD
+          WHERE A.CAR_ID = #{sCarId}
+    </select>
+
+    <!-- 재고 리스트 -->
+    <select id="selectVehicleMasterStocksByConditionCnt" parameterType="VehicleMasterSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0208T
+         WHERE DLR_CD = #{sDlrCd}
+           AND VIN_NO = #{sVinNo}
+    </select>
+    <select id="selectVehicleMasterStocksByCondition" parameterType="VehicleMasterSearchVO" resultType="VehicleMasterVO">
+        SELECT DLR_CD
+             , VIN_NO
+             , SEQ
+             , STAT_CHG_CD
+             , STAT_CHG_BEF_CONT
+             , STAT_CHG_AFT_CONT
+             , REG_USR_ID
+             , REG_DT
+          FROM SA_0208T
+         WHERE DLR_CD = #{sDlrCd}
+           AND VIN_NO = #{sVinNo}
+         ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "statChgCd"'>STAT_CHG_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "statChgBefCont"'>STAT_CHG_BEF_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "statChgAftCont"'>STAT_CHG_AFT_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "regUsrId"'>REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "regDt"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            STAT_CHG_CD ASC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                STAT_CHG_CD ASC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 차량마스터관리PopUp 리스트 -->
+    <select id="selectVehicleMasterStsByConditionCnt" parameterType="VehicleMasterSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0121T A
+         WHERE A.VIN_NO IS NOT NULL
+         <choose>
+             <when test='sPageGubun == "deleveryVehicle"'>
+                AND (A.CAR_STAT_CD = '60'
+                OR (A.CAR_STAT_CD = '70' AND A.PRE_GI_YN = 'Y'))
+             </when>
+             <when test='sPageGubun == "usedCar"'>
+                AND A.CAR_STAT_CD = '70'
+                AND A.PRE_GI_YN = 'N'
+             </when>
+             <otherwise>
+
+             </otherwise>
+         </choose>
+         <if test='sDlrCd != null and sDlrCd != ""'>
+           AND A.ORD_DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sVinNo != null and sVinNo != ""'>
+           AND A.VIN_NO LIKE '%' || #{sVinNo} || '%'
+         </if>
+         <if test='sCarStatCd != null and sCarStatCd != ""'>
+           AND A.CAR_STAT_CD = #{sCarStatCd}
+         </if>
+         <if test='sOwnStatCd != null and sOwnStatCd != ""'>
+           AND A.OWN_STAT_CD = #{sOwnStatCd}
+         </if>
+         <if test='sCarlineCd != null and sCarlineCd != ""'>
+           AND A.CARLINE_CD = #{sCarlineCd}
+         </if>
+         <if test='sModelCd != null and sModelCd != ""'>
+           AND A.MODEL_CD = #{sModelCd}
+         </if>
+         <if test='sOcnCd != null and sOcnCd != ""'>
+           AND A.OCN_CD = #{sOcnCd}
+         </if>
+         <if test='sExtColorCd != null and sExtColorCd != ""'>
+           AND A.EXT_COLOR_CD = #{sExtColorCd}
+         </if>
+         <if test='sIntColorCd != null and sIntColorCd != ""'>
+           AND A.INT_COLOR_CD = #{sIntColorCd}
+         </if>
+         <if test='sCmpCarYn != null and sCmpCarYn != ""'>
+           AND A.CMP_CAR_YN = #{sCmpCarYn}
+         </if>
+         <if test='sCmpCarDstinCd != null and sCmpCarDstinCd != ""'>
+           AND A.CMP_CAR_DSTIN_CD = #{sCmpCarDstinCd}
+         </if>
+        <if test='sCarRegNo != null and sCarRegNo != ""'>
+           AND A.CAR_REG_NO LIKE '%' || #{sCarRegNo} || '%'
+        </if>
+    </select>
+    <select id="selectVehicleMasterStsByCondition" parameterType="VehicleMasterSearchVO" resultType="VehicleMasterVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A.VIN_NO
+                     , A.NCAR_DSTIN_CD
+                     , A.DLR_CD
+                     , A.CAR_STAT_CD
+                     , A.OWN_STAT_CD
+                     , A.CARLINE_CD
+                     , FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM
+                     , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_CD_NM
+                     , A.MODEL_CD
+                     , FN_GET_MODEL_NM_NC(A.MODEL_CD) AS MODEL_NM
+                     , FN_GET_MODEL_NM(A.MODEL_CD) AS MODEL_CD_NM
+                     , A.OCN_CD
+                     , FN_GET_OCN_NM_NC(A.MODEL_CD, A.OCN_CD) AS OCN_NM
+                     , FN_GET_OCN_NM(A.MODEL_CD,A.OCN_CD) AS OCN_CD_NM
+                     , A.EXT_COLOR_CD
+                     , FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+                     , FN_GET_EXT_COLOR_NM(A.EXT_COLOR_CD) AS EXT_COLOR_CD_NM
+                     , A.INT_COLOR_CD
+                     , FN_GET_INT_COLOR_NM_NC(A.INT_COLOR_CD) AS INT_COLOR_NM
+                     , FN_GET_INT_COLOR_NM(A.INT_COLOR_CD) AS INT_COLOR_CD_NM
+                     , A.STOCK_TP
+                     , A.STRGE_CD
+                     , A.LOC_CD
+                     , A.CAR_REG_NO
+                     , A.CMP_CAR_DSTIN_CD
+                     , A.CMP_CAR_YN
+                     , A.CUST_SALE_DT
+                     , A.CAR_REG_DT
+                     , A.ORD_TP
+                  FROM SA_0121T A
+                 WHERE A.VIN_NO IS NOT NULL
+                  <choose>
+                     <when test='sPageGubun == "deleveryVehicle"'>
+                        AND (A.CAR_STAT_CD = '60'
+                        OR (A.CAR_STAT_CD = '70' AND A.PRE_GI_YN = 'Y'))
+                     </when>
+                     <when test='sPageGubun == "usedCar"'>
+                        AND A.CAR_STAT_CD = '70'
+                        AND A.PRE_GI_YN = 'N'
+                     </when>
+                     <otherwise>
+
+                     </otherwise>
+                  </choose>
+                  <if test='sDlrCd != null and sDlrCd != ""'>
+                   AND A.ORD_DLR_CD = #{sDlrCd}
+                  </if>
+                  <if test='sVinNo != null and sVinNo != ""'>
+                   AND A.VIN_NO LIKE '%' || #{sVinNo} || '%'
+                  </if>
+                  <if test='sCarStatCd != null and sCarStatCd != ""'>
+                    AND A.CAR_STAT_CD = #{sCarStatCd}
+                  </if>
+                  <if test='sOwnStatCd != null and sOwnStatCd != ""'>
+                    AND A.OWN_STAT_CD = #{sOwnStatCd}
+                  </if>
+                  <if test='sCarlineCd != null and sCarlineCd != ""'>
+                    AND A.CARLINE_CD = #{sCarlineCd}
+                  </if>
+                  <if test='sModelCd != null and sModelCd != ""'>
+                    AND A.MODEL_CD = #{sModelCd}
+                  </if>
+                  <if test='sOcnCd != null and sOcnCd != ""'>
+                    AND A.OCN_CD = #{sOcnCd}
+                  </if>
+                  <if test='sExtColorCd != null and sExtColorCd != ""'>
+                    AND A.EXT_COLOR_CD = #{sExtColorCd}
+                  </if>
+                  <if test='sIntColorCd != null and sIntColorCd != ""'>
+                    AND A.INT_COLOR_CD = #{sIntColorCd}
+                  </if>
+                  <if test='sCmpCarYn != null and sCmpCarYn != ""'>
+                    AND A.CMP_CAR_YN = #{sCmpCarYn}
+                  </if>
+                  <if test='sCmpCarDstinCd != null and sCmpCarDstinCd != ""'>
+                    AND A.CMP_CAR_DSTIN_CD = #{sCmpCarDstinCd}
+                  </if>
+                  <if test='sCarRegNo != null and sCarRegNo != ""'>
+                    AND A.CAR_REG_NO LIKE '%' || #{sCarRegNo} || '%'
+                  </if>
+            ) T1
+                <where>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        ROWNUM <![CDATA[<=]]> #{lastIndex}
+                    </if>
+                </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+        ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "vinNo"'>VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "carStsCd"'>CAR_STS_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ownStatCd"'>OWN_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "carlineCd"'>CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "modelCd"'>MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "ocnCd"'>OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "extColorCd"'>EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "intColorCd"'>INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "stockTp"'>STOCK_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "strgeCd"'>STRGE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "locCd"'>LOC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            VIN_NO ASC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                VIN_NO ASC
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectVehicleVinNo" parameterType="VehicleMasterSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0121T A
+         WHERE A.VIN_NO = #{sVinNo}
+
+    </select>
+
+    <!-- 정비에서 필요되는 신차정보 저장 로직. -->
+    <insert id="insertNewCar" parameterType="VehicleMasterVO">
+        INSERT INTO SA_0121T
+               ( CAR_ID             --차량ID
+                 ,VIN_NO            --차대번호
+                 ,VIN_NO1           --차대번호1
+                 ,VIN_NO2           --차대번호2
+                 ,DLR_CD            --딜러코드
+                 ,CAR_BRAND_CD      --제조사코드
+                 ,TEMP1             --차량명
+                 ,MANUFACT_YY_MM_DT --제조년월
+                 ,CAR_RUN_DIST_VAL  --주행거리
+                 ,CAR_DISP_QTY      --배기량
+                 ,CAR_REG_NO        --번호판
+                 ,NCAR_DSTIN_CD     --신차량구분코드
+                 ,MAKER_CD          --메이커코드 H(Hyundai):현대, O(other):현대이외
+                 ,CAR_STAT_CD
+                 ,ORD_DLR_CD
+                 ,ENGIN_SERIAL_NO
+                 ,GRTE_END_DT
+                 ,CUST_SALE_DT
+                 ,REG_USR_ID
+                 ,REG_DT
+                 ,UPDT_USR_ID
+                 ,UPDT_DT
+                 )
+                  VALUES
+                 ((SELECT 'L'|| #{dlrCd} || LPAD(TO_CHAR(NVL(TO_NUMBER(SUBSTR(MAX(CAR_ID),7)),0)+1),6,'0') FROM SA_0121T WHERE NCAR_DSTIN_CD = 'O')
+                  ,#{vinNo}
+                  ,SUBSTR(#{vinNo},1,11)
+                  ,SUBSTR(#{vinNo},12)
+                  ,#{dlrCd}
+                  ,#{carBrandCd}
+                  ,#{temp1}
+                  ,#{manufactYyMmDt}
+                  ,#{carRunDistVal}
+                  ,#{carDispQty}
+                  ,#{carRegNo}
+                  ,'O'
+                  ,'O'
+                  ,#{carStatCd}
+                  ,#{ordDlrCd}
+                  ,#{enginSerialNo}
+                  ,#{grteEndDt}
+                  ,#{custSaleDt}
+                  ,#{regUsrId}
+                  ,SYSDATE
+                  ,#{regUsrId}
+                  ,SYSDATE
+                 )
+        <selectKey resultType="String" keyProperty="carId" order="AFTER">
+            SELECT 'L'|| #{dlrCd} || LPAD(TO_CHAR(NVL(TO_NUMBER(SUBSTR(MAX(CAR_ID),7)),0)),6,'0') AS CAR_ID FROM SA_0121T WHERE NCAR_DSTIN_CD = 'O'
+        </selectKey>
+    </insert>
+
+    <update id="updateNewCar" parameterType="VehicleMasterVO">
+        UPDATE SA_0121T
+           SET
+               UPDT_USR_ID       = #{updtUsrId}
+             , UPDT_DT           = SYSDATE
+             <if test= ' vinNo != null and vinNo != "" '>
+             , VIN_NO            = #{vinNo}
+             </if>
+             <if test= ' vinNo != null and vinNo != "" '>
+             , VIN_NO1           = SUBSTR(#{vinNo},1,11)
+             </if>
+             <if test= ' vinNo != null and vinNo != "" '>
+             , VIN_NO2           = SUBSTR(#{vinNo},12)
+             </if>
+             , CAR_BRAND_CD      = #{carBrandCd}
+             , TEMP1             = #{temp1}
+             , MANUFACT_YY_MM_DT = #{manufactYyMmDt}
+             , CAR_RUN_DIST_VAL  = #{carRunDistVal}
+             , CAR_DISP_QTY      = #{carDispQty}
+             , CAR_REG_NO        = #{carRegNo}
+             , ENGIN_SERIAL_NO   = #{enginSerialNo}
+             , GRTE_END_DT       = #{grteEndDt}
+             , CUST_SALE_DT      = #{custSaleDt}
+          WHERE 1=1
+            AND ORD_DLR_CD  = #{dlrCd}
+            AND CAR_ID      = #{carId}
+    </update>
+
+
+
+    <!-- 'N'인 VIN NO가 기존에 있으면 튕겨준다. -->
+    <select id="selectVinNoCnt" parameterType="VehicleMasterVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0121T A
+         WHERE 1=1
+           AND A.VIN_NO = #{vinNo}
+           AND A.NCAR_DSTIN_CD = 'N'
+    </select>
+
+    <!-- 'O'인 VIN NO가 기존에 있으면 update, 존자하지 않으면 insert -->
+    <select id="selectNewVinNoCnt" parameterType="VehicleMasterVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0121T A
+         WHERE 1=1
+           AND A.CAR_ID = #{carId}
+           AND A.NCAR_DSTIN_CD = 'O'
+    </select>
+
+    <select id="selectNewVinNoChkCnt" parameterType="VehicleMasterVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0121T A
+         WHERE 1=1
+           AND A.VIN_NO        = #{vinNo}
+    </select>
+
+
+    <!-- 차량입출고내역조회 COUNT-->
+    <select id="selectVehicleMasterDeliveryHistCnt" parameterType="VehicleMasterVO" resultType="int">
+       SELECT COUNT(*)
+        FROM SA_0301T
+       WHERE KMVIN = #{sVinNo}
+    </select>
+
+    <!-- 차량입출고내역조회 COUNT--><!-- 현업요청으로 인해 '입출고내역'을 '출고내역'으로 변경 . 2016.10.15/yewom.kim -->
+    <select id="selectVehicleMasterDeliveryHist" parameterType="VehicleMasterSearchVO" resultType="VehicleMasterVO">
+      SELECT TO_DATE(KMTRDY||KMTRTM, 'YYYYMMDD HH24MISS') AS WORK_DT
+           , KMVIN
+           , KMOPT
+        FROM SA_0301T
+       WHERE KMVIN = #{sVinNo}
+       ORDER BY KMTRDY DESC, KMTRTM DESC
+    </select>
+
+    <!-- 차량 출고내역 조회  -->
+    <select id="selectVehicleDeliverySearch" parameterType="VehicleMasterSearchVO" resultType="VehicleDeliveryVO">
+    /* [chn.bhmc.dms.sal.veh.service.dao.VehicleMasterDAO.selectVehicleDeliverySearch] */
+        SELECT *
+          FROM (
+                SELECT A.KMTRDY             -- DMS->ERP전송일YYYYMMDD
+                     , A.KMTRTM             -- DMS->ERP전송시간HHMMSS
+                     , A.KMSEQ              -- 시퀀스 1~999999
+                     , A.KMOPT              -- 구분코드 J1실출고, J2출고취소, J3전략출고, J4전략출고취소, J5전략출고후실출고
+                     , A.KMDATE             -- 일자(딜러입고일,딜러입고취소일)
+                     , A.KMSTDY             -- 일자(소매일,소매취소일)KMSTDY,KMDCDY
+                     , A.KMDCDY             -- 시간(소매일,소매취소일)KMDCDY,KMDCDY
+                     , A.KMCNCD             -- 소매취소사유코드
+                     , A.KMVIN              -- VIN-NO(KMVIN1+KMVIN2
+                     , A.KMDELR             -- 딜러코드
+                     , A.KMCTCD             -- 2급딜러코드
+                     , A.KMRGNO             -- 판매사원ID
+                     , A.KMOTIT             -- 차량용도(승용-P/택시-C)
+                     , A.KMCONT             -- DMS계약번호
+                     , A.KMSTDY2            -- 보증수리시작일
+                     , A.KMPROP             -- 소매유형
+                     , A.KMUSER             -- DMS사용자ID
+                     , A.CONTRACT_NO        -- 계약번호
+                     , A.CUSTNM             -- 고객명
+                  FROM SA_0301T A
+                 WHERE A.KMVIN = #{sVinNo}
+                   AND A.KMDELR = #{sDlrCd}
+                 ORDER BY A.KMTRDY DESC, A.KMTRTM DESC, A.KMSEQ DESC
+                )
+         WHERE ROWNUM = 1
+    </select>
+
+
+    <!-- [CRM 전용]:고객번호로 자사보유차량 대수/타사보유차량 대수 산출 -->
+    <select id="selectVehicleCustCntSearch" parameterType="VehicleMasterSearchVO" resultType="VehicleMasterVO">
+        SELECT A.BP_CD
+             , A.N_CNT
+             , B.O_CNT
+          FROM (
+                SELECT A.BP_CD
+                     , SUM(A.CNT) AS N_CNT
+                  FROM (
+                        SELECT #{sCustNo} as BP_CD
+                             , NVL(MAX(Z.CAR_ID), ' ') AS CAR_ID
+                             , NVL(MAX(Z.VIN_NO), ' ') AS VIN_NO
+                             , NVL(SUM(Z.CNT), 0) AS CNT
+                          FROM (
+                                SELECT MAX(A.BP_CD) AS BP_CD
+                                     , A.CAR_ID
+                                     , MAX(A.VIN_NO) AS VIN_NO
+                                     , 1 AS CNT
+                                  FROM SA_0123T A
+                                 INNER JOIN SA_0121T B
+                                    ON A.CAR_ID = B.CAR_ID
+                                 WHERE B.NCAR_DSTIN_CD = 'N'
+                                   AND A.BP_CD = #{sCustNo}
+                                 <if test='sUseYn != null and sUseYn != ""'>
+                                   AND A.USE_YN = #{sUseYn}
+                                 </if>
+                                   GROUP BY A.CAR_ID
+                                )Z
+                        ) A
+                  GROUP BY A.BP_CD
+               ) A
+              ,(
+                SELECT B.BP_CD
+                     , SUM(B.CNT) AS O_CNT
+                  FROM (
+                        SELECT #{sCustNo} as BP_CD
+                             , NVL(MAX(Z.CAR_ID), ' ') AS CAR_ID
+                             , NVL(MAX(Z.VIN_NO), ' ') AS VIN_NO
+                             , NVL(SUM(Z.CNT), 0) AS CNT
+                          FROM (
+                                SELECT MAX(A.BP_CD) AS BP_CD
+                                     , A.CAR_ID
+                                     , MAX(A.VIN_NO) AS VIN_NO
+                                     , 1 AS CNT
+                                  FROM SA_0123T A
+                                 INNER JOIN SA_0121T B
+                                    ON A.CAR_ID = B.CAR_ID
+                                 WHERE NVL(NCAR_DSTIN_CD, 'O') != 'N'
+                                   AND A.BP_CD = #{sCustNo}
+                                 <if test='sUseYn != null and sUseYn != ""'>
+                                   AND A.USE_YN = #{sUseYn}
+                                 </if>
+                                   GROUP BY A.CAR_ID
+                               ) Z
+                      ) B
+                  GROUP BY B.BP_CD
+               ) B
+           WHERE A.BP_CD = B.BP_CD
+    </select>
+</mapper>

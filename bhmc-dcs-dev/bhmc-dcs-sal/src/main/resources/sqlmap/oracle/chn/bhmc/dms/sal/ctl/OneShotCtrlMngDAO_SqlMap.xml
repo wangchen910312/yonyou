@@ -1,0 +1,475 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.ctl.service.dao.OneShotCtrlMngDAO">
+
+    <!-- 좌측 전략출고 목록 조회  -->
+    <select id="selectOneShotLeftByCondition" parameterType="OneShotCtrlMngSearchVO" resultType="OneShotCtrlMngVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT * FROM (
+                    SELECT DECODE((SELECT REMARK
+                                    FROM (SELECT A.REMARK
+                                                 ,ROW_NUMBER() OVER(PARTITION BY A.CTRL_DLR_CD ORDER BY A.CTRL_SEQ DESC) AS RN
+                                                 ,A.CTRL_DLR_CD
+                                            FROM SA_0215T A, SA_0214T B
+                                           WHERE A.CTRL_SEQ = B.CTRL_SEQ
+                                             AND B.CTRL_GRP_CD = 'X')
+                                   WHERE RN = 1
+                                     AND CTRL_DLR_CD = X.DLR_CD),
+                                  NULL,
+                                  'N',
+                                  (SELECT REMARK
+                                    FROM (SELECT A.REMARK
+                                                 ,ROW_NUMBER() OVER(PARTITION BY A.CTRL_DLR_CD ORDER BY A.CTRL_SEQ DESC) AS RN
+                                                 ,A.CTRL_DLR_CD
+                                            FROM SA_0215T A, SA_0214T B
+                                           WHERE A.CTRL_SEQ = B.CTRL_SEQ
+                                             AND B.CTRL_GRP_CD = 'X')
+                                   WHERE RN = 1
+                                     AND CTRL_DLR_CD = X.DLR_CD)) AS CTRL_YN,
+                           X.DLR_CD,
+                           X.DLR_NM,
+                           X.SDPT_CD,
+                           (SELECT DIVI_NM FROM CM_2501T WHERE DIVI_CD = X.SDPT_CD) AS SDPT_NM,
+                           X.DIST_OFFICE_CD,
+                           (SELECT OFF_NM
+                              FROM CM_2601T
+                             WHERE OFF_CD = X.DIST_OFFICE_CD
+                               AND DIVI_CD = X.SDPT_CD) AS DIST_OFFICE_NM,
+                           (SELECT CTRL_SEQ
+                              FROM (SELECT A.CTRL_SEQ
+                                          ,ROW_NUMBER() OVER(PARTITION BY A.CTRL_DLR_CD ORDER BY A.CTRL_SEQ DESC) AS RN
+                                          ,A.CTRL_DLR_CD
+                                      FROM SA_0215T A, SA_0214T B
+                                     WHERE A.CTRL_SEQ = B.CTRL_SEQ
+                                       AND B.CTRL_GRP_CD = 'X')
+                             WHERE RN = 1
+                               AND CTRL_DLR_CD = X.DLR_CD) AS CTRL_SEQ,
+                           'X' AS CTRL_GRP_CD,
+                           (SELECT CTRL_TARG_CD
+                              FROM (SELECT B.CTRL_TARG_CD
+                                          ,ROW_NUMBER() OVER(PARTITION BY A.CTRL_DLR_CD ORDER BY A.CTRL_SEQ DESC) AS RN
+                                          ,A.CTRL_DLR_CD
+                                      FROM SA_0215T A, SA_0214T B
+                                     WHERE A.CTRL_SEQ = B.CTRL_SEQ
+                                       AND B.CTRL_GRP_CD = 'X')
+                             WHERE RN = 1
+                               AND CTRL_DLR_CD = X.DLR_CD) AS CTRL_TARG_CD
+                      FROM CM_0101T X
+                     WHERE 1 = 1
+                     <if test='sDlrTpL != null and sDlrTpL == "4S"'>
+                       AND SUBSTR(X.DLR_CD,1,1) LIKE 'D%'
+                     </if>
+                     <if test='sDlrTpL != null and sDlrTpL == "SP"'>
+                       AND SUBSTR(X.DLR_CD,1,1) NOT LIKE 'D%'
+                     </if>
+                     <if test='sDlrCdLeft != null and sDlrCdLeft != ""'>
+                       AND X.DLR_CD LIKE '%'||UPPER(#{sDlrCdLeft})||'%'
+                     </if>
+                     <if test='sDiviCdL != null and sDiviCdL != ""'>
+                       AND X.SDPT_CD = #{sDiviCdL}
+                     </if>
+                     <if test='sOffCdL != null and sOffCdL != ""'>
+                       AND X.DIST_OFFICE_CD = #{sOffCdL}
+                     </if>
+                ) WHERE 1 = 1
+                    <if test='sCtrlYnLeft != null and sCtrlYnLeft != ""'>
+                    AND CTRL_YN = #{sCtrlYnLeft}
+                    </if>
+            ORDER BY
+             <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "ctrlSeq"'>CTRL_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "sdptNm"'>SDPT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "distOfficeNm"'>DIST_OFFICE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "dlrNm"'>DLR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <otherwise>
+                                DLR_CD ASC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                    DLR_CD ASC
+                </otherwise>
+            </choose>
+
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 좌측 전략출고 목록 갯수 조회  -->
+    <select id="selectOneShotLeftByConditionCnt" parameterType="OneShotCtrlMngSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE FROM (
+            SELECT DECODE((SELECT REMARK
+                            FROM (SELECT A.REMARK
+                                         ,ROW_NUMBER() OVER(PARTITION BY A.CTRL_DLR_CD ORDER BY A.CTRL_SEQ DESC) AS RN
+                                         ,A.CTRL_DLR_CD
+                                    FROM SA_0215T A, SA_0214T B
+                                   WHERE A.CTRL_SEQ = B.CTRL_SEQ
+                                     AND B.CTRL_GRP_CD = 'X')
+                           WHERE RN = 1
+                             AND CTRL_DLR_CD = X.DLR_CD),
+                          NULL,
+                          'N',
+                          (SELECT REMARK
+                            FROM (SELECT A.REMARK
+                                         ,ROW_NUMBER() OVER(PARTITION BY A.CTRL_DLR_CD ORDER BY A.CTRL_SEQ DESC) AS RN
+                                         ,A.CTRL_DLR_CD
+                                    FROM SA_0215T A, SA_0214T B
+                                   WHERE A.CTRL_SEQ = B.CTRL_SEQ
+                                     AND B.CTRL_GRP_CD = 'X')
+                           WHERE RN = 1
+                             AND CTRL_DLR_CD = X.DLR_CD)) AS CTRL_YN
+              FROM CM_0101T X
+             WHERE 1 = 1
+             <if test='sDlrTpL != null and sDlrTpL == "4S"'>
+               AND SUBSTR(X.DLR_CD,1,1) LIKE 'D%'
+             </if>
+             <if test='sDlrTpL != null and sDlrTpL == "SP"'>
+               AND SUBSTR(X.DLR_CD,1,1) NOT LIKE 'D%'
+             </if>
+             <if test='sDlrCdLeft != null and sDlrCdLeft != ""'>
+               AND X.DLR_CD LIKE '%'||UPPER(#{sDlrCdLeft})||'%'
+             </if>
+             <if test='sDiviCdL != null and sDiviCdL != ""'>
+               AND X.SDPT_CD = #{sDiviCdL}
+             </if>
+             <if test='sOffCdL != null and sOffCdL != ""'>
+               AND X.DIST_OFFICE_CD = #{sOffCdL}
+             </if>
+        ) WHERE 1 = 1
+            <if test='sCtrlYnLeft != null and sCtrlYnLeft != ""'>
+            AND CTRL_YN = #{sCtrlYnLeft}
+            </if>
+    </select>
+
+    <!-- 우측 소매출고, 소매출고취소, 전략출고취소 목록 조회  -->
+    <select id="selectOneShotRightByCondition" parameterType="OneShotCtrlMngSearchVO" resultType="OneShotCtrlMngVO">
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT * FROM (
+                    SELECT DECODE((SELECT REMARK
+                                    FROM (SELECT A.REMARK
+                                                 ,ROW_NUMBER() OVER(PARTITION BY A.CTRL_DLR_CD ORDER BY A.CTRL_SEQ DESC) AS RN
+                                                 ,A.CTRL_DLR_CD
+                                            FROM SA_0215T A, SA_0214T B
+                                           WHERE A.CTRL_SEQ = B.CTRL_SEQ
+                                             AND B.CTRL_GRP_CD = 'Y')
+                                   WHERE RN = 1
+                                     AND CTRL_DLR_CD = X.DLR_CD),
+                                  NULL,
+                                  'N',
+                                  (SELECT REMARK
+                                    FROM (SELECT A.REMARK
+                                                 ,ROW_NUMBER() OVER(PARTITION BY A.CTRL_DLR_CD ORDER BY A.CTRL_SEQ DESC) AS RN
+                                                 ,A.CTRL_DLR_CD
+                                            FROM SA_0215T A, SA_0214T B
+                                           WHERE A.CTRL_SEQ = B.CTRL_SEQ
+                                             AND B.CTRL_GRP_CD = 'Y')
+                                   WHERE RN = 1
+                                     AND CTRL_DLR_CD = X.DLR_CD)) AS CTRL_YN,
+                           X.DLR_CD,
+                           X.DLR_NM,
+                           X.SDPT_CD,
+                           (SELECT DIVI_NM FROM CM_2501T WHERE DIVI_CD = X.SDPT_CD) AS SDPT_NM,
+                           X.DIST_OFFICE_CD,
+                           (SELECT OFF_NM
+                              FROM CM_2601T
+                             WHERE OFF_CD = X.DIST_OFFICE_CD
+                               AND DIVI_CD = X.SDPT_CD) AS DIST_OFFICE_NM,
+                           (SELECT CTRL_SEQ
+                              FROM (SELECT A.CTRL_SEQ
+                                          ,ROW_NUMBER() OVER(PARTITION BY A.CTRL_DLR_CD ORDER BY A.CTRL_SEQ DESC) AS RN
+                                          ,A.CTRL_DLR_CD
+                                      FROM SA_0215T A, SA_0214T B
+                                     WHERE A.CTRL_SEQ = B.CTRL_SEQ
+                                       AND B.CTRL_GRP_CD = 'Y')
+                             WHERE RN = 1
+                               AND CTRL_DLR_CD = X.DLR_CD) AS CTRL_SEQ,
+                           'X' AS CTRL_GRP_CD,
+                           (SELECT CTRL_TARG_CD
+                              FROM (SELECT B.CTRL_TARG_CD
+                                          ,ROW_NUMBER() OVER(PARTITION BY A.CTRL_DLR_CD ORDER BY A.CTRL_SEQ DESC) AS RN
+                                          ,A.CTRL_DLR_CD
+                                      FROM SA_0215T A, SA_0214T B
+                                     WHERE A.CTRL_SEQ = B.CTRL_SEQ
+                                       AND B.CTRL_GRP_CD = 'Y')
+                             WHERE RN = 1
+                               AND CTRL_DLR_CD = X.DLR_CD) AS CTRL_TARG_CD
+                      FROM CM_0101T X
+                     WHERE 1 = 1
+                     <if test='sDlrTpR != null and sDlrTpR == "4S"'>
+                       AND SUBSTR(X.DLR_CD,1,1) LIKE 'D%'
+                     </if>
+                     <if test='sDlrTpR != null and sDlrTpR == "SP"'>
+                       AND SUBSTR(X.DLR_CD,1,1) NOT LIKE 'D%'
+                     </if>
+                     <if test='sDlrCdRight != null and sDlrCdRight != ""'>
+                       AND X.DLR_CD LIKE '%'||UPPER(#{sDlrCdRight})||'%'
+                     </if>
+                     <if test='sDiviCdR != null and sDiviCdR != ""'>
+                       AND X.SDPT_CD = #{sDiviCdR}
+                     </if>
+                     <if test='sOffCdR != null and sOffCdR != ""'>
+                       AND X.DIST_OFFICE_CD = #{sOffCdR}
+                     </if>
+                ) WHERE 1 = 1
+                    <if test='sCtrlYnRight != null and sCtrlYnRight != ""'>
+                    AND CTRL_YN = #{sCtrlYnRight}
+                    </if>
+            ORDER BY
+             <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "ctrlSeq"'>CTRL_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "sdptNm"'>SDPT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "distOfficeNm"'>DIST_OFFICE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "dlrNm"'>DLR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <otherwise>
+                                DLR_CD ASC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                    DLR_CD ASC
+                </otherwise>
+            </choose>
+
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 우측 소매출고, 소매출고취소, 전략출고취소 목록 갯수 조회  -->
+    <select id="selectOneShotRightByConditionCnt" parameterType="OneShotCtrlMngSearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE FROM (
+            SELECT DECODE((SELECT REMARK
+                            FROM (SELECT A.REMARK
+                                         ,ROW_NUMBER() OVER(PARTITION BY A.CTRL_DLR_CD ORDER BY A.CTRL_SEQ DESC) AS RN
+                                         ,A.CTRL_DLR_CD
+                                    FROM SA_0215T A, SA_0214T B
+                                   WHERE A.CTRL_SEQ = B.CTRL_SEQ
+                                     AND B.CTRL_GRP_CD = 'Y')
+                           WHERE RN = 1
+                             AND CTRL_DLR_CD = X.DLR_CD),
+                          NULL,
+                          'N',
+                          (SELECT REMARK
+                            FROM (SELECT A.REMARK
+                                         ,ROW_NUMBER() OVER(PARTITION BY A.CTRL_DLR_CD ORDER BY A.CTRL_SEQ DESC) AS RN
+                                         ,A.CTRL_DLR_CD
+                                    FROM SA_0215T A, SA_0214T B
+                                   WHERE A.CTRL_SEQ = B.CTRL_SEQ
+                                     AND B.CTRL_GRP_CD = 'Y')
+                           WHERE RN = 1
+                             AND CTRL_DLR_CD = X.DLR_CD)) AS CTRL_YN
+              FROM CM_0101T X
+             WHERE 1 = 1
+             <if test='sDlrTpR != null and sDlrTpR == "4S"'>
+               AND SUBSTR(X.DLR_CD,1,1) LIKE 'D%'
+             </if>
+             <if test='sDlrTpR != null and sDlrTpR == "SP"'>
+               AND SUBSTR(X.DLR_CD,1,1) NOT LIKE 'D%'
+             </if>
+             <if test='sDlrCdRight != null and sDlrCdRight != ""'>
+               AND X.DLR_CD LIKE '%'||UPPER(#{sDlrCdRight})||'%'
+             </if>
+             <if test='sDiviCdR != null and sDiviCdR != ""'>
+               AND X.SDPT_CD = #{sDiviCdR}
+             </if>
+             <if test='sOffCdR != null and sOffCdR != ""'>
+               AND X.DIST_OFFICE_CD = #{sOffCdR}
+             </if>
+        ) WHERE 1 = 1
+            <if test='sCtrlYnRight != null and sCtrlYnRight != ""'>
+            AND CTRL_YN = #{sCtrlYnRight}
+            </if>
+    </select>
+
+    <!-- 마감대상딜러(HEADER) 정보를 삭제한다. -->
+    <delete id="deleteDeadlineCtrlMngHd" parameterType="OneShotCtrlMngVO">
+        DELETE SA_0214T WHERE CTRL_SEQ = #{ctrlSeq}
+    </delete>
+
+    <!-- 마감대상딜러(DETAIL) 정보를 삭제한다. -->
+    <delete id="deleteTargetDealerDt" parameterType="OneShotCtrlMngVO">
+        DELETE SA_0215T WHERE CTRL_SEQ = #{ctrlSeq} AND CTRL_DLR_CD = #{dlrCd}
+    </delete>
+
+    <!-- 마감대상딜러(HEADER) 정보를 삭제한다. -->
+    <delete id="deleteDeadlineCtrlMngHdIf" parameterType="OneShotCtrlMngVO">
+        DELETE SA_0214IS WHERE CTRL_SEQ = #{ctrlSeq}
+    </delete>
+
+    <!-- 마감대상딜러(DETAIL) 정보를 삭제한다. -->
+    <delete id="deleteTargetDealerDtIf" parameterType="OneShotCtrlMngVO">
+        DELETE SA_0215IS WHERE CTRL_SEQ = #{ctrlSeq} AND CTRL_DLR_CD = #{dlrCd}
+    </delete>
+
+    <!-- 저장 -->
+    <insert id="insertDeadlineCtrlMngHd" parameterType="OneShotCtrlMngVO">
+        INSERT INTO SA_0214T(
+               CTRL_SEQ
+              ,CTRL_START_YY_MM_DT
+              ,CTRL_END_YY_MM_DT
+              ,CTRL_GRP_CD
+              ,CTRL_TARG_CD
+              ,DLR_CTRL_RANGE_CD
+              ,CTRL_YN
+              ,REMARK
+              ,REG_USR_ID
+              ,REG_DT
+              ,UPDT_USR_ID
+              ,UPDT_DT
+        )VALUES(
+               (SELECT NVL(MAX(CTRL_SEQ)+1,1) AS CTRL_SEQ FROM SA_0214T)
+              ,SYSDATE
+              ,ADD_MONTHS(SYSDATE,+360)
+              <if test='courseTp != null and courseTp == "L"'>
+              ,'X'
+              ,'X01'
+              </if>
+              <if test='courseTp != null and courseTp == "R"'>
+              ,'Y'
+              ,'Y01'
+              </if>
+              ,'02'
+              ,#{ctrlYn}
+              ,#{remark}
+              ,#{regUsrId}
+              ,SYSDATE
+              ,#{regUsrId}
+              ,SYSDATE
+        )
+        <selectKey resultType="String" keyProperty="ctrlSeq" order="AFTER">
+            SELECT MAX(CTRL_SEQ) AS ctrlSeq FROM SA_0214T
+        </selectKey>
+    </insert>
+
+    <!-- 저장 -->
+    <insert id="insertDeadlineCtrlMngHdIf" parameterType="OneShotCtrlMngVO">
+        INSERT INTO SA_0214IS(
+               CTRL_SEQ
+              ,CTRL_START_YY_MM_DT
+              ,CTRL_END_YY_MM_DT
+              ,CTRL_GRP_CD
+              ,CTRL_TARG_CD
+              ,DLR_CTRL_RANGE_CD
+              ,CTRL_YN
+              ,REMARK
+              ,REG_USR_ID
+              ,REG_DT
+              ,UPDT_USR_ID
+              ,UPDT_DT
+              ,IFRESULT
+        )VALUES(
+               #{ctrlSeq}
+              ,#{startDtTm}
+              ,#{endDtTm}
+              <if test='courseTp != null and courseTp == "L"'>
+              ,'X'
+              ,'X01'
+              </if>
+              <if test='courseTp != null and courseTp == "R"'>
+              ,'Y'
+              ,'Y01'
+              </if>
+              ,'02'
+              ,#{ctrlYn}
+              ,#{remark}
+              ,#{regUsrId}
+              ,SYSDATE
+              ,#{regUsrId}
+              ,SYSDATE
+              ,'N'
+        )
+    </insert>
+
+    <!-- 마감대상딜러(DETAIL) 정보를 등록한다. -->
+    <insert id="insertTargetDealerDt" parameterType="OneShotCtrlMngVO">
+        INSERT INTO SA_0215T(
+               CTRL_SEQ
+              ,CTRL_DLR_CD
+              ,REMARK
+              ,REG_USR_ID
+              ,REG_DT
+              ,UPDT_USR_ID
+              ,UPDT_DT
+        )VALUES(
+               #{ctrlSeq}
+              ,#{dlrCd}
+              ,#{ctrlYn}
+              ,#{regUsrId}
+              ,SYSDATE
+              ,#{regUsrId}
+              ,SYSDATE
+        )
+    </insert>
+
+    <insert id="insertTargetDealerDtIf" parameterType="OneShotCtrlMngVO">
+        INSERT INTO SA_0215IS(
+               CTRL_SEQ
+              ,CTRL_DLR_CD
+              ,REMARK
+              ,REG_USR_ID
+              ,REG_DT
+              ,UPDT_USR_ID
+              ,UPDT_DT
+              ,IFRESULT
+        )VALUES(
+               #{ctrlSeq}
+              ,#{dlrCd}
+              ,#{ctrlYn}
+              ,#{regUsrId}
+              ,SYSDATE
+              ,#{regUsrId}
+              ,SYSDATE
+              ,'N'
+        )
+    </insert>
+
+    <!-- 엑셀업로드한 data로 지역, 사무소를 불러온다. -->
+    <select id="selectSungCityCondition" parameterType="OneShotCtrlMngVO" resultType="OneShotCtrlMngVO">
+        SELECT #{ctrlYn} AS CTRL_YN
+              ,#{dlrCd} AS DLR_CD
+              ,A.DLR_NM
+            <if test='strCtrlStartYyMmDt != null' >
+              ,TO_DATE(#{strCtrlStartYyMmDt},'YYYYMMDD HH24MISS') AS CTRL_START_YYMMDT
+            </if>
+            <if test='strCtrlEndYyMmDt != null' >
+              ,TO_DATE(#{strCtrlEndYyMmDt},'YYYYMMDD HH24MISS') AS CTRL_END_YYMMDT
+            </if>
+          FROM SA_0101T A
+         WHERE A.DLR_CD = #{dlrCd}
+        ORDER BY A.DLR_CD ASC NULLS LAST
+    </select>
+
+</mapper>

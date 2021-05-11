@@ -1,0 +1,901 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="selectLoginReportMain" class="com.fr.data.impl.DBTableData">
+<Parameters/>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[CVA]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT (SELECT DIVI_NM
+          FROM CM_2501T Z
+         WHERE A.SDPT_CD = Z.DIVI_CD) AS DIVI_NM
+      ,(SELECT OFF_NM
+          FROM CM_2601T Z
+         WHERE A.DIST_OFFICE_CD = Z.OFF_CD) AS OFF_NM
+      ,A.DLR_NM
+      ,(SELECT TSK_NM
+          FROM CM_2801T Z
+         WHERE A.TSK_CD = Z.TSK_CD) AS TSK_NM
+      ,AVG_LOGIN_TM
+      ,CNT
+      ,SESS_START_DT AS LOGIN_DATE
+  FROM (SELECT SUM(1) AS CNT
+              ,B.TSK_CD
+              ,C.SDPT_CD
+              ,C.DIST_OFFICE_CD
+              ,C.DLR_NM
+              ,AVG(TRUNC((SESS_END_DT-SESS_START_DT)*24*60)) AS AVG_LOGIN_TM
+              ,SESS_START_DT
+          FROM CM_3502T A
+             , CM_0801T B
+             , CM_0101T C
+         WHERE A.USR_ID = B.USR_ID
+           AND B.DLR_CD = C.DLR_CD
+           AND TO_CHAR(A.SESS_START_DT,'YYYYmmdd') BETWEEN  REGEXP_REPLACE('${LOGIN_DT_F}','-') AND REGEXP_REPLACE('${LOGIN_DT_T}','-') AND
+      ${IF(LEN(DIVI_CD) == 0, "1=1 AND", "C.SDPT_CD IN ('" + DIVI_CD + "') AND")}
+      ${IF(LEN(OFF_CD) == 0, "1=1 AND", "C.DIST_OFFICE_CD IN ('" + OFF_CD + "') AND")}
+      ${IF(LEN(DLR_CD) == 0, "1=1 AND", "C.DLR_CD IN ('" + DLR_CD + "') AND")}
+      ${IF(LEN(JOB_CD) == 0, "1=1 AND", "B.TSK_CD IN ('" + JOB_CD + "') AND")}
+           A.SESS_END_DT IS NOT NULL
+      GROUP BY B.TSK_CD
+              ,C.SDPT_CD
+              ,C.DIST_OFFICE_CD
+              ,DLR_NM
+              ,SESS_START_DT) A]]></Query>
+</TableData>
+<TableData name="CM_2801T" class="com.fr.data.impl.DBTableData">
+<Parameters/>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[CVA]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT * FROM CM_2801T]]></Query>
+</TableData>
+<TableData name="CM_2501T" class="com.fr.data.impl.DBTableData">
+<Parameters/>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[CVA]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT * FROM CM_2501T]]></Query>
+</TableData>
+<TableData name="CM_2601T" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="DIVI_CD"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[CVA]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT * FROM CM_2601T
+WHERE 1=1
+AND ${IF(LEN(DIVI_CD) == 0, "1=1", "DIVI_CD = '" + DIVI_CD +"'")}]]></Query>
+</TableData>
+<TableData name="CM_0101T" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="SDPT_CD"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="DIST_OFFICE_CD"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[CVA]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT * FROM CM_0101T
+WHERE 1=1
+AND ${IF(LEN(DIVI_CD) == 0, "1=1", "SDPT_CD = '" + DIVI_CD +"'")}
+AND ${IF(LEN(OFF_CD) == 0, "1=1", "DIST_OFFICE_CD = '" + OFF_CD +"'")}]]></Query>
+</TableData>
+</TableDataMap>
+<ReportWebAttr>
+<ServerPrinter/>
+<WebPageContent>
+<ToolBars>
+<ToolBarManager>
+<Location>
+<Embed position="1"/>
+</Location>
+<ToolBar>
+<Widget class="com.fr.report.web.button.page.First">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-First')}]]></Text>
+<IconName>
+<![CDATA[first]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Previous">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Previous')}]]></Text>
+<IconName>
+<![CDATA[previous]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.PageNavi">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Next">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Next')}]]></Text>
+<IconName>
+<![CDATA[next]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.page.Last">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('ReportServerP-Last')}]]></Text>
+<IconName>
+<![CDATA[last]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.FlashPrint">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Print[Client]A')}]]></Text>
+<IconName>
+<![CDATA[flashprint]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.Print">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Print')}]]></Text>
+<IconName>
+<![CDATA[print]]></IconName>
+<PrintButtons/>
+</Widget>
+<Widget class="com.fr.report.web.button.Export">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Export')}]]></Text>
+<IconName>
+<![CDATA[export]]></IconName>
+<Buttons pdf="true" excelP="true" excelO="true" excelS="true" word="true" image="true" html="true"/>
+</Widget>
+<Widget class="com.fr.report.web.button.Email">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Email')}]]></Text>
+<IconName>
+<![CDATA[email]]></IconName>
+</Widget>
+</ToolBar>
+</ToolBarManager>
+</ToolBars>
+<WebPage isPage="false" isShowAsImage="false" isAutoScale="false" isTDHeavy="false"/>
+</WebPageContent>
+<WebViewContent>
+<ToolBars>
+<ToolBarManager>
+<Location>
+<Embed position="1"/>
+</Location>
+<ToolBar>
+<Widget class="com.fr.report.web.button.PageSetup">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('PageSetup-Page_Setup')}]]></Text>
+<IconName>
+<![CDATA[pagesetup]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.PrintPreview">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('PrintP-Print_Preview')}]]></Text>
+<IconName>
+<![CDATA[preview]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.FlashPrint">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Print[Client]A')}]]></Text>
+<IconName>
+<![CDATA[flashprint]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.Print">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Print')}]]></Text>
+<IconName>
+<![CDATA[print]]></IconName>
+<PrintButtons/>
+</Widget>
+<Widget class="com.fr.report.web.button.Export">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Export')}]]></Text>
+<IconName>
+<![CDATA[export]]></IconName>
+<Buttons pdf="true" excelP="true" excelO="true" excelS="true" word="true" image="true" html="true"/>
+</Widget>
+<Widget class="com.fr.report.web.button.Email">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Email')}]]></Text>
+<IconName>
+<![CDATA[email]]></IconName>
+</Widget>
+</ToolBar>
+</ToolBarManager>
+</ToolBars>
+<SortFuncCheck check="true"/>
+<ConditionFuncCheck check="true"/>
+<ListFuncCheck check="true"/>
+</WebViewContent>
+<WebWriteContent>
+<ToolBars>
+<ToolBarManager>
+<Location>
+<Embed position="1"/>
+</Location>
+<ToolBar>
+<Widget class="com.fr.report.web.button.write.Submit">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Submit')}]]></Text>
+<IconName>
+<![CDATA[submit]]></IconName>
+<Verify failVerifySubmit="false"/>
+</Widget>
+<Widget class="com.fr.report.web.button.write.Verify">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Verify-Data_Verify')}]]></Text>
+<IconName>
+<![CDATA[verify]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.FlashPrint">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Utils-Print[Client]A')}]]></Text>
+<IconName>
+<![CDATA[flashprint]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.Print">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Print')}]]></Text>
+<IconName>
+<![CDATA[print]]></IconName>
+<PrintButtons/>
+</Widget>
+<Widget class="com.fr.report.web.button.Export">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Export')}]]></Text>
+<IconName>
+<![CDATA[export]]></IconName>
+<Buttons pdf="true" excelP="true" excelO="true" excelS="true" word="true" image="true" html="true"/>
+</Widget>
+<Widget class="com.fr.report.web.button.Email">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Email')}]]></Text>
+<IconName>
+<![CDATA[email]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.write.AppendColumnRow">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[${i18n('Add')}${i18n('Record')}]]></Text>
+<IconName>
+<![CDATA[appendcolumn]]></IconName>
+</Widget>
+<Widget class="com.fr.report.web.button.write.ShowCellValue">
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<widgetValue/>
+<LabelAttr verticalcenter="true" textalign="0" autoline="false"/>
+<FRFont name="SimSun" style="0" size="72"/>
+<border style="0" color="-723724"/>
+</Widget>
+</ToolBar>
+</ToolBarManager>
+</ToolBars>
+<SelectedColor/>
+<WebWrite SheetPosition="1"/>
+<RptLocation isShowAtLeft="true"/>
+<UnloadCheck/>
+<ShowWidgets/>
+<OtherAttr isAutoStash="false"/>
+</WebWriteContent>
+</ReportWebAttr>
+<Report class="com.fr.report.worksheet.WorkSheet" name="조회1">
+<ReportPageAttr>
+<HR F="0" T="3"/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[1872000,0,723900,1152000,1152000,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,1440000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" cs="21" s="0">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cmm.report_lbl.loginReport")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<CellGUIAttr/>
+<CellPageAttr/>
+<Expand/>
+</C>
+<C c="0" r="2" cs="21">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="3" cs="3" s="1">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cmm.report_lbl.business_part")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="3" cs="3" s="1">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cmm.report_lbl.office")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="3" cs="3" s="1">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cmm.report_lbl.dealer")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="3" cs="3" s="1">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cmm.report_lbl.jobNm")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="3" cs="3" s="1">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cmm.report_lbl.date")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="15" r="3" cs="3" s="1">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cmm.report_lbl.loginCnt")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="18" r="3" cs="3" s="1">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=i18n("cmm.report_lbl.loginAvgTime")]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="4" cs="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectLoginReportMain" columnName="DIVI_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="4" cs="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectLoginReportMain" columnName="OFF_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="4" cs="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectLoginReportMain" columnName="DLR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="9" r="4" cs="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectLoginReportMain" columnName="TSK_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="12" r="4" cs="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectLoginReportMain" columnName="LOGIN_DATE"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="15" r="4" cs="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectLoginReportMain" columnName="CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="18" r="4" cs="3" s="2">
+<O t="DSColumn">
+<Attributes dsName="selectLoginReportMain" columnName="AVG_LOGIN_TM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="7">
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="28800000" height="1439856000"/>
+<Margin top="576000" left="720000" bottom="286560" right="574560"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="false" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[参数]]></PWTitle>
+<ParameterUI class="com.fr.form.main.parameter.FormParameterUI">
+<Layout class="com.fr.form.ui.container.WParameterLayout">
+<WidgetName name="para"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Margin top="1" left="1" bottom="1" right="1"/>
+<Border>
+<border style="0" color="-723724" type="0" borderStyle="0"/>
+<WidgetTitle>
+<O>
+<![CDATA[新建标题]]></O>
+<FRFont name="SimSun" style="0" size="72"/>
+<Position pos="0"/>
+</WidgetTitle>
+<Alpha alpha="1.0"/>
+</Border>
+<Background name="ColorBackground" color="-1184275"/>
+<LCAttr vgap="0" hgap="0" compInterval="0"/>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.Label">
+<WidgetName name="label1_c_c"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<widgetValue>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=I18N('cmm.report_lbl.business_part')]]></Attributes>
+</O>
+</widgetValue>
+<LabelAttr verticalcenter="true" textalign="4" autoline="true"/>
+<FRFont name="SimSun" style="0" size="72"/>
+<border style="0" color="-723724"/>
+</InnerWidget>
+<BoundsAttr x="15" y="10" width="77" height="23"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.Label">
+<WidgetName name="label3_c_c"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<widgetValue>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=I18N('cmm.report_lbl.office')]]></Attributes>
+</O>
+</widgetValue>
+<LabelAttr verticalcenter="true" textalign="4" autoline="true"/>
+<FRFont name="SimSun" style="0" size="72"/>
+<border style="0" color="-723724"/>
+</InnerWidget>
+<BoundsAttr x="15" y="40" width="77" height="23"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.parameter.FormSubmitButton">
+<Listener event="click">
+<JavaScript class="com.fr.js.JavaScriptImpl">
+<Parameters/>
+<Content>
+<![CDATA[null]]></Content>
+</JavaScript>
+</Listener>
+<WidgetName name="formSubmit0_c_c"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Text>
+<![CDATA[=I18n('global.btn.search')]]></Text>
+<Hotkeys>
+<![CDATA[enter]]></Hotkeys>
+</InnerWidget>
+<BoundsAttr x="1068" y="10" width="60" height="23"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.Label">
+<WidgetName name="label1_c_c_c"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<widgetValue>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=I18N('cmm.report_lbl.dealer')]]></Attributes>
+</O>
+</widgetValue>
+<LabelAttr verticalcenter="true" textalign="4" autoline="true"/>
+<FRFont name="SimSun" style="0" size="72"/>
+<border style="0" color="-723724"/>
+</InnerWidget>
+<BoundsAttr x="255" y="10" width="77" height="23"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.Label">
+<WidgetName name="label3_c_c_c"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<widgetValue>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=I18N('cmm.report_lbl.jobNm')]]></Attributes>
+</O>
+</widgetValue>
+<LabelAttr verticalcenter="true" textalign="4" autoline="true"/>
+<FRFont name="SimSun" style="0" size="72"/>
+<border style="0" color="-723724"/>
+</InnerWidget>
+<BoundsAttr x="255" y="40" width="77" height="23"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.DateEditor">
+<WidgetName name="LOGIN_DT_T"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<DateAttr/>
+<widgetValue>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=TODAY()]]></Attributes>
+</O>
+</widgetValue>
+</InnerWidget>
+<BoundsAttr x="949" y="10" width="105" height="23"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.DateEditor">
+<WidgetName name="LOGIN_DT_F"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<DateAttr/>
+<widgetValue>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=DATE(YEAR(TODAY())-10,MONTH(TODAY()),DAY(TODAY()))]]></Attributes>
+</O>
+</widgetValue>
+</InnerWidget>
+<BoundsAttr x="819" y="10" width="105" height="23"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.Label">
+<WidgetName name="label0_c"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<widgetValue>
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=I18N('cmm.report_lbl.loginDate')]]></Attributes>
+</O>
+</widgetValue>
+<LabelAttr verticalcenter="true" textalign="4" autoline="true"/>
+<FRFont name="SimSun" style="0" size="72"/>
+<border style="0" color="-723724"/>
+</InnerWidget>
+<BoundsAttr x="725" y="10" width="85" height="23"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.Label">
+<WidgetName name="label4_c_c_c_c_c"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<widgetValue>
+<O>
+<![CDATA[~]]></O>
+</widgetValue>
+<LabelAttr verticalcenter="true" textalign="0" autoline="true"/>
+<FRFont name="SimSun" style="0" size="72"/>
+<border style="0" color="-723724"/>
+</InnerWidget>
+<BoundsAttr x="920" y="10" width="36" height="23"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.ComboBox">
+<WidgetName name="JOB_CD"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Dictionary class="com.fr.data.impl.TableDataDictionary">
+<FormulaDictAttr kiName="TSK_CD" viName="TSK_NM"/>
+<TableDataDictAttr>
+<TableData class="com.fr.data.impl.NameTableData">
+<Name>
+<![CDATA[CM_2801T]]></Name>
+</TableData>
+</TableDataDictAttr>
+</Dictionary>
+<widgetValue>
+<O>
+<![CDATA[]]></O>
+</widgetValue>
+</InnerWidget>
+<BoundsAttr x="340" y="40" width="155" height="23"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.ComboBox">
+<WidgetName name="DIVI_CD"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Dictionary class="com.fr.data.impl.TableDataDictionary">
+<FormulaDictAttr kiName="DIVI_CD" viName="DIVI_NM"/>
+<TableDataDictAttr>
+<TableData class="com.fr.data.impl.NameTableData">
+<Name>
+<![CDATA[CM_2501T]]></Name>
+</TableData>
+</TableDataDictAttr>
+</Dictionary>
+<widgetValue>
+<O>
+<![CDATA[]]></O>
+</widgetValue>
+</InnerWidget>
+<BoundsAttr x="100" y="10" width="155" height="23"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.ComboBox">
+<WidgetName name="OFF_CD"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Dictionary class="com.fr.data.impl.TableDataDictionary">
+<FormulaDictAttr kiName="OFF_CD" viName="OFF_NM"/>
+<TableDataDictAttr>
+<TableData class="com.fr.data.impl.NameTableData">
+<Name>
+<![CDATA[CM_2601T]]></Name>
+</TableData>
+</TableDataDictAttr>
+</Dictionary>
+<widgetValue>
+<O>
+<![CDATA[]]></O>
+</widgetValue>
+</InnerWidget>
+<BoundsAttr x="100" y="40" width="155" height="23"/>
+</Widget>
+<Widget class="com.fr.form.ui.container.WAbsoluteLayout$BoundsWidget">
+<InnerWidget class="com.fr.form.ui.ComboBox">
+<WidgetName name="DLR_CD"/>
+<WidgetAttr>
+<PrivilegeControl/>
+</WidgetAttr>
+<Dictionary class="com.fr.data.impl.TableDataDictionary">
+<FormulaDictAttr kiName="DLR_CD" viName="DLR_NM"/>
+<TableDataDictAttr>
+<TableData class="com.fr.data.impl.NameTableData">
+<Name>
+<![CDATA[CM_0101T]]></Name>
+</TableData>
+</TableDataDictAttr>
+</Dictionary>
+<widgetValue>
+<O>
+<![CDATA[]]></O>
+</widgetValue>
+</InnerWidget>
+<BoundsAttr x="340" y="10" width="360" height="23"/>
+</Widget>
+<Sorted sorted="false"/>
+<Display display="true"/>
+<DelayDisplayContent delay="false"/>
+<Position position="0"/>
+<Design_Width design_width="1301"/>
+<MobileWidgetList>
+<Widget widgetName="DIVI_CD"/>
+<Widget widgetName="DLR_CD"/>
+<Widget widgetName="LOGIN_DT_F"/>
+<Widget widgetName="LOGIN_DT_T"/>
+<Widget widgetName="OFF_CD"/>
+<Widget widgetName="JOB_CD"/>
+</MobileWidgetList>
+<WidgetNameTagMap>
+<NameTag name="LOGIN_DT_T" tag="~"/>
+<NameTag name="DIVI_CD" tag="=I18N(&apos;cmm.report_lbl.business_part&apos;)"/>
+<NameTag name="LOGIN_DT_F" tag="=I18N(&apos;cmm.report_lbl.loginDate&apos;)"/>
+<NameTag name="DLR_CD" tag="=I18N(&apos;cmm.report_lbl.dealer&apos;)"/>
+<NameTag name="OFF_CD" tag="=I18N(&apos;cmm.report_lbl.office&apos;)"/>
+<NameTag name="JOB_CD" tag="=I18N(&apos;cmm.report_lbl.jobNm&apos;)"/>
+</WidgetNameTagMap>
+</Layout>
+<DesignAttr width="1301" height="87"/>
+</ParameterUI>
+<Parameter>
+<Attributes name="row"/>
+<O t="I">
+<![CDATA[20]]></O>
+</Parameter>
+<Background name="ColorBackground" color="-1184275"/>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="128"/>
+<Background name="ColorBackground" color="-1"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="12" paddingRight="12">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

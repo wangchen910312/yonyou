@@ -1,0 +1,1949 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20170715" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="ds1" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sGrStrgeCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT
+ROW_NUMBER() OVER(ORDER BY T1.STRGE_CD ASC) AS NO
+,T1.DLR_CD
+,T1.STRGE_CD
+,T1.STRGE_NM
+,SUM(T1.STOCK_QTY) AS STOCK_QTY
+,ROUND(SUM(T1.STOCK_AMT),2) AS STOCK_AMT
+,SUM(T1.AVLB_STOCK_QTY) AS AVLB_STOCK_QTY
+,ROUND(SUM(T1.AVLB_STOCK_AMT),2) AS AVLB_STOCK_AMT
+,SUM(T1.RESV_STOCK_QTY) AS RESV_STOCK_QTY
+,ROUND(SUM(T1.RESV_STOCK_AMT),2) AS RESV_STOCK_AMT
+,SUM(T1.GR_SCHE_QTY) AS GR_SCHE_QTY
+,ROUND(SUM(T1.GR_SCHE_AMT),2) AS GR_SCHE_AMT
+,SUM(T1.GI_SCHE_QTY) AS GI_SCHE_QTY
+,ROUND(SUM(T1.GI_SCHE_AMT),2) AS GI_SCHE_AMT
+,SUM(T1.BORROW_QTY) AS BORROW_QTY
+,ROUND(SUM(T1.BORROW_AMT),2) AS BORROW_AMT
+,SUM(T1.RENT_QTY) AS RENT_QTY
+,ROUND(SUM(T1.RENT_AMT),2) AS RENT_AMT
+FROM(
+SELECT
+			 A.DLR_CD
+			 ,A.STRGE_CD
+                ,I.STRGE_NM
+                ,A.ITEM_CD
+                ,B.ITEM_NM
+                ,(NVL(A.AVLB_STOCK_QTY,0) + NVL(A.RESV_STOCK_QTY,0) - NVL(A.BORROW_QTY,0) + NVL(A.RENT_QTY,0)) * (NVL(F.MOVING_AVG_PRC, B.MOVING_AVG_PRC)) AS STOCK_AMT
+                ,NVL(A.AVLB_STOCK_QTY,0) + NVL(A.RESV_STOCK_QTY,0) - NVL(A.BORROW_QTY,0) + NVL(A.RENT_QTY,0) AS STOCK_QTY
+                ,A.AVLB_STOCK_QTY
+                ,(NVL(A.AVLB_STOCK_QTY,0) * NVL(F.MOVING_AVG_PRC, B.MOVING_AVG_PRC)) AS AVLB_STOCK_AMT
+                ,A.RESV_STOCK_QTY
+                ,(NVL(A.RESV_STOCK_QTY,0) * NVL(F.MOVING_AVG_PRC, B.MOVING_AVG_PRC)) AS RESV_STOCK_AMT
+                ,A.GR_SCHE_QTY
+                ,(NVL(A.GR_SCHE_QTY,0) * NVL(F.MOVING_AVG_PRC, B.MOVING_AVG_PRC)) AS GR_SCHE_AMT
+                ,A.GI_SCHE_QTY
+                ,(NVL(A.GI_SCHE_QTY,0) * NVL(F.MOVING_AVG_PRC, B.MOVING_AVG_PRC)) AS GI_SCHE_AMT
+                ,A.BORROW_QTY
+                ,(NVL(A.BORROW_QTY,0) * NVL(F.MOVING_AVG_PRC, B.MOVING_AVG_PRC)) AS BORROW_AMT
+                ,A.RENT_QTY
+                ,(NVL(A.RENT_QTY,0) * NVL(F.MOVING_AVG_PRC, B.MOVING_AVG_PRC)) AS RENT_AMT
+                ,NVL(F.MOVING_AVG_PRC, B.MOVING_AVG_PRC) AS MOVING_AVG_PRC
+
+            FROM PT_0301T A
+            INNER JOIN CM_0104T I ON A.DLR_CD = I.DLR_CD AND A.PLT_CD = I.PLT_CD AND A.STRGE_CD = I.STRGE_CD
+            LEFT JOIN PT_0201T B ON A.DLR_CD  = B.DLR_CD AND A.ITEM_CD = B.ITEM_CD
+            LEFT JOIN
+            (
+                SELECT
+                    A.ITEM_CD, A.DLR_CD, MAX(A.PURC_PRC) AS PURC_PRC
+                FROM (
+                    SELECT
+                        A.ITEM_CD, A.PURC_ORD_NO, A.DLR_CD
+                        ,LAST_VALUE(A.PURC_PRC) OVER(PARTITION BY A.ITEM_CD ORDER BY B.PURC_REG_DT ASC ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS PURC_PRC
+                        ,B.PURC_REG_DT
+                    FROM PT_0422T A INNER JOIN PT_0421T B ON A.DLR_CD = B.DLR_CD AND A.PURC_ORD_NO = B.PURC_ORD_NO
+                )A
+                GROUP BY A.ITEM_CD, A.DLR_CD
+            )D  ON A.DLR_CD = D.DLR_CD AND A.ITEM_CD = D.ITEM_CD
+            LEFT JOIN PT_0208T F ON A.DLR_CD = F.DLR_CD AND A.STRGE_CD = F.STRGE_CD AND A.ITEM_CD = F.ITEM_CD
+            LEFT JOIN PT_0211T G ON A.DLR_CD = G.DLR_CD AND B.BP_CD = G.BP_CD
+            WHERE A.DLR_CD = '${sDlrCd}'
+            AND A.PLT_CD = '1000'
+            AND B.ITEM_DSTIN_CD NOT IN ('20','04')
+)T1
+WHERE T1.DLR_CD = '${sDlrCd}'
+${IF(LEN(sGrStrgeCd) == 0, ""," AND T1.STRGE_CD = '"+sGrStrgeCd+"'")}
+GROUP BY T1.DLR_CD,T1.STRGE_CD, T1.STRGE_NM
+
+            ]]></Query>
+</TableData>
+<TableData name="ds2" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sGrStrgeCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT A.dlr_cd
+      ,A.strge_nm
+      ,A.stock_qty
+      ,A.avlb_stock_qty
+  FROM
+(select row_number() over(order by dlr_cd, nvl(sum(stock_qty), 0) DESC) as no,	-- NO
+       vw.dlr_cd,											-- 딜러코드
+       vw.dlr_nm,											-- 딜러명
+       vw.strge_tp,											-- 창고유형 코드
+       vw.strge_tp_nm,										-- 창고유형명
+       nvl(vw.strge_nm, 'undefined storage') as strge_nm,
+       nvl(sum(stock_qty), 0) as stock_qty,					-- 장부재고 수량
+       nvl(sum(avlb_stock_qty), 0) as avlb_stock_qty		-- 가용재고 수량
+from   (
+			select p.dlr_cd,
+			       p.dlr_nm,
+			       p.plt_cd,
+			       p.strge_cd,
+			       p.strge_nm,
+			       p.strge_tp,
+			       p.strge_tp_nm,
+			       nvl(q.stock_qty, 0) as stock_qty,
+			       nvl(q.avlb_stock_qty, 0) as avlb_stock_qty
+			from   (
+						-- (1) 딜러의 재고 및 출고에 대한 창고 정보
+						select distinct x.dlr_cd,
+						       y.dlr_nm,
+						       x.plt_cd,
+						       x.strge_cd,
+						       y.strge_nm,
+						       y.strge_tp,
+						       y.strge_tp_nm
+						from   (
+						            -- 재고정보
+									select dlr_cd,
+									       plt_cd,
+									       strge_cd
+									from   PT_0301T
+									where  dlr_cd = '${sDlrCd}'
+									union all
+									-- 수불부 정보
+									select a.dlr_cd,
+									       b.plt_cd,
+									       b.strge_cd
+									from   PT_0311T a,
+									       PT_0312T b
+									where  a.dlr_cd = b.dlr_cd
+									and    a.mvt_doc_yy_mm = b.mvt_doc_yy_mm
+									and    a.mvt_doc_no = b.mvt_doc_no
+									and    a.dlr_cd = '${sDlrCd}'
+									and    a.mvt_tp in ('48', '47', '23')   -- 차입출고(48), 차출출고(47), 유보출고(23)
+									and    b.auto_cre_yn = 'N'              -- 유보출고의 경우, H와 S가 동시에 존재하기 때문
+									and    not exists (
+									                     -- 취소 전표 제외
+									                     select 'A'
+									                     from   PT_0312T
+									                     where  canc_stmt_yn = 'Y'
+									                     and    dlr_cd = b.dlr_cd
+									                     and    mvt_doc_yy_mm = b.mvt_doc_yy_mm
+									                     and    ref_doc_no = b.mvt_doc_no
+									                     and    dlr_cd = '${sDlrCd}'
+									                  )
+						       ) x,
+						       (
+						            -- 딜러별 창고 정보
+									select a.dlr_cd,
+									       c.dlr_nm,
+									       a.plt_cd,
+									       a.strge_cd,
+									       a.strge_nm,
+									       a.strge_tp,
+									       b.cmm_cd_txt as strge_tp_nm
+									from   CM_0104T a,
+									       CM_0304T b,
+									       CM_0101T c
+									where  a.strge_tp = b.cmm_cd
+									and    a.dlr_cd = c.dlr_cd
+									and    a.dlr_cd = '${sDlrCd}'
+									and    b.cmm_grp_cd = 'COM022'
+									and    b.lang_cd = 'zh'
+						       ) y
+						where  x.dlr_cd = y.dlr_cd
+						and    x.plt_cd = y.plt_cd
+						and    x.strge_cd = y.strge_cd
+			       ) p,
+			       (
+						-- (2) 창고별 재고 수량/금액 정보
+						select dlr_cd,
+						       plt_cd,
+						       strge_cd,
+						       nvl(sum(stock_qty), 0) as stock_qty,
+						       nvl(sum(avlb_stock_qty), 0) as avlb_stock_qty
+						from   (
+						            -- 창고별 재고정보 (실시간)
+									select a.dlr_cd,
+									       a.plt_cd,
+									       a.strge_cd,
+									       a.item_cd,
+									       nvl(a.avlb_stock_qty, 0) + nvl(a.resv_stock_qty, 0) - nvl(a.borrow_qty, 0) + nvl(a.rent_qty, 0) as stock_qty,
+									       nvl(a.avlb_stock_qty, 0) as avlb_stock_qty
+									from   PT_0301T a,  -- 재고정보
+									       PT_0214T b   -- 판매가격정보 (BMP구매가격 사용)
+									where  a.dlr_cd   = b.dlr_cd(+)
+									and    a.strge_cd = b.strge_cd(+)
+									and    a.item_cd  = b.item_cd(+)
+									and    b.del_yn(+) = 'N'
+									and    a.dlr_cd = '${sDlrCd}'
+						       ) vw1
+						group by dlr_cd, plt_cd, strge_cd
+			       ) q,
+			       (
+						-- (3) 창고별 출고 수량/금액 정보
+						select dlr_cd,
+						       plt_cd,
+						       strge_cd
+						from   (
+						            -- 창고별 출고 수불부 정보
+									select a.dlr_cd,
+									       b.plt_cd,
+									       b.strge_cd,
+									       a.mvt_tp,
+									       b.item_cd
+									from   PT_0311T a,
+									       PT_0312T b
+									where  a.dlr_cd = b.dlr_cd
+									and    a.mvt_doc_yy_mm = b.mvt_doc_yy_mm
+									and    a.mvt_doc_no = b.mvt_doc_no
+									and    a.dlr_cd = '${sDlrCd}'
+									and    a.mvt_tp in ('48', '47', '23')   -- 차입출고(48), 차출출고(47), 유보출고(23)
+									and    b.auto_cre_yn = 'N'              -- 유보출고의 경우, H와 S가 동시에 존재하기 때문
+									and    not exists (
+									                     -- 취소 전표 제외
+									                     select 'A'
+									                     from   PT_0312T
+									                     where  dlr_cd = '${sDlrCd}'
+									                     and    canc_stmt_yn = 'Y'
+									                     and    dlr_cd = b.dlr_cd
+									                     and    mvt_doc_yy_mm = b.mvt_doc_yy_mm
+									                     and    ref_doc_no = b.mvt_doc_no
+									                  )
+						       ) vw2
+						group by dlr_cd, plt_cd, strge_cd
+			       ) r
+			where  p.dlr_cd = q.dlr_cd(+)
+			and    p.plt_cd = q.plt_cd(+)
+			and    p.strge_cd = q.strge_cd(+)
+			and    p.dlr_cd = r.dlr_cd(+)
+			and    p.plt_cd = r.plt_cd(+)
+			and    p.strge_cd = r.strge_cd(+)
+			${IF(LEN(sGrStrgeCd) == 0, ""," and p.strge_cd = '"+sGrStrgeCd+"'")}
+       ) vw
+group by vw.dlr_cd, vw.dlr_nm, vw.strge_tp, vw.strge_tp_nm, vw.strge_nm
+  HAVING nvl(sum(stock_qty), 0) > 0
+) A
+WHERE A.NO < 6 ]]></Query>
+</TableData>
+<TableData name="ds3" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sGrStrgeCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT A.dlr_cd
+      ,A.strge_nm
+      ,A.stock_amt
+      ,A.avlb_stock_amt
+  FROM
+(select row_number() over(order by dlr_cd, nvl(sum(stock_amt), 0) DESC) as no,	-- NO
+       vw.dlr_cd,											-- 딜러코드
+       vw.dlr_nm,											-- 딜러명
+       vw.strge_tp,											-- 창고유형 코드
+       vw.strge_tp_nm,										-- 창고유형명
+       nvl(vw.strge_nm, 'undefined storage') as strge_nm,
+       nvl(sum(stock_amt), 0) as stock_amt,					-- 장부재고 금액
+       nvl(sum(avlb_stock_amt), 0) as avlb_stock_amt		-- 가용재고 금액
+from   (
+			select p.dlr_cd,
+			       p.dlr_nm,
+			       p.plt_cd,
+			       p.strge_cd,
+			       p.strge_nm,
+			       p.strge_tp,
+			       p.strge_tp_nm,
+			       nvl(q.stock_amt, 0) as stock_amt,
+			       nvl(q.avlb_stock_amt, 0) as avlb_stock_amt
+			from   (
+						-- (1) 딜러의 재고 및 출고에 대한 창고 정보
+						select distinct x.dlr_cd,
+						       y.dlr_nm,
+						       x.plt_cd,
+						       x.strge_cd,
+						       y.strge_nm,
+						       y.strge_tp,
+						       y.strge_tp_nm
+						from   (
+						            -- 재고정보
+									select dlr_cd,
+									       plt_cd,
+									       strge_cd
+									from   PT_0301T
+									where  dlr_cd = '${sDlrCd}'
+									union all
+									-- 수불부 정보
+									select a.dlr_cd,
+									       b.plt_cd,
+									       b.strge_cd
+									from   PT_0311T a,
+									       PT_0312T b
+									where  a.dlr_cd = b.dlr_cd
+									and    a.mvt_doc_yy_mm = b.mvt_doc_yy_mm
+									and    a.mvt_doc_no = b.mvt_doc_no
+									and    a.dlr_cd = '${sDlrCd}'
+									and    a.mvt_tp in ('48', '47', '23')   -- 차입출고(48), 차출출고(47), 유보출고(23)
+									and    b.auto_cre_yn = 'N'              -- 유보출고의 경우, H와 S가 동시에 존재하기 때문
+									and    not exists (
+									                     -- 취소 전표 제외
+									                     select 'A'
+									                     from   PT_0312T
+									                     where  canc_stmt_yn = 'Y'
+									                     and    dlr_cd = b.dlr_cd
+									                     and    mvt_doc_yy_mm = b.mvt_doc_yy_mm
+									                     and    ref_doc_no = b.mvt_doc_no
+									                     and    dlr_cd = '${sDlrCd}'
+									                  )
+						       ) x,
+						       (
+						            -- 딜러별 창고 정보
+									select a.dlr_cd,
+									       c.dlr_nm,
+									       a.plt_cd,
+									       a.strge_cd,
+									       a.strge_nm,
+									       a.strge_tp,
+									       b.cmm_cd_txt as strge_tp_nm
+									from   CM_0104T a,
+									       CM_0304T b,
+									       CM_0101T c
+									where  a.strge_tp = b.cmm_cd
+									and    a.dlr_cd = c.dlr_cd
+									and    a.dlr_cd = '${sDlrCd}'
+									and    b.cmm_grp_cd = 'COM022'
+									and    b.lang_cd = 'zh'
+						       ) y
+						where  x.dlr_cd = y.dlr_cd
+						and    x.plt_cd = y.plt_cd
+						and    x.strge_cd = y.strge_cd
+			       ) p,
+			       (
+						-- (2) 창고별 재고 수량/금액 정보
+						select dlr_cd,
+						       plt_cd,
+						       strge_cd,
+						       nvl(sum(stock_amt), 0) as stock_amt,
+						       nvl(sum(avlb_stock_amt), 0) as avlb_stock_amt
+						from   (
+						            -- 창고별 재고정보 (실시간)
+									select a.dlr_cd,
+									       a.plt_cd,
+									       a.strge_cd,
+									       a.item_cd,
+									       (nvl(a.avlb_stock_qty, 0) + nvl(a.resv_stock_qty, 0) - nvl(a.borrow_qty, 0) + nvl(a.rent_qty, 0)) * nvl(b.sale_prc_amt, 0) as stock_amt,
+				nvl(a.avlb_stock_qty, 0) * nvl(b.sale_prc_amt, 0) as avlb_stock_amt
+				                         from   PT_0301T a,  -- 재고정보
+									       PT_0214T b   -- 판매가격정보 (BMP구매가격 사용)
+									where  a.dlr_cd   = b.dlr_cd(+)
+									and    a.strge_cd = b.strge_cd(+)
+									and    a.item_cd  = b.item_cd(+)
+									and    b.del_yn(+) = 'N'
+									and    a.dlr_cd = '${sDlrCd}'
+						       ) vw1
+						group by dlr_cd, plt_cd, strge_cd
+			       ) q,
+			       (
+						-- (3) 창고별 출고 수량/금액 정보
+						select dlr_cd,
+						       plt_cd,
+						       strge_cd
+						from   (
+						            -- 창고별 출고 수불부 정보
+									select a.dlr_cd,
+									       b.plt_cd,
+									       b.strge_cd,
+									       a.mvt_tp,
+									       b.item_cd
+									from   PT_0311T a,
+									       PT_0312T b
+									where  a.dlr_cd = b.dlr_cd
+									and    a.mvt_doc_yy_mm = b.mvt_doc_yy_mm
+									and    a.mvt_doc_no = b.mvt_doc_no
+									and    a.dlr_cd = '${sDlrCd}'
+									and    a.mvt_tp in ('48', '47', '23')   -- 차입출고(48), 차출출고(47), 유보출고(23)
+									and    b.auto_cre_yn = 'N'              -- 유보출고의 경우, H와 S가 동시에 존재하기 때문
+									and    not exists (
+									             -- 취소 전표 제외
+								             select  'A'
+								               from  PT_0312T
+								              where  dlr_cd = '${sDlrCd}'
+								                and  canc_stmt_yn = 'Y'
+								                and  dlr_cd = b.dlr_cd
+								                and  mvt_doc_yy_mm = b.mvt_doc_yy_mm
+							                     and  ref_doc_no = b.mvt_doc_no
+							                  )
+						       ) vw2
+						group by dlr_cd, plt_cd, strge_cd
+			       ) r
+			where  p.dlr_cd = q.dlr_cd(+)
+			and    p.plt_cd = q.plt_cd(+)
+			and    p.strge_cd = q.strge_cd(+)
+			and    p.dlr_cd = r.dlr_cd(+)
+			and    p.plt_cd = r.plt_cd(+)
+			and    p.strge_cd = r.strge_cd(+)
+			${IF(LEN(sGrStrgeCd) == 0, ""," and p.strge_cd = '"+sGrStrgeCd+"'")}
+       ) vw
+group by vw.dlr_cd, vw.dlr_nm, vw.strge_tp, vw.strge_tp_nm, vw.strge_nm
+  HAVING nvl(sum(stock_amt), 0) > 0
+) A
+WHERE A.NO < 6 ]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="12" T="12"/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[432000,1728000,1728000,1728000,1728000,1728000,1728000,1728000,1728000,1728000,1728000,144000,1152000,1152000,1152000,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[432000,2160000,5295900,3695700,3139200,2819400,3886200,2592000,3139200,2552700,3139200,3139200,3139200,2971800,3238500,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="1" cs="9" rs="10" s="0">
+<O t="CC">
+<LayoutAttr selectedIndex="0"/>
+<ChangeAttr enable="false" changeType="button" timeInterval="5" buttonColor="-8421505" carouselColor="-8421505">
+<TextAttr>
+<Attr alignText="0"/>
+</TextAttr>
+</ChangeAttr>
+<Chart name="默认" chartClass="com.fr.plugin.chart.vanchart.VanChart">
+<Chart class="com.fr.plugin.chart.vanchart.VanChart">
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1118482"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<ChartAttr isJSDraw="true" isStyleGlobal="false"/>
+<Title4VanChart>
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-6908266"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[账面金额]]></O>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei UI" style="1" size="88" foreground="-13421773"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<Attr4VanChart useHtml="false" floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0"/>
+</Title4VanChart>
+<Plot class="com.fr.plugin.chart.column.VanChartColumnPlot">
+<VanChartPlotVersion version="20170715"/>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isNullValueBreak="true" autoRefreshPerSecond="0" seriesDragEnable="false" plotStyle="4" combinedSize="50.0"/>
+<newHotTooltipStyle>
+<AttrContents>
+<Attr showLine="false" position="1" isWhiteBackground="true" isShowMutiSeries="false" seriesLabel="${VALUE}"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+<PercentFormat>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.##%]]></Format>
+</PercentFormat>
+</AttrContents>
+</newHotTooltipStyle>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
+<ConditionAttr name="">
+<AttrList>
+<Attr class="com.fr.chart.base.AttrBorder">
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1"/>
+</AttrBorder>
+</Attr>
+<Attr class="com.fr.chart.base.AttrAlpha">
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.AttrTooltip">
+<AttrTooltip>
+<Attr enable="true" duration="4" followMouse="false" showMutiSeries="true" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="SimSun" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="true"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="true"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="true"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="false"/>
+</AttrTooltipSeriesFormat>
+</series>
+<changedValue class="com.fr.plugin.chart.base.format.AttrTooltipChangedValueFormat">
+<AttrTooltipChangedValueFormat>
+<Attr enable="false"/>
+</AttrTooltipChangedValueFormat>
+</changedValue>
+<HtmlLabel customText="" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+<GI>
+<AttrBackground>
+<Background name="ColorBackground" color="-16777216"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="2"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="0.5"/>
+</AttrAlpha>
+</GI>
+</AttrTooltip>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.AttrLabel">
+<AttrLabel>
+<labelAttr enable="true"/>
+<labelDetail class="com.fr.plugin.chart.base.AttrLabelDetail">
+<Attr showLine="false" autoAdjust="false" position="6" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="SimSun" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="true"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="true"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.##]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0%]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="false"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="false"/>
+</AttrTooltipSeriesFormat>
+</series>
+<changedValue class="com.fr.plugin.chart.base.format.AttrTooltipChangedValueFormat">
+<AttrTooltipChangedValueFormat>
+<Attr enable="false"/>
+</AttrTooltipChangedValueFormat>
+</changedValue>
+<HtmlLabel customText="function(){ return (this.value/10000).toFixed(0);}" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+</labelDetail>
+</AttrLabel>
+</Attr>
+</AttrList>
+</ConditionAttr>
+</DefaultAttr>
+</ConditionCollection>
+<Legend4VanChart>
+<Legend>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-3355444"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr position="1" visible="true"/>
+<FRFont name="Microsoft YaHei UI" style="0" size="64" foreground="-10066330"/>
+</Legend>
+<Attr4VanChart floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0" isHighlight="false"/>
+</Legend4VanChart>
+<DataSheet>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isVisible="false"/>
+<FRFont name="SimSun" style="0" size="72"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+</DataSheet>
+<DataProcessor class="com.fr.base.chart.chartdata.model.NormalDataModel"/>
+<newPlotFillStyle>
+<AttrFillStyle>
+<AFStyle colorStyle="1"/>
+<FillStyleName fillStyleName="新特性"/>
+<isCustomFillStyle isCustomFillStyle="false"/>
+<ColorList>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+<OColor colvalue="-472193"/>
+<OColor colvalue="-486008"/>
+<OColor colvalue="-8595761"/>
+<OColor colvalue="-7236949"/>
+<OColor colvalue="-8873759"/>
+<OColor colvalue="-1071514"/>
+<OColor colvalue="-1188474"/>
+<OColor colvalue="-6715442"/>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+<OColor colvalue="-472193"/>
+<OColor colvalue="-486008"/>
+<OColor colvalue="-8595761"/>
+<OColor colvalue="-7236949"/>
+<OColor colvalue="-8873759"/>
+<OColor colvalue="-1071514"/>
+<OColor colvalue="-1188474"/>
+<OColor colvalue="-6715442"/>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+<OColor colvalue="-472193"/>
+<OColor colvalue="-486008"/>
+<OColor colvalue="-8595761"/>
+<OColor colvalue="-7236949"/>
+<OColor colvalue="-8873759"/>
+<OColor colvalue="-1071514"/>
+<OColor colvalue="-1188474"/>
+<OColor colvalue="-6715442"/>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+</ColorList>
+</AttrFillStyle>
+</newPlotFillStyle>
+<VanChartPlotAttr isAxisRotation="false" categoryNum="1"/>
+<VanChartRectanglePlotAttr vanChartPlotType="normal" isDefaultIntervalBackground="true"/>
+<XAxisList>
+<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartAxis">
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr rotation="-90" alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="1" MainGridStyle="1"/>
+<newLineColor lineColor="-5197648"/>
+<AxisPosition value="3"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr rotation="-90" alignText="0">
+<FRFont name="Verdana" style="0" size="64" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+<VanChartAxisAttr mainTickLine="2" secTickLine="0" axisName="X축" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
+<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<alertList/>
+<customBackgroundList/>
+</VanChartAxis>
+</XAxisList>
+<YAxisList>
+<VanChartAxis class="com.fr.plugin.chart.attr.axis.VanChartValueAxis">
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[]]></O>
+<TextAttr>
+<Attr rotation="-90" alignText="0">
+<FRFont name="Verdana" style="0" size="88" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<newAxisAttr isShowAxisLabel="true"/>
+<AxisLineStyle AxisStyle="0" MainGridStyle="1"/>
+<newLineColor lineColor="-5197648"/>
+<AxisPosition value="2"/>
+<TickLine201106 type="2" secType="0"/>
+<ArrowShow arrowShow="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="SimSun" style="0" size="72" foreground="-10066330"/>
+</Attr>
+</TextAttr>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0]]></Format>
+<AxisLabelCount value="=0"/>
+<AxisRange/>
+<AxisUnit201106 isCustomMainUnit="false" isCustomSecUnit="false" mainUnit="=0" secUnit="=0"/>
+<ZoomAxisAttr isZoom="false"/>
+<axisReversed axisReversed="false"/>
+<VanChartAxisAttr mainTickLine="0" secTickLine="0" axisName="Y축" titleUseHtml="false" autoLabelGap="true" limitSize="false" maxHeight="15.0" commonValueFormat="true" isRotation="false"/>
+<HtmlLabel customText="function(){ return this; }" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+<alertList/>
+<customBackgroundList/>
+<VanChartValueAxisAttr isLog="false" valueStyle="false" baseLog="=10"/>
+<ds>
+<RadarYAxisTableDefinition>
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+<attr/>
+</RadarYAxisTableDefinition>
+</ds>
+</VanChartAxis>
+</YAxisList>
+<stackAndAxisCondition>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
+<ConditionAttr name=""/>
+</DefaultAttr>
+</ConditionCollection>
+</stackAndAxisCondition>
+<VanChartColumnPlotAttr seriesOverlapPercent="20.0" categoryIntervalPercent="20.0" fixedWidth="false" columnWidth="0" filledWithImage="false" isBar="false"/>
+</Plot>
+<ChartDefinition>
+<MoreNameCDDefinition>
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+<TableData class="com.fr.data.impl.NameTableData">
+<Name>
+<![CDATA[ds1]]></Name>
+</TableData>
+<CategoryName value="STRGE_NM"/>
+<ChartSummaryColumn name="STOCK_AMT" function="com.fr.data.util.function.NoneFunction" customName="账面金额"/>
+</MoreNameCDDefinition>
+</ChartDefinition>
+</Chart>
+<tools hidden="true" sort="false" export="false" fullScreen="false"/>
+<VanChartZoom>
+<zoomAttr zoomVisible="false" zoomGesture="true" zoomResize="true" zoomType="xy"/>
+<from>
+<![CDATA[]]></from>
+<to>
+<![CDATA[]]></to>
+</VanChartZoom>
+<refreshMoreLabel>
+<attr moreLabel="true" autoTooltip="true"/>
+<AttrTooltip>
+<Attr enable="true" duration="4" followMouse="false" showMutiSeries="false" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0"/>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="true"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="false"/>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="false"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="false"/>
+</AttrTooltipSeriesFormat>
+</series>
+<changedValue class="com.fr.plugin.chart.base.format.AttrTooltipChangedValueFormat">
+<AttrTooltipChangedValueFormat>
+<Attr enable="true"/>
+</AttrTooltipChangedValueFormat>
+</changedValue>
+<HtmlLabel customText="" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+<GI>
+<AttrBackground>
+<Background name="ColorBackground" color="-1"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="4"/>
+<newColor borderColor="-15395563"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="0.8"/>
+</AttrAlpha>
+</GI>
+</AttrTooltip>
+</refreshMoreLabel>
+</Chart>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="1" cs="5" rs="10">
+<O t="CC">
+<LayoutAttr selectedIndex="0"/>
+<ChangeAttr enable="false" changeType="button" timeInterval="5" buttonColor="-8421505" carouselColor="-8421505">
+<TextAttr>
+<Attr alignText="0"/>
+</TextAttr>
+</ChangeAttr>
+<Chart name="默认" chartClass="com.fr.plugin.chart.vanchart.VanChart">
+<Chart class="com.fr.plugin.chart.vanchart.VanChart">
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1118482"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<ChartAttr isJSDraw="true" isStyleGlobal="false"/>
+<Title4VanChart>
+<Title>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-6908266"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<O>
+<![CDATA[账面库存]]></O>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Microsoft YaHei UI" style="1" size="88" foreground="-13421773"/>
+</Attr>
+</TextAttr>
+<TitleVisible value="true" position="0"/>
+</Title>
+<Attr4VanChart useHtml="false" floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0"/>
+</Title4VanChart>
+<Plot class="com.fr.plugin.chart.PiePlot4VanChart">
+<VanChartPlotVersion version="20170715"/>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1118482"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isNullValueBreak="true" autoRefreshPerSecond="0" seriesDragEnable="false" plotStyle="4" combinedSize="50.0"/>
+<newHotTooltipStyle>
+<AttrContents>
+<Attr showLine="false" position="1" isWhiteBackground="true" isShowMutiSeries="false" seriesLabel="${VALUE}"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+<PercentFormat>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0.##%]]></Format>
+</PercentFormat>
+</AttrContents>
+</newHotTooltipStyle>
+<ConditionCollection>
+<DefaultAttr class="com.fr.chart.chartglyph.ConditionAttr">
+<ConditionAttr name="">
+<AttrList>
+<Attr class="com.fr.chart.base.AttrBorder">
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-1"/>
+</AttrBorder>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.AttrLabel">
+<AttrLabel>
+<labelAttr enable="true"/>
+<labelDetail class="com.fr.plugin.chart.base.AttrLabelDetail">
+<Attr showLine="false" autoAdjust="false" position="5" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="Verdana" style="1" size="72"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="false"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="true"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.##]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="false"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="false"/>
+</AttrTooltipSeriesFormat>
+</series>
+<changedValue class="com.fr.plugin.chart.base.format.AttrTooltipChangedValueFormat">
+<AttrTooltipChangedValueFormat>
+<Attr enable="false"/>
+</AttrTooltipChangedValueFormat>
+</changedValue>
+<HtmlLabel customText="function(){ return (this.value).toFixed(0);}" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+</labelDetail>
+</AttrLabel>
+</Attr>
+<Attr class="com.fr.plugin.chart.base.AttrTooltip">
+<AttrTooltip>
+<Attr enable="true" duration="4" followMouse="false" showMutiSeries="false" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0">
+<FRFont name="SimSun" style="0" size="72"/>
+</Attr>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="true"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.##]]></Format>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="true"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="false"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="true"/>
+</AttrTooltipSeriesFormat>
+</series>
+<changedValue class="com.fr.plugin.chart.base.format.AttrTooltipChangedValueFormat">
+<AttrTooltipChangedValueFormat>
+<Attr enable="false"/>
+</AttrTooltipChangedValueFormat>
+</changedValue>
+<HtmlLabel customText="" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+<GI>
+<AttrBackground>
+<Background name="ColorBackground" color="-16777216"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="2"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="0.5"/>
+</AttrAlpha>
+</GI>
+</AttrTooltip>
+</Attr>
+</AttrList>
+</ConditionAttr>
+</DefaultAttr>
+</ConditionCollection>
+<Legend4VanChart>
+<Legend>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="0" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-3355444"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr position="4" visible="true"/>
+<FRFont name="Microsoft YaHei UI" style="0" size="48" foreground="-10066330"/>
+</Legend>
+<Attr4VanChart floating="false" x="0.0" y="0.0" limitSize="false" maxHeight="15.0" isHighlight="false"/>
+</Legend4VanChart>
+<DataSheet>
+<GI>
+<AttrBackground>
+<Background name="NullBackground"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="0"/>
+<newColor borderColor="-16777216"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="1.0"/>
+</AttrAlpha>
+</GI>
+<Attr isVisible="false"/>
+</DataSheet>
+<DataProcessor class="com.fr.base.chart.chartdata.model.NormalDataModel"/>
+<newPlotFillStyle>
+<AttrFillStyle>
+<AFStyle colorStyle="1"/>
+<FillStyleName fillStyleName="新特性"/>
+<isCustomFillStyle isCustomFillStyle="false"/>
+<ColorList>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+<OColor colvalue="-472193"/>
+<OColor colvalue="-486008"/>
+<OColor colvalue="-8595761"/>
+<OColor colvalue="-7236949"/>
+<OColor colvalue="-8873759"/>
+<OColor colvalue="-1071514"/>
+<OColor colvalue="-1188474"/>
+<OColor colvalue="-6715442"/>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+<OColor colvalue="-472193"/>
+<OColor colvalue="-486008"/>
+<OColor colvalue="-8595761"/>
+<OColor colvalue="-7236949"/>
+<OColor colvalue="-8873759"/>
+<OColor colvalue="-1071514"/>
+<OColor colvalue="-1188474"/>
+<OColor colvalue="-6715442"/>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+<OColor colvalue="-472193"/>
+<OColor colvalue="-486008"/>
+<OColor colvalue="-8595761"/>
+<OColor colvalue="-7236949"/>
+<OColor colvalue="-8873759"/>
+<OColor colvalue="-1071514"/>
+<OColor colvalue="-1188474"/>
+<OColor colvalue="-6715442"/>
+<OColor colvalue="-10243346"/>
+<OColor colvalue="-8988015"/>
+</ColorList>
+</AttrFillStyle>
+</newPlotFillStyle>
+<VanChartPlotAttr isAxisRotation="false" categoryNum="1"/>
+<PieAttr4VanChart roseType="normal" startAngle="0.0" endAngle="360.0" innerRadius="60.0" supportRotation="false"/>
+<VanChartRadius radiusType="auto" radius="100"/>
+</Plot>
+<ChartDefinition>
+<OneValueCDDefinition seriesName="STRGE_NM" valueName="STOCK_QTY" function="com.fr.data.util.function.NoneFunction">
+<Top topCate="-1" topValue="-1" isDiscardOtherCate="false" isDiscardOtherSeries="false" isDiscardNullCate="false" isDiscardNullSeries="false"/>
+<TableData class="com.fr.data.impl.NameTableData">
+<Name>
+<![CDATA[ds1]]></Name>
+</TableData>
+<CategoryName value=""/>
+</OneValueCDDefinition>
+</ChartDefinition>
+</Chart>
+<tools hidden="true" sort="false" export="false" fullScreen="false"/>
+<VanChartZoom>
+<zoomAttr zoomVisible="false" zoomGesture="true" zoomResize="true" zoomType="xy"/>
+<from>
+<![CDATA[]]></from>
+<to>
+<![CDATA[]]></to>
+</VanChartZoom>
+<refreshMoreLabel>
+<attr moreLabel="true" autoTooltip="true"/>
+<AttrTooltip>
+<Attr enable="true" duration="4" followMouse="false" showMutiSeries="false" isCustom="false"/>
+<TextAttr>
+<Attr alignText="0"/>
+</TextAttr>
+<AttrToolTipContent>
+<Attr isCommon="true"/>
+<value class="com.fr.plugin.chart.base.format.AttrTooltipValueFormat">
+<AttrTooltipValueFormat>
+<Attr enable="false"/>
+</AttrTooltipValueFormat>
+</value>
+<percent class="com.fr.plugin.chart.base.format.AttrTooltipPercentFormat">
+<AttrTooltipPercentFormat>
+<Attr enable="false"/>
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#.##]]></Format>
+</AttrTooltipPercentFormat>
+</percent>
+<category class="com.fr.plugin.chart.base.format.AttrTooltipCategoryFormat">
+<AttrToolTipCategoryFormat>
+<Attr enable="false"/>
+</AttrToolTipCategoryFormat>
+</category>
+<series class="com.fr.plugin.chart.base.format.AttrTooltipSeriesFormat">
+<AttrTooltipSeriesFormat>
+<Attr enable="false"/>
+</AttrTooltipSeriesFormat>
+</series>
+<changedValue class="com.fr.plugin.chart.base.format.AttrTooltipChangedValueFormat">
+<AttrTooltipChangedValueFormat>
+<Attr enable="true"/>
+</AttrTooltipChangedValueFormat>
+</changedValue>
+<HtmlLabel customText="" useHtml="false" isCustomWidth="false" isCustomHeight="false" width="50" height="50"/>
+</AttrToolTipContent>
+<GI>
+<AttrBackground>
+<Background name="ColorBackground" color="-1"/>
+<Attr shadow="false"/>
+</AttrBackground>
+<AttrBorder>
+<Attr lineStyle="1" isRoundBorder="false" roundRadius="4"/>
+<newColor borderColor="-15395563"/>
+</AttrBorder>
+<AttrAlpha>
+<Attr alpha="0.8"/>
+</AttrAlpha>
+</GI>
+</AttrTooltip>
+</refreshMoreLabel>
+</Chart>
+</O>
+<PrivilegeControl/>
+<Expand leftParentDefault="false" upParentDefault="false"/>
+</C>
+<C c="1" r="12" s="1">
+<O>
+<![CDATA[序号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="12" s="1">
+<O>
+<![CDATA[仓库]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="12" s="1">
+<O>
+<![CDATA[账面金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="12" s="1">
+<O>
+<![CDATA[账面库存]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="12" s="1">
+<O>
+<![CDATA[可用数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="12" s="1">
+<O>
+<![CDATA[可用金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="12" s="1">
+<O>
+<![CDATA[借进数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="12" s="1">
+<O>
+<![CDATA[借进金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="12" s="1">
+<O>
+<![CDATA[借出数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="12" s="1">
+<O>
+<![CDATA[借出金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="12" s="1">
+<O>
+<![CDATA[预留数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="12" s="1">
+<O>
+<![CDATA[预留金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="12">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="12">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="13" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="NO"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand leftParentDefault="false" left="C14"/>
+</C>
+<C c="2" r="13" s="2">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="STRGE_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="3" r="13" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="STOCK_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="4" r="13" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="STOCK_QTY"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="5" r="13" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="AVLB_STOCK_QTY"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="6" r="13" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="AVLB_STOCK_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="7" r="13" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="BORROW_QTY"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="8" r="13" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="BORROW_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="9" r="13" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="RENT_QTY"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="10" r="13" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="RENT_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="11" r="13" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="RESV_STOCK_QTY"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="12" r="13" s="3">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="RESV_STOCK_AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="13" r="13">
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="14" r="13">
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="1" r="14" s="4">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="14" s="4">
+<O>
+<![CDATA[汇总]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="14" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(D14)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="14" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(E14)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="14" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(F14)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="14" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(G14)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="14" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(H14)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="14" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(I14)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="14" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(J14)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="14" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(K14)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="14" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(L14)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="14" s="5">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=SUM(M14)]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="14">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="14">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="11" r="15">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="15">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="15">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="12" r="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="13" r="16">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="14" r="17">
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting orientation="1">
+<PaperSize width="33912000" height="46411200"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,###.##]]></Format>
+<FRFont name="Verdana" style="0" size="64" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Microsoft YaHei UI" style="1" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,###.##]]></Format>
+<FRFont name="Verdana" style="1" size="64" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID TemplateID="2e4119f8-1dda-424a-8756-6d3361391895"/>
+</WorkBook>

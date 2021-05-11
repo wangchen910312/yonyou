@@ -1,0 +1,600 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="PT_0632T" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sEtcGiDocNo"/>
+<O>
+<![CDATA[EI2015110021]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT B.DLR_CD,B.ETC_GI_DOC_NO,B.REG_DT,B.CNT
+     , (SELECT DLR_NM FROM CM_0101T WHERE DLR_CD = B.DLR_CD) AS DLR_NM
+     , (SELECT USR_NM FROM CM_0801T WHERE USR_ID = B.REG_USR_ID) AS USR_NM
+  FROM (
+		SELECT A.DLR_CD,A.ETC_GI_DOC_NO
+		     , TO_CHAR(MAX(A.REG_DT), 'YYYY-MM-DD HH24:MI:SS') AS REG_DT
+		     , MAX(A.REG_USR_ID) AS REG_USR_ID , SUM(A.QTY) AS CNT
+		  FROM PT_0632T A
+		 WHERE A.DLR_CD = '${sDlrCd}'
+   		   AND A.ETC_GI_DOC_NO = '${sEtcGiDocNo}'
+		   GROUP BY DLR_CD,ETC_GI_DOC_NO
+	    ) B
+	  ]]></Query>
+</TableData>
+<TableData name="PT_0632T_DETL" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[D0103]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sEtcGiDocNo"/>
+<O>
+<![CDATA[EI2015110021]]></O>
+</Parameter>
+</Parameters>
+<Attributes maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[SELECT * FROM (
+	SELECT ROWNUM AS RNUM, T1.* FROM (
+		SELECT
+            A.DLR_CD                      --딜러코드
+           ,A.ETC_GI_DOC_NO               --기타출고번호
+           ,A.ETC_GI_DOC_LINE_NO          --기타출고라인번호
+           ,A.ITEM_CD                     --품목코드
+           ,C.ITEM_NM
+           ,A.GI_STRGE_CD                 --출고창고
+           ,A.GR_STRGE_CD                    --입고창고
+           ,A.QTY AS STRGE_MOVE_STOCK_QTY
+           ,NVL(D.MOVING_AVG_PRC, 0) AS PRC                --이동평균가격
+           ,(NVL(D.MOVING_AVG_PRC, 0) * A.QTY) AS AMT      --이동평균가격
+           ,E.STRGE_NM AS GI_STRGE_CD_NM                 --출고창고
+           ,F.STRGE_NM AS GR_STRGE_CD_NM                    --입고창고
+       FROM DMSDB.PT_0632T A
+            INNER JOIN PT_0631T B
+               ON A.DLR_CD = B.DLR_CD
+              AND A.ETC_GI_DOC_NO = B.ETC_GI_DOC_NO
+            INNER JOIN  DMSDB.PT_0201T C    --품목정보
+               ON A.DLR_CD  = C.DLR_CD
+              AND A.ITEM_CD = C.ITEM_CD
+             LEFT OUTER JOIN PT_0208T D
+                   ON A.DLR_CD  = D.DLR_CD
+                  AND A.GI_STRGE_CD  = D.STRGE_CD
+                  AND A.ITEM_CD = D.ITEM_CD
+             LEFT OUTER JOIN CM_0104T E
+                   ON A.DLR_CD  = E.DLR_CD
+                  AND B.PLT_CD  = E.PLT_CD
+                  AND A.GI_STRGE_CD = E.STRGE_CD
+             LEFT OUTER JOIN CM_0104T F
+                   ON A.DLR_CD  = F.DLR_CD
+                  AND B.PLT_CD  = F.PLT_CD
+                  AND A.GR_STRGE_CD = F.STRGE_CD
+      WHERE A.DLR_CD            = '${sDlrCd}'
+        AND A.ETC_GI_DOC_NO    = '${sEtcGiDocNo}'
+       ORDER BY A.DLR_CD                      --딜러코드
+               ,A.ETC_GI_DOC_NO  DESC         --기타출고번호
+               ,A.ETC_GI_DOC_LINE_NO
+	) T1
+)]]></Query>
+</TableData>
+</TableDataMap>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="0" T="6"/>
+<FR F="8" T="9"/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[723900,1445760,1445760,723900,723900,723900,1143000,723900,1447800,727200,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[1028700,2933700,5562600,4381500,4152900,3124200,2628900,3581400,2743200,2743200,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="1" cs="8" s="1">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T" columnName="DLR_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="2" cs="8" s="2">
+<O>
+<![CDATA[配件移库单]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="3" cs="2" s="3">
+<O>
+<![CDATA[移动单号码]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="3" cs="3" s="4">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T" columnName="ETC_GI_DOC_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="3" s="3">
+<O>
+<![CDATA[移库日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="3" cs="2" s="4">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T" columnName="REG_DT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="4" cs="2" s="3">
+<O>
+<![CDATA[总数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="4" cs="3" s="5">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T" columnName="CNT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="4" s="3">
+<O>
+<![CDATA[操作人]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="4" cs="2" s="4">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T" columnName="USR_NM"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper"/>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="5" cs="8" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="6" s="6">
+<O>
+<![CDATA[序号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="6" s="6">
+<O>
+<![CDATA[配件编号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="6" s="6">
+<O>
+<![CDATA[配件名称]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="6" s="6">
+<O>
+<![CDATA[原仓库]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="6" s="6">
+<O>
+<![CDATA[新仓库]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="6" s="6">
+<O>
+<![CDATA[移库数量]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="6" s="6">
+<O>
+<![CDATA[成本单价]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="6" s="6">
+<O>
+<![CDATA[成本金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="0" r="7" s="6">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T_DETL" columnName="RNUM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[条件属性1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[&A8 % 13 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.PageHighlightAction">
+<P i="1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="1" r="7" s="6">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T_DETL" columnName="ITEM_CD"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="2" r="7" s="4">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T_DETL" columnName="ITEM_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="3" r="7" s="7">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T_DETL" columnName="GI_STRGE_CD_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="4" r="7" s="4">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T_DETL" columnName="GR_STRGE_CD_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="5" r="7" s="8">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T_DETL" columnName="STRGE_MOVE_STOCK_QTY"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="6" r="7" s="9">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T_DETL" columnName="PRC"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="7" r="7" s="9">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T_DETL" columnName="AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand dir="0"/>
+</C>
+<C c="0" r="8" cs="2" s="6">
+<O>
+<![CDATA[操作人(签字）]]></O>
+<PrivilegeControl/>
+<CellPageAttr/>
+<Expand/>
+</C>
+<C c="2" r="8" cs="3" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="8" s="6">
+<O>
+<![CDATA[总金额]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="8" s="3">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T_DETL" columnName="PRC"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.SummaryGrouper">
+<FN>
+<![CDATA[com.fr.data.util.function.SumFunction]]></FN>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="8" s="10">
+<O t="DSColumn">
+<Attributes dsName="PT_0632T_DETL" columnName="AMT"/>
+<Condition class="com.fr.data.condition.ListCondition"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.SummaryGrouper">
+<FN>
+<![CDATA[com.fr.data.util.function.SumFunction]]></FN>
+</RG>
+<Result>
+<![CDATA[$$$]]></Result>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="9" cs="3" s="11">
+<O t="Formula" class="Formula">
+<Attributes>
+<![CDATA[=NOW()]]></Attributes>
+</O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings headerHeight="0" footerHeight="0">
+<PaperSetting>
+<PaperSize width="33912000" height="46411200"/>
+<Margin top="720000" left="2880000" bottom="720000" right="720000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[参数]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="1" size="72"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="1" size="104"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<Format class="com.fr.base.TextFormat"/>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border>
+<Top style="1"/>
+<Bottom style="1"/>
+<Left style="1"/>
+<Right style="1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1">
+<FRFont name="Microsoft YaHei" style="0" size="64"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+</WorkBook>

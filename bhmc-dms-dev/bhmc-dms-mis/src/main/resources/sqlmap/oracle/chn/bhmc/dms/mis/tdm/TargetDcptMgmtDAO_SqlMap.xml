@@ -1,0 +1,3190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : TargetDcptMgmtDAO_SqlMap.xml
+    Description : [딜러사] 목표분해도
+    author chibeom.song
+    since 2016. 7. 21.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 7. 21.   chibeom.song     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO">
+
+    <!-- 성(우편번호) 목록을  조회한다. -->
+    <select id="selectProvinceInfoList" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectProvinceInfoList] */
+        SELECT SUNG_CD AS provinceCd, SUNG_NM AS provinceNm FROM CM_0205T
+        <where>
+            <if test='sMarketStatusProvince != null and sMarketStatusProvince != ""'>
+                SUNG_CD = #{sMarketStatusProvince}
+            </if>
+        </where>
+        GROUP BY SUNG_CD, SUNG_NM ORDER BY SUNG_CD
+    </select>
+
+    <!-- 시(우편번호) 목록을  조회한다. -->
+    <select id="selectCityInfoList" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectCityInfoList] */
+        SELECT CITY_CD AS cityCd, CITY_NM AS cityNm FROM CM_0205T
+        <where>
+            <if test='sMarketStatusCity != null and sMarketStatusCity != ""'>
+                SUNG_CD = #{sMarketStatusCity}
+            </if>
+        </where>
+        GROUP BY CITY_CD, CITY_NM
+        ORDER BY CITY_CD
+    </select>
+
+    <!-- 시(우편번호) 목록을  조회한다. -->
+    <select id="selectMarketStatusCityList" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectMarketStatusCityList] */
+        SELECT CITY_CD AS cityCd, CITY_NM AS cityNm FROM CM_0205T
+        <where>
+            <if test='provinceCd != null and provinceCd != ""'>
+                SUNG_CD = #{provinceCd}
+            </if>
+        </where>
+        GROUP BY CITY_CD, CITY_NM
+        ORDER BY CITY_CD
+    </select>
+
+    <!-- 시(우편번호) 목록을  조회한다. -->
+    <select id="selectMarketStatusCityCnt" parameterType="TargetDcptMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectMarketStatusCityCnt] */
+        SELECT COUNT(*) AS VALUE FROM CM_0205T
+        <where>
+            <if test='provinceCd != null and provinceCd != ""'>
+                SUNG_CD = #{provinceCd}
+            </if>
+        </where>
+    </select>
+
+    <!-- 시장현황자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtRegByKey" parameterType="map" resultType="TargetDcptMgmtVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtRegByKey] */
+        SELECT * FROM MS_0107T
+        WHERE REG_YY = #{regYear}
+        AND REG_MM = #{regMonth}
+            AND SUNG_CD = #{provinceCd}
+            AND CITY_CD = #{cityCd}
+    </select>
+
+    <!-- 시장현황자료를 등록한다. -->
+    <insert id="insertTargetDcptMgmtReg" parameterType="TargetDcptMgmtVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.insertTargetDcptMgmtReg] */
+        INSERT INTO MS_0107T(
+              REG_YY
+            , REG_MM
+            , SUNG_CD
+            , CITY_CD
+            , DIST_CD
+            , REF_VAL
+            , DEL_YN
+            , REG_USR_ID
+            , REG_DT
+            , UPDT_USR_ID
+            , UPDT_DT
+        )VALUES(
+              #{regYear}
+            , #{regMonth}
+            , #{provinceCd}
+            , #{cityCd}
+            , 'TEMP'
+            , #{marketRefVal}
+            , 'N'
+            , #{regUsrId}
+            , SYSDATE
+            , #{regUsrId}
+            , SYSDATE
+        )
+    </insert>
+
+    <!-- 시장현황자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtReg" parameterType="TargetDcptMgmtVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtReg] */
+        UPDATE MS_0107T SET
+            REF_VAL = #{marketRefVal}
+            , UPDT_USR_ID = #{regUsrId}
+            , UPDT_DT = SYSDATE
+        WHERE REG_YY = #{regYear}
+            AND REG_MM = #{regMonth}
+            AND SUNG_CD = #{provinceCd}
+            AND CITY_CD = #{cityCd}
+    </update>
+
+    <!-- 시장현황자료를 삭제한다. -->
+    <update id="deleteTargetDcptMgmtReg" parameterType="TargetDcptMgmtVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.deleteTargetDcptMgmtReg] */
+        UPDATE MS_0107T SET
+            DEL_YN = 'Y'
+            , UPDT_USR_ID = #{regUsrId}
+            , UPDT_DT = SYSDATE
+        WHERE REG_YY = #{regYear}
+            AND REG_MM = #{regMonth}
+            AND SUNG_CD = #{provinceCd}
+            AND CITY_CD = #{cityCd}
+            AND DIST_CD = #{areaCd}
+    </update>
+
+    <!-- 시장현황자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtByCondition" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtByCondition] */
+            SELECT
+                '全国份额' AS nameArea,
+                ROUND((SELECT NVL(AVG(REF_VAL), 0)
+                        FROM MS_0107T
+                        WHERE REG_YY||REG_MM = #{sMarketStatusYyMm}),2) AS localPossessionRate,
+
+                ROUND((SELECT NVL(AVG(REF_VAL), 0) FROM MS_0107T
+                WHERE REG_YY||REG_MM =
+                TO_CHAR(TO_DATE(#{sMarketStatusYyMm}, 'YYYYMM')-1, 'YYYYMM')),2) AS localLastMonthContrast,
+                ROUND((SELECT NVL(AVG(REF_VAL), 0) FROM MS_0107T
+                WHERE REG_YY = (SUBSTR(#{sMarketStatusYyMm},1,4) - 1)
+                AND REG_MM = SUBSTR(#{sMarketStatusYyMm},5,2)),2) localLastYearMonth
+            FROM DUAL
+            UNION ALL
+            SELECT
+                '本省份额' AS nameArea,
+                ROUND((SELECT NVL(AVG(REF_VAL), 0) FROM MS_0107T
+                <where>
+                    REG_YY||REG_MM = #{sMarketStatusYyMm}
+                    <if test='sMarketStatusProvince != null and sMarketStatusProvince != ""'>
+                        AND SUNG_CD = #{sMarketStatusProvince}
+                    </if>
+                </where>
+                ),2) AS provincePossessionRate,
+                ROUND((SELECT NVL(AVG(REF_VAL), 0) FROM MS_0107T
+                <where>
+                    REG_YY||REG_MM = TO_CHAR(TO_DATE(#{sMarketStatusYyMm}, 'YYYYMM')-1, 'YYYYMM')
+                    <if test='sMarketStatusProvince != null and sMarketStatusProvince != ""'>
+                        AND SUNG_CD = #{sMarketStatusProvince}
+                    </if>
+                </where>
+                ),2) AS provinceLastMonthContrast,
+
+                ROUND((SELECT NVL(AVG(REF_VAL), 0) FROM MS_0107T
+                <where>
+                    REG_YY = (SUBSTR(#{sMarketStatusYyMm},1,4) - 1)
+                    AND REG_MM = SUBSTR(#{sMarketStatusYyMm},5,2)
+                    <if test='sMarketStatusProvince != null and sMarketStatusProvince != ""'>
+                        AND SUNG_CD = #{sMarketStatusProvince}
+                    </if>
+                </where>
+                ),2) provinceLastYearMonth
+              FROM DUAL
+              UNION ALL
+              SELECT
+               '本市份额' AS nameArea,
+                ROUND((SELECT NVL(AVG(REF_VAL), 0) FROM MS_0107T
+                <where>
+                    REG_YY||REG_MM = #{sMarketStatusYyMm}
+                    <if test='sMarketStatusProvince != null and sMarketStatusProvince != ""'>
+                        AND SUNG_CD = #{sMarketStatusProvince}
+                    </if>
+                    <if test='sMarketStatusCity != null and sMarketStatusCity != ""'>
+                        AND CITY_CD = #{sMarketStatusCity}
+                    </if>
+                </where>
+                ),2) AS cityPossessionRate,
+
+                ROUND((SELECT NVL(AVG(REF_VAL), 0) FROM MS_0107T
+                <where>
+                    REG_YY||REG_MM = TO_CHAR(TO_DATE(#{sMarketStatusYyMm}, 'YYYYMM')-1, 'YYYYMM')
+                    <if test='sMarketStatusProvince != null and sMarketStatusProvince != ""'>
+                        AND SUNG_CD = #{sMarketStatusProvince}
+                    </if>
+                    <if test='sMarketStatusCity != null and sMarketStatusCity != ""'>
+                        AND CITY_CD = #{sMarketStatusCity}
+                    </if>
+                </where>
+                ),2) AS cityLastMonthContrast,
+
+                ROUND((SELECT NVL(AVG(REF_VAL), 0) FROM MS_0107T
+                <where>
+                    REG_YY = (SUBSTR(#{sMarketStatusYyMm},1,4) - 1)
+                    AND REG_MM = SUBSTR(#{sMarketStatusYyMm},5,2)
+                    <if test='sMarketStatusProvince != null and sMarketStatusProvince != ""'>
+                        AND SUNG_CD = #{sMarketStatusProvince}
+                    </if>
+                    <if test='sMarketStatusCity != null and sMarketStatusCity != ""'>
+                        AND CITY_CD = #{sMarketStatusCity}
+                    </if>
+                </where>
+                ),2) cityLastYearMonth
+            FROM DUAL
+    </select>
+
+    <!-- 딜러현황자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerStatusBasicGrid" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerStatusBasicGrid] */
+        SELECT
+           A.SALE_YY AS saleYy
+          ,A.SALE_MM AS saleMm
+          ,A.SALE_DD AS saleDd
+          ,NVL((SELECT SUM(STOCK_CNT) FROM MS_1003T_2016 WHERE SALE_YY||SALE_MM||SALE_DD = #{sDealerStatusYyMmDd}),'0') AS stockValue
+          ,NVL((SELECT SUM(STOCK_RATE) FROM MS_1003T_2016 WHERE SALE_YY||SALE_MM||SALE_DD = #{sDealerStatusYyMmDd}),'0')||'%' AS stockCount
+          ,(SELECT SUM(SALE_CNT) FROM MS_1001T_2016 R
+            WHERE SALE_YY||SALE_MM||SALE_DD BETWEEN TO_CHAR(TO_DATE(SUBSTR(#{sDealerStatusYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')||SUBSTR(#{sDealerStatusYyMmDd},7,2)
+            AND #{sDealerStatusYyMmDd}) AS saleStatus3Month
+          ,NVL((SELECT MAX(IDCC_DLR_CNT) + MAX(SHOP_DLR_CNT) FROM MS_1002T_2016 WHERE SALE_YY||SALE_MM||SALE_DD = #{sDealerStatusYyMmDd}), '0') AS salemanCount
+          ,MAX(B.IDCC_UDR_CUST_CNT) AS idccPotentialCustomer
+          ,MAX(B.SHOP_UDR_CUST_CNT) AS shopPotentialCustomer
+        FROM MS_1001T_2016 A, MS_1004T_2016 B
+        WHERE A.SALE_YY = B.STD_YY(+) AND A.SALE_MM = B.STD_MM(+) AND A.SALE_DD = B.STD_DD
+        AND   A.SALE_YY||A.SALE_MM||A.SALE_DD = #{sDealerStatusYyMmDd}
+        GROUP BY A.SALE_YY, A.SALE_MM, A.SALE_DD
+    </select>
+
+    <!-- 딜러현황자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerStatusDetailGrid" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerStatusBasicGrid] */
+        SELECT
+        Z.channelGubn
+        ,Z.idccCollectCustQty
+        ,Z.idccVisitReqRate||'%' AS idccVisitReqRate
+        ,Z.idccDealQty
+        ,Z.idccVisitDealRate||'%' AS idccVisitDealRate
+        ,Z.idccDealRate||'%' AS idccDealRate
+        FROM (
+        SELECT
+           A.SALE_YY AS saleYy
+          ,A.SALE_MM AS saleMm
+          ,A.SALE_DD AS saleDd
+          ,'IDCC' AS channelGubn
+          ,MAX(B.IDCC_CUST_VSIT_CNT) AS idccCollectCustQty
+          ,MAX(B.IDCC_VSIT_REQ_RATE) AS idccVisitReqRate
+          ,MAX(B.IDCC_DEAL_CNT) AS idccDealQty
+          ,MAX(ROUND((B.IDCC_DEAL_CNT/NULLIF(B.IDCC_UDR_CUST_CNT,0)) * 100,2)) AS idccVisitDealRate
+          ,MAX(B.IDCC_DEAL_RATE) AS idccDealRate
+        FROM MS_1001T_2016 A, MS_1004T_2016 B
+        WHERE A.SALE_YY = B.STD_YY(+) AND A.SALE_MM = B.STD_MM(+) AND A.SALE_DD = B.STD_DD
+        AND   A.SALE_YY||A.SALE_MM||A.SALE_DD = #{sDealerStatusYyMmDd}
+        GROUP BY A.SALE_YY, A.SALE_MM, A.SALE_DD
+        UNION ALL
+        SELECT
+           A.SALE_YY AS saleYy
+          ,A.SALE_MM AS saleMm
+          ,A.SALE_DD AS saleDd
+          ,'SHOP' AS channelGubn
+          ,MAX(B.SHOP_PRSN_INFO_COLLC_RATE) AS shopPerInfoRate
+          ,MAX(B.SHOP_CUST_VSIT_CNT) AS shopCollectCustQty
+          ,MAX(B.SHOP_DEAL_CNT) AS shopDealQty
+          ,MAX(0) AS shopVisitDealRate
+          ,MAX(B.SHOP_DEAL_RATE) AS shopDealRate
+        FROM MS_1001T_2016 A, MS_1004T_2016 B
+        WHERE A.SALE_YY = B.STD_YY(+) AND A.SALE_MM = B.STD_MM(+) AND A.SALE_DD = B.STD_DD
+        AND   A.SALE_YY||A.SALE_MM||A.SALE_DD = #{sDealerStatusYyMmDd}
+        GROUP BY A.SALE_YY, A.SALE_MM, A.SALE_DD ) Z
+    </select>
+
+    <!-- 제조사목표 자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtManuTargetAllGrid" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        SELECT NVL(SUM(GOAL_PREF_VAL), '0') AS totGoalPrefVal FROM MS_0102T
+        <where>
+            DLR_CD = 'D2618' AND PREF_TP = '2'
+            <if test='sManuTargetYyMmDd != null and sManuTargetYyMmDd != ""'>
+                AND GOAL_YY||GOAL_MM = #{sManuTargetYyMmDd}
+            </if>
+        </where>
+    </select>
+
+    <!-- 제조사목표 정보 목록을 조회한다. -->
+    <select id="selectTargetDcptMgmtManuTargetGridByCondition" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtManuTargetGridByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                     A.GOAL_YY
+                    ,A.GOAL_MM
+                    ,A.CARLINE_CD AS carlineCd
+                    ,(SELECT Z.CARLINE_NM FROM SA_0101T Z WHERE Z.CARLINE_CD = A.CARLINE_CD AND Z.USE_YN = 'Y') AS carLineNm
+                    ,A.GOAL_PREF_VAL AS goalPrefVal
+                    ,(SELECT SUM(Z.SALE_CNT) AS saleCnt FROM MS_1001T_2016 Z
+                      WHERE Z.SALE_YY||Z.SALE_MM = SUBSTR(#{sManuTargetYyMmDd},1 , 6) AND Z.CARLINE_CD = A.CARLINE_CD) AS goalRstfVal
+                    ,NVL(ROUND(((SELECT SUM(Z.SALE_CNT) AS saleCnt FROM MS_1001T_2016 Z
+                      WHERE Z.SALE_YY||Z.SALE_MM = SUBSTR(#{sManuTargetYyMmDd},1 , 6)
+                      AND Z.CARLINE_CD = A.CARLINE_CD)/A.GOAL_PREF_VAL)*100, 2),'0')||'%' AS goalRstRate
+                FROM MS_0102T A
+                <where>
+                DLR_CD = 'D2618' AND PREF_TP = '2'
+                    <if test='sManuTargetYyMmDd != null and sManuTargetYyMmDd != ""'>
+                        AND GOAL_YY||GOAL_MM = #{sManuTargetYyMmDd}
+                    </if>
+                </where>
+                ORDER BY A.CARLINE_CD
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 제조사목표 정보 목록수를 조회한다. -->
+    <select id="selectTargetDcptMgmtManuTargetGridCnt" parameterType="TargetDcptMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtManuTargetGridCnt] */
+        SELECT COUNT(*) AS VALUE FROM MS_0102T
+        <where>
+            DLR_CD = 'D2618' AND PREF_TP = '2'
+            <if test='sManuTargetYyMmDd != null and sManuTargetYyMmDd != ""'>
+                AND GOAL_YY||GOAL_MM = #{sManuTargetYyMmDd}
+            </if>
+        </where>
+    </select>
+
+    <!-- 딜러분해 자료  총 갯수를 조회한다.(당월 총목표 그리드) -->
+    <select id="selectTargetDcptMgmtDealerSaleDcptTotalCnt" parameterType="TargetDcptMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerDcptTotalCnt] */
+        SELECT COUNT(*) AS VALUE FROM MS_0109T
+                WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm}
+    </select>
+
+    <!-- 딜러분해 자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerSaleDcptTotalResult" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerDcptTotalResult] */
+        SELECT
+            DECODE(((SELECT GOAL_PREF_VAL FROM MS_0109T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND DLR_TP = 'I') +
+            (SELECT GOAL_PREF_VAL FROM MS_0109T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND DLR_TP = 'M')),'','0',
+            ((SELECT GOAL_PREF_VAL FROM MS_0109T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND DLR_TP = 'I') +
+            (SELECT GOAL_PREF_VAL FROM MS_0109T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND DLR_TP = 'M'))) AS allDealerGoalPrefVal
+            ,(SELECT GOAL_PREF_VAL FROM MS_0109T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND DLR_TP = 'I') AS idccDealerGoalPrefVal
+            ,(SELECT GOAL_PREF_VAL FROM MS_0109T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND DLR_TP = 'M') AS shopDealerGoalPrefVal
+            ,DECODE((SELECT MAX(PREF_TP) FROM MS_0109T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} GROUP BY GOAL_YY, GOAL_MM), '1', 'T'
+            ,DECODE((SELECT MAX(PREF_TP) FROM MS_0109T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} GROUP BY GOAL_YY, GOAL_MM), '2', 'C', 'T')) AS dealerPrefTp
+            ,(SELECT AVG(IDCC_DEAL_RATE) FROM  MS_1004T_2016 WHERE STD_YY||STD_MM = #{sDealerSaleDcptYyMm}) AS idccDealRate
+            ,(SELECT AVG(SHOP_DEAL_RATE) FROM  MS_1004T_2016 WHERE STD_YY||STD_MM = #{sDealerSaleDcptYyMm}) AS shopDealRate
+             FROM DUAL
+
+    </select>
+
+    <!-- 딜러분해 자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerSaleDcptTotalBasic" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerSaleDcptTotalBasic] */
+        SELECT
+             '0' AS allDealerGoalPrefVal
+            ,'0' AS idccDealerGoalPrefVal
+            ,'0' AS shopDealerGoalPrefVal
+            ,'0' AS secondDealerGoalPrefVal
+            ,'0' AS etcDealerGoalPrefVal
+            ,'T' AS dealerPrefTp
+        FROM DUAL
+    </select>
+
+    <!-- 딜러분해 자료  총 갯수를 조회한다.(차종별 목표 그리드) -->
+    <select id="selectTargetDcptMgmtDealerSaleDcptCarCnt" parameterType="TargetDcptMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerSaleDcptCarCnt] */
+        SELECT COUNT(*) AS VALUE FROM MS_0104T
+                WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm}
+                AND   GOAL_TP = 'S'
+    </select>
+
+    <!-- 딜러분해 자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerSaleDcptCarResult" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerSaleDcptCarResult] */
+            SELECT
+                NVL((SELECT GOAL_PREF_VAL FROM MS_0109T
+                 WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND DLR_TP = 'I'), '0') AS idccDealerGoalPrefVal
+                ,NVL(SUM(C.dealerGoalPrefVal),'0') AS idccDealerGoalSumVal
+                ,(NVL((SELECT GOAL_PREF_VAL FROM MS_0109T
+                 WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND DLR_TP = 'I'), '0') - NVL(SUM(C.dealerGoalPrefVal),'0')) AS idccDealerGoalGapVal
+                ,NVL(MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 1, C.dealerGoalPrefVal))), '0') AS carNo1
+                ,NVL(MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 2, C.dealerGoalPrefVal))), '0') AS carNo2
+                ,NVL(MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 3, C.dealerGoalPrefVal))), '0') AS carNo3
+                ,NVL(MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 4, C.dealerGoalPrefVal))), '0') AS carNo4
+                ,NVL(MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 5, C.dealerGoalPrefVal))), '0') AS carNo5
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 6, C.dealerGoalPrefVal))) AS carNo6
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 7, C.dealerGoalPrefVal))) AS carNo7
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 8, C.dealerGoalPrefVal))) AS carNo8
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 9, C.dealerGoalPrefVal))) AS carNo9
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 10, C.dealerGoalPrefVal))) AS carNo10
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 11, C.dealerGoalPrefVal))) AS carNo11
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 12, C.dealerGoalPrefVal))) AS carNo12
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 13, C.dealerGoalPrefVal))) AS carNo13
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 14, C.dealerGoalPrefVal))) AS carNo14
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 15, C.dealerGoalPrefVal))) AS carNo15
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 16, C.dealerGoalPrefVal))) AS carNo16
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 17, C.dealerGoalPrefVal))) AS carNo17
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 18, C.dealerGoalPrefVal))) AS carNo18
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 19, C.dealerGoalPrefVal))) AS carNo19
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 20, C.dealerGoalPrefVal))) AS carNo20
+                ,MIN(DECODE(C.dealerDlrTp, 'I',DECODE(C.RN, 21, C.dealerGoalPrefVal))) AS carNo21
+                FROM
+                (SELECT
+                    ROW_NUMBER() OVER(PARTITION BY A.DLR_TP ORDER BY A.DLR_TP, A.CARLINE_CD) AS RN
+                    ,A.GOAL_YY          AS dealerGoalYy
+                    ,A.GOAL_MM          AS dealerGoalMm
+                    ,A.SDPT_CD          AS dealerSdptCd
+                    ,A.OFFICE_CD        AS dealerOfficeCd
+                    ,A.DLR_CD           AS dealerDlrCd
+                    ,A.DLR_TP           AS dealerDlrTp
+                    ,A.GOAL_TP          AS dealerGoalTp
+                    ,A.CARLINE_CD        AS dealerCarlineCd
+                    ,B.CARLINE_NM       AS dealerCarlineNm
+                    ,A.GOAL_PREF_VAL    AS dealerGoalPrefVal
+                FROM MS_0104T A, SA_0101T B
+                WHERE A.CARLINE_CD = B.CARLINE_CD
+                AND   A.GOAL_YY||A.GOAL_MM = #{sDealerSaleDcptYyMm}
+                AND   A.GOAL_TP = 'S'
+                AND   A.DLR_TP = 'I'
+                ORDER BY A.CARLINE_CD
+                ) C
+                GROUP BY C.dealerDlrTp
+    </select>
+
+    <!-- 딜러분해 자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerSaleDcptShopResult" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerSaleDcptShopResult] */
+            SELECT
+                NVL((SELECT GOAL_PREF_VAL FROM MS_0109T
+                 WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND DLR_TP = 'M'), '0') AS shopDealerGoalPrefVal
+                ,NVL(SUM(C.dealerGoalPrefVal),'0') AS shopDealerGoalSumVal
+                ,(NVL((SELECT GOAL_PREF_VAL FROM MS_0109T
+                 WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND DLR_TP = 'M'), '0') - NVL(SUM(C.dealerGoalPrefVal),'0')) AS shopDealerGoalGapVal
+                ,NVL(MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 1, C.dealerGoalPrefVal))), '0') AS carNo22
+                ,NVL(MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 2, C.dealerGoalPrefVal))), '0') AS carNo23
+                ,NVL(MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 3, C.dealerGoalPrefVal))), '0') AS carNo24
+                ,NVL(MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 4, C.dealerGoalPrefVal))), '0') AS carNo25
+                ,NVL(MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 5, C.dealerGoalPrefVal))), '0') AS carNo26
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 6, C.dealerGoalPrefVal))) AS carNo27
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 7, C.dealerGoalPrefVal))) AS carNo28
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 8, C.dealerGoalPrefVal))) AS carNo29
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 9, C.dealerGoalPrefVal))) AS carNo30
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 10, C.dealerGoalPrefVal))) AS carNo31
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 11, C.dealerGoalPrefVal))) AS carNo32
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 12, C.dealerGoalPrefVal))) AS carNo33
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 13, C.dealerGoalPrefVal))) AS carNo34
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 14, C.dealerGoalPrefVal))) AS carNo35
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 15, C.dealerGoalPrefVal))) AS carNo36
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 16, C.dealerGoalPrefVal))) AS carNo37
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 17, C.dealerGoalPrefVal))) AS carNo38
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 18, C.dealerGoalPrefVal))) AS carNo39
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 19, C.dealerGoalPrefVal))) AS carNo40
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 20, C.dealerGoalPrefVal))) AS carNo41
+                ,MIN(DECODE(C.dealerDlrTp, 'M',DECODE(C.RN, 21, C.dealerGoalPrefVal))) AS carNo42
+                FROM
+                (SELECT
+                    ROW_NUMBER() OVER(PARTITION BY A.DLR_TP ORDER BY A.DLR_TP, A.CARLINE_CD) AS RN
+                    ,A.GOAL_YY          AS dealerGoalYy
+                    ,A.GOAL_MM          AS dealerGoalMm
+                    ,A.SDPT_CD          AS dealerSdptCd
+                    ,A.OFFICE_CD        AS dealerOfficeCd
+                    ,A.DLR_CD           AS dealerDlrCd
+                    ,A.DLR_TP           AS dealerDlrTp
+                    ,A.GOAL_TP          AS dealerGoalTp
+                    ,A.CARLINE_CD        AS dealerCarlineCd
+                    ,B.CARLINE_NM       AS dealerCarlineNm
+                    ,A.GOAL_PREF_VAL    AS dealerGoalPrefVal
+                FROM MS_0104T A, SA_0101T B
+                WHERE A.CARLINE_CD = B.CARLINE_CD
+                AND   A.GOAL_YY||A.GOAL_MM = #{sDealerSaleDcptYyMm}
+                AND   A.GOAL_TP = 'S'
+                AND   A.DLR_TP = 'M'
+                ORDER BY A.CARLINE_CD
+                ) C
+                GROUP BY C.dealerDlrTp
+    </select>
+
+    <!-- 딜러분해 자료-헤더 조회 목록  -->
+    <select id="selectTargetDcptMgmtDealerDcptCarHeadersByCondition" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtBaseVO">
+    /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerDcptCarHeadersByCondition] */
+        SELECT CARLINE_CD AS dealerCarlineCd
+          FROM SA_0101T
+          GROUP BY CARLINE_CD
+          ORDER BY CARLINE_CD
+    </select>
+
+    <!-- 딜러분해 자료 갯수 조회 -->
+    <select id="selectTargetDcptMgmtDealerDcptCarViewByConditionCnt" parameterType="TargetDcptMgmtSearchVO" resultType="int">
+    /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerDcptCarViewByConditionCnt] */
+     SELECT
+             COUNT(*)
+        FROM MS_0104T A, SA_0101T B
+        WHERE A.CARLINE_CD = B.CARLINE_CD
+        AND   A.GOAL_YY||A.GOAL_MM = #{sDealerSaleDcptYyMm}
+        AND   A.GOAL_TP = 'S'
+        ORDER BY A.CARLINE_CD
+    </select>
+
+    <!-- 딜러분해 자료 목표자료를 등록한다. -->
+    <insert id="insertTargetDcptMgmtDealerSaleDcptTotalResult" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.insertTargetDcptMgmtDealerSaleDcptTotalResult] */
+        INSERT INTO MS_0109T
+        SELECT
+               SUBSTR(#{sDealerSaleDcptYyMm}, 1, 4)
+              ,SUBSTR(#{sDealerSaleDcptYyMm}, 5, 2)
+              ,'S04'
+              ,'HB'
+              ,'D2618'
+              ,'I'
+              ,'0'
+              ,'1'
+              ,#{dealerRegUsrId}
+              ,SYSDATE
+              ,#{dealerRegUsrId}
+              ,SYSDATE
+              FROM DUAL
+              UNION ALL
+        SELECT
+               SUBSTR(#{sDealerSaleDcptYyMm}, 1, 4)
+              ,SUBSTR(#{sDealerSaleDcptYyMm}, 5, 2)
+              ,'S04'
+              ,'HB'
+              ,'D2618'
+              ,'M'
+              ,'0'
+              ,'1'
+              ,#{dealerRegUsrId}
+              ,SYSDATE
+              ,#{dealerRegUsrId}
+              ,SYSDATE
+              FROM DUAL
+    </insert>
+
+    <!-- 딜러분해 자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerDcptCarViewByCondition" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtBaseVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerDcptCarViewByCondition] */
+            SELECT
+                 A.GOAL_YY          AS dealerGoalYy
+                ,A.GOAL_MM          AS dealerGoalMm
+                ,A.SDPT_CD          AS dealerSdptCd
+                ,A.OFFICE_CD        AS dealerOfficeCd
+                ,A.DLR_CD           AS dealerDlrCd
+                ,DECODE(A.DLR_TP, 'I', 'IDCC', 'SHOP') AS dealerDlrTp
+                ,A.GOAL_TP          AS dealerGoalTp
+                ,A.CARLINE_CD       AS dealerCarlineCd
+                ,B.CARLINE_NM       AS dealerCarlineNm
+                ,A.GOAL_PREF_VAL    AS dealerGoalPrefVal
+            FROM MS_0104T A, SA_0101T B
+            WHERE A.CARLINE_CD = B.CARLINE_CD
+            AND   A.GOAL_YY||A.GOAL_MM = #{sDealerSaleDcptYyMm}
+            AND   A.GOAL_TP = 'S'
+            ORDER BY A.CARLINE_CD
+    </select>
+
+    <!-- 딜러분해 차종별 목표자료를 등록한다. -->
+    <insert id="insertTargetDcptMgmtDealerSaleDcptCarResult" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.insertTargetDcptMgmtDealerSaleDcptCarResult] */
+        INSERT INTO MS_0104T
+        SELECT
+               SUBSTR(#{sDealerSaleDcptYyMm},1,4)
+              ,SUBSTR(#{sDealerSaleDcptYyMm},5,2)
+              ,'S04'
+              ,'HB'
+              ,'D2618'
+              ,'I'
+              ,'S'
+              ,CARLINE_CD
+              ,'0'
+              ,'1'
+              ,'N'
+              ,#{dealerRegUsrId}
+              ,SYSDATE
+              ,#{dealerRegUsrId}
+              ,SYSDATE
+              FROM SA_0101T
+              UNION ALL
+        SELECT
+               SUBSTR(#{sDealerSaleDcptYyMm},1,4)
+              ,SUBSTR(#{sDealerSaleDcptYyMm},5,2)
+              ,'S04'
+              ,'HB'
+              ,'D2618'
+              ,'M'
+              ,'S'
+              ,CARLINE_CD
+              ,'0'
+              ,'1'
+              ,'N'
+              ,#{dealerRegUsrId}
+              ,SYSDATE
+              ,#{dealerRegUsrId}
+              ,SYSDATE
+              FROM SA_0101T
+    </insert>
+
+    <!-- 딜러분해 자료  총 갯수를 조회한다.(집객 목표 그리드) -->
+    <select id="selectTargetDcptMgmtDealerDcptCustCnt" parameterType="TargetDcptMgmtSearchVO" resultType="int">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerDcptCustCnt] */
+        SELECT COUNT(*) AS VALUE FROM MS_0104T
+                WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm}
+                AND   GOAL_TP = 'C'
+    </select>
+
+    <!-- 딜러분해 집객 자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerDcptCustResult" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerDcptCustResult] */
+
+        SELECT
+            NVL(((ROUND((SELECT SUM(GOAL_PREF_VAL) FROM MS_0104T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND GOAL_TP = 'C' AND DLR_TP = 'I') /
+            (((SELECT AVG(IDCC_DEAL_RATE) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = #{sDealerSaleDcptYyMm})
+            - (SELECT AVG(IDCC_UDR_CUST_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = #{sDealerSaleDcptYyMm})) * 100), 2)) -
+            (ROUND((SELECT SUM(GOAL_PREF_VAL) FROM MS_0104T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND GOAL_TP = 'C' AND DLR_TP = 'M') /
+            (((SELECT AVG(SHOP_DEAL_RATE) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = #{sDealerSaleDcptYyMm})
+            - (SELECT AVG(SHOP_UDR_CUST_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = #{sDealerSaleDcptYyMm})) * 100), 2))), '0') AS allCustDealerOpinionvalue,
+            NVL(ROUND((SELECT SUM(GOAL_PREF_VAL) FROM MS_0104T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND GOAL_TP = 'C' AND DLR_TP = 'I') /
+            (((SELECT AVG(IDCC_DEAL_RATE) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = #{sDealerSaleDcptYyMm})
+            - (SELECT AVG(IDCC_UDR_CUST_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = #{sDealerSaleDcptYyMm})) * 100), 2), '0') AS idccCustDealerOpinionvalue,
+            NVL(ROUND((SELECT SUM(GOAL_PREF_VAL) FROM MS_0104T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND GOAL_TP = 'C' AND DLR_TP = 'M') /
+            (((SELECT AVG(SHOP_DEAL_RATE) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = #{sDealerSaleDcptYyMm})
+            - (SELECT AVG(SHOP_UDR_CUST_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = #{sDealerSaleDcptYyMm})) * 100), 2), '0') AS shopCustDealerOpinionvalue,
+             NVL(((SELECT GOAL_PREF_VAL FROM MS_0104T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND GOAL_TP = 'C' AND DLR_TP = 'I' AND CARLINE_CD = 'ZZ')+
+            (SELECT GOAL_PREF_VAL FROM MS_0104T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND GOAL_TP = 'C' AND DLR_TP = 'M' AND CARLINE_CD = 'ZZ')), '0') AS allCustDealerGoalPrefVal,
+            NVL((SELECT GOAL_PREF_VAL FROM MS_0104T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND GOAL_TP = 'C' AND DLR_TP = 'I' AND CARLINE_CD = 'ZZ'), '0') AS idccCustDealerGoalPrefVal,
+             NVL((SELECT GOAL_PREF_VAL FROM MS_0104T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleDcptYyMm} AND GOAL_TP = 'C' AND DLR_TP = 'M' AND CARLINE_CD = 'ZZ'), '0') AS shopCustDealerGoalPrefVal,
+            NVL((SELECT AVG(IDCC_DEAL_RATE) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = #{sDealerSaleDcptYyMm}), '0') AS idccDealRate,
+            NVL((SELECT AVG(SHOP_DEAL_RATE) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = #{sDealerSaleDcptYyMm}), '0') AS shopDealRate
+             FROM DUAL
+
+    </select>
+
+    <!-- 딜러분해 집객 목표자료를 등록한다. -->
+    <insert id="insertTargetDcptMgmtDealerDcptCustResult" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.insertTargetDcptMgmtDealerDcptCustResult] */
+        INSERT INTO MS_0104T
+        SELECT
+               SUBSTR(#{sDealerSaleDcptYyMm}, 1, 4)
+              ,SUBSTR(#{sDealerSaleDcptYyMm}, 5, 2)
+              ,'S04'
+              ,'HB'
+              ,'D2618'
+              ,'I'
+              ,'C'
+              ,'ZZ'
+              ,'0'
+              ,'1'
+              ,'N'
+              ,#{dealerRegUsrId}
+              ,SYSDATE
+              ,#{dealerRegUsrId}
+              ,SYSDATE
+              FROM DUAL
+              UNION ALL
+        SELECT
+               SUBSTR(#{sDealerSaleDcptYyMm}, 1, 4)
+              ,SUBSTR(#{sDealerSaleDcptYyMm}, 5, 2)
+              ,'S04'
+              ,'HB'
+              ,'D2618'
+              ,'M'
+              ,'C'
+              ,'ZZ'
+              ,'0'
+              ,'1'
+              ,'N'
+              ,#{dealerRegUsrId}
+              ,SYSDATE
+              ,#{dealerRegUsrId}
+              ,SYSDATE
+              FROM DUAL
+    </insert>
+
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptCar" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptCar] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{dealerGoalPrefVal}
+            , UPDT_USR_ID = #{dealerUpdtUsrId}
+            , UPDT_DT = SYSDATE
+        WHERE GOAL_YY = #{dealerGoalYy}
+        AND   GOAL_MM = #{dealerGoalMm}
+        AND   DLR_CD = #{dealerDlrCd}
+        AND   DLR_TP = DECODE(#{dealerDlrTp}, 'IDCC' , 'I', 'M')
+        AND   GOAL_TP = 'S'
+        AND   CARLINE_CD  = #{dealerCarlineCd}
+    </update>
+
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptCust" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptCust] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{custDealerGoalPrefVal}
+            , UPDT_USR_ID = #{custDealerUpdtUsrId}
+            , UPDT_DT = SYSDATE
+        WHERE GOAL_YY = #{custDealerGoalYy}
+        AND   GOAL_MM = #{custDealerGoalMm}
+        AND   DLR_CD = #{custDealerDlrCd}
+        AND   DLR_TP = DECODE(#{custDealerDlrTp}, 'IDCC' , 'I', 'M')
+        AND   GOAL_TP = 'C'
+    </update>
+
+    <!-- 딜러분해 판매고문별 목표자료 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerDcptSaleManAllData" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        SELECT
+        NVL((SELECT SUM(GOAL_PREF_VAL) FROM MS_0109T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleManDcptYyMm}), '0') AS allMonthTargetVal
+        ,NVL((SELECT DECODE(SUM(GOAL_PREF_VAL), '', '0',  SUM(GOAL_PREF_VAL)) FROM MS_0109T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleManDcptYyMm} AND DLR_TP = 'I' AND PREF_TP = '2'), '0') AS idccMonthTargetVal
+        ,NVL((SELECT DECODE(SUM(GOAL_PREF_VAL), '', '0',  SUM(GOAL_PREF_VAL)) FROM MS_0109T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleManDcptYyMm} AND DLR_TP = 'M'  AND PREF_TP = '2'), '0') AS shopMonthTargetVal
+        ,NVL(ROUND((SELECT DECODE(AVG(IDCC_DLR_CNT + SHOP_DLR_CNT), '', '0',  AVG(IDCC_DLR_CNT + SHOP_DLR_CNT)) FROM MS_1002T_2016 WHERE SALE_YY||SALE_MM = #{sDealerSaleManDcptYyMm}),2), '0') AS allSalemanCnt
+        ,DECODE((SELECT MAX(PREF_TP) FROM MS_0109T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleManDcptYyMm} GROUP BY GOAL_YY, GOAL_MM), '1', 'T'
+        ,DECODE((SELECT MAX(PREF_TP) FROM MS_0109T WHERE GOAL_YY||GOAL_MM = #{sDealerSaleManDcptYyMm} GROUP BY GOAL_YY, GOAL_MM), '2', 'C', '')) AS prefTp
+        FROM DUAL
+    </select>
+
+    <!-- 딜러분해 판매고문별 목표자료 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerDcptSaleManAllStatus" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        SELECT   NVL(SUM(C.dealerGoalPrefVal),'0') AS allDealerGoalSumVal
+                ,NVL(MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 1, C.dealerGoalPrefVal))), '0') AS carNo1
+                ,NVL(MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 2, C.dealerGoalPrefVal))), '0') AS carNo2
+                ,NVL(MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 3, C.dealerGoalPrefVal))), '0') AS carNo3
+                ,NVL(MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 4, C.dealerGoalPrefVal))), '0') AS carNo4
+                ,NVL(MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 5, C.dealerGoalPrefVal))), '0') AS carNo5
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 6, C.dealerGoalPrefVal))) AS carNo6
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 7, C.dealerGoalPrefVal))) AS carNo7
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 8, C.dealerGoalPrefVal))) AS carNo8
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 9, C.dealerGoalPrefVal))) AS carNo9
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 10, C.dealerGoalPrefVal))) AS carNo10
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 11, C.dealerGoalPrefVal))) AS carNo11
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 12, C.dealerGoalPrefVal))) AS carNo12
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 13, C.dealerGoalPrefVal))) AS carNo13
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 14, C.dealerGoalPrefVal))) AS carNo14
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 15, C.dealerGoalPrefVal))) AS carNo15
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 16, C.dealerGoalPrefVal))) AS carNo16
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 17, C.dealerGoalPrefVal))) AS carNo17
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 18, C.dealerGoalPrefVal))) AS carNo18
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 19, C.dealerGoalPrefVal))) AS carNo19
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 20, C.dealerGoalPrefVal))) AS carNo20
+                ,MIN(DECODE(C.dealerGoalTp, 'S',DECODE(C.RN, 21, C.dealerGoalPrefVal))) AS carNo21
+                FROM (
+                    SELECT
+                        ROW_NUMBER() OVER(PARTITION BY A.GOAL_TP ORDER BY A.GOAL_TP, A.CARLINE_CD) AS RN
+                        ,A.GOAL_TP          AS dealerGoalTp
+                        ,A.CARLINE_CD        AS dealerCarlineCd
+                        ,SUM(A.GOAL_PREF_VAL)    AS dealerGoalPrefVal
+                    FROM MS_0104T A, SA_0101T B
+                    WHERE A.CARLINE_CD = B.CARLINE_CD
+                    AND   A.GOAL_YY||A.GOAL_MM = #{sDealerSaleManDcptYyMm}
+                    AND   A.GOAL_TP = 'S'
+                    GROUP BY A.GOAL_TP, A.CARLINE_CD
+                    ORDER BY A.CARLINE_CD ) C
+    </select>
+
+    <!-- 딜러분해 판매고문별 목표자료를 조회한다. -->
+    <select id="selectSalesmanDcptRegByKey" parameterType="map" resultType="TargetDcptMgmtSalemanVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectSalesmanDcptRegByKey] */
+        SELECT * FROM MS_0105T
+        WHERE GOAL_YY||GOAL_MM = #{sDealerSaleManDcptYyMm}
+            AND EMP_NO = #{empNo}
+            AND CARLINE_CD = #{carlineCd}
+    </select>
+
+    <!-- 딜러분해 판매고문별 목표자료를 등록한다. -->
+    <insert id="insertSalesmanDcptReg" parameterType="TargetDcptMgmtSalemanVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.insertSalesmanDcptReg] */
+        INSERT INTO MS_0105T(
+              GOAL_YY
+                ,GOAL_MM
+                ,SDPT_CD
+                ,OFFICE_CD
+                ,DLR_CD
+                ,EMP_NO
+                ,DLR_TP
+                ,GOAL_TP
+                ,CARLINE_CD
+                ,GOAL_PREF_VAL
+                ,PREF_TP
+                ,DEL_YN
+                ,REG_USR_ID
+                ,REG_DT
+                ,UPDT_USR_ID
+                ,UPDT_DT
+        )VALUES(
+              SUBSTR(#{sDealerSaleManDcptYyMm}, 1, 4)
+            , SUBSTR(#{sDealerSaleManDcptYyMm}, 5, 2)
+            , (SELECT DISTINCT SDPT_CD FROM CM_0101T WHERE DLR_CD = 'D2618')
+            , (SELECT DISTINCT DIST_OFFICE_CD FROM CM_0101T WHERE DLR_CD = 'D2618')
+            , #{carlineCd}
+            , #{empNo}
+            ,'S'
+            ,'Z'
+            , #{carlineCd}
+            , #{goalPrefVal}
+            , '1'
+            , 'N'
+            , #{regUsrId}
+            , SYSDATE
+            , #{regUsrId}
+            , SYSDATE
+        )
+    </insert>
+
+    <!-- 딜러분해 판매고문별 목표자료를 수정한다. -->
+    <update id="updateSalesmanDcptReg" parameterType="TargetDcptMgmtSalemanVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateSalesmanDcptReg] */
+        UPDATE MS_0105T SET
+              GOAL_PREF_VAL = #{goalPrefVal}
+            , UPDT_USR_ID = #{updtUsrId}
+            , UPDT_DT = SYSDATE
+        WHERE GOAL_YY||GOAL_MM = #{sDealerSaleManDcptYyMm}
+            AND EMP_NO = #{empNo}
+            AND CARLINE_CD = #{carlineCd}
+    </update>
+
+    <!-- 딜러분해 판매고문별 목표자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerSalemanDcpt" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        SELECT   (SELECT DISTINCT USR_NM FROM CM_0801T WHERE EMP_NO = C.empNo) AS empNm
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 1, C.goalPrefVal))), '0') AS carNo1
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 2, C.goalPrefVal))), '0') AS carNo2
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 3, C.goalPrefVal))), '0') AS carNo3
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 4, C.goalPrefVal))), '0') AS carNo4
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 5, C.goalPrefVal))), '0') AS carNo5
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 6, C.goalPrefVal))), '0') AS carNo6
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 7, C.goalPrefVal))), '0') AS carNo7
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 8, C.goalPrefVal))), '0') AS carNo8
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 9, C.goalPrefVal))), '0') AS carNo9
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 10, C.goalPrefVal))), '0') AS carNo10
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 11, C.goalPrefVal))), '0') AS carNo11
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 12, C.goalPrefVal))), '0') AS carNo12
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 13, C.goalPrefVal))), '0') AS carNo13
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 14, C.goalPrefVal))), '0') AS carNo14
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 15, C.goalPrefVal))), '0') AS carNo15
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 16, C.goalPrefVal))), '0') AS carNo16
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 17, C.goalPrefVal))), '0') AS carNo17
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 18, C.goalPrefVal))), '0') AS carNo18
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 19, C.goalPrefVal))), '0') AS carNo19
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 20, C.goalPrefVal))), '0') AS carNo20
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 21, C.goalPrefVal))), '0') AS carNo21
+                        ,(SELECT SUM(GOAL_PREF_VAL) FROM MS_0105T WHERE EMP_NO = C.empNo AND GOAL_YY||GOAL_MM = #{sDealerSaleManDcptYyMm}) AS sumSalemanCnt
+                        FROM (
+            SELECT
+            ROW_NUMBER() OVER(PARTITION BY A.EMP_NO ORDER BY A.EMP_NO, A.CARLINE_CD) AS RN
+            , A.EMP_NO AS empNo
+            , A.DLR_TP AS dlrTp
+            , A.CARLINE_CD AS carlineCd
+            , A.GOAL_PREF_VAL AS goalPrefVal
+            FROM MS_0105T A
+            WHERE GOAL_YY||GOAL_MM = #{sDealerSaleManDcptYyMm}) C
+            GROUP BY C.empNo
+            ORDER BY C.empNo
+    </select>
+
+    <!-- 딜러분해 판매고문별 목표자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerDcptSaleManProStatus" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        SELECT
+             NVL(SUM(X.carNo1), '0') AS carPro1
+            ,NVL(SUM(X.carNo2), '0') AS carPro2
+            ,NVL(SUM(X.carNo3), '0') AS carPro3
+            ,NVL(SUM(X.carNo4), '0') AS carPro4
+            ,NVL(SUM(X.carNo5), '0') AS carPro5
+            ,NVL(SUM(X.carNo6), '0') AS carPro6
+            ,NVL(SUM(X.carNo7), '0') AS carPro7
+            ,NVL(SUM(X.carNo8), '0') AS carPro8
+            ,NVL(SUM(X.carNo9), '0') AS carPro9
+            ,NVL(SUM(X.carNo10), '0') AS carPro10
+            ,NVL(SUM(X.carNo11), '0') AS carPro11
+            ,NVL(SUM(X.carNo12), '0') AS carPro12
+            ,NVL(SUM(X.carNo13), '0') AS carPro13
+            ,NVL(SUM(X.carNo14), '0') AS carPro14
+            ,NVL(SUM(X.carNo15), '0') AS carPro15
+            ,NVL(SUM(X.carNo16), '0') AS carPro16
+            ,NVL(SUM(X.carNo17), '0') AS carPro17
+            ,NVL(SUM(X.carNo18), '0') AS carPro18
+            ,NVL(SUM(X.carNo19), '0') AS carPro19
+            ,NVL(SUM(X.carNo20), '0') AS carPro20
+            ,NVL(SUM(X.carNo21), '0') AS carPro21
+            ,NVL(SUM(X.sumGoalPrefVal), '0') AS sumToalVal
+            FROM (
+                SELECT   NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 1, C.goalPrefVal))), '0') AS carNo1
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 2, C.goalPrefVal))), '0') AS carNo2
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 3, C.goalPrefVal))), '0') AS carNo3
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 4, C.goalPrefVal))), '0') AS carNo4
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 5, C.goalPrefVal))), '0') AS carNo5
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 6, C.goalPrefVal))), '0') AS carNo6
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 7, C.goalPrefVal))), '0') AS carNo7
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 8, C.goalPrefVal))), '0') AS carNo8
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 9, C.goalPrefVal))), '0') AS carNo9
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 10, C.goalPrefVal))), '0') AS carNo10
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 11, C.goalPrefVal))), '0') AS carNo11
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 12, C.goalPrefVal))), '0') AS carNo12
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 13, C.goalPrefVal))), '0') AS carNo13
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 14, C.goalPrefVal))), '0') AS carNo14
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 15, C.goalPrefVal))), '0') AS carNo15
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 16, C.goalPrefVal))), '0') AS carNo16
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 17, C.goalPrefVal))), '0') AS carNo17
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 18, C.goalPrefVal))), '0') AS carNo18
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 19, C.goalPrefVal))), '0') AS carNo19
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 20, C.goalPrefVal))), '0') AS carNo20
+                        ,NVL(MIN(DECODE(C.dlrTp, 'S',DECODE(C.RN, 21, C.goalPrefVal))), '0') AS carNo21
+                        ,(SELECT SUM(GOAL_PREF_VAL) FROM MS_0105T WHERE EMP_NO = 'D0012015' AND GOAL_YY||GOAL_MM = #{sDealerSaleManDcptYyMm}) AS sumGoalPrefVal
+                        FROM (
+            SELECT
+            ROW_NUMBER() OVER(PARTITION BY A.EMP_NO ORDER BY A.EMP_NO, A.CARLINE_CD) AS RN
+            , A.EMP_NO AS empNo
+            , A.DLR_TP AS dlrTp
+            , A.CARLINE_CD AS carlineCd
+            , A.GOAL_PREF_VAL AS goalPrefVal
+            FROM MS_0105T A
+            WHERE GOAL_YY||GOAL_MM = #{sDealerSaleManDcptYyMm}) C
+            GROUP BY C.empNo
+            ORDER BY C.empNo ) X
+    </select>
+
+    <!-- 딜러분해 판매고문별 목표자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerSalemanDcptCnt" parameterType="TargetDcptMgmtSearchVO" resultType="int">
+            SELECT
+            COUNT(*) AS VALUE
+            FROM MS_0105T A
+            WHERE GOAL_YY||GOAL_MM = #{sDealerSaleManDcptYyMm}
+    </select>
+
+    <!-- 과정관리 자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtProcessMgmtSale" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtProcessSale] */
+
+
+
+
+
+    </select>
+
+    <!-- 과정관리 집객진도 자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtProcessCust" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtProcessCust] */
+        SELECT
+         IDCC_DEAL_CNT AS idccCustDealCnt
+        ,IDCC_DEAL_RATE AS idccCustDealRate
+        ,NVL(((SELECT
+          ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(TRUNC(LAST_DAY('20160825')), 'DD'), 2)
+          FROM MS_0104T
+          WHERE DLR_CD = 'D2618'
+          AND DLR_TP = 'I'
+          AND GOAL_TP = 'C'
+          AND GOAL_YY = '2016'
+          AND GOAL_MM = '08') - IDCC_DEAL_CNT) ,'0') AS idccCustTargetGapVal
+        ,NVL((SELECT
+          ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(TRUNC(LAST_DAY('20160825')), 'DD'), 2)
+          FROM MS_0104T
+          WHERE DLR_CD = 'D2618'
+          AND DLR_TP = 'I'
+          AND GOAL_TP = 'C'
+          AND GOAL_YY = '2016'
+          AND GOAL_MM = '08') ,'0') AS idccCustTargetDayVal
+        ,NVL((SELECT
+          ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(TRUNC(LAST_DAY('20160825')), 'DD'), 2)
+          FROM MS_0104T
+          WHERE DLR_CD = 'D2618'
+          AND DLR_TP = 'I'
+          AND GOAL_TP = 'C'
+          AND GOAL_YY = '2016'
+          AND GOAL_MM = '08') ,'0') AS idccCustTargetLastMonthVal
+        ,NVL((SELECT
+          ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(TRUNC(LAST_DAY('20160825')), 'DD'), 2)
+          FROM MS_0104T
+          WHERE DLR_CD = 'D2618'
+          AND DLR_TP = 'I'
+          AND GOAL_TP = 'C'
+          AND GOAL_YY = '2016'
+          AND GOAL_MM = '08') ,'0') AS idccCustTargetLastYearVal
+        ,SHOP_DEAL_CNT AS shopCustDealCnt
+        ,SHOP_DEAL_RATE AS shopCustDealRate
+        ,NVL(((SELECT
+          ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(TRUNC(LAST_DAY('20160825')), 'DD'), 2)
+          FROM MS_0104T
+          WHERE DLR_CD = 'D2618'
+          AND DLR_TP = 'M'
+          AND GOAL_TP = 'C'
+          AND GOAL_YY = '2016'
+          AND GOAL_MM = '08') - IDCC_DEAL_CNT) ,'0') AS shopCustTargetGapVal
+        ,NVL((SELECT
+          ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(TRUNC(LAST_DAY('20160825')), 'DD'), 2)
+          FROM MS_0104T
+          WHERE DLR_CD = 'D2618'
+          AND DLR_TP = 'M'
+          AND GOAL_TP = 'C'
+          AND GOAL_YY = '2016'
+          AND GOAL_MM = '08') ,'0') AS shopCustTargetDayVal
+        ,NVL((SELECT
+          ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(TRUNC(LAST_DAY('20160825')), 'DD'), 2)
+          FROM MS_0104T
+          WHERE DLR_CD = 'D2618'
+          AND DLR_TP = 'M'
+          AND GOAL_TP = 'C'
+          AND GOAL_YY = '2016'
+          AND GOAL_MM = '08') ,'0') AS shopCustTargetLastMonthVal
+        ,NVL((SELECT
+          ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(TRUNC(LAST_DAY('20160825')), 'DD'), 2)
+          FROM MS_0104T
+          WHERE DLR_CD = 'D2618'
+          AND DLR_TP = 'M'
+          AND GOAL_TP = 'C'
+          AND GOAL_YY = '2016'
+          AND GOAL_MM = '08') ,'0') AS shopCustTargetLastYearVal
+        FROM MS_1004T_2016
+        WHERE STD_YY = '2016'
+        AND STD_MM = '08'
+        AND STD_DD = '22'
+    </select>
+
+    <!-- 과정관리 자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtKpi" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        SELECT
+             NVL(ROUND(MAX(TT.kpiIdccTargetCustGoalPrefVal),2), '0') AS kpiIdccTargetCustGoalPrefVal
+            ,NVL(ROUND(MAX(TT.kpiIdccCustVsitCnt),2), '0') AS kpiIdccCustVsitCnt
+            ,NVL(ROUND(MAX(TT.kpiIdccCustReqRate),2), '0') AS kpiIdccCustReqRate
+            ,NVL(ROUND(MAX(TT.kpiIdccDealCnt),2), '0') AS kpiIdccDealCnt
+            ,NVL(ROUND(MAX(TT.kpiShopTargetCustGoalPrefVal),2), '0') AS kpiShopTargetCustGoalPrefVal
+            ,NVL(ROUND(MAX(TT.kpiShopTargetCustVsitCnt),2), '0') AS kpiShopTargetCustVsitCnt
+            ,NVL(ROUND(MAX(TT.kpiShopPrsnInfoCollcRate),2), '0') AS kpiShopPrsnInfoCollcRate
+            ,NVL(ROUND(MAX(TT.kpiShopDealCnt),2), '0') AS kpiShopDealCnt
+            ,NVL(ROUND(MAX((TT.kpiIdccCustReqRate/TT.kpiIdccCustVsitCnt)),2), '0') AS kpiIdccCustVsitRate
+            ,NVL(ROUND(MAX((TT.kpiIdccDealCnt/TT.kpiIdccCustReqRate)),2), '0') AS kpiIdccVsitDealCnt
+            ,NVL(ROUND(MAX((TT.kpiIdccDealCnt/TT.kpiIdccCustVsitCnt)),2), '0') AS kpiIdccVsitDealRate
+            ,NVL(ROUND(MAX((TT.kpiShopPrsnInfoCollcRate/TT.kpiShopTargetCustVsitCnt)),2), '0') AS kpiShopVsitPrsnInfoCollcRate
+            ,NVL(ROUND(MAX((TT.kpiShopDealCnt/TT.kpiShopPrsnInfoCollcRate)),2), '0') AS kpiShopVsitSuccessRate
+            ,NVL(ROUND(MAX(((TT.kpiIdccCustVsitCnt + TT.kpiShopTargetCustVsitCnt)/(TT.kpiIdccTargetCustGoalPrefVal+TT.kpiShopTargetCustGoalPrefVal))),2), '0') AS kpiShopCustTargetAchieve
+            ,NVL(ROUND((AVG(TT.kpiIdccDealCnt + TT.kpiShopDealCnt)),2), '0') AS kpiTotalDealRate
+            ,NVL(ROUND(MAX((TT.kpiIdcc3MCustReqRate/TT.kpiIdcc3MCustVsitCnt)),2), '0') AS kpiIdcc3MCustVsitRate
+            ,NVL(ROUND(MAX((TT.kpiIdcc3MDealCnt/TT.kpiIdcc3MCustReqRate)),2), '0') AS kpiIdcc3MVsitDealCnt
+            ,NVL(ROUND(MAX((TT.kpiIdcc3MDealCnt/TT.kpiIdcc3MCustVsitCnt)),2), '0') AS kpiIdcc3MVsitDealRate
+            ,NVL(ROUND(MAX((TT.kpiShop3MPrsnInfoCollcRate/TT.kpiShop3MTargetCustVsitCnt)),2), '0') AS kpiShop3MVsitPrsnInfoCollcRate
+            ,NVL(ROUND(MAX((TT.kpiShop3MDealCnt/TT.kpiShop3MPrsnInfoCollcRate)),2), '0') AS kpiShop3MVsitSuccessRate
+            ,NVL(ROUND(MAX(((TT.kpiIdcc3MCustVsitCnt + TT.kpiShop3MTargetCustVsitCnt)/(TT.kpiIdcc3MTargetCustGoalPrefVal+TT.kpiShop3MTargetCustGoalPrefVal))),2), '0') AS kpiShop3MCustTargetAchieve
+            ,NVL(ROUND(MAX(TT.referCustReqRate),2), '0') AS referCustReqRate
+            ,NVL(ROUND(MAX(TT.referCustDealRate),2), '0') AS referCustDealRate
+            ,NVL(ROUND(MAX(TT.referPrsnInfoCollcRate),2), '0') AS referPrsnInfoCollcRate
+            ,NVL(ROUND(MAX(TT.referTargetDealRate),2), '0') AS referTargetDealRate
+            ,NVL(ROUND(MAX(TT.refer3MCustReqRate),2), '0') AS refer3MCustReqRate
+            ,NVL(ROUND(MAX(TT.refer3MCustDealRate),2), '0') AS refer3MCustDealRate
+            ,NVL(ROUND(MAX(TT.refer3MPrsnInfoCollcRate),2), '0') AS refer3MPrsnInfoCollcRate
+            ,NVL(ROUND(MAX(TT.refer3MTargetDealRate),2), '0') AS refer3MTargetDealRate
+            FROM (
+            SELECT
+                     (SELECT GOAL_PREF_VAL FROM MS_0104T WHERE GOAL_YY||GOAL_MM = SUBSTR(#{sCustKpiYyMmDd},1,4) AND DLR_TP = 'I' AND GOAL_TP = 'C') AS kpiIdccTargetCustGoalPrefVal
+                    ,(SELECT SUM(IDCC_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD BETWEEN #{sCustKpiYyMmDd} AND #{eCustKpiYyMmDd}) AS kpiIdccCustVsitCnt
+                    ,(SELECT SUM(IDCC_VSIT_REQ_RATE) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD BETWEEN #{sCustKpiYyMmDd} AND #{eCustKpiYyMmDd}) AS kpiIdccCustReqRate
+                    ,(SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD BETWEEN #{sCustKpiYyMmDd} AND #{eCustKpiYyMmDd}) AS kpiIdccDealCnt
+                    ,(SELECT GOAL_PREF_VAL FROM MS_0104T WHERE GOAL_YY||GOAL_MM = SUBSTR(#{sCustKpiYyMmDd},1,4) AND DLR_TP = 'M' AND GOAL_TP = 'C') AS kpiShopTargetCustGoalPrefVal
+                    ,(SELECT SUM(SHOP_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD BETWEEN #{sCustKpiYyMmDd} AND #{eCustKpiYyMmDd}) AS kpiShopTargetCustVsitCnt
+                    ,(SELECT SUM(SHOP_PRSN_INFO_COLLC_RATE) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD BETWEEN #{sCustKpiYyMmDd} AND #{eCustKpiYyMmDd}) AS kpiShopPrsnInfoCollcRate
+                    ,(SELECT SUM(SHOP_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD BETWEEN #{sCustKpiYyMmDd} AND #{eCustKpiYyMmDd}) AS kpiShopDealCnt
+                    ,(SELECT SUM(GOAL_PREF_VAL) FROM MS_0104T
+                      WHERE GOAL_YY||GOAL_MM BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(#{sCustKpiYyMmDd}, 'YYYYMMDD'), -3), 'YYYYMM') AND SUBSTR(#{sCustKpiYyMmDd},1,6) AND DLR_TP = 'I' AND GOAL_TP = 'C') AS kpiIdcc3MTargetCustGoalPrefVal
+                    ,(SELECT SUM(IDCC_CUST_VSIT_CNT) FROM MS_1004T_2016
+                      WHERE STD_YY||STD_MM||STD_DD BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(#{sCustKpiYyMmDd}, 'YYYYMMDD'), -3), 'YYYYMMDD') AND #{sCustKpiYyMmDd}) AS kpiIdcc3MCustVsitCnt
+                    ,(SELECT SUM(IDCC_VSIT_REQ_RATE) FROM MS_1004T_2016
+                      WHERE STD_YY||STD_MM||STD_DD BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(#{sCustKpiYyMmDd}, 'YYYYMMDD'), -3), 'YYYYMMDD') AND #{sCustKpiYyMmDd}) AS kpiIdcc3MCustReqRate
+                    ,(SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016
+                      WHERE STD_YY||STD_MM||STD_DD BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(#{sCustKpiYyMmDd}, 'YYYYMMDD'), -3), 'YYYYMMDD') AND #{sCustKpiYyMmDd}) AS kpiIdcc3MDealCnt
+                    ,(SELECT SUM(GOAL_PREF_VAL) FROM MS_0104T
+                      WHERE GOAL_YY||GOAL_MM BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(#{sCustKpiYyMmDd}, 'YYYYMMDD'), -3), 'YYYYMM') AND SUBSTR(#{sCustKpiYyMmDd},1,6) AND DLR_TP = 'M' AND GOAL_TP = 'C') AS kpiShop3MTargetCustGoalPrefVal
+                    ,(SELECT SUM(SHOP_CUST_VSIT_CNT) FROM MS_1004T_2016
+                      WHERE STD_YY||STD_MM||STD_DD BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(#{sCustKpiYyMmDd}, 'YYYYMMDD'), -3), 'YYYYMMDD') AND #{sCustKpiYyMmDd}) AS kpiShop3MTargetCustVsitCnt
+                    ,(SELECT SUM(SHOP_PRSN_INFO_COLLC_RATE) FROM MS_1004T_2016
+                      WHERE STD_YY||STD_MM||STD_DD BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(#{sCustKpiYyMmDd}, 'YYYYMMDD'), -3), 'YYYYMMDD') AND #{sCustKpiYyMmDd}) AS kpiShop3MPrsnInfoCollcRate
+                    ,(SELECT SUM(SHOP_DEAL_CNT) FROM MS_1004T_2016
+                      WHERE STD_YY||STD_MM||STD_DD BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(#{sCustKpiYyMmDd}, 'YYYYMMDD'), -3), 'YYYYMMDD') AND #{sCustKpiYyMmDd}) AS kpiShop3MDealCnt
+                    ,(SELECT AVG(VSIT_REQ_RATE) FROM MS_0106T WHERE REF_YY_MM_DD BETWEEN #{sCustKpiYyMmDd} AND #{eCustKpiYyMmDd}) AS referCustReqRate
+                    ,(SELECT AVG(VSIT_DEAL_RATE) FROM MS_0106T WHERE REF_YY_MM_DD BETWEEN #{sCustKpiYyMmDd} AND #{eCustKpiYyMmDd}) AS referCustDealRate
+                    ,(SELECT AVG(PRSN_INFO_OFFER_RATE) FROM MS_0106T WHERE REF_YY_MM_DD BETWEEN #{sCustKpiYyMmDd} AND #{eCustKpiYyMmDd}) AS referPrsnInfoCollcRate
+                    ,(SELECT AVG(GOAL_ACHV_RATE) FROM MS_0106T WHERE REF_YY_MM_DD BETWEEN #{sCustKpiYyMmDd} AND #{eCustKpiYyMmDd}) AS referTargetDealRate
+                    ,(SELECT AVG(VSIT_REQ_RATE) FROM MS_0106T
+                      WHERE REF_YY_MM_DD BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(#{sCustKpiYyMmDd}, 'YYYYMMDD'), -3), 'YYYYMMDD') AND #{sCustKpiYyMmDd}) AS refer3MCustReqRate
+                    ,(SELECT AVG(VSIT_DEAL_RATE) FROM MS_0106T
+                      WHERE REF_YY_MM_DD BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(#{sCustKpiYyMmDd}, 'YYYYMMDD'), -3), 'YYYYMMDD') AND #{sCustKpiYyMmDd}) AS refer3MCustDealRate
+                    ,(SELECT AVG(PRSN_INFO_OFFER_RATE) FROM MS_0106T
+                      WHERE REF_YY_MM_DD BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(#{sCustKpiYyMmDd}, 'YYYYMMDD'), -3), 'YYYYMMDD') AND #{sCustKpiYyMmDd}) AS refer3MPrsnInfoCollcRate
+                    ,(SELECT AVG(GOAL_ACHV_RATE) FROM MS_0106T
+                      WHERE REF_YY_MM_DD BETWEEN TO_CHAR(ADD_MONTHS(TO_DATE(#{sCustKpiYyMmDd}, 'YYYYMMDD'), -3), 'YYYYMMDD') AND #{sCustKpiYyMmDd}) AS refer3MTargetDealRate
+                FROM DUAL ) TT
+    </select>
+
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleIdcc" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleIdcc] */
+        UPDATE MS_0109T SET
+              GOAL_PREF_VAL = #{idccDealerGoalPrefValSave}
+            , UPDT_USR_ID = #{dealerUpdtUsrId}
+            , UPDT_DT = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleShop" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0109T SET
+              GOAL_PREF_VAL = #{shopDealerGoalPrefValSave}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo1" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro1}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = '2C'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo2" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro2}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'B3'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo3" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro3}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'BX'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo4" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro4}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'C3'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo5" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro5}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'C7'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo6" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro6}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'C9'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo7" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro7}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'CE'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo8" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro8}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'CH'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo9" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro9}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'CP'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo10" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro10}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'DC'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo11" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro11}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'DZ'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo12" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro12}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'E5'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo13" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro13}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'ES'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo14" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro14}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'F0'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo15" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro15}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'F8'
+        AND   GOAL_TP       = 'S'
+    </update>
+     <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo16" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro16}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'F9'
+    </update>
+     <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo17" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro17}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'ID'
+        AND   GOAL_TP       = 'S'
+    </update>
+     <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo18" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro18}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'IK'
+        AND   GOAL_TP       = 'S'
+    </update>
+     <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo19" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro19}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'IV'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo20" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro20}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'IZ'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo21" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro21}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'TE'
+        AND   GOAL_TP       = 'S'
+    </update>
+
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo22" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro22}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = '2C'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo23" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro23}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'B3'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo24" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro24}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'BX'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo25" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro25}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'C3'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo26" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro26}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'C7'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo27" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro27}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'C9'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo28" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro28}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'CE'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo29" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro29}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'CH'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo30" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro30}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'CP'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo31" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro31}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'DC'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo32" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro32}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'DZ'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo33" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro33}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'E5'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo34" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro34}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'ES'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo35" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro35}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'F0'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo36" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro36}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'F8'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo37" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro37}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'F9'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo38" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro38}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'ID'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo39" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro39}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'IK'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo40" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro40}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'IV'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo41" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro41}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'IZ'
+        AND   GOAL_TP       = 'S'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleCarNo42" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{carPro42}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'TE'
+        AND   GOAL_TP       = 'S'
+    </update>
+
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptCustIdcc" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleIdcc] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{idccCustDealerGoalPrefValSave}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+        AND   CARLINE_CD    = 'ZZ'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptCustShop" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{shopCustDealerGoalPrefValSave}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMmSave}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = 'ZZ'
+    </update>
+
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptSaleComplete" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0109T SET
+              PREF_TP = '2'
+            , UPDT_USR_ID = #{dealerUpdtUsrId}
+            , UPDT_DT = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sDealerSaleDcptYyMm}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sDealerSaleDcptYyMm}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+    </update>
+
+    <!-- 딜러분해 자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtPotenCustCnt" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+    /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtPotenCustCnt] */
+    SELECT
+     TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 1, A.GOAL_PREF_VAL))),'0')) AS custCnt1
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 2, A.GOAL_PREF_VAL))),'0')) AS custCnt2
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 3, A.GOAL_PREF_VAL))),'0')) AS custCnt3
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 4, A.GOAL_PREF_VAL))),'0')) AS custCnt4
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 5, A.GOAL_PREF_VAL))),'0')) AS custCnt5
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 6, A.GOAL_PREF_VAL))),'0')) AS custCnt6
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 7, A.GOAL_PREF_VAL))),'0')) AS custCnt7
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 8, A.GOAL_PREF_VAL))),'0')) AS custCnt8
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 9, A.GOAL_PREF_VAL))),'0')) AS custCnt9
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 10, A.GOAL_PREF_VAL))),'0')) AS custCnt10
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 11, A.GOAL_PREF_VAL))),'0')) AS custCnt11
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 12, A.GOAL_PREF_VAL))),'0')) AS custCnt12
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 13, A.GOAL_PREF_VAL))),'0')) AS custCnt13
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 14, A.GOAL_PREF_VAL))),'0')) AS custCnt14
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 15, A.GOAL_PREF_VAL))),'0')) AS custCnt15
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 16, A.GOAL_PREF_VAL))),'0')) AS custCnt16
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 17, A.GOAL_PREF_VAL))),'0')) AS custCnt17
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 18, A.GOAL_PREF_VAL))),'0')) AS custCnt18
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 19, A.GOAL_PREF_VAL))),'0')) AS custCnt19
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 20, A.GOAL_PREF_VAL))),'0')) AS custCnt20
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 21, A.GOAL_PREF_VAL))),'0')) AS custCnt21
+    FROM (
+        SELECT
+          ROW_NUMBER() OVER(PARTITION BY GOAL_YY||GOAL_MM ORDER BY CARLINE_CD) AS RN
+          ,GOAL_YY||GOAL_MM AS GOAL_YYMM
+          ,CARLINE_CD
+          ,GOAL_PREF_VAL
+          FROM MS_0104T
+          WHERE GOAL_YY||GOAL_MM = SUBSTR(#{sTargetStatusYyMmDd},1,6)
+          AND DLR_CD = 'D2618'
+          AND DLR_TP = 'I'
+          AND GOAL_TP = 'C'
+          --AND PREF_TP = '2'
+    ) A
+    UNION ALL
+     SELECT
+     TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 1, A.GOAL_PREF_VAL))),'0')) AS custCnt1
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 2, A.GOAL_PREF_VAL))),'0')) AS custCnt2
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 3, A.GOAL_PREF_VAL))),'0')) AS custCnt3
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 4, A.GOAL_PREF_VAL))),'0')) AS custCnt4
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 5, A.GOAL_PREF_VAL))),'0')) AS custCnt5
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 6, A.GOAL_PREF_VAL))),'0')) AS custCnt6
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 7, A.GOAL_PREF_VAL))),'0')) AS custCnt7
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 8, A.GOAL_PREF_VAL))),'0')) AS custCnt8
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 9, A.GOAL_PREF_VAL))),'0')) AS custCnt9
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 10, A.GOAL_PREF_VAL))),'0')) AS custCnt10
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 11, A.GOAL_PREF_VAL))),'0')) AS custCnt11
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 12, A.GOAL_PREF_VAL))),'0')) AS custCnt12
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 13, A.GOAL_PREF_VAL))),'0')) AS custCnt13
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 14, A.GOAL_PREF_VAL))),'0')) AS custCnt14
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 15, A.GOAL_PREF_VAL))),'0')) AS custCnt15
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 16, A.GOAL_PREF_VAL))),'0')) AS custCnt16
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 17, A.GOAL_PREF_VAL))),'0')) AS custCnt17
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 18, A.GOAL_PREF_VAL))),'0')) AS custCnt18
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 19, A.GOAL_PREF_VAL))),'0')) AS custCnt19
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 20, A.GOAL_PREF_VAL))),'0')) AS custCnt20
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 21, A.GOAL_PREF_VAL))),'0')) AS custCnt21
+    FROM (
+        SELECT
+          ROW_NUMBER() OVER(PARTITION BY GOAL_YY||GOAL_MM ORDER BY CARLINE_CD) AS RN
+          ,GOAL_YY||GOAL_MM AS GOAL_YYMM
+          ,CARLINE_CD
+          ,GOAL_PREF_VAL
+          FROM MS_0104T
+          WHERE GOAL_YY||GOAL_MM = SUBSTR(#{sTargetStatusYyMmDd},1,6)
+          AND DLR_CD = 'D2618'
+          AND DLR_TP = 'M'
+          AND GOAL_TP = 'C'
+          --AND PREF_TP = '2'
+    ) A
+    </select>
+
+    <!-- 딜러현황자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerTargetAchieveGrid" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+    /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerTargetAchieveGrid] */
+    SELECT
+        X.CARLINE_CD AS targetAchieveCarlineCd
+        ,SUM(X.SUM_ALL_CUST_VSIT_CNT) AS sumAllCustVsitCnt
+        ,SUM(X.GOAL_PREF_VAL) AS monthGoalPrefVal
+        ,SUM(X.DAY_GOAL_PREF_VAL) AS dayGoalPrefVal
+        ,NVL(ROUND((SUM(X.SUM_ALL_CUST_VSIT_CNT)/NULLIF(SUM(X.DAY_GOAL_PREF_VAL),0)*100), 2), '0') ||' %' AS prosDayCustVsitPers
+        ,NVL(ROUND(((SUM(X.SUM_IDCC_CUST_VSIT_CNT + X.SUM_SHOP_CUST_VSIT_CNT))/NULLIF(SUM(X.GOAL_PREF_VAL),0)*100), 2), '0')||' %' AS prosMonthCustVsitPers
+        ,(SUM(X.DAY_GOAL_PREF_VAL) - SUM(X.SUM_ALL_CUST_VSIT_CNT)) AS gapTodatCUstVsitCnt
+        ,SUM(X.SUM_IDCC_CUST_VSIT_CNT + X.SUM_SHOP_CUST_VSIT_CNT) AS sumCustVsitCnt
+        ,SUM(X.GAP_IDCC_CUST_VSIT_CNT + X.GAP_SHOP_CUST_VSIT_CNT) AS gapCustVsitCnt
+        ,NVL(SUM(X.LAST_MONTH_GOAL_PREF_VAL), '0') AS lastMonthGoalPrefVal
+        ,NVL(SUM(X.LAST_MONTH_CUST_VSIT_CNT), '0') AS lastMonthCustVsitCnt
+        ,NVL((SUM(X.LAST_MONTH_GOAL_PREF_VAL) - SUM(X.LAST_MONTH_CUST_VSIT_CNT)), '0') AS gapMonthCustVsitCnt
+        ,NVL(ROUND(SUM(X.LAST_MONTH_CUST_VSIT_CNT)/NULLIF(SUM(X.LAST_MONTH_GOAL_PREF_VAL),0),2)*100, '0') AS prosMonthCustVsitPer
+        ,NVL(SUM(X.LAST_YEAR_GOAL_PREF_VAL), '0') AS lastYearGoalPrefVal
+        ,NVL(SUM(X.LAST_YEAR_CUST_VSIT_CNT), '0') AS lastYearCustVsitCnt
+        ,NVL((SUM(X.LAST_YEAR_GOAL_PREF_VAL) - SUM(X.LAST_YEAR_CUST_VSIT_CNT)), '0') AS gapYearCustVsitCnt
+        ,NVL(ROUND(SUM(X.LAST_YEAR_CUST_VSIT_CNT)/NULLIF(SUM(X.LAST_YEAR_GOAL_PREF_VAL),0),2)*100, '0') AS prosYearCustVsitPers
+        FROM (
+        SELECT
+             A.CARLINE_CD
+            ,A.IDCC_CUST_VSIT_CNT
+            ,A.SHOP_CUST_VSIT_CNT
+            ,(A.IDCC_CUST_VSIT_CNT + A.SHOP_CUST_VSIT_CNT) AS SUM_ALL_CUST_VSIT_CNT
+            ,(SELECT SUM(IDCC_CUST_VSIT_CNT) FROM MS_1004T_2016 X WHERE X.STD_YY||X.STD_MM = SUBSTR(#{sDealerTargetAchieveYyMmDd}, 1, 6) AND X.CARLINE_CD = A.CARLINE_CD) AS SUM_IDCC_CUST_VSIT_CNT
+            ,(SELECT SUM(SHOP_CUST_VSIT_CNT) FROM MS_1004T_2016 X WHERE X.STD_YY||X.STD_MM = SUBSTR(#{sDealerTargetAchieveYyMmDd}, 1, 6) AND X.CARLINE_CD = A.CARLINE_CD) AS SUM_SHOP_CUST_VSIT_CNT
+            ,B.GOAL_PREF_VAL
+            ,ROUND((B.GOAL_PREF_VAL/TO_CHAR(LAST_DAY(TO_DATE(#{sDealerTargetAchieveYyMmDd}, 'YYYYMMDD')),'DD')), 2) AS DAY_GOAL_PREF_VAL
+            ,(B.GOAL_PREF_VAL - (SELECT SUM(IDCC_CUST_VSIT_CNT) FROM MS_1004T_2016 X WHERE X.STD_YY||X.STD_MM = SUBSTR(#{sDealerTargetAchieveYyMmDd}, 1, 6) AND X.CARLINE_CD = A.CARLINE_CD)) AS GAP_IDCC_CUST_VSIT_CNT
+            ,(B.GOAL_PREF_VAL - (SELECT SUM(SHOP_CUST_VSIT_CNT) FROM MS_1004T_2016 X WHERE X.STD_YY||X.STD_MM = SUBSTR(#{sDealerTargetAchieveYyMmDd}, 1, 6) AND X.CARLINE_CD = A.CARLINE_CD)) AS GAP_SHOP_CUST_VSIT_CNT
+            ,(SELECT ROUND((SUM(Z.GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(#{sDealerTargetAchieveYyMmDd}, 'YYYYMMDD')),'DD')), 2)
+              FROM MS_0104T Z WHERE Z.CARLINE_CD = A.CARLINE_CD AND Z.GOAL_YY||Z.GOAL_MM = TO_CHAR(TO_DATE(SUBSTR(#{sDealerTargetAchieveYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')) AS LAST_MONTH_GOAL_PREF_VAL
+            ,(SELECT ROUND(((Y.IDCC_CUST_VSIT_CNT + Y.SHOP_CUST_VSIT_CNT)/TO_CHAR(LAST_DAY(TO_DATE(TO_CHAR(TO_DATE(SUBSTR(#{sDealerTargetAchieveYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMMDD'),'YYYYMMDD')),'DD')), 2)
+              FROM MS_1004T_2016 Y WHERE Y.CARLINE_CD = A.CARLINE_CD AND Y.STD_YY||Y.STD_MM||Y.STD_DD = TO_CHAR(TO_DATE(SUBSTR(#{sDealerTargetAchieveYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')||SUBSTR(#{sDealerTargetAchieveYyMmDd},7,2)) AS LAST_MONTH_CUST_VSIT_CNT
+            ,(SELECT ROUND((SUM(C.GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sDealerTargetAchieveYyMmDd}, 1, 4)-1||SUBSTR(#{sDealerTargetAchieveYyMmDd}, 5, 4),'YYYYMMDD')),'DD')), 2)
+              FROM MS_0104T C WHERE C.CARLINE_CD = A.CARLINE_CD AND C.GOAL_YY = (SUBSTR(#{sDealerTargetAchieveYyMmDd}, 1, 4)-1) AND C.GOAL_MM = SUBSTR(#{sDealerTargetAchieveYyMmDd}, 5, 4)) AS LAST_YEAR_GOAL_PREF_VAL
+            ,(SELECT ROUND(((D.IDCC_CUST_VSIT_CNT + D.SHOP_CUST_VSIT_CNT)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sDealerTargetAchieveYyMmDd}, 1, 4)-1||SUBSTR(#{sDealerTargetAchieveYyMmDd}, 5, 4),'YYYYMMDD')),'DD')), 2)  FROM MS_1004T_2016 D
+            WHERE D.CARLINE_CD = A.CARLINE_CD AND D.STD_YY = SUBSTR(#{sDealerTargetAchieveYyMmDd}, 1, 4) AND D.STD_MM = SUBSTR(#{sDealerTargetAchieveYyMmDd}, 5, 2) AND D.STD_DD = SUBSTR(#{sDealerTargetAchieveYyMmDd}, 7, 2)) AS LAST_YEAR_CUST_VSIT_CNT
+            FROM MS_1004T_2016 A, MS_0104T B
+            <where>
+            A.STD_YY = B.GOAL_YY
+            AND   A.STD_MM = B.GOAL_MM
+            AND   A.CARLINE_CD = B.CARLINE_CD
+            AND   B.DLR_CD = 'D2618'
+            AND   B.GOAL_TP = 'C'
+            AND   B.PREF_TP = '2'
+            <if test='sCustChannel != null and sCustChannel != ""'>
+                AND   B.DLR_TP = DECODE(#{sCustChannel}, 'IDCC', 'I', 'M')
+            </if>
+            AND   A.STD_YY||A.STD_MM||A.STD_DD = #{sDealerTargetAchieveYyMmDd}
+            </where> ) X
+            GROUP BY X.CARLINE_CD
+            ORDER BY X.CARLINE_CD
+    </select>
+
+    <!-- 딜러현황자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerTargetAchieveIdccGrid" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerTargetAchieveGrid] */
+
+
+
+    </select>
+
+    <!-- 딜러현황자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtDealerTargetAchieveShopGrid" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtDealerTargetAchieveGrid] */
+
+
+
+    </select>
+
+
+
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt1" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt1}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = '2C'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt2" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt2}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'B3'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt3" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt3}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'BX'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt4" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt4}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'C3'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt5" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt5}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'C7'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt6" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt6}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'C9'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt7" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt7}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'CE'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt8" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt8}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'CH'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt9" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt9}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'CP'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt10" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt10}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'DC'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt11" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt11}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'DZ'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt12" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt12}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'E5'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt13" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt13}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'ES'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt14" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt14}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'F0'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt15" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt15}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'F8'
+    </update>
+     <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt16" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt16}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'F9'
+    </update>
+     <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt17" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt17}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'ID'
+    </update>
+     <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt18" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt18}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'IK'
+    </update>
+     <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt19" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt19}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'IV'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt20" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt20}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'IZ'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt21" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt21}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'I'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'TE'
+    </update>
+
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt22" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt22}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   CARLINE_CD    = '2C'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt23" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt23}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'B3'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt24" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt24}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'BX'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt25" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt25}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'C3'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt26" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt26}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'C7'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt27" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt27}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'C9'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt28" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt28}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'CE'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt29" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt29}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'CH'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt30" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt30}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'CP'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt31" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt31}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'DC'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt32" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt32}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'DZ'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt33" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt33}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'E5'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt34" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt34}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   GOAL_TP       = 'C'
+        AND   CARLINE_CD    = 'ES'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt35" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt35}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   GOAL_TP       = 'C'
+        AND   CARLINE_CD    = 'F0'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt36" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt36}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   GOAL_TP       = 'C'
+        AND   CARLINE_CD    = 'F8'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt37" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt37}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   GOAL_TP       = 'C'
+        AND   CARLINE_CD    = 'F9'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt38" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt38}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+    AND   GOAL_TP        = 'C'
+        AND   CARLINE_CD    = 'ID'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt39" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt39}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   GOAL_TP       = 'C'
+        AND   CARLINE_CD    = 'IK'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt40" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt40}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   GOAL_TP       = 'C'
+        AND   CARLINE_CD    = 'IV'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt41" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt41}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   GOAL_TP       = 'C'
+        AND   CARLINE_CD    = 'IZ'
+    </update>
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtTargetStatuspotenCustCnt42" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptSaleShop] */
+        UPDATE MS_0104T SET
+              GOAL_PREF_VAL = #{potenCustCnt42}
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = 'M'
+        AND   GOAL_TP       = 'C'
+        AND   CARLINE_CD    = 'TE'
+    </update>
+
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateTargetDcptMgmtDealerDcptCustComplete" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateTargetDcptMgmtDealerDcptCustComplete] */
+        UPDATE MS_0104T SET
+              PREF_TP = '2'
+            , UPDT_USR_ID = #{dealerUpdtUsrId}
+            , UPDT_DT = SYSDATE
+        WHERE GOAL_YY       = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   GOAL_TP       = 'C'
+    </update>
+
+    <!-- 딜러현황자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtProcessMgmtGrid" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtProcessMgmtGrid] */
+
+        SELECT
+        '1' AS nameGubn
+        ,'I' AS nameChannel
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 1, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt1
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 2, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt2
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 3, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt3
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 4, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt4
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 5, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt5
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 6, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt6
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 7, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt7
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 8, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt8
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 9, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt9
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 10, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt10
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 11, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt11
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 12, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt12
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 13, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt13
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 14, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt14
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 15, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt15
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 16, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt16
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 17, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt17
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 18, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt18
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 19, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt19
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 20, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt20
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 21, A.IDCC_UDR_CUST_CNT))), '0'),'9,999,999') AS potenCustCnt21
+        FROM (
+            SELECT
+               ROW_NUMBER() OVER(PARTITION BY STD_YY||STD_MM||STD_DD ORDER BY CARLINE_CD) AS RN
+              ,STD_YY||STD_MM||STD_DD AS STDYYMMDD
+              ,CARLINE_CD
+              ,IDCC_UDR_CUST_CNT
+            FROM MS_1004T_2016
+            WHERE STD_YY||STD_MM||STD_DD = #{sTargetStatusYyMmDd}
+        ) A
+        UNION ALL
+        SELECT
+        '1' AS nameGubn
+        ,'M' AS nameChannel
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 1, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo1
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 2, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo2
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 3, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo3
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 4, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo4
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 5, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo5
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 6, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo6
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 7, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo7
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 8, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo8
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 9, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo9
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 10, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo10
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 11, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo11
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 12, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo12
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 13, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo13
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 14, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo14
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 15, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo15
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 16, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo16
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 17, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo17
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 18, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo18
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 19, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo19
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 20, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo20
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 21, A.SHOP_UDR_CUST_CNT))), '0'),'9,999,999') AS carNo21
+        FROM (
+            SELECT
+               ROW_NUMBER() OVER(PARTITION BY STD_YY||STD_MM||STD_DD ORDER BY CARLINE_CD) AS RN
+              ,STD_YY||STD_MM||STD_DD AS STDYYMMDD
+              ,CARLINE_CD
+              ,SHOP_UDR_CUST_CNT
+            FROM MS_1004T_2016
+            WHERE STD_YY||STD_MM||STD_DD = #{sTargetStatusYyMmDd}
+        ) A
+        UNION ALL
+        SELECT
+         '2' AS nameGubn
+        ,'I' AS nameChannel
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 1, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate1
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 2, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate2
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 3, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate3
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 4, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate4
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 5, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate5
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 6, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate6
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 7, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate7
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 8, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate8
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 9, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate9
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 10, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate10
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 11, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate11
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 12, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate12
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 13, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate13
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 14, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate14
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 15, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate15
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 16, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate16
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 17, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate17
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 18, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate18
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 19, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate19
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 20, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate20
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 21, A.IDCC_DEAL_RATE))), '0'),'9,999,999') AS dealRate21
+        FROM (
+            SELECT
+               ROW_NUMBER() OVER(PARTITION BY STD_YY||STD_MM||STD_DD ORDER BY CARLINE_CD) AS RN
+              ,STD_YY||STD_MM||STD_DD AS STDYYMMDD
+              ,CARLINE_CD
+              ,IDCC_DEAL_RATE
+            FROM MS_1004T_2016
+            WHERE STD_YY||STD_MM||STD_DD BETWEEN TO_CHAR(TO_DATE(SUBSTR(#{sTargetStatusYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')||SUBSTR(#{sTargetStatusYyMmDd},7,2) AND #{sTargetStatusYyMmDd}
+        ) A
+        UNION ALL
+        SELECT
+        '2' AS nameGubn
+        ,'M' AS nameChannel
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 1, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate1
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 2, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate2
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 3, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate3
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 4, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate4
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 5, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate5
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 6, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate6
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 7, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate7
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 8, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate8
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 9, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate9
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 10, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate10
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 11, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate11
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 12, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate12
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 13, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate13
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 14, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate14
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 15, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate15
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 16, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate16
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 17, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate17
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 18, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate18
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 19, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate19
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 20, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate20
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 21, A.SHOP_DEAL_RATE))), '0'),'9,999,999') AS dealRate21
+        FROM (
+            SELECT
+               ROW_NUMBER() OVER(PARTITION BY STD_YY||STD_MM||STD_DD ORDER BY CARLINE_CD) AS RN
+              ,STD_YY||STD_MM||STD_DD AS STDYYMMDD
+              ,CARLINE_CD
+              ,SHOP_DEAL_RATE
+            FROM MS_1004T_2016
+            WHERE STD_YY||STD_MM||STD_DD BETWEEN TO_CHAR(TO_DATE(SUBSTR(#{sTargetStatusYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')||SUBSTR(#{sTargetStatusYyMmDd},7,2) AND #{sTargetStatusYyMmDd}
+        ) A
+        UNION ALL
+        SELECT
+        '3' AS nameGubn
+        ,'M' AS nameChannel
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 1, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate1
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 2, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate2
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 3, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate3
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 4, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate4
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 5, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate5
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 6, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate6
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 7, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate7
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 8, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate8
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 9, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate9
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 10, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate10
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 11, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate11
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 12, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate12
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 13, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate13
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 14, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate14
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 15, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate15
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 16, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate16
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 17, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate17
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 18, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate18
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 19, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate19
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 20, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate20
+        ,TO_CHAR(NVL(MIN(DECODE(A.STDYYMMDD, #{sTargetStatusYyMmDd},DECODE(A.RN, 21, A.SHOP_PRSN_INFO_COLLC_RATE))), '0'),'9,999,999') AS custInfoInputRate21
+        FROM (
+            SELECT
+               ROW_NUMBER() OVER(PARTITION BY STD_YY||STD_MM||STD_DD ORDER BY CARLINE_CD) AS RN
+              ,STD_YY||STD_MM||STD_DD AS STDYYMMDD
+              ,CARLINE_CD
+              ,SHOP_PRSN_INFO_COLLC_RATE
+            FROM MS_1004T_2016
+            WHERE STD_YY||STD_MM||STD_DD BETWEEN TO_CHAR(TO_DATE(SUBSTR(#{sTargetStatusYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')||SUBSTR(#{sTargetStatusYyMmDd},7,2) AND #{sTargetStatusYyMmDd}
+        ) A
+
+
+    </select>
+
+    <!-- 딜러현황자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtProcessCustConfig" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtProcessCustConfig] */
+
+        SELECT
+        '1' AS custGubn
+        ,'I' AS custChannel
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 1, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig1
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 2, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig2
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 3, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig3
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 4, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig4
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 5, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig5
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 6, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig6
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 7, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig7
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 8, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig8
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 9, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig9
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 10, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig10
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 11, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig11
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 12, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig12
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 13, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig13
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 14, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig14
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 15, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig15
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 16, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig16
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 17, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig17
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 18, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig18
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 19, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig19
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 20, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig20
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 21, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig21
+    FROM (
+        SELECT
+          ROW_NUMBER() OVER(PARTITION BY GOAL_YY||GOAL_MM ORDER BY CARLINE_CD) AS RN
+          ,GOAL_YY||GOAL_MM AS GOAL_YYMM
+          ,CARLINE_CD
+          ,GOAL_PREF_VAL
+          FROM MS_0104T
+          WHERE GOAL_YY||GOAL_MM = SUBSTR(#{sTargetStatusYyMmDd},1,6)
+          AND DLR_CD = 'D2618'
+          AND DLR_TP = 'I'
+          AND GOAL_TP = 'S'
+          --AND PREF_TP = '2'
+    ) A
+    UNION ALL
+     SELECT
+     '1' AS custGubn
+        ,'M' AS custChannel
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 1, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig1
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 2, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig2
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 3, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig3
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 4, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig4
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 5, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig5
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 6, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig6
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 7, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig7
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 8, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig8
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 9, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig9
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 10, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig10
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 11, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig11
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 12, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig12
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 13, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig13
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 14, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig14
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 15, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig15
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 16, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig16
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 17, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig17
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 18, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig18
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 19, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig19
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 20, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig20
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 21, A.GOAL_PREF_VAL))),'0'),'9,999,999') AS targetconfig21
+    FROM (
+        SELECT
+          ROW_NUMBER() OVER(PARTITION BY GOAL_YY||GOAL_MM ORDER BY CARLINE_CD) AS RN
+          ,GOAL_YY||GOAL_MM AS GOAL_YYMM
+          ,CARLINE_CD
+          ,GOAL_PREF_VAL
+          FROM MS_0104T
+          WHERE GOAL_YY||GOAL_MM = SUBSTR(#{sTargetStatusYyMmDd},1,6)
+          AND DLR_CD = 'D2618'
+          AND DLR_TP = 'M'
+          AND GOAL_TP = 'S'
+          --AND PREF_TP = '2'
+    ) A
+    UNION ALL
+    SELECT
+    '2' AS custGubn
+        ,'I' AS custChannel
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 1, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig1
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 2, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig2
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 3, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig3
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 4, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig4
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 5, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig5
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 6, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig6
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 7, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig7
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 8, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig8
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 9, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig9
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 10, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig10
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 11, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig11
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 12, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig12
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 13, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig13
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 14, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig14
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 15, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig15
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 16, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig16
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 17, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig17
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 18, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig18
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 19, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig19
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 20, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig20
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 21, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig21
+    FROM (
+        SELECT
+          ROW_NUMBER() OVER(PARTITION BY X.GOAL_YY||X.GOAL_MM ORDER BY X.CARLINE_CD) AS RN
+          ,X.GOAL_YY||X.GOAL_MM AS GOAL_YYMM
+          ,X.CARLINE_CD
+          ,X.GOAL_PREF_VAL
+          ,(SELECT IDCC_DEAL_RATE FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sTargetStatusYyMmDd} AND CARLINE_CD = X.CARLINE_CD) AS IDCC_DEAL_RATE
+          FROM MS_0104T X
+          WHERE X.GOAL_YY||X.GOAL_MM = SUBSTR(#{sTargetStatusYyMmDd},1,6)
+          AND X.DLR_CD = 'D2618'
+          AND X.DLR_TP = 'I'
+          AND X.GOAL_TP = 'S'
+         -- AND PREF_TP = '2'
+    ) A
+    UNION ALL
+    SELECT
+    '2' AS custGubn
+    ,'M' AS custChannel
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 1, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig1
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 2, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig2
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 3, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig3
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 4, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig4
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 5, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig5
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 6, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig6
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 7, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig7
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 8, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig8
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 9, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig9
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 10, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig10
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 11, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig11
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 12, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig12
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 13, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig13
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 14, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig14
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 15, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig15
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 16, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig16
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 17, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig17
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 18, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig18
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 19, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig19
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 20, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig20
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 21, A.GOAL_PREF_VAL/A.IDCC_DEAL_RATE))),'0'),'9,999,999') AS targetconfig21
+    FROM (
+        SELECT
+          ROW_NUMBER() OVER(PARTITION BY X.GOAL_YY||X.GOAL_MM ORDER BY X.CARLINE_CD) AS RN
+          ,X.GOAL_YY||X.GOAL_MM AS GOAL_YYMM
+          ,X.CARLINE_CD
+          ,X.GOAL_PREF_VAL
+          ,(SELECT IDCC_DEAL_RATE FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sTargetStatusYyMmDd} AND CARLINE_CD = X.CARLINE_CD) AS IDCC_DEAL_RATE
+          FROM MS_0104T X
+          WHERE X.GOAL_YY||X.GOAL_MM = SUBSTR(#{sTargetStatusYyMmDd},1,6)
+          AND X.DLR_CD = 'D2618'
+          AND X.DLR_TP = 'M'
+          AND X.GOAL_TP = 'S'
+         -- AND PREF_TP = '2'
+    ) A
+
+
+    </select>
+
+     <!-- 딜러현황자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtProcessCustConfigVal" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtProcessCustConfigVal] */
+
+        SELECT
+        '1' AS custGubnVal
+        ,'I' AS custChannelVal
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 1, A.GOAL_PREF_VAL))),'0')) AS custCnt1
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 2, A.GOAL_PREF_VAL))),'0')) AS custCnt2
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 3, A.GOAL_PREF_VAL))),'0')) AS custCnt3
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 4, A.GOAL_PREF_VAL))),'0')) AS custCnt4
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 5, A.GOAL_PREF_VAL))),'0')) AS custCnt5
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 6, A.GOAL_PREF_VAL))),'0')) AS custCnt6
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 7, A.GOAL_PREF_VAL))),'0')) AS custCnt7
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 8, A.GOAL_PREF_VAL))),'0')) AS custCnt8
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 9, A.GOAL_PREF_VAL))),'0')) AS custCnt9
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 10, A.GOAL_PREF_VAL))),'0')) AS custCnt10
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 11, A.GOAL_PREF_VAL))),'0')) AS custCnt11
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 12, A.GOAL_PREF_VAL))),'0')) AS custCnt12
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 13, A.GOAL_PREF_VAL))),'0')) AS custCnt13
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 14, A.GOAL_PREF_VAL))),'0')) AS custCnt14
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 15, A.GOAL_PREF_VAL))),'0')) AS custCnt15
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 16, A.GOAL_PREF_VAL))),'0')) AS custCnt16
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 17, A.GOAL_PREF_VAL))),'0')) AS custCnt17
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 18, A.GOAL_PREF_VAL))),'0')) AS custCnt18
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 19, A.GOAL_PREF_VAL))),'0')) AS custCnt19
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 20, A.GOAL_PREF_VAL))),'0')) AS custCnt20
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 21, A.GOAL_PREF_VAL))),'0')) AS custCnt21
+    FROM (
+        SELECT
+          ROW_NUMBER() OVER(PARTITION BY GOAL_YY||GOAL_MM ORDER BY CARLINE_CD) AS RN
+          ,GOAL_YY||GOAL_MM AS GOAL_YYMM
+          ,CARLINE_CD
+          ,GOAL_PREF_VAL
+          FROM MS_0104T
+          WHERE GOAL_YY||GOAL_MM = SUBSTR(#{sTargetStatusYyMmDd},1,6)
+          AND DLR_CD = 'D2618'
+          AND DLR_TP = 'I'
+          AND GOAL_TP = 'C'
+          --AND PREF_TP = '2'
+    ) A
+    UNION ALL
+     SELECT
+     '1' AS custGubnVal
+        ,'M' AS custChannelVal
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 1, A.GOAL_PREF_VAL))),'0')) AS custCnt1
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 2, A.GOAL_PREF_VAL))),'0')) AS custCnt2
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 3, A.GOAL_PREF_VAL))),'0')) AS custCnt3
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 4, A.GOAL_PREF_VAL))),'0')) AS custCnt4
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 5, A.GOAL_PREF_VAL))),'0')) AS custCnt5
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 6, A.GOAL_PREF_VAL))),'0')) AS custCnt6
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 7, A.GOAL_PREF_VAL))),'0')) AS custCnt7
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 8, A.GOAL_PREF_VAL))),'0')) AS custCnt8
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 9, A.GOAL_PREF_VAL))),'0')) AS custCnt9
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 10, A.GOAL_PREF_VAL))),'0')) AS custCnt10
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 11, A.GOAL_PREF_VAL))),'0')) AS custCnt11
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 12, A.GOAL_PREF_VAL))),'0')) AS custCnt12
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 13, A.GOAL_PREF_VAL))),'0')) AS custCnt13
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 14, A.GOAL_PREF_VAL))),'0')) AS custCnt14
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 15, A.GOAL_PREF_VAL))),'0')) AS custCnt15
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 16, A.GOAL_PREF_VAL))),'0')) AS custCnt16
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 17, A.GOAL_PREF_VAL))),'0')) AS custCnt17
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 18, A.GOAL_PREF_VAL))),'0')) AS custCnt18
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 19, A.GOAL_PREF_VAL))),'0')) AS custCnt19
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 20, A.GOAL_PREF_VAL))),'0')) AS custCnt20
+    ,TO_CHAR(NVL(MIN(DECODE(A.GOAL_YYMM, SUBSTR(#{sTargetStatusYyMmDd},1,6),DECODE(A.RN, 21, A.GOAL_PREF_VAL))),'0')) AS custCnt21
+    FROM (
+        SELECT
+          ROW_NUMBER() OVER(PARTITION BY GOAL_YY||GOAL_MM ORDER BY CARLINE_CD) AS RN
+          ,GOAL_YY||GOAL_MM AS GOAL_YYMM
+          ,CARLINE_CD
+          ,GOAL_PREF_VAL
+          FROM MS_0104T
+          WHERE GOAL_YY||GOAL_MM = SUBSTR(#{sTargetStatusYyMmDd},1,6)
+          AND DLR_CD = 'D2618'
+          AND DLR_TP = 'M'
+          AND GOAL_TP = 'C'
+          --AND PREF_TP = '2'
+    ) A
+    </select>
+
+    <!-- 과정관리 자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtProcessMgmtSaleGrid" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtProcessMgmtSaleGrid] */
+
+        SELECT
+        '1' AS nameGubn
+        ,'I' AS nameChannel
+            , GOAL_YY, GOAL_MM
+            ,TO_CHAR(ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(#{sProcessMgmtYyMmDd},'YYYYMMDD')),'DD'), 2), '999,999') AS totalDayTargetVal -- 일목표
+            ,TO_CHAR(ROUND((SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}), 2), '999,999') AS totalDayGoalVal -- 일실적
+            ,TO_CHAR(((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(#{sProcessMgmtYyMmDd},'YYYYMMDD')),'DD'), 2)) -
+              ((SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}))), '999,999') AS totalDayGapVal -- 일 차이
+            ,ROUND(((SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}) /
+              NULLIF((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(#{sProcessMgmtYyMmDd},'YYYYMMDD')),'DD'), 2)),0)), 2) AS totalDayDealRate -- 일 판매율
+            ,ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMMDD'),'YYYYMMDD')),'DD'), 2) AS totalMonthTargetVal-- 지난 달 일목표
+            ,(SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')  AND STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},7,2))  AS totalMonthGoalVal -- 지난 달 일실적
+            ,((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMMDD'),'YYYYMMDD')),'DD'), 2)) -
+              ((SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')  AND STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},7,2)))) AS totalMonthGapVal -- 지난 달 일 차이
+            ,ROUND((((SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')  AND STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},7,2)) /
+              (ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMMDD'),'YYYYMMDD')),'DD'), 2)))),2) AS totalMonthDealRate -- 지난 달 일 판매율
+            ,ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1||SUBSTR(#{sProcessMgmtYyMmDd},5,4),'YYYYMMDD')),'DD'), 2) AS totalYearTargetVal -- 작년동월목표
+            ,(SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY = SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1 AND STD_MM||STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},5,4)) AS totalYearGoalVal-- 작년동월실적
+            ,((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1||SUBSTR(#{sProcessMgmtYyMmDd},5,4),'YYYYMMDD')),'DD'), 2)) -
+              ((SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY = SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1 AND STD_MM||STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},5,4)))) AS totalYearGapVal -- 작년동월 차이
+            ,ROUND((((SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY = SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1 AND STD_MM||STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},5,4)) /
+              (ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1||SUBSTR(#{sProcessMgmtYyMmDd},5,4),'YYYYMMDD')),'DD'), 2)))),2) AS totalYearDealRate -- 작년동월 판매율
+            FROM MS_0104T
+            WHERE GOAL_YY||GOAL_MM = SUBSTR(#{sProcessMgmtYyMmDd},1,6)
+            AND DLR_TP = 'I'
+            AND GOAL_TP = 'S'
+            GROUP BY GOAL_YY, GOAL_MM
+            UNION ALL
+            SELECT
+            '1' AS nameGubn
+        ,'M' AS nameChannel
+             ,GOAL_YY, GOAL_MM
+            ,TO_CHAR(ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(#{sProcessMgmtYyMmDd},'YYYYMMDD')),'DD'), 2), '999,999') -- 일목표
+            ,TO_CHAR((SELECT SUM(SHOP_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}), '999,999') -- 일실적
+            ,TO_CHAR(((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(#{sProcessMgmtYyMmDd},'YYYYMMDD')),'DD'), 2)) -
+              ((SELECT SUM(SHOP_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}))), '999,999') -- 일 차이
+            ,ROUND(((SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}) /
+              NULLIF((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(#{sProcessMgmtYyMmDd},'YYYYMMDD')),'DD'), 2)),0)), 2) -- 일 판매율
+            ,ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMMDD'),'YYYYMMDD')),'DD'), 2) -- 지난 달 일목표
+            ,(SELECT SUM(SHOP_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')  AND STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},7,2)) -- 지난 달 일실적
+            ,((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMMDD'),'YYYYMMDD')),'DD'), 2)) -
+              ((SELECT SUM(SHOP_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')  AND STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},7,2)))) -- 지난 달 일 차이
+            ,ROUND((((SELECT SUM(SHOP_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')  AND STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},7,2)) /
+              (ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMMDD'),'YYYYMMDD')),'DD'), 2)))),2) -- 지난 달 일 판매율
+            ,ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1||SUBSTR(#{sProcessMgmtYyMmDd},5,4),'YYYYMMDD')),'DD'), 2) -- 작년동월목표
+            ,(SELECT SUM(SHOP_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY = SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1 AND STD_MM||STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},5,4)) -- 작년동월실적
+            ,((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1||SUBSTR(#{sProcessMgmtYyMmDd},5,4),'YYYYMMDD')),'DD'), 2)) -
+              ((SELECT SUM(SHOP_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}))) -- 작년동월 차이
+            ,ROUND((((SELECT SUM(SHOP_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}) /
+              (ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1||SUBSTR(#{sProcessMgmtYyMmDd},5,4),'YYYYMMDD')),'DD'), 2)))),2) -- 작년동월 판매율
+            FROM MS_0104T
+            WHERE GOAL_YY||GOAL_MM = SUBSTR(#{sProcessMgmtYyMmDd},1,6)
+            AND DLR_TP = 'M'
+            AND GOAL_TP = 'S'
+            GROUP BY GOAL_YY, GOAL_MM
+
+    </select>
+
+    <!-- 과정관리 자료를 조회한다. -->
+    <select id="selectTargetDcptMgmtProcessMgmtCustGrid" parameterType="TargetDcptMgmtSearchVO" resultType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.selectTargetDcptMgmtProcessMgmtCustGrid] */
+
+        SELECT
+        '2' AS nameGubn
+        ,'I' AS nameChannel
+             ,GOAL_YY, GOAL_MM
+            ,TO_CHAR(ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(#{sProcessMgmtYyMmDd},'YYYYMMDD')),'DD'), 2), '999,999') AS totalDayTargetVal -- 일목표
+            ,TO_CHAR(ROUND((SELECT SUM(IDCC_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}), 2), '999,999') AS totalDayGoalVal -- 일실적
+            ,TO_CHAR(ROUND(((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(#{sProcessMgmtYyMmDd},'YYYYMMDD')),'DD'), 2)) -
+              ((SELECT SUM(IDCC_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}))), 2), '999,999') AS totalDayGapVal -- 일 차이
+            ,ROUND(((SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}) /
+              NULLIF((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(#{sProcessMgmtYyMmDd},'YYYYMMDD')),'DD'), 2)),0)), 2) AS totalDayDealRate -- 일 판매율
+            ,ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMMDD'),'YYYYMMDD')),'DD'), 2) AS totalMonthTargetVal-- 지난 달 일목표
+            ,(SELECT SUM(IDCC_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')  AND STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},7,2)) AS totalMonthGoalVal -- 지난 달 일실적
+            ,((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMMDD'),'YYYYMMDD')),'DD'), 2)) -
+              ((SELECT SUM(IDCC_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')  AND STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},7,2)))) AS totalMonthGapVal -- 지난 달 일 차이
+            ,ROUND((((SELECT SUM(IDCC_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')  AND STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},7,2)) /
+              (ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMMDD'),'YYYYMMDD')),'DD'), 2)))),2) AS totalMonthDealRate -- 지난 달 일 판매율
+            ,ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1||SUBSTR(#{sProcessMgmtYyMmDd},5,4),'YYYYMMDD')),'DD'), 2) AS totalYearTargetVal -- 작년동월목표
+            ,(SELECT SUM(IDCC_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY = SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1 AND STD_MM||STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},5,4)) AS totalYearGoalVal-- 작년동월실적
+            ,((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1||SUBSTR(#{sProcessMgmtYyMmDd},5,4),'YYYYMMDD')),'DD'), 2)) -
+              ((SELECT SUM(IDCC_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY = SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1 AND STD_MM||STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},5,4)))) AS totalYearGapVal -- 작년동월 차이
+            ,ROUND((((SELECT SUM(IDCC_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY = SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1 AND STD_MM||STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},5,4)) /
+              (ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1||SUBSTR(#{sProcessMgmtYyMmDd},5,4),'YYYYMMDD')),'DD'), 2)))),2) AS totalYearDealRate -- 작년동월 판매율
+            FROM MS_0104T
+            WHERE GOAL_YY||GOAL_MM = SUBSTR(#{sProcessMgmtYyMmDd},1,6)
+            AND DLR_TP = 'I'
+            AND GOAL_TP = 'C'
+            AND CARLINE_CD != 'ZZ'
+            GROUP BY GOAL_YY, GOAL_MM
+            UNION ALL
+            SELECT
+            '2' AS nameGubn
+        ,'M' AS nameChannel
+            , GOAL_YY, GOAL_MM
+            ,TO_CHAR(ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(#{sProcessMgmtYyMmDd},'YYYYMMDD')),'DD'), 2), '999,999') -- 일목표
+            ,TO_CHAR(ROUND((SELECT SUM(SHOP_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}),2), '999,999') -- 일실적
+            ,TO_CHAR(((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(#{sProcessMgmtYyMmDd},'YYYYMMDD')),'DD'), 2)) -
+              ((SELECT SUM(SHOP_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}))), '999,999') -- 일 차이
+            ,ROUND(((SELECT SUM(IDCC_DEAL_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM||STD_DD = #{sProcessMgmtYyMmDd}) /
+              NULLIF((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(#{sProcessMgmtYyMmDd},'YYYYMMDD')),'DD'), 2)),0)), 2) -- 일 판매율
+            ,ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMMDD'),'YYYYMMDD')),'DD'), 2) -- 지난 달 일목표
+            ,(SELECT SUM(SHOP_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')   AND STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},7,2)) -- 지난 달 일실적
+            ,((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMMDD'),'YYYYMMDD')),'DD'), 2)) -
+              ((SELECT SUM(SHOP_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')  AND STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},7,2)))) -- 지난 달 일 차이
+            ,ROUND((((SELECT SUM(SHOP_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY||STD_MM = TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMM')  AND STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},7,2)) /
+              (ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(TO_CHAR(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,6), 'YYYYMM')-1, 'YYYYMMDD'),'YYYYMMDD')),'DD'), 2)))),2) -- 지난 달 일 판매율
+            ,ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1||SUBSTR(#{sProcessMgmtYyMmDd},5,4),'YYYYMMDD')),'DD'), 2) -- 작년동월목표
+            ,(SELECT SUM(SHOP_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY = SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1 AND STD_MM||STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},5,4)) -- 작년동월실적
+            ,((ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1||SUBSTR(#{sProcessMgmtYyMmDd},5,4),'YYYYMMDD')),'DD'), 2)) -
+              ((SELECT SUM(SHOP_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY = SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1 AND STD_MM||STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},5,4)))) -- 작년동월 차이
+            ,ROUND((((SELECT SUM(SHOP_CUST_VSIT_CNT) FROM MS_1004T_2016 WHERE STD_YY = SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1 AND STD_MM||STD_DD = SUBSTR(#{sProcessMgmtYyMmDd},5,4)) /
+              (ROUND(SUM(GOAL_PREF_VAL)/TO_CHAR(LAST_DAY(TO_DATE(SUBSTR(#{sProcessMgmtYyMmDd},1,4)-1||SUBSTR(#{sProcessMgmtYyMmDd},5,4),'YYYYMMDD')),'DD'), 2)))),2) -- 작년동월 판매율
+            FROM MS_0104T
+            WHERE GOAL_YY||GOAL_MM = SUBSTR(#{sProcessMgmtYyMmDd},1,6)
+            AND DLR_TP = 'M'
+            AND GOAL_TP = 'C'
+            AND CARLINE_CD != 'ZZ'
+            GROUP BY GOAL_YY, GOAL_MM
+    </select>
+
+    <!-- 딜러분해 차종별 목표자료를 수정한다. -->
+    <update id="updateCustConfigReg" parameterType="TargetDcptMgmtSearchVO">
+        /* [chn.bhmc.dms.mis.tdm.service.dao.TargetDcptMgmtDAO.updateCustConfigReg] */
+        UPDATE MS_0104T SET
+        <if test='custCnt1 != null and custCnt1 != ""'>
+            GOAL_PREF_VAL    = #{custCnt1}
+        </if>
+        <if test='custCnt2 != null and custCnt2 != ""'>
+            GOAL_PREF_VAL    = #{custCnt2}
+        </if>
+        <if test='custCnt3 != null and custCnt3 != ""'>
+            GOAL_PREF_VAL    = #{custCnt3}
+        </if>
+        <if test='custCnt4 != null and custCnt4 != ""'>
+            GOAL_PREF_VAL    = #{custCnt4}
+        </if>
+        <if test='custCnt5 != null and custCnt5 != ""'>
+            GOAL_PREF_VAL    = #{custCnt5}
+        </if>
+        <if test='custCnt6 != null and custCnt6 != ""'>
+            GOAL_PREF_VAL    = #{custCnt6}
+        </if>
+        <if test='custCnt7 != null and custCnt7 != ""'>
+            GOAL_PREF_VAL    = #{custCnt7}
+        </if>
+        <if test='custCnt8 != null and custCnt8 != ""'>
+            GOAL_PREF_VAL    = #{custCnt8}
+        </if>
+        <if test='custCnt9 != null and custCnt9 != ""'>
+            GOAL_PREF_VAL    = #{custCnt9}
+        </if>
+        <if test='custCnt10 != null and custCnt10 != ""'>
+            GOAL_PREF_VAL    = #{custCnt10}
+        </if>
+        <if test='custCnt11 != null and custCnt11 != ""'>
+            GOAL_PREF_VAL    = #{custCnt11}
+        </if>
+        <if test='custCnt12 != null and custCnt12 != ""'>
+            GOAL_PREF_VAL    = #{custCnt12}
+        </if>
+        <if test='custCnt13 != null and custCnt13 != ""'>
+            GOAL_PREF_VAL    = #{custCnt13}
+        </if>
+        <if test='custCnt14 != null and custCnt14 != ""'>
+            GOAL_PREF_VAL    = #{custCnt14}
+        </if>
+        <if test='custCnt15 != null and custCnt15 != ""'>
+            GOAL_PREF_VAL    = #{custCnt15}
+        </if>
+        <if test='custCnt16 != null and custCnt16 != ""'>
+            GOAL_PREF_VAL    = #{custCnt16}
+        </if>
+        <if test='custCnt17 != null and custCnt17 != ""'>
+            GOAL_PREF_VAL    = #{custCnt17}
+        </if>
+        <if test='custCnt18 != null and custCnt18 != ""'>
+            GOAL_PREF_VAL    = #{custCnt18}
+        </if>
+        <if test='custCnt19 != null and custCnt19 != ""'>
+            GOAL_PREF_VAL    = #{custCnt19}
+        </if>
+        <if test='custCnt20 != null and custCnt20 != ""'>
+            GOAL_PREF_VAL    = #{custCnt20}
+        </if>
+        <if test='custCnt21 != null and custCnt21 != ""'>
+            GOAL_PREF_VAL    = #{custCnt21}
+        </if>
+            , UPDT_USR_ID   = #{dealerUpdtUsrId}
+            , UPDT_DT       = SYSDATE
+        <where>
+        GOAL_YY             = SUBSTR(#{sTargetStatusYyMmDd}, 1, 4)
+        AND   GOAL_MM       = SUBSTR(#{sTargetStatusYyMmDd}, 5, 2)
+        AND   DLR_CD        = 'D2618'
+        AND   DLR_TP        = #{custChannelVal}
+        <if test='custCnt1 != null and custCnt1 != ""'>
+            AND CARLINE_CD    = '2C'
+        </if>
+        <if test='custCnt2 != null and custCnt2 != ""'>
+            AND CARLINE_CD    = 'B3'
+        </if>
+        <if test='custCnt3 != null and custCnt3 != ""'>
+            AND CARLINE_CD    = 'BX'
+        </if>
+        <if test='custCnt4 != null and custCnt4 != ""'>
+            AND CARLINE_CD    = 'C3'
+        </if>
+        <if test='custCnt5 != null and custCnt5 != ""'>
+            AND CARLINE_CD    = 'C7'
+        </if>
+        <if test='custCnt6 != null and custCnt6 != ""'>
+            AND CARLINE_CD    = 'C9'
+        </if>
+        <if test='custCnt7 != null and custCnt7 != ""'>
+            AND CARLINE_CD    = 'CE'
+        </if>
+        <if test='custCnt8 != null and custCnt8 != ""'>
+            AND CARLINE_CD    = 'CH'
+        </if>
+        <if test='custCnt9 != null and custCnt9 != ""'>
+            AND CARLINE_CD    = 'CP'
+        </if>
+        <if test='custCnt10 != null and custCnt10 != ""'>
+            AND CARLINE_CD    = 'DC'
+        </if>
+        <if test='custCnt11 != null and custCnt11 != ""'>
+            AND CARLINE_CD    = 'DZ'
+        </if>
+        <if test='custCnt12 != null and custCnt12 != ""'>
+            AND CARLINE_CD    = 'E5'
+        </if>
+        <if test='custCnt13 != null and custCnt13 != ""'>
+            AND CARLINE_CD    = 'ES'
+        </if>
+        <if test='custCnt14 != null and custCnt14 != ""'>
+            AND CARLINE_CD    = 'F0'
+        </if>
+        <if test='custCnt15 != null and custCnt15 != ""'>
+            AND CARLINE_CD    = 'F8'
+        </if>
+        <if test='custCnt16 != null and custCnt16 != ""'>
+            AND CARLINE_CD    = 'F9'
+        </if>
+        <if test='custCnt17 != null and custCnt17 != ""'>
+            AND CARLINE_CD    = 'ID'
+        </if>
+        <if test='custCnt18 != null and custCnt18 != ""'>
+            AND CARLINE_CD    = 'IK'
+        </if>
+        <if test='custCnt19 != null and custCnt19 != ""'>
+            AND CARLINE_CD    = 'IV'
+        </if>
+        <if test='custCnt20 != null and custCnt20 != ""'>
+            AND CARLINE_CD    = 'IZ'
+        </if>
+        <if test='custCnt21 != null and custCnt21 != ""'>
+            AND CARLINE_CD    = 'TE'
+        </if>
+        AND   GOAL_TP       = 'C'
+        </where>
+    </update>
+
+</mapper>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : RoleMappingDAO_SqlMap.xml
+    Description : 역할-사용자 매핑에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 1. 18.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 18.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.sales.dao.SalesRoleMappingDAO">
+
+   
+    <!-- 역할이 있는 사용자 목록을 조회한다. -->
+    <select id="selectUsersByRoleId" parameterType="map" resultType="chn.bhmc.dms.mob.api.sales.vo.UserVO">
+        SELECT
+            T2.USR_ID
+            ,T2.USR_NM
+            ,T2.EMP_NO
+            ,NVL(T2.SYS_USER_YN,'N') AS SYS_USER_YN
+        FROM CM_0803T T1
+        INNER JOIN CM_0801T T2 ON T1.REF_ID = T2.USR_ID AND T1.REF_TP = 'U'
+        WHERE
+            T1.SYS_CD = #{sysCd}
+            <if test='roleIdList != null and roleIdList.size > 0'>
+                AND T1.ROLE_ID IN
+                <foreach item="roleId" index="index" collection="roleIdList" open="(" separator="," close=")">
+                    #{roleId}
+                </foreach>
+            </if>
+            <if test='empNo != null and empNo != ""'>
+                AND T2.EMP_NO  LIKE '%'||#{empNo}||'%'
+            </if>
+            <if test='usrNm != null and usrNm != ""'>
+                AND T2.USR_NM LIKE '%'||#{usrNm}||'%'
+            </if>
+            AND T2.DLR_CD = #{dlrCd}
+            AND T1.USE_YN = 'Y'
+            AND T2.DEL_YN = 'N'
+            AND T2.ENABLED_YN = 'Y'
+        ORDER BY T2.USR_NM ASC
+    </select>
+
+</mapper>

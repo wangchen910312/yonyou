@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CustCouponInfoDAO_SqlMap.xml
+    Description :
+    author Kyo Jin Lee
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kyo Jin Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cif.service.dao.CustCouponInfoDAO">
+
+    <!-- 조회 검색조건 -->
+    <sql id="searchWhere">
+        <where>
+            <if test='sDlrCd          != null and sDlrCd          != ""'> AND CR_0823T.DLR_CD          = #{sDlrCd}        </if>
+            <if test='sCupnSeq        != null and sCupnSeq        != ""'> AND CR_0823T.CUPN_SEQ        = #{sCupnSeq}      </if>
+            <if test='sCupnNm         != null and sCupnNm         != ""'>
+                    AND CR_0823T.CUPN_NM LIKE '%'||#{sCupnNm}||'%'
+            </if>
+            <if test='sDcCd           != null and sDcCd           != ""'> AND CR_0823T.DC_CD           = #{sDcCd}         </if>
+            <if test='sDcUseTp        != null and sDcUseTp        != ""'> AND CR_0823T.DC_USE_TP       = #{sDcUseTp}      </if>
+            <if test='sUseYn          != null and sUseYn          != ""'> AND CR_0823T.USE_YN          = #{sUseYn}        </if>
+            <if test='sCupnFromDt     != null and sCupnFromDt     != ""'> AND CR_0823T.CUPN_FROM_DT    = #{sCupnFromDt}   </if>
+            <if test='sCupnToDt       != null and sCupnToDt       != ""'> AND CR_0823T.CUPN_TO_DT      = #{sCupnToDt}     </if>
+            <if test='sCupnValidPrid  != null and sCupnValidPrid  != ""'> AND CR_0823T.CUPN_VALID_PRID = #{sCupnValidPrid}</if>
+            <if test='sLbrDcRate      != null and sLbrDcRate      != ""'> AND CR_0823T.LBR_DC_RATE     = #{sLbrDcRate}    </if>
+            <if test='sLbrDcAmt       != null and sLbrDcAmt       != ""'> AND CR_0823T.LBR_DC_AMT      = #{sLbrDcAmt}     </if>
+            <if test='sParDcRate      != null and sParDcRate      != ""'> AND CR_0823T.PAR_DC_RATE     = #{sParDcRate}    </if>
+            <if test='sParDcAmt       != null and sParDcAmt       != ""'> AND CR_0823T.PAR_DC_AMT      = #{sParDcAmt}     </if>
+            <if test='sTotDcRate      != null and sTotDcRate      != ""'> AND CR_0823T.TOT_DC_RATE     = #{sTotDcRate}    </if>
+            <if test='sTotDcAmt       != null and sTotDcAmt       != ""'> AND CR_0823T.TOT_DC_AMT      = #{sTotDcAmt}     </if>
+            <if test='sItemCd         != null and sItemCd         != ""'> AND CR_0823T.ITEM_CD         = #{sItemCd}       </if>
+            <if test='sGoodsCnt       != null and sGoodsCnt       != ""'> AND CR_0823T.GOODS_CNT       = #{sGoodsCnt}     </if>
+        </where>
+
+    </sql>
+
+    <!-- 정보 목록수를 조회한다. -->
+    <select id="selectCustCouponInfoByConditionCnt" parameterType="CustCouponInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInfoDAO.selectCustCouponInfoByConditionCnt] */
+        SELECT COUNT(CUPN_SEQ) AS VALUE
+          FROM CR_0823T
+         <include refid="searchWhere" />
+    </select>
+
+    <!-- 정보 목록을 조회한다. -->
+    <select id="selectCustCouponInfoByCondition" parameterType="CustCouponInfoSearchVO" resultType="CustCouponInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInfoDAO.selectCustCouponInfoByCondition] */
+        SELECT T2.*
+            FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT A1.* FROM (
+                    SELECT
+                        CR_0823T.DLR_CD                 --딜러코드
+                        ,CR_0823T.CUPN_SEQ               --쿠폰시퀀스
+                        ,CR_0823T.CUPN_NM                --쿠폰명
+                        ,CR_0823T.DC_CD                  --할인방식
+                        ,CR_0823T.DC_USE_TP              --할인사용구분
+                        ,CR_0823T.USE_YN                 --사용여부
+                        ,CR_0823T.CUPN_FROM_DT           --유효시작일
+                        ,CR_0823T.CUPN_TO_DT             --유효종료일
+                        ,CR_0823T.CUPN_VALID_PRID        --기본유효일자
+                        ,CR_0823T.LBR_DC_RATE
+                        ,CR_0823T.PAR_DC_RATE            --부품할인율
+                        ,CR_0823T.TOT_DC_RATE            --총액할인율
+                        ,CR_0823T.LBR_DC_AMT             --공임할인금액
+                        ,CR_0823T.PAR_DC_AMT             --부품할인금액
+                        ,CR_0823T.TOT_DC_AMT             --총액할인금액
+                        ,CR_0823T.ITEM_CD                --용폼코드
+                        ,(SELECT ITEM_NM FROM PT_0201T WHERE ITEM_CD = CR_0823T.ITEM_CD) AS ITEM_NM
+                        ,CR_0823T.GOODS_CNT              --수량
+                        ,CR_0823T.REG_USR_ID             --등록자ID
+                        ,CR_0823T.REG_DT                 --등록일자
+                        ,CR_0823T.UPDT_USR_ID            --수정자ID
+                        ,CR_0823T.UPDT_DT                --수정일자
+                    FROM CR_0823T CR_0823T
+                    <include refid="searchWhere" />
+                    ) A1
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>          A1.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "cupnSeq"'>        A1.CUPN_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "cupnNm"'>         A1.CUPN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "dcCd"'>           A1.DC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                                <when test='item.field == "dcUseTp"'>        A1.DC_USE_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "useYn"'>          A1.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "cupnFromDt"'>     A1.CUPN_FROM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                <when test='item.field == "cupnToDt"'>       A1.CUPN_TO_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "cupnValidPrid"'>  A1.CUPN_VALID_PRID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "lbrDcRate"'>      A1.LBR_DC_RATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "lbrDcAmt"'>       A1.LBR_DC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "parDcRate"'>      A1.PAR_DC_RATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "parDcAmt"'>       A1.PAR_DC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "totDcRate"'>      A1.TOT_DC_RATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "totDcAmt"'>       A1.TOT_DC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "itemCd"'>         A1.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "goodsCnt"'>       A1.GOODS_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "regUsrId"'>       A1.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "regDt"'>          A1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                                <when test='item.field == "updtUsrId"'>      A1.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "updtDt"'>         A1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <otherwise>
+                                    A1.DLR_CD ASC
+                                    ,A1.REG_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        A1.DLR_CD ASC
+                        ,A1.REG_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        ) T2
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+
+    </select>
+
+    <!-- 목록을 조회한다. -->
+    <select id="selectCustCouponInfoByConditionByKey" parameterType="CustCouponInfoVO" resultType="CustCouponInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInfoDAO.selectCustCouponInfoByConditionByKey] */
+        SELECT A1.* FROM (
+            SELECT
+                ,CR_0823T.DLR_CD                 --딜러코드
+                ,CR_0823T.CUPN_SEQ               --쿠폰시퀀스
+                ,CR_0823T.CUPN_NM                --쿠폰명
+                ,CR_0823T.DC_CD                  --할인방식
+                ,CR_0823T.DC_USE_TP              --할인사용구분
+                ,CR_0823T.USE_YN                 --사용여부
+                ,CR_0823T.CUPN_FROM_DT           --유효시작일
+                ,CR_0823T.CUPN_TO_DT             --유효종료일
+                ,CR_0823T.CUPN_VALID_PRID        --기본유효일자
+                ,CR_0823T.LBR_DC_RATE            --공임할일율
+                ,CR_0823T.LBR_DC_AMT             --공임할인금액
+                ,CR_0823T.PAR_DC_RATE            --부품할인율
+                ,CR_0823T.PAR_DC_AMT             --부품할인금액
+                ,CR_0823T.TOT_DC_RATE            --총액할인율
+                ,CR_0823T.TOT_DC_AMT             --총액할인금액
+                ,CR_0823T.ITEM_CD                --용폼코드
+                ,(SELECT ITEM_NM FROM PT_0201T WHERE ITEM_CD = CR_0823T.ITEM_CD) AS ITEM_NM
+                ,CR_0823T.GOODS_CNT              --수량
+                ,CR_0823T.REG_USR_ID             --등록자ID
+                ,CR_0823T.REG_DT                 --등록일자
+                ,CR_0823T.UPDT_USR_ID            --수정자ID
+                ,CR_0823T.UPDT_DT                --수정일자
+            FROM CR_0823T CR_0823T
+            <include refid="searchWhere" />
+            ) A1
+        ORDER BY
+        <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "dlrCd"'>          A1.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                        <when test='item.field == "cupnSeq"'>        A1.CUPN_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                        <when test='item.field == "cupnNm"'>         A1.CUPN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                        <when test='item.field == "dcCd"'>           A1.DC_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>          </when>
+                        <when test='item.field == "dcUseTp"'>        A1.DC_USE_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                        <when test='item.field == "useYn"'>          A1.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                        <when test='item.field == "cupnFromDt"'>     A1.CUPN_FROM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                        <when test='item.field == "cupnToDt"'>       A1.CUPN_TO_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "cupnValidPrid"'>  A1.CUPN_VALID_PRID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "lbrDcRate"'>      A1.LBR_DC_RATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                        <when test='item.field == "lbrDcAmt"'>       A1.LBR_DC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "parDcRate"'>      A1.PAR_DC_RATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                        <when test='item.field == "parDcAmt"'>       A1.PAR_DC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "totDcRate"'>      A1.TOT_DC_RATE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                        <when test='item.field == "totDcAmt"'>       A1.TOT_DC_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "itemCd"'>         A1.ITEM_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                        <when test='item.field == "goodsCnt"'>       A1.GOODS_CNT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                        <when test='item.field == "regUsrId"'>       A1.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                        <when test='item.field == "regDt"'>          A1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>         </when>
+                        <when test='item.field == "updtUsrId"'>      A1.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                        <when test='item.field == "updtDt"'>         A1.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                        <otherwise>
+                            A1.DLR_CD ASC
+                            ,A1.REG_DT DESC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                A1.DLR_CD ASC
+                ,A1.REG_DT DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 추가한다. -->
+    <insert id="insertCustCoupon" parameterType="CustCouponInfoVO" >
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInfoDAO.insertCustCoupon] */
+
+        <selectKey resultType="int" keyProperty="cupnSeq" order="AFTER">
+            SELECT SEQ_CR_0823T.currval AS CUPN_SEQ FROM DUAL
+        </selectKey>
+
+        INSERT INTO CR_0823T(
+            DLR_CD
+            ,CUPN_SEQ
+            ,CUPN_NM
+            ,DC_CD
+            ,DC_USE_TP
+            ,USE_YN
+            ,CUPN_FROM_DT
+            ,CUPN_TO_DT
+            ,CUPN_VALID_PRID
+            ,LBR_DC_RATE
+            ,LBR_DC_AMT
+            ,PAR_DC_RATE
+            ,PAR_DC_AMT
+            ,TOT_DC_RATE
+            ,TOT_DC_AMT
+            ,ITEM_CD
+            ,GOODS_CNT
+            ,REG_USR_ID
+            ,REG_DT
+            ,UPDT_USR_ID
+            ,UPDT_DT
+        ) VALUES (
+            #{dlrCd}
+            ,SEQ_CR_0823T.NEXTVAL
+            ,#{cupnNm}
+            ,#{dcCd}
+            ,#{dcUseTp}
+            ,#{useYn}
+            ,#{cupnFromDt}
+            ,#{cupnToDt}
+            ,#{cupnValidPrid}
+            ,#{lbrDcRate}
+            ,#{lbrDcAmt}
+            ,#{parDcRate}
+            ,#{parDcAmt}
+            ,#{totDcRate}
+            ,#{totDcAmt}
+            ,#{itemCd}
+            ,#{goodsCnt}
+            ,#{regUsrId}
+            ,SYSDATE
+            ,#{regUsrId}
+            ,SYSDATE
+        )
+
+    </insert>
+
+    <!-- 업데이트 한다. -->
+    <update id="updateCustCoupon" parameterType="CustCouponInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInfoDAO.updateCustCoupon] */
+        UPDATE CR_0823T SET
+            UPDT_DT          = SYSDATE
+            ,UPDT_USR_ID      = #{regUsrId}
+            <if test='cupnNm != null and cupnNm != ""'>
+            ,CUPN_NM          = #{cupnNm}
+            </if>
+            <if test='dcCd != null and dcCd != ""'>
+            ,DC_CD            = #{dcCd}
+            </if>
+            <if test='dcUseTp != null and dcUseTp != ""'>
+            ,DC_USE_TP        = #{dcUseTp}
+            </if>
+            <if test='useYn != null and useYn != ""'>
+            ,USE_YN           = #{useYn}
+            </if>
+            ,CUPN_FROM_DT     = nvl(#{cupnFromDt},'')
+            ,CUPN_TO_DT       = nvl(#{cupnToDt},'')
+            <if test='cupnValidPrid != null'>
+            ,CUPN_VALID_PRID  = #{cupnValidPrid}
+            </if>
+            <if test='lbrDcRate != null'>
+            ,LBR_DC_RATE      = #{lbrDcRate}
+            </if>
+            <if test='lbrDcAmt != null'>
+            ,LBR_DC_AMT       = #{lbrDcAmt}
+            </if>
+            <if test='parDcRate != null'>
+            ,PAR_DC_RATE      = #{parDcRate}
+            </if>
+            <if test='parDcAmt != null'>
+            ,PAR_DC_AMT       = #{parDcAmt}
+            </if>
+            <if test='totDcRate != null'>
+            ,TOT_DC_RATE      = #{totDcRate}
+            </if>
+            <if test='totDcAmt != null'>
+            ,TOT_DC_AMT       = #{totDcAmt}
+            </if>
+            <if test='itemCd != null and itemCd != ""'>
+            ,ITEM_CD          = #{itemCd}
+            </if>
+            <if test='goodsCnt != null and goodsCnt != ""'>
+            ,GOODS_CNT        = #{goodsCnt}
+            </if>
+        WHERE DLR_CD = #{dlrCd}
+          AND CUPN_SEQ = #{cupnSeq}
+    </update>
+
+    <!-- 삭제 한다. -->
+    <delete id="deleteCustCoupon" parameterType="CustCouponInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustCouponInfoDAO.deleteCustCoupon] */
+        DELETE FROM CR_0823T
+        WHERE DLR_CD = #{dlrCd}
+          AND CUPN_SEQ = #{cupnSeq}
+    </delete>
+
+</mapper>

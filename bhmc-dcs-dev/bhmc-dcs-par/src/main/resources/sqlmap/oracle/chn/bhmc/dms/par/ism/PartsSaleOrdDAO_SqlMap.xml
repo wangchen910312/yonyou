@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : PartsSaleOrdDAO_SqlMap.xml
+    Description : 부품판매 관리.
+    author Ju Won Lee
+    since 2018. 2. 08.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2018. 2. 08.     Ju Won Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.par.ism.service.dao.PartsSaleOrdDAO">
+
+    <!-- 부품판매 조회 정보 Count를 조회한다. -->
+    <select id="selectPartsSaleOrdByConditionCnt" resultType="int" parameterType="PartsSaleOrdSearchVO">
+    /* [chn.bhmc.dms.par.ism.service.dao.PartsSaleOrdDAO.selectPartsSaleOrdByConditionCnt] */
+          SELECT COUNT(*)
+            FROM PT_0521I A
+                 INNER JOIN CM_0101T B ON A.ISS_DLR_CD = B.DLR_CD
+           WHERE 1=1
+            <if test='sDlrCd != null and sDlrCd != ""'>
+               AND A.ISS_DLR_CD = #{sDlrCd}
+            </if>
+            <if test='sDlrNm != null and sDlrNm != ""'>
+                AND B.DLR_NM LIKE '%'||#{sDlrNm}||'%'
+            </if>
+            <if test='sYyMm != null and sYyMm != ""'>
+                AND A.ISS_YYMM = #{sYyMm}
+            </if>
+    </select>
+
+       <!-- 부품판매 조회 정보를 조회한다. -->
+    <select id="selectPartsSaleOrdByCondition" resultType="PartsSaleOrdVO" parameterType="PartsSaleOrdSearchVO">
+    /* [chn.bhmc.dms.par.ism.service.dao.PartsSaleOrdDAO.selectPartsSaleOrdByCondition] */
+      SELECT A.*
+        FROM
+            (
+            SELECT   ROWNUM AS RNUM
+                   , T1.*
+              FROM (
+                      SELECT A.ISS_DLR_CD
+                            ,B.DLR_NM
+                            ,to_char(to_date(A.ISS_YYMM,'yyyy-mm'),'yyyy-mm') AS ISS_YYMM
+                            ,A.ISS_SALE_CNT
+                            ,A.ISS_SALE_QTY
+                            ,A.ISS_SALE_AMT
+                    FROM PT_0521I A
+                         INNER JOIN CM_0101T B ON A.ISS_DLR_CD = B.DLR_CD
+                   WHERE 1=1
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                       AND A.ISS_DLR_CD = #{sDlrCd}
+                    </if>
+                    <if test='sDlrNm != null and sDlrNm != ""'>
+                        AND B.DLR_NM LIKE '%'||#{sDlrNm}||'%'
+                    </if>
+                    <if test='sYyMm != null and sYyMm != ""'>
+                        AND A.ISS_YYMM = #{sYyMm}
+                    </if>
+                     ORDER BY
+                          A.ISS_DLR_CD ASC
+                         ,A.ISS_YYMM DESC
+             ) T1
+           ) A
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    RNUM <![CDATA[<=]]> #{lastIndex}
+                AND RNUM <![CDATA[>]]> #{firstIndex}
+                </if>
+            </where>
+    </select>
+</mapper>

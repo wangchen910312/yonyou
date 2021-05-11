@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.inv.service.dao.StockConditionDAO">
+
+    <!-- 재고조회 조회 목록  -->
+    <!--
+	<select id="selectStockConditionsByCondition" parameterType="StockStateSearchVO" resultType="StockConditionVO">
+        WITH CTE AS (
+                      SELECT ROW_NUMBER() OVER(ORDER BY B.LVL_ID, B.LOC_CD ASC) AS PARENT_ID
+                             ,B.LOC_CD
+                         FROM PT_0222T B
+                         WHERE B.ITEM_CD IS null
+                         <if test='sStrgeCd != null and sStrgeCd != ""'>
+                           AND B.STRGE_CD = #{sStrgeCd}
+                         </if>
+            )
+       SELECT ROW_NUMBER() OVER(ORDER BY A.LVL_ID, A.LOC_CD ASC) AS ID
+             ,A.LVL_ID
+             ,A.LOC_CD
+             ,A.LOC_NM
+             ,A.MAIN_LOC_YN
+             ,A.STRGE_CD
+             ,A.UPPER_LOC_ID
+             ,B.PARENT_ID
+             ,NVL(C.TOT, 0) AS TOT
+          from PT_0222T A
+             , CTE B
+             ,( select STRGE_CD
+                     , LOC_CD
+                     , sum(1) AS TOT
+                  FROM SA_0121T
+                 WHERE STRGE_CD IS NOT NULL
+                   AND LOC_CD IS NOT NULL
+                   AND NCAR_DSTIN_CD = 'N'           /*신차*/
+                 <if test='sCarlineCd != null and sCarlineCd != ""'>
+                   AND CARLINE_CD =  #{sCarlineCd}
+                 </if>
+                 <if test='sModelCd != null and sModelCd != ""'>
+                   AND MODEL_CD =  #{sModelCd}
+                 </if>
+                 <if test='sOcnCd != null and sOcnCd != ""'>
+                   AND OCN_CD =  #{sOcnCd}
+                 </if>
+                 <if test='sExtColorCd != null and sExtColorCd != ""'>
+                   AND EXT_COLOR_CD =  #{sExtColorCd}
+                 </if>
+                 <if test='sIntColorCd != null and sIntColorCd != ""'>
+                   AND INT_COLOR_CD =   #{sIntColorCd}
+                 </if>
+                 GROUP BY STRGE_CD, LOC_CD
+              ) C
+         where A.UPPER_LOC_ID = B.LOC_CD (+)
+           AND A.STRGE_CD = C.STRGE_CD (+)
+           AND A.LOC_CD = C.LOC_CD(+)
+           AND A.ITEM_CD IS null
+        <if test='sStrgeCd != null and sStrgeCd != ""'>
+           AND A.STRGE_CD = #{sStrgeCd}         /*창고*/
+        </if>
+        <if test='sLocCd != null and sLocCd != ""'>
+          AND A.LOC_CD =  #{sLocCd}           /*위치*/
+        </if>
+        <if test='sDlrCd != null and sDlrCd != ""'>
+          AND A.DLR_CD =  #{sDlrCd}           /*딜러코드*/
+        </if>
+        ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                       <when test='item.field == "locId"'>A.LOC_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            A.DLR_CD, A.LVL_ID, A.LOC_CD ASC
+                        </otherwise>
+                    </choose>
+                 </foreach>
+            </when>
+            <otherwise>
+                A.DLR_CD, A.LVL_ID, A.LOC_CD ASC
+            </otherwise>
+        </choose>
+	</select>
+     -->
+
+    <!-- 재고조회 조회 목록  -->
+    <select id="selectStockConditionsByCondition" parameterType="StockStateSearchVO" resultType="StockConditionVO">
+       SELECT A.ID
+            , A.LVL_ID
+            , A.LOC_CD
+            , A.LOC_NM
+            , A.MAIN_LOC_YN
+            , A.STRGE_CD
+            , A.UPPER_LOC_ID
+            , A.PARENT_ID
+            , (SELECT SUM(TOT)
+                 FROM (
+                        WITH CTE AS (
+                          SELECT ROW_NUMBER() OVER(ORDER BY B.LVL_ID, B.LOC_CD ASC) AS PARENT_ID
+                                 ,B.LOC_CD
+                             FROM PT_0222T B
+                             WHERE B.ITEM_CD IS null
+                             <if test='sStrgeCd != null and sStrgeCd != ""'>
+                               AND B.STRGE_CD = #{sStrgeCd}
+                             </if>
+                          )
+                        SELECT ROW_NUMBER() OVER(ORDER BY A.LVL_ID, A.LOC_CD ASC) AS ID
+                             , A.LVL_ID
+                             , A.LOC_CD
+                             , A.LOC_NM
+                             , A.MAIN_LOC_YN
+                             , A.STRGE_CD
+                             , A.UPPER_LOC_ID
+                             , B.PARENT_ID
+                             , NVL(C.TOT, 0) AS TOT
+                          from PT_0222T A
+                             , CTE B
+                             ,( select STRGE_CD
+                                     , LOC_CD
+                                     , SUM(1) AS TOT
+                                  FROM SA_0121T
+                                 WHERE STRGE_CD IS NOT NULL
+                                   AND LOC_CD IS NOT NULL
+                                   AND NCAR_DSTIN_CD = 'N'           -- 신차
+                                 <if test='sCarlineCd != null and sCarlineCd != ""'>
+                                   AND CARLINE_CD =  #{sCarlineCd}
+                                 </if>
+                                 <if test='sModelCd != null and sModelCd != ""'>
+                                   AND MODEL_CD =  #{sModelCd}
+                                 </if>
+                                 <if test='sOcnCd != null and sOcnCd != ""'>
+                                   AND OCN_CD =  #{sOcnCd}
+                                 </if>
+                                 <if test='sExtColorCd != null and sExtColorCd != ""'>
+                                   AND EXT_COLOR_CD =  #{sExtColorCd}
+                                 </if>
+                                 <if test='sIntColorCd != null and sIntColorCd != ""'>
+                                   AND INT_COLOR_CD =   #{sIntColorCd}
+                                 </if>
+                                 <if test='sDlrCd != null and sDlrCd != ""'>
+                                   AND ORD_DLR_CD = #{sDlrCd}
+                                 </if>
+                                 GROUP BY STRGE_CD, LOC_CD
+                              ) C
+                         where A.UPPER_LOC_ID = B.LOC_CD (+)
+                           AND A.STRGE_CD = C.STRGE_CD (+)
+                           AND A.LOC_CD = C.LOC_CD(+)
+                           AND A.ITEM_CD IS null
+                        <if test='sStrgeCd != null and sStrgeCd != ""'>
+                           AND A.STRGE_CD = #{sStrgeCd}         -- 창고
+                        </if>
+                        <if test='sLocCd != null and sLocCd != ""'>
+                          AND A.LOC_CD =  #{sLocCd}           -- 위치
+                        </if>
+                        <if test='sDlrCd != null and sDlrCd != ""'>
+                          AND A.DLR_CD =  #{sDlrCd}           -- 딜러코드
+                        </if>
+                     ) Z
+               START WITH Z.ID = A.ID
+               CONNECT BY PRIOR Z.ID = Z.PARENT_ID
+           ) AS TOT
+       FROM (
+              WITH CTE AS (
+                      SELECT ROW_NUMBER() OVER(ORDER BY B.LVL_ID, B.LOC_CD ASC) AS PARENT_ID
+                             ,B.LOC_CD
+                         FROM PT_0222T B
+                         WHERE B.ITEM_CD IS null
+                         <if test='sStrgeCd != null and sStrgeCd != ""'>
+                           AND B.STRGE_CD = #{sStrgeCd}
+                         </if>
+                      )
+               SELECT ROW_NUMBER() OVER(ORDER BY A.LVL_ID, A.LOC_CD ASC) AS ID
+                     , A.LVL_ID
+                     , A.LOC_CD
+                     , A.LOC_NM
+                     , A.MAIN_LOC_YN
+                     , A.STRGE_CD
+                     , A.UPPER_LOC_ID
+                     , B.PARENT_ID
+                     , NVL(C.TOT, 0) AS TOT
+                  FROM PT_0222T A
+                     , CTE B
+                     ,( SELECT STRGE_CD
+                             , LOC_CD
+                             , SUM(1) AS TOT
+                          FROM SA_0121T
+                         WHERE STRGE_CD IS NOT NULL
+                           AND LOC_CD IS NOT NULL
+                           AND NCAR_DSTIN_CD = 'N'           -- 신차
+                         <if test='sCarlineCd != null and sCarlineCd != ""'>
+                           AND CARLINE_CD =  #{sCarlineCd}
+                         </if>
+                         <if test='sModelCd != null and sModelCd != ""'>
+                           AND MODEL_CD =  #{sModelCd}
+                         </if>
+                         <if test='sOcnCd != null and sOcnCd != ""'>
+                           AND OCN_CD =  #{sOcnCd}
+                         </if>
+                         <if test='sExtColorCd != null and sExtColorCd != ""'>
+                           AND EXT_COLOR_CD =  #{sExtColorCd}
+                         </if>
+                         <if test='sIntColorCd != null and sIntColorCd != ""'>
+                           AND INT_COLOR_CD =   #{sIntColorCd}
+                         </if>
+                         <if test='sDlrCd != null and sDlrCd != ""'>
+                           AND ORD_DLR_CD = #{sDlrCd}
+                         </if>
+                         GROUP BY STRGE_CD, LOC_CD
+                      ) C
+                 WHERE A.UPPER_LOC_ID = B.LOC_CD (+)
+                   AND A.STRGE_CD = C.STRGE_CD (+)
+                   AND A.LOC_CD = C.LOC_CD(+)
+                   AND A.ITEM_CD IS null
+                <if test='sStrgeCd != null and sStrgeCd != ""'>
+                   AND A.STRGE_CD = #{sStrgeCd}         -- 창고
+                </if>
+                <if test='sLocCd != null and sLocCd != ""'>
+                  AND A.LOC_CD =  #{sLocCd}           -- 위치
+                </if>
+                <if test='sDlrCd != null and sDlrCd != ""'>
+                  AND A.DLR_CD =  #{sDlrCd}           -- 딜러코드
+                </if>
+           ) A
+        START WITH A.PARENT_ID IS NULL
+        CONNECT BY PRIOR  A.ID = A.PARENT_ID
+
+        ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                       <when test='item.field == "locId"'>A.LOC_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                           A.LVL_ID, A.LOC_CD ASC
+                        </otherwise>
+                    </choose>
+                 </foreach>
+            </when>
+            <otherwise>
+                    A.LVL_ID, A.LOC_CD ASC
+            </otherwise>
+        </choose>
+    </select>
+</mapper>

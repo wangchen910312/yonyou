@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : OfficeDao_SqlMap.xml
+    Description : 사무소에 관한 데이터처리
+    author Kang Seok Han
+    since 2015. 1. 29.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 29.     Kang Seok Han     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.cmm.cmp.service.dao.OfficeDAO">
+
+	<!-- 사무소 정보를 등록한다. -->
+	<insert id="insertOffice" parameterType="OfficeVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.OfficeDAO.insertOffice] */
+		INSERT INTO CM_2601T(
+			DIVI_CD
+            ,OFF_CD
+            ,OFF_NM
+		)VALUES(
+			#{diviCd}
+            ,#{offCd}
+            ,#{offNm}
+		)
+	</insert>
+
+	<!-- 사무소 정보 정보를 수정한다. -->
+	<update id="updateOffice" parameterType="OfficeVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.OfficeDAO.updateOffice] */
+		UPDATE CM_2601T SET
+            OFF_NM = #{offNm}
+		WHERE DIVI_CD = #{diviCd}
+            AND OFF_CD = #{offCd}
+	</update>
+
+	<!-- 사무소 정보 정보를 삭제한다. -->
+	<delete id="deleteOffice" parameterType="OfficeVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.OfficeDAO.deleteOffice] */
+		DELETE FROM CM_2601T
+		WHERE DIVI_CD = #{diviCd}
+            AND OFF_CD = #{offCd}
+	</delete>
+
+	<!-- 사무소 정보를 조회한다. -->
+	<select id="selectOfficeByKey" parameterType="map" resultType="OfficeVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.OfficeDAO.selectOfficeByKey] */
+		SELECT * FROM CM_2601T
+		WHERE DIVI_CD = #{diviCd}
+            AND OFF_CD = #{offCd}
+	</select>
+
+	<!-- 사무소 정보 목록을 조회한다. -->
+	<select id="selectOfficesByCondition" parameterType="OfficeSearchVO" resultType="OfficeVO">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.OfficeDAO.selectOfficesByCondition] */
+		SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT V1.DIVI_CD, V1.DIVI_NM, V2.OFF_CD, V2.OFF_NM
+                FROM CM_2501T V1
+                INNER JOIN CM_2601T V2 ON V1.DIVI_CD = V2.DIVI_CD
+                <where>
+                    <if test='sDiviCd != null and sDiviCd != ""'>
+                        V1.DIVI_CD = #{sDiviCd}
+                    </if>
+
+                    <if test='sDiviNm != null and sDiviNm != ""'>
+                        AND V1.DIVI_NM LIKE '%'||#{sDiviNm}||'%'
+                    </if>
+
+                    <if test='sOffCd != null and sOffCd != ""'>
+                        AND V2.OFF_CD = #{sOffCd}
+                    </if>
+
+                    <if test='sOffNm != null and sOffNm != ""'>
+                        AND V2.OFF_NM LIKE '%'||#{sOffNm}||'%'
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "diviCd"'>V1.DIVI_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "diviNM"'>V1.DIVI_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "offCd"'>V2.OFF_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "offNm"'>V2.OFF_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    V1.DIVI_CD ASC, V2.OFF_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        V1.DIVI_CD ASC, V2.OFF_CD ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+	<!-- 사무소 정보 목록수를 조회한다. -->
+	<select id="selectOfficesByConditionCnt" parameterType="OfficeSearchVO" resultType="int">
+        /* [chn.bhmc.dms.cmm.cmp.service.dao.OfficeDAO.selectOfficesByConditionCnt] */
+		SELECT COUNT(*) AS VALUE
+        FROM CM_2501T V1
+        INNER JOIN CM_2601T V2 ON V1.DIVI_CD = V2.DIVI_CD
+        <where>
+            <if test='sDiviCd != null and sDiviCd != ""'>
+                V1.DIVI_CD = #{sDiviCd}
+            </if>
+
+            <if test='sDiviNm != null and sDiviNm != ""'>
+                AND V1.DIVI_NM LIKE '%'||#{sDiviNm}||'%'
+            </if>
+
+            <if test='sOffCd != null and sOffCd != ""'>
+                AND V2.OFF_CD = #{sOffCd}
+            </if>
+
+            <if test='sOffNm != null and sOffNm != ""'>
+                AND V2.OFF_NM LIKE '%'||#{sOffNm}||'%'
+            </if>
+        </where>
+	</select>
+
+</mapper>

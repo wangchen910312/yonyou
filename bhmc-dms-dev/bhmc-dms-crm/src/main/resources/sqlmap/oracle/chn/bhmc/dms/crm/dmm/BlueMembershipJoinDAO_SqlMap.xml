@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : BlueMembershipJoinDAO_SqlMap.xml
+    Description : 블루멤버십 가입
+    author Hyun Ho Kim
+    since 2016. 04. 06.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 04. 06.    Hyun Ho Kim    최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.dmm.service.dao.BlueMembershipJoinDAO">
+    <sql id="searchBlueMembership">
+        <if test='sCustNo != null and sCustNo != ""'>
+            AND A.CUST_NO = #{sCustNo}
+        </if>
+        <if test='sVinNo != null and sVinNo != ""'>
+            AND A.VIN_NO LIKE '%'||#{sVinNo}||'%'
+        </if>
+
+        <if test='sCustNm != null and sCustNm != ""'>
+            AND ( A.CUST_NM LIKE '%'||#{sCustNm}||'%'
+                OR A.HP_NO LIKE '%'||#{sCustNm}||'%'
+                )
+        </if>
+        <if test='sJoinApproveYn != null and sJoinApproveYn != ""'>
+            AND A.JOIN_APPROVE_YN = #{sJoinApproveYn}
+        </if>
+
+        <if test='sStartDt != null'>
+            AND A.JOIN_APPROVE_DT <![CDATA[>=]]> #{sStartDt}
+        </if>
+        <if test='sEndDt != null'>
+            AND A.JOIN_APPROVE_DT <![CDATA[<]]> #{sEndDt} + 1
+        </if>
+    </sql>
+
+    <!-- 블루멤버십 가입 목록수를 조회한다. -->
+    <select id="selectBlueMembershipJoinsByConditionCnt" parameterType="BlueMembershipJoinSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.BlueMembershipJoinDAO.selectBlueMembershipJoinsByConditionCnt] */
+        SELECT  COUNT(*) AS VALUE
+        FROM    CR_0807T A INNER JOIN CR_0101T B
+                ON A.DLR_CD = B.DLR_CD
+                AND A.CUST_NO = B.CUST_NO
+                LEFT OUTER JOIN CR_0801T C
+                ON B.DLR_CD = C.DLR_CD
+                AND B.CUST_NO = C.CUST_NO
+        WHERE   A.DLR_CD = #{sDlrCd}
+        <include refid="searchBlueMembership" />
+
+    </select>
+
+    <!-- 블루멤버십 가입 정보 목록을 조회한다. -->
+    <select id="selectBlueMembershipJoinsByCondition" parameterType="BlueMembershipJoinSearchVO" resultType="BlueMembershipJoinVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.BlueMembershipJoinDAO.selectBlueMembershipJoinsByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                    SELECT  A.DLR_CD
+                            ,A.CUST_NO
+                            ,A.CUST_NM
+                            ,A.CUST_TP
+                            ,FN_CMM_CD_NM('CRM001',A.CUST_TP,'zh','N') AS CUST_TP_NM -- CRM_蓝缤入会管理_蓝缤入会履历 新增Excel 下载 客户类型 贾明 2018-10-22
+                            ,A.CAR_OWN_YN
+                            ,A.HP_NO
+                            ,A.MATH_DOC_TP
+                            ,FN_CMM_CD_NM('CRM024',A.MATH_DOC_TP,'zh','N') AS MATH_DOC_TP_NM -- CRM_蓝缤入会管理_蓝缤入会履历 新增Excel 下载 证件类型  贾明 2018-10-22
+                            ,A.SSN_CRN_NO
+                            ,A.SUNG_NM
+                            ,A.CITY_NM
+                            ,A.DIST_NM
+                            ,A.ZIP_CD
+                            ,A.EXT_ZIP_CD
+                            ,A.ADDR_NM
+                            ,A.ADDR_DETL_CONT
+                            ,A.JOIN_DLR_CD
+                            ,A.JOIN_REQ_AGREE_YN
+                            ,A.POLICY_AGREE_YN
+                            ,A.JOIN_APPROVE_YN
+                            ,A.JOIN_APPROVE_DT
+                            ,A.REG_USR_ID
+                            ,FN_GET_USER_NM(A.REG_USR_ID) AS REG_USR_NM           --등록자이름
+                            ,A.REG_DT
+                            ,A.UPDT_USR_ID
+                            ,A.UPDT_DT
+                            ,A.REMARK
+                            ,A.PAY_AMT
+                            ,B.BLUE_MEMBERSHIP_NO           --블루멤버십 번호(카드번호)
+                            ,CASE WHEN B.BLUE_MEMBERSHIP_NO IS NOT NULL THEN 'Y' ELSE 'N' END AS BLUE_MEMBER --CRM_蓝缤入会管理_蓝缤入会履历 新增Excel 下载 蓝缤会员2018-10-22
+                            ,B.BLUE_MEMBERSHIP_JOIN_DT      --블루멤버쉽 가입일자
+                            ,B.BLUE_MEMBERSHIP_JOIN_DLR_CD  --블루멤버십 가입딜러코드
+                            ,B.BLUE_GRADE_CHG_DT            --블루멤버십등급변경일자
+                            ,B.BLUE_GRADE_NM                --블루멤버십등급명
+                            ,B.BLUE_AVLB_POINT_VAL          --블루멤버십가용포인트값
+                            ,A.VIN_NO
+                            ,A.AGREE                    --지불여부
+                            ,A.MODEL_CD                 --MODEL CD
+                            ,FN_GET_MODEL_NM(A.MODEL_CD) AS MODEL_NM
+                    FROM    CR_0807T A INNER JOIN CR_0101T B
+                            ON A.DLR_CD = B.DLR_CD
+                            AND A.CUST_NO = B.CUST_NO
+                            LEFT OUTER JOIN CR_0801T C
+                            ON B.DLR_CD = C.DLR_CD
+                            AND B.CUST_NO = C.CUST_NO
+                    WHERE   A.DLR_CD = #{sDlrCd}
+                    <include refid="searchBlueMembership" />
+                    ORDER BY
+                    <choose>
+                        <when test='sort != null'>
+                            <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                                <choose>
+                                    <!-- 20170424 블루멤버십 가입이력 -->
+                                    <when test='item.field == "custNm"'>A.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "custTp"'>A.CUST_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "hpNo"'>A.HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "mathDocTp"'>A.MATH_DOC_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "ssnCrnNo"'>A.SSN_CRN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "agree"'>A.AGREE <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "payAmt"'>A.PAY_AMT <choose><when test='item.dir == "asc"'>ASC NULLS FIRST</when><otherwise>DESC NULLS LAST</otherwise></choose></when>
+                                    <when test='item.field == "vinNo"'>A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "modelNm"'>MODEL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "blueMembershipNo"'>B.BLUE_MEMBERSHIP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "regUsrNm"'>REG_USR_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "joinApproveDtFormat"'>A.JOIN_APPROVE_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "joinApproveYn"'>A.JOIN_APPROVE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "remark"'>A.REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "regDtFormat"'>A.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+
+
+                                    <when test='item.field == "carOwnYn"'>A.CAR_OWN_YN        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "sungNm"'>A.SUNG_NM        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "cityNm"'>A.CITY_NM        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "regUsrId"'>A.REG_USR_ID        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "blueMembershipNo"'>B.BLUE_MEMBERSHIP_NO        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "blueMembershipJoinDtFormat"'>B.BLUE_MEMBERSHIP_JOIN_DT        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <when test='item.field == "blueMembershipJoinDlrCd"'>B.BLUE_MEMBERSHIP_JOIN_DLR_CD        <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                    <otherwise>
+                                        A.BLUE_MEMBERSHIP_SEQ DESC
+                                    </otherwise>
+                                </choose>
+                            </foreach>
+                        </when>
+                        <otherwise>
+                            A.BLUE_MEMBERSHIP_SEQ DESC
+                        </otherwise>
+                    </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <insert id="insertBlueMembershipJoin" parameterType="BlueMembershipJoinVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.BlueMembershipJoinDAO.insertBlueMembershipJoin] */
+        INSERT INTO CR_0807T    --블루멤버쉽가입
+            (
+            DLR_CD                   --딜러코드
+            ,CUST_NO                  --고객번호
+            ,CUST_NM                  --고객명
+            ,CUST_TP                  --고객유형
+            ,CAR_OWN_YN               --차량소유여부
+            ,HP_NO                    --휴대폰번호
+            ,MATH_DOC_TP              --주요인증문서유형
+            ,SSN_CRN_NO               --주민사업자등록번호
+            ,SUNG_NM                  --성명
+            ,CITY_NM                  --도시명
+            ,DIST_NM                  --지역명
+            ,ZIP_CD                   --우편번호
+            ,EXT_ZIP_CD               --확장우편번호
+            ,ADDR_NM                  --주소명
+            ,ADDR_DETL_CONT           --주소상세내용
+            ,JOIN_DLR_CD              --가입딜러코드
+            ,JOIN_REQ_AGREE_YN        --가입요청동의여부
+            ,POLICY_AGREE_YN          --정책동의여부
+            ,JOIN_APPROVE_YN          --가입승인여부
+            ,JOIN_APPROVE_DT          --가입승인일자
+            ,REG_USR_ID               --등록자ID
+            ,REG_DT                   --등록일자
+            ,PAY_AMT                  --지불금액
+            ,BLUE_MEMBERSHIP_NO       --블루멤버쉽번호
+            ,BLUE_MEMBERSHIP_ID       --블루멤버쉽 아이디
+            ,BLUE_GRADE_NM            --블루멤버십 등급(CRM806)
+            ,BLUE_AVLB_POINT_VAL      --블루멤버십 포인트-가용
+            ,BLUE_MEMBERSHIP_JOIN_DT  --블루멤버쉽가입일자
+            ,BLUE_GRADE_CHD_DT        --블루멤버십 등급변경일
+            ,REMARK                   --블루멤버십 가입 실패 사유
+            ,BLUE_MEMBERSHIP_SEQ      --블루멤버십 시퀀스
+            ,AGREE                    --지불여부
+            ,VIN_NO                   --VIN NO
+            ,MODEL_CD                 --MODEL CD
+        )VALUES(
+            #{dlrCd}                   --딜러코드
+            ,#{custNo}                  --고객번호
+            ,#{custNm}                  --고객명
+            ,#{custTp}                  --고객유형
+            ,#{carOwnYn}                --차량소유여부
+            ,#{hpNo}                    --휴대폰번호
+            ,#{mathDocTp}               --주요인증문서유형
+            ,#{ssnCrnNo}                --주민사업자등록번호
+            ,#{sungNm}                  --성명
+            ,#{cityNm}                  --도시명
+            ,#{distNm}                  --지역명
+            ,#{zipCd}                   --우편번호
+            ,#{extZipCd}                --확장우편번호
+            ,#{addrNm}                  --주소명
+            ,#{addrDetlCont}            --주소상세내용
+            ,#{joinDlrCd}               --가입딜러코드
+            ,#{joinReqAgreeYn}          --가입요청동의여부
+            ,#{policyAgreeYn}           --정책동의여부
+            ,#{joinApproveYn}           --가입승인여부
+            ,#{joinApproveDt}         --가입승인일자
+            ,#{regUsrId}                --등록자ID
+            ,SYSDATE                    --등록일자
+            ,#{payAmt}                  --지불금액
+            ,#{blueMembershipNo}        --블루멤버쉽번호
+            ,#{blueMembershipId}        --블루멤버쉽 아이디
+            ,#{blueGradeNm}             --블루멤버십 등급(crm806)
+            ,#{blueAvlbPointVal}        --블루멤버십 포인트-가용
+            ,#{blueMembershipJoinDt}    --블루멤버쉽가입일자
+            ,#{blueGradeChdDt}          --블루멤버십 등급변경일
+            ,#{remark}                  --블루멤버십 가입 실패 사유
+            ,SEQ_CR_0807T.NEXTVAL        --블루멤버십 시퀀스
+            ,#{agree}                   --지불여부
+            ,#{vin}                   --VIN번호
+            ,#{modelCd}                 --MODEL CD
+        )
+    </insert>
+
+    <select id="selectBlueMembershipJoinByKey" parameterType="BlueMembershipJoinSearchVO" resultType="BlueMembershipJoinVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.BlueMembershipJoinDAO.selectBlueMembershipJoinByKey] */
+        SELECT  DLR_CD
+                ,CUST_NO
+                ,CUST_NM
+                ,CUST_TP
+                ,CAR_OWN_YN
+                ,HP_NO
+                ,MATH_DOC_TP
+                ,SSN_CRN_NO
+                ,SUNG_NM
+                ,CITY_NM
+                ,DIST_NM
+                ,ZIP_CD
+                ,EXT_ZIP_CD
+                ,ADDR_NM
+                ,ADDR_DETL_CONT
+                ,JOIN_DLR_CD
+                ,JOIN_REQ_AGREE_YN
+                ,POLICY_AGREE_YN
+                ,JOIN_APPROVE_YN
+                ,JOIN_APPROVE_DT
+                ,REG_USR_ID
+                ,REG_DT
+                ,UPDT_USR_ID
+                ,UPDT_DT
+                ,PAY_AMT
+        FROM    CR_0807T
+        WHERE   DLR_CD = #{sDlrCd}
+        AND     CUST_NO = #{sCustNo}
+    </select>
+
+    <update id="updateBlueMembershipApprove" parameterType="BlueMembershipJoinVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.BlueMembershipJoinDAO.updateBlueMembershipApprove] */
+        UPDATE  CR_0807T
+        SET     JOIN_APPROVE_YN = #{joinApproveYn}
+                ,JOIN_APPROVE_DT = SYSDATE
+                ,UPDT_USR_ID = #{updtUsrId}
+                ,UPDT_DT = SYSDATE
+        WHERE   DLR_CD = #{dlrCd}
+        AND     CUST_NO = #{custNo}
+    </update>
+
+    <update id="updateBlueMembershipJoinAddr" parameterType="BlueMembershipJoinVO">
+        /* [chn.bhmc.dms.crm.dmm.service.dao.BlueMembershipJoinDAO.updateBlueMembershipJoinAddr] */
+        UPDATE  CR_0807T
+        SET     HP_NO = #{hpNo}                      --휴대폰번호
+                ,SUNG_NM = #{sungNm}                 --성명
+                ,CITY_NM = #{cityNm}                 --도시명
+                ,DIST_NM = #{distNm}                 --지역명
+                ,ZIP_CD = #{zipCd}                   --우편번호
+                ,EXT_ZIP_CD = #{extZipCd}            --확장우편번호
+                ,ADDR_NM = #{addrNm}                 --주소명
+                ,ADDR_DETL_CONT = #{addrDetlCont}    --주소상세내용
+                ,UPDT_USR_ID = #{updtUsrId}
+                ,UPDT_DT = SYSDATE
+        WHERE   DLR_CD = #{dlrCd}
+        AND     CUST_NO = #{custNo}
+    </update>
+
+    <sql id="searchBlueMembershipCurrentState">
+            AND BLUE_MEMBERSHIP_NO IS NOT NULL
+            AND DEL_YN = 'N'
+        <if test='sCustNm != null and sCustNm != ""'>
+            AND CUST_NM LIKE '%'||#{sCustNm}||'%'
+        </if>
+        <if test='sHpNo != null and sHpNo != ""'>
+            AND HP_NO LIKE '%'||#{sHpNo}||'%'
+        </if>
+        <if test='sSsnCrnNo != null and sSsnCrnNo != ""'>
+            AND SSN_CRN_NO LIKE '%'||#{sSsnCrnNo}||'%'
+        </if>
+        <if test='sBlueMembershipJoinDlrCd != null and sBlueMembershipJoinDlrCd == "OWNDLR"'>
+            AND BLUE_MEMBERSHIP_JOIN_DLR_CD = #{sDlrCd}
+        </if>
+        <if test='sBlueMembershipJoinDlrCd != null and sBlueMembershipJoinDlrCd == "OTHDLR"'>
+            AND BLUE_MEMBERSHIP_JOIN_DLR_CD IN ( SELECT DLR_CD FROM CM_0101T WHERE DLR_CD != #{sDlrCd} )
+        </if>
+        <if test='sBlueMembershipJoinDlrCd != null and sBlueMembershipJoinDlrCd == "ETC"'>
+            AND BLUE_MEMBERSHIP_JOIN_DLR_CD NOT IN ( SELECT DLR_CD FROM CM_0101T )
+        </if>
+        <if test='sBlueGradeNm != null and sBlueGradeNm != ""'>
+            AND BLUE_GRADE_NM = #{sBlueGradeNm}
+        </if>
+        <if test='sBlueMembershipJoinDtFrom != null'>
+            AND BLUE_MEMBERSHIP_JOIN_DT <![CDATA[>=]]> trunc(#{sBlueMembershipJoinDtFrom},'DD')
+        </if>
+        <if test='sBlueMembershipJoinDtTo != null'>
+            AND BLUE_MEMBERSHIP_JOIN_DT <![CDATA[<]]> trunc(#{sBlueMembershipJoinDtTo},'DD')+1
+        </if>
+        <if test='sBlueAvlbPointValFrom != -1'>
+            AND BLUE_AVLB_POINT_VAL <![CDATA[>=]]> #{sBlueAvlbPointValFrom}
+        </if>
+        <if test='sBlueAvlbPointValTo != -1'>
+            AND BLUE_AVLB_POINT_VAL <![CDATA[<=]]> #{sBlueAvlbPointValTo}
+        </if>
+        <if test='sBlueLoginId != null and sBlueLoginId != ""'>
+            AND BLUE_LOGIN_ID LIKE '%'||#{sBlueLoginId}||'%'
+        </if>
+    </sql>
+
+    <select id="selectBlueMembershipByConditionCnt" parameterType="BlueMembershipSearchVO" resultType="int">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.BlueMembershipJoinDAO.selectBlueMembershipByConditionCnt] */
+         SELECT COUNT(CUST_NO) AS CNT
+           FROM CR_0101T
+          WHERE DLR_CD = #{sDlrCd}
+          <include refid="searchBlueMembershipCurrentState" />
+    </select>
+
+    <select id="selectBlueMembershipByCondition" parameterType="BlueMembershipSearchVO" resultType="BlueMembershipInfoVO">
+    /* [chn.bhmc.dms.crm.dmm.service.dao.BlueMembershipJoinDAO.selectBlueMembershipByCondition] */
+    SELECT T2.*
+         , FN_GET_CMMCD_NM ('CRM806',T2.BLUE_GRADE_CD,#{sLangCd}) AS BLUE_GRADE_CD_NM
+      FROM (
+      SELECT ROWNUM AS RNUM, T1.* FROM (
+         SELECT DLR_CD,
+                CUST_NO,
+                CUST_NM,
+                HP_NO,
+                SSN_CRN_NO,
+                BLUE_MEMBERSHIP_NO,
+                BLUE_MEMBERSHIP_JOIN_DT,
+                BLUE_MEMBERSHIP_JOIN_DLR_CD,
+                BLUE_GRADE_CHG_DT,
+                BLUE_GRADE_NM AS BLUE_GRADE_CD,
+                BLUE_AVLB_POINT_VAL,
+                BLUE_MEMBERSHIP_ID,
+                BLUE_LOGIN_ID
+           FROM CR_0101T
+          WHERE DLR_CD = #{sDlrCd}
+          <include refid="searchBlueMembershipCurrentState" />
+          ORDER BY
+          <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <!-- 20170424 블루멤버십 가입이력 -->
+                            <when test='item.field == "custNm"'>CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "hpNo"'>HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "mathDocTp"'>MATH_DOC_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "ssnCrnNo"'>SSN_CRN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "blueMembershipNo"'>BLUE_MEMBERSHIP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "blueMembershipId"'>BLUE_MEMBERSHIP_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "blueAvlbPointVal"'>BLUE_AVLB_POINT_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "blueLoginId"'>BLUE_LOGIN_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "blueMembershipJoinDt"'>BLUE_MEMBERSHIP_JOIN_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <when test='item.field == "blueMembershipJoinDlrCd"'>BLUE_MEMBERSHIP_JOIN_DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <otherwise>
+                                BLUE_MEMBERSHIP_JOIN_DT DESC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                    BLUE_MEMBERSHIP_JOIN_DT DESC
+                </otherwise>
+            </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        ) T2
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+</mapper>

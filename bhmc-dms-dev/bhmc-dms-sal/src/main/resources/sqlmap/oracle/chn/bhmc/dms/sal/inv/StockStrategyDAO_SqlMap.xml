@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.inv.service.dao.StockStrategyDAO">
+
+    <!-- 전략출고관리 조회 목록 갯수  -->
+    <select id="selectStockStrategysByConditionCnt" parameterType="StockStrategySearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.inv.service.dao.StockStrategyDAO.selectStockStrategysByConditionCnt] */
+        SELECT COUNT(*)
+          FROM (
+                 SELECT 1
+                   FROM SA_0256T A    --전략출고
+                    INNER JOIN (
+                         SELECT DLR_CD
+                              , CAR_ID
+                              , MAX(CAST(NVL(STR_NO,0) AS INTEGER)) AS STR_NO
+                           FROM SA_0256T
+                          WHERE DLR_CD = #{sDlrCd}
+                          GROUP BY DLR_CD, CAR_ID
+                       ) B
+                      ON A.DLR_CD = B.DLR_CD
+                     AND A.CAR_ID = B.CAR_ID
+                     AND A.STR_NO = B.STR_NO
+                    INNER JOIN SA_0121T C ON A.VIN_NO = C.VIN_NO AND C.CAR_STAT_CD <![CDATA[ <> ]]> '70'
+                    WHERE 1 = 1
+                      AND TRIM(A.STR_STAT) NOT IN ('D', 'E' , 'X')
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                      AND A.DLR_CD =  #{sDlrCd}
+                    </if>
+                    <if test='sStrStat != null and sStrStat != ""'>
+                      AND TRIM(A.STR_STAT) =  #{sStrStat}
+                    </if>
+                    <if test='sStrConfirmStartDt != null'>
+                      AND A.STR_CONFIRM_DT <![CDATA[>=]]> TRUNC(#{sStrConfirmStartDt},'DD')
+                    </if>
+                    <if test='sStrConfirmEndDt != null'>
+                      AND A.STR_CONFIRM_DT <![CDATA[<]]> TRUNC(#{sStrConfirmEndDt},'DD')+1
+                    </if>
+                    <if test='sStrAskStartDt != null'>
+                      AND A.STR_ASK_DT <![CDATA[>=]]> TRUNC(#{sStrAskStartDt},'DD')
+                    </if>
+                    <if test='sStrAskEndDt != null'>
+                      AND A.STR_ASK_DT <![CDATA[<]]> TRUNC(#{sStrAskEndDt},'DD')+1
+                    </if>
+                    <if test='sCarlineCd != null and sCarlineCd != ""'>
+                      AND A.CARLINE_CD = #{sCarlineCd}
+                    </if>
+                    <if test='sModelCd != null and sModelCd != ""'>
+                      AND A.MODEL_CD = #{sModelCd}
+                    </if>
+                    <if test='sOcnCd != null and sOcnCd != ""'>
+                      AND A.OCN_CD = #{sOcnCd}
+                    </if>
+                    <if test='sExtColorCd != null and sExtColorCd != ""'>
+                      AND A.EXT_COLOR_CD = #{sExtColorCd}
+                    </if>
+                    <if test='sIntColorCd != null and sIntColorCd != ""'>
+                      AND A.INT_COLOR_CD = #{sIntColorCd}
+                    </if>
+                    <if test='sVinNo != null and sVinNo != ""'>
+                      AND A.VIN_NO LIKE '%'||#{sVinNo}||'%'
+                    </if>
+                )
+    </select>
+
+	<!-- 전략출고관리 조회 목록  -->
+	<select id="selectStockStrategysByCondition" parameterType="StockStrategySearchVO" resultType="StockStrategyVO">
+    /* [chn.bhmc.dms.sal.inv.service.dao.StockStrategyDAO.selectStockStrategysByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_CARLINE_NM_NC(T1.CARLINE_CD) AS CARLINE_NM
+                 , FN_GET_MODEL_TP_NM(T1.MODEL_CD, T1.OCN_CD) AS MODEL_NM
+                 , FN_GET_OCN_NM_NC(T1.MODEL_CD, T1.OCN_CD) AS OCN_NM
+                 , FN_GET_EXT_COLOR_NM_NC(T1.EXT_COLOR_CD) AS EXT_COLOR_NM
+                 , FN_GET_INT_COLOR_NM_NC(T1.INT_COLOR_CD) AS INT_COLOR_NM
+                 , T1.*
+              FROM (
+                SELECT A.DLR_CD                --딜러코드
+                     , A.CAR_ID                --차량ID
+                     , A.STR_NO                --전략출고 번호
+                     , A.VIN_NO                --차대번호
+                     , A.STR_STAT              --전략출고 심사상태
+                     , ( SELECT Z1.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL190'   /*전략출고 심사상태*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z1
+                         WHERE TRIM(A.STR_STAT) = Z1.CMM_CD
+                       ) AS STR_STAT_NM        --심사상태명
+                     , A.STR_ASK_DT            --전략출고 신청일자
+                     , A.STR_CONFIRM_DT        --전략출고 심사일자
+                     , A.CONFIRM_USR_ID        --심사자
+                     , A.CONFIRM_REMARK        --심사비고
+                     , A.CARLINE_CD            --차종코드
+                     , A.MODEL_CD              --모델코드
+                     , A.OCN_CD                --OCN코드
+                     , A.EXT_COLOR_CD          --외장색상코드
+                     , A.INT_COLOR_CD          --내장색상코드
+                     , A.ORD_TP                --오더유형
+                     , ( SELECT Z2.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL138'   /*오더유형*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z2
+                         WHERE A.ORD_TP = Z2.CMM_CD
+                       ) AS ORD_TP_NM          -- 주문유형
+                     , A.CUST_CD               --고객코드
+                     , A.CUST_NM               --고객명
+                     , A.REMARK                --비고
+                     , A.CONTRACT_NO           --계약번호
+                     , A.CANC_DT               --취소일자
+                     , A.CAANC_RESON           --취소사유
+                     , A.REG_USR_ID            --등록자ID
+                     , A.REG_DT                --등록일자
+                FROM SA_0256T A    --전략출고
+                INNER JOIN (
+                     SELECT DLR_CD
+                          , CAR_ID
+                          , MAX(CAST(NVL(STR_NO,0) AS INTEGER)) AS STR_NO
+                       FROM SA_0256T
+                      WHERE DLR_CD = #{sDlrCd}
+                      GROUP BY DLR_CD, CAR_ID
+                   ) B
+                  ON A.DLR_CD = B.DLR_CD
+                 AND A.CAR_ID = B.CAR_ID
+                 AND A.STR_NO = B.STR_NO
+                INNER JOIN SA_0121T C
+                   ON A.VIN_NO = C.VIN_NO
+                <if test='isDeliveryGubun != "Y"'>
+                  AND C.CAR_STAT_CD <![CDATA[ <> ]]> '70'
+                </if>
+                WHERE 1 = 1
+                  AND TRIM(A.STR_STAT) NOT IN ('D', 'E', 'X')
+                <if test='sDlrCd != null and sDlrCd != ""'>
+                  AND A.DLR_CD =  #{sDlrCd}
+                </if>
+                <if test='sStrStat != null and sStrStat != ""'>
+                  AND TRIM(A.STR_STAT) =  #{sStrStat}
+                </if>
+                <if test='sStrAskStartDt != null'>
+                  AND A.STR_ASK_DT <![CDATA[>=]]> TRUNC(#{sStrAskStartDt},'DD')
+                </if>
+                <if test='sStrAskEndDt != null'>
+                  AND A.STR_ASK_DT <![CDATA[<]]> TRUNC(#{sStrAskEndDt},'DD')+1
+                </if>
+                <if test='sStrConfirmStartDt != null'>
+                  AND A.STR_CONFIRM_DT <![CDATA[>=]]> TRUNC(#{sStrConfirmStartDt},'DD')
+                </if>
+                <if test='sStrConfirmEndDt != null'>
+                  AND A.STR_CONFIRM_DT <![CDATA[<]]> TRUNC(#{sStrConfirmEndDt},'DD')+1
+                </if>
+                <if test='sCarlineCd != null and sCarlineCd != ""'>
+                  AND A.CARLINE_CD = #{sCarlineCd}
+                </if>
+                <if test='sModelCd != null and sModelCd != ""'>
+                  AND A.MODEL_CD = #{sModelCd}
+                </if>
+                <if test='sOcnCd != null and sOcnCd != ""'>
+                  AND A.OCN_CD = #{sOcnCd}
+                </if>
+                <if test='sExtColorCd != null and sExtColorCd != ""'>
+                  AND A.EXT_COLOR_CD = #{sExtColorCd}
+                </if>
+                <if test='sIntColorCd != null and sIntColorCd != ""'>
+                  AND A.INT_COLOR_CD = #{sIntColorCd}
+                </if>
+                <if test='sVinNo != null and sVinNo != ""'>
+                  AND A.VIN_NO LIKE '%'||#{sVinNo}||'%'
+                </if>
+                <if test='sCarId != null and sCarId != ""'>
+                  AND A.CAR_ID = #{sCarId}
+                </if>
+                  ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "rnum"'>          ROWNUM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "dlrCd"'>         A.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "carId"'>         A.CAR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "strNo"'>         A.STR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "vinNo"'>         A.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "strStat"'>       A.STR_STAT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "strStatNm"'>     STR_STAT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "strAskDt"'>      A.STR_ASK_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "strConfirmDt"'>  A.STR_CONFIRM_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "confirmUsrId"'>  A.CONFIRM_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "confirmRemark"'> A.CONFIRM_REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carlineCd"'>     A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "carlineNm"'>     A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "modelCd"'>       A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "modelNm"'>       A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "ocnCd"'>         A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "ocnNm"'>         A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "extColorCd"'>    A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                <when test='item.field == "extColorNm"'>    A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                <when test='item.field == "intColorCd"'>    A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                <when test='item.field == "intColorNm"'>    A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                <when test='item.field == "ordTp"'>         A.ORD_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "ordTpNm"'>       ORD_TP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "custCd"'>        A.CUST_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "custNm"'>        A.CUST_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "remark"'>        A.REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                <when test='item.field == "contractNo"'>    A.CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                <when test='item.field == "cancDt"'>        A.CANC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                <when test='item.field == "caancReson"'>    A.CAANC_RESON <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                <when test='item.field == "regUsrId"'>      A.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                <otherwise>
+                                  A.STR_ASK_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                      A.STR_ASK_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+	</select>
+
+    <!-- 전략출고상태 변경 -->
+    <update id="updateCarStrStat" parameterType="StockStrategyVO">
+    /* [chn.bhmc.dms.sal.inv.service.dao.StockStrategyDAO.updateCarStrStat] */
+        UPDATE SA_0121T
+           set STR_YN = #{strYn}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE VIN_NO = #{vinNo}
+           AND CAR_ID = #{carId}
+    </update>
+
+    <!-- 전략출고상태 변경 -->
+    <update id="cancelStockStrategy" parameterType="StockStrategyVO">
+    /* [chn.bhmc.dms.sal.inv.service.dao.StockStrategyDAO.cancelStockStrategy] */
+        UPDATE SA_0256T    --전략출고
+           SET STR_STAT = #{strStat}
+             , CANC_DT = SYSDATE
+             , CAANC_RESON = #{caancReson}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE DLR_CD = #{dlrCd}
+           AND CAR_ID = #{carId}
+           AND STR_NO = #{strNo}
+    </update>
+
+
+</mapper>

@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : NcdCodeManageDAO_SqlMap.xml
+    Description : 현상코드 마스터에 관한 데이터처리
+    author Kwon Ki Hyun
+    since 2016. 01. 14.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 14.  Kwon Ki Hyun     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.svi.service.dao.NcdCodeManageDAO">
+
+    <!-- 현상 Code 리스트 수량 -->
+    <select id="selectNcdCodeManageByConditionCnt" parameterType="NcdCodeManageSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.NcdCodeManageDAO.selectNcdCodeManageByConditionCnt] */
+
+        SELECT COUNT(PHEN_DSTIN_CD) VALUE
+          FROM SE_1055T
+         <where>
+            <if test='sPhenDstinCd !=null and sPhenDstinCd != "" '>
+                AND PHEN_DSTIN_CD = #{sPhenDstinCd}
+            </if>
+            <if test='sPhenLclsCd !=null and sPhenLclsCd !="" '>
+                AND PHEN_LCLS_CD = #{sPhenLclsCd}
+            </if>
+            <if test='sPhenMclsCd != null and sPhenMclsCd != "" '>
+                AND PHEN_MCLS_CD = #{sPhenMclsCd}
+            </if>
+            <if test='sPhenCd != null and sPhenCd != "" '>
+                AND PHEN_CD = #{sPhenCd}
+            </if>
+            <if test='sDelYn != null and sDelYn != "" '>
+                AND DEL_YN = #{sDelYn}
+            </if>
+            <if test='sPhenNm !=null and sPhenNm !="" '>
+                AND PHEN_NM LIKE '%'||#{sPhenNm}||'%'
+            </if>
+         </where>
+    </select>
+
+    <!-- 현상 Code 리스트 -->
+    <select id="selectNcdCodeManageByCondition" parameterType="NcdCodeManageSearchVO" resultType="NcdCodeManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.NcdCodeManageDAO.selectNcdCodeManageByCondition] */
+
+        SELECT *
+          FROM (
+           SELECT ROWNUM AS RNUM, T1.*
+             FROM (
+                SELECT PHEN_DSTIN_CD, PHEN_CD , PHEN_LCLS_CD, PHEN_MCLS_CD
+                      <choose>
+                           <when test='sLangCd == "ko"' >, PHEN_NM  </when>
+                           <otherwise> , PHEN_CHN_NM AS PHEN_NM </otherwise>
+                      </choose>
+                      ,CONFIRM_YN , DEL_YN , REG_DT , REG_USR_ID
+                      ,UPDT_DT , UPDT_USR_ID
+                 FROM SE_1055T
+                 <where>
+                    <if test='sPhenDstinCd !=null and sPhenDstinCd != "" '>
+                        AND PHEN_DSTIN_CD = #{sPhenDstinCd}
+                    </if>
+                    <if test='sPhenLclsCd !=null and sPhenLclsCd !="" '>
+                        AND PHEN_LCLS_CD = #{sPhenLclsCd}
+                    </if>
+                    <if test='sPhenMclsCd != null and sPhenMclsCd != "" '>
+                        AND PHEN_MCLS_CD = #{sPhenMclsCd}
+                    </if>
+                    <if test='sPhenCd != null and sPhenCd != "" '>
+                        AND PHEN_CD = #{sPhenCd}
+                    </if>
+                    <if test='sDelYn != null and sDelYn != "" '>
+                        AND DEL_YN = #{sDelYn}
+                    </if>
+                    <if test='sPhenNm !=null and sPhenNm !="" '>
+                        AND PHEN_NM LIKE '%'||#{sPhenNm}||'%'
+                    </if>
+                 </where>
+                 ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "phenDstinCd"'>PHEN_DSTIN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "phenCd"'>PHEN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "phenLclsCd"'>PHEN_LCLS_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "phenMclsCd"'>PHEN_MCLS_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    PHEN_CD ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        PHEN_CD ASC
+                    </otherwise>
+                </choose>
+                )T1
+                <where>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        ROWNUM <![CDATA[<=]]> #{lastIndex}
+                    </if>
+                </where>
+             )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 현상 코드 POPUP 갯수 -->
+    <select id="selectNcdCodeByConditionCnt" parameterType="NcdCodeSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.NcdCodeManageDAO.selectNcdCodeByConditionCnt] */
+
+        SELECT COUNT(ITEM_CD) VALUE
+          FROM SE_1054T
+         <where>
+            <!-- <if test='sItemCd !=null and sItemCd != "" '>
+                ITEM_CD = SUBSTR(#{sItemCd},1,5)
+            </if> -->
+            AND ITEM_CD = SUBSTR(#{sItemCd},1,5)
+            AND DEL_YN = 'N'
+            AND STD_CARLINE_CD ='*'
+         </where>
+    </select>
+
+    <!-- 현상 코드 부품매핑 대분류 리스트 POPUP -->
+    <select id="selectNcdLclsMapByKey" parameterType="NcdCodeSearchVO" resultType="NcdLclsVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.NcdCodeManageDAO.selectNcdLclsMapByKey] */
+
+        SELECT A.PHEN_LCLS_CD AS L_CLS_CD
+             <choose>
+                   <when test='sLangCd == "ko"' >, A.PHEN_NM     AS L_CD_NM </when>
+                   <otherwise>, A.PHEN_CHN_NM AS L_CD_NM </otherwise>
+              </choose>
+          FROM SE_1055T A , (
+          SELECT DISTINCT B.PHEN_LCLS_CD
+            FROM SE_1054T A , SE_1055T B
+           WHERE A.PHEN_CD        = B.PHEN_CD
+             AND A.DEL_YN         ='N'
+             AND A.STD_CARLINE_CD ='*'
+             <if test='sItemCd !=null and sItemCd != "" '>
+             AND A.ITEM_CD         =SUBSTR(#{sItemCd},1,5)
+             </if>
+             AND B.DEL_YN         ='N'
+             AND B.CONFIRM_YN     ='Y'
+             AND B.PHEN_DSTIN_CD  ='S'
+          ) B
+          WHERE A.PHEN_DSTIN_CD ='L'
+            AND A.DEL_YN        ='N'
+            AND A.CONFIRM_YN    ='Y'
+            AND A.PHEN_LCLS_CD = B.PHEN_LCLS_CD
+          ORDER BY A.PHEN_LCLS_CD
+    </select>
+
+    <!-- 현상 코드  대분류 리스트 POPUP -->
+    <select id="selectNcdLclsByKey" parameterType="NcdCodeSearchVO" resultType="NcdLclsVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.NcdCodeManageDAO.selectNcdLclsByKey] */
+
+        SELECT A.PHEN_LCLS_CD AS L_CLS_CD
+             <choose>
+                   <when test='sLangCd == "ko"' >, A.PHEN_NM     AS L_CD_NM </when>
+                   <otherwise>, A.PHEN_CHN_NM AS L_CD_NM </otherwise>
+              </choose>
+          FROM SE_1055T A
+          WHERE A.PHEN_DSTIN_CD ='L'
+            AND A.DEL_YN        ='N'
+            AND A.CONFIRM_YN    ='Y'
+          ORDER BY A.PHEN_LCLS_CD
+    </select>
+
+   <!-- 현상 코드 부품매핑 중분류 리스트 POPUP -->
+    <select id="selectNcdMclsMapByKey" parameterType="NcdCodeSearchVO" resultType="NcdMclsVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.NcdCodeManageDAO.selectNcdMclsMapByKey] */
+
+           SELECT A.PHEN_MCLS_CD  AS M_CLS_CD
+                 <choose>
+                   <when test='sLangCd == "ko"' >, A.PHEN_NM  AS M_CD_NM  </when>
+                   <otherwise>, A.PHEN_CHN_NM AS M_CD_NM </otherwise>
+                </choose>
+             FROM SE_1055T A , (
+              SELECT DISTINCT B.PHEN_LCLS_CD , B.PHEN_MCLS_CD
+                FROM SE_1054T A , SE_1055T B
+               WHERE A.PHEN_CD        = B.PHEN_CD
+                 AND A.DEL_YN         ='N'
+                 AND A.STD_CARLINE_CD ='*'
+                 AND A.ITEM_CD         = SUBSTR(#{sItemCd},1,5)
+                 AND B.DEL_YN         ='N'
+                 AND B.CONFIRM_YN     ='Y'
+                 AND B.PHEN_DSTIN_CD  ='S'
+              ) B
+              WHERE A.PHEN_DSTIN_CD ='M'
+                AND A.DEL_YN        ='N'
+                AND A.CONFIRM_YN    ='Y'
+                AND A.PHEN_MCLS_CD  = B.PHEN_MCLS_CD
+             ORDER BY A.PHEN_MCLS_CD
+
+    </select>
+
+    <!-- 현상 코드  중분류 리스트 POPUP -->
+    <select id="selectNcdMclsByKey" parameterType="NcdCodeSearchVO" resultType="NcdMclsVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.NcdCodeManageDAO.selectNcdMclsByKey] */
+
+       SELECT A.PHEN_MCLS_CD AS M_CLS_CD
+             <choose>
+                  <when test='sLangCd == "ko"' > , A.PHEN_NM     AS M_CD_NM  </when>
+                  <otherwise> , A.PHEN_CHN_NM AS M_CD_NM  </otherwise>
+             </choose>
+         FROM SE_1055T A
+          WHERE A.PHEN_DSTIN_CD ='M'
+            AND A.DEL_YN        ='N'
+            AND A.CONFIRM_YN    ='Y'
+            AND A.PHEN_LCLS_CD  = #{sPhenCd}
+          ORDER BY A.PHEN_MCLS_CD
+    </select>
+
+    <!-- 현상 코드 부품매핑 소분류 리스트 POPUP -->
+    <select id="selectNcdSclsMapByKey" parameterType="NcdCodeSearchVO" resultType="NcdSclsVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.NcdCodeManageDAO.selectNcdSclsMapByKey] */
+
+      SELECT B.PHEN_CD
+             <choose>
+                  <when test='sLangCd == "ko"' > ,B.PHEN_NM     AS PHEN_NM  </when>
+                  <otherwise> ,B.PHEN_CHN_NM AS PHEN_NM </otherwise>
+             </choose>
+        FROM SE_1054T A , SE_1055T B
+       WHERE A.PHEN_CD        = B.PHEN_CD
+         AND A.DEL_YN         ='N'
+         AND A.STD_CARLINE_CD ='*'
+         AND A.ITEM_CD         =SUBSTR(#{sItemCd},1,5)
+         AND B.DEL_YN         ='N'
+         AND B.CONFIRM_YN     ='Y'
+         AND B.PHEN_DSTIN_CD  ='S'
+      ORDER BY B.PHEN_CD
+      
+    </select>
+
+    <!-- 현상 코드  소분류 리스트 POPUP -->
+    <select id="selectNcdSclsByKey" parameterType="NcdCodeSearchVO" resultType="NcdSclsVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.NcdCodeManageDAO.selectNcdSclsByKey] */
+
+       SELECT A.PHEN_CD
+             <choose>
+                  <when test='sLangCd == "ko"' > , A.PHEN_NM     AS PHEN_NM  </when>
+                  <otherwise> , A.PHEN_CHN_NM AS PHEN_NM </otherwise>
+             </choose>
+         FROM SE_1055T A
+          WHERE A.PHEN_DSTIN_CD ='S'
+            AND A.DEL_YN        ='N'
+            AND A.CONFIRM_YN    ='Y'
+            AND A.PHEN_MCLS_CD  = #{sPhenCd}
+          ORDER BY A.PHEN_CD
+    </select>
+
+
+
+
+    <!-- 현상 Code 수정 -->
+    <update id="updateNcdCodeManages" parameterType="NcdCodeManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.NcdCodeManageDAO.updateNcdCodeManages] */
+
+        UPDATE SE_1055T SET
+              DEL_YN  = #{delYn}
+            , UPDT_DT     = SYSDATE
+            , UPDT_USR_ID = #{regUsrId}
+        WHERE PHEN_DSTIN_CD = #{phenDstinCd}
+          AND PHEN_LCLS_CD = #{phenLclsCd}
+          <if test='phenMclsCd !=null and phenMclsCd != "" '>
+          AND PHEN_MCLS_CD = #{phenMclsCd}
+          </if>
+          AND PHEN_CD      = #{phenCd}
+
+    </update>
+
+</mapper>

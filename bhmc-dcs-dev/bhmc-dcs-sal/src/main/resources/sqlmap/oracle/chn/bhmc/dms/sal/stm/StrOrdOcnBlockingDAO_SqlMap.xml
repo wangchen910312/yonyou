@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.stm.service.dao.StrOrdOcnBlockingDAO">
+
+	<!-- 전략오더OCN블러킹-헤더 조회 목록  -->
+	<select id="selectStrOrdOcnBlockingHeadersByCondition" parameterType="StrOrdOcnBlockingSearchVO" resultType="StrOrdOcnBlockingVO">
+    /* [chn.bhmc.dms.sal.stm.service.dao.StrOrdOcnBlockingDAO.selectStrOrdOcnBlockingHeadersByCondition] */
+        SELECT OCN_CD
+          FROM SA_0105T
+          WHERE MODEL_CD = #{sModelCd}
+          <if test='sOcnCd != null and sOcnCd != ""'>
+            AND OCN_CD = #{sOcnCd}
+          </if>
+          GROUP BY OCN_CD
+	</select>
+
+    <!-- 전략오더OCN블러킹 조회 목록  -->
+    <select id="selectStrOrdOcnBlockingsByCondition" parameterType="StrOrdOcnBlockingSearchVO" resultType="StrOrdOcnBlockingVO">
+    /* [chn.bhmc.dms.sal.stm.service.dao.StrOrdOcnBlockingDAO.selectStrOrdOcnBlockingsByCondition] */
+          SELECT A.RID
+               , A.DLR_CD
+               , A.DLR_NM
+               , A.CARLINE_CD
+               , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+               , A.MODEL_CD
+               , FN_GET_MODEL_NM(A.MODEL_CD) AS MODEL_NM
+               , A.OCN_CD
+               , NVL(C.BLK_YN, 'N') AS BLK_YN
+            FROM (
+                    SELECT *
+                      FROM ( SELECT ROWNUM AS RID
+                                  , A.DLR_CD
+                                  , A.DLR_NM
+                               FROM CM_0101T A
+                              <where>
+                                <if test='sDlrCd != null and sDlrCd != ""'>
+                                  A.DLR_CD = #{sDlrCd}
+                                </if>
+                              </where>
+                            ) A
+                          ,( SELECT SUBSTR(MODEL_CD,1,2) AS CARLINE_CD
+                                  , MODEL_CD
+                                  , OCN_CD
+                              FROM SA_0105T
+                              WHERE MODEL_CD = #{sModelCd}
+                             <if test='sOcnCd != null and sOcnCd != ""'>
+                                AND OCN_CD = #{sOcnCd}
+                             </if>
+                              GROUP BY MODEL_CD, OCN_CD
+                           ) B
+                   )A
+             LEFT OUTER JOIN SA_0137T C
+               ON A.DLR_CD = C.DLR_CD
+              AND A.CARLINE_CD = C.CARLINE_CD
+              AND A.MODEL_CD = C.MODEL_CD
+              AND A.OCN_CD = C.OCN_CD
+             <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND A.RID <![CDATA[<=]]> #{lastIndex}
+                </if>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                   AND A.RID > #{firstIndex}
+                </if>
+            </where>
+           ORDER BY A.DLR_CD ASC
+    </select>
+
+
+    <!-- 딜러 갯수 조회 -->
+    <select id="selectStrOrdOcnBlockingsByConditionCnt" parameterType="StrOrdOcnBlockingSearchVO" resultType="int">
+    /* [chn.bhmc.dms.sal.stm.service.dao.StrOrdOcnBlockingDAO.selectStrOrdOcnBlockingsByConditionCnt] */
+     SELECT COUNT(*)
+       FROM CM_0101T A
+      <where>
+        <if test='sDlrCd != null and sDlrCd != ""'>
+          A.DLR_CD = #{sDlrCd}
+        </if>
+      </where>
+    </select>
+
+    <!-- 전략오더OCN블러킹 저장 -->
+    <insert id="insertStrOrdOcnBlockings" parameterType="StrOrdOcnBlockingSaveVO">
+        INSERT
+          INTO SA_0137T    --전략오더OCN블러킹
+        (
+          DLR_CD             --딜러코드
+         ,CARLINE_CD         --차종코드
+         ,MODEL_CD           --모델코드
+         ,OCN_CD             --OCN코드
+         ,BLK_YN             --블러킹여부
+         ,REG_USR_ID         --등록자ID
+         ,REG_DT             --등록일자
+         ,UPDT_USR_ID        --수정자ID
+         ,UPDT_DT            --수정일자
+        )
+        VALUES
+        (
+          #{dlrCd}             --딜러코드
+         ,#{carlineCd}         --차종코드
+         ,#{modelCd}           --모델코드
+         ,#{ocnCd}             --OCN코드
+         ,#{blkYn}             --블러킹여부
+         ,#{regUsrId}          --등록자ID
+         ,SYSDATE
+         ,#{updtUsrId}         --수정자ID
+         ,SYSDATE
+        )
+    </insert>
+
+    <!-- 전략오더OCN블러킹 삭제 -->
+    <delete id="deleteStrOrdOcnBlockings" parameterType="StrOrdOcnBlockingSaveVO">
+        DELETE
+          FROM SA_0137T
+         WHERE DLR_CD = #{dlrCd}
+           AND CARLINE_CD = #{carlineCd}
+           AND MODEL_CD = #{modelCd}
+           <if test='ocnCd != null and ocnCd != ""'>
+            AND OCN_CD = #{ocnCd}
+          </if>
+    </delete>
+
+
+    <!-- 전략오더OCN블러킹 복사전 딜러정보 삭제 -->
+    <delete id="deleteStrOrdOcnBlockingDlrInfo" parameterType="StrOrdOcnBlockingVO">
+        DELETE
+          FROM SA_0137T
+         WHERE DLR_CD = #{dlrCd2}
+    </delete>
+
+    <!-- 전략오더OCN블러킹 딜러정보 복사 -->
+    <insert id="insertStrOrdOcnBlockingDlrInfo" parameterType="StrOrdOcnBlockingVO">
+        INSERT
+          INTO SA_0137T
+           (   DLR_CD
+             , CARLINE_CD
+             , MODEL_CD
+             , OCN_CD
+             , BLK_YN
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+           ) SELECT #{dlrCd2}
+              , CARLINE_CD
+              , MODEL_CD
+              , OCN_CD
+              , BLK_YN
+              , #{regUsrId}
+              , SYSDATE
+              , #{updtUsrId}
+              , SYSDATE
+           FROM SA_0137T
+          WHERE DLR_CD = #{dlrCd}
+    </insert>
+
+
+    <!-- 전체딜러의 해당 차량-모델들의 OCN정보를 다 지움 -->
+    <delete id="deleteStrOrdOcnBlockingAllDlrCopys" parameterType="StrOrdOcnBlockingSaveVO">
+        DELETE
+          FROM SA_0137T
+         WHERE CARLINE_CD = #{carlineCd}
+           AND MODEL_CD = #{modelCd}
+    </delete>
+
+    <!-- 해당 딜러의 OCN정보로 전체딜러 복사 -->
+    <insert id="insertStrOrdOcnBlockingAllDlrCopys" parameterType="StrOrdOcnBlockingSaveVO">
+        INSERT
+          INTO SA_0137T
+            (  DLR_CD
+             , CARLINE_CD
+             , MODEL_CD
+             , OCN_CD
+             , BLK_YN
+             , REG_USR_ID
+             , REG_DT
+             , UPDT_USR_ID
+             , UPDT_DT
+           )
+           SELECT B.DLR_CD
+                    , A.CARLINE_CD
+                    , A.MODEL_CD
+                    , A.OCN_CD
+                    , A.BLK_YN
+                    , #{regUsrId}
+                    , SYSDATE
+                    , #{updtUsrId}
+                    , SYSDATE
+                 FROM SA_0137T A
+                    , (SELECT DLR_CD
+                        FROM CM_0101T B
+                       WHERE DLR_CD != #{dlrCd}
+                       ) B
+                WHERE A.DLR_CD = #{dlrCd}
+                  AND A.CARLINE_CD = #{carlineCd}
+                  AND A.MODEL_CD = #{modelCd}
+    </insert>
+
+
+
+</mapper>

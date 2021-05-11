@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans  xmlns="http://www.springframework.org/schema/security"
+	xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.2.xsd
+						http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-4.1.xsd
+						http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.2.xsd">
+
+    <context:annotation-config />
+
+    <!--
+        기존 설정 방식..
+	<http access-denied-page="/common/accessDenied.jsp" request-matcher="ant">
+		<form-login login-page="/common/login.jsp"
+					authentication-failure-url="/common/login.jsp?fail=true"
+					 />
+		<logout logout-success-url="/common/logout.jsp"/>
+		<anonymous/>
+
+		<custom-filter before="FILTER_SECURITY_INTERCEPTOR" ref="filterSecurityInterceptor"/>
+	</http>
+	-->
+
+	<http entry-point-ref="loginUrlAuthenticationEntryPoint" request-matcher-ref="requestMatcherTypeFactoryBean" use-expressions="false">
+		<headers>
+            <frame-options policy="SAMEORIGIN"/>
+        </headers>
+
+        <form-login
+            authentication-failure-handler-ref="simpleUrlAuthenticationFailureHandler"
+            authentication-success-handler-ref="simpleUrlAuthenticationSuccessHandler"
+        />
+		<csrf disabled="true" />
+<!-- 		<logout /> -->
+		<anonymous enabled="false" />
+
+		<session-management session-authentication-strategy-ref="sas" />
+
+		<!-- for authorization -->
+		<custom-filter before="FILTER_SECURITY_INTERCEPTOR" ref="filterSecurityInterceptor"/>
+		<custom-filter position="CONCURRENT_SESSION_FILTER" ref="concurrencyFilter" />
+<!-- 		<custom-filter position="SESSION_MANAGEMENT_FILTER" ref="sessionManagementFilter" /> -->
+		<custom-filter position="LOGOUT_FILTER" ref="logoutFilter" />
+<!-- 		<custom-filter position="ANONYMOUS_FILTER" ref="anonymousFilter" /> -->
+
+<!-- 		<intercept-url pattern="/resources/apps/dms.plist" requires-channel="https" /> -->
+<!-- 		<intercept-url pattern="/**" requires-channel="http" /> -->
+	</http>
+
+	<beans:bean id="loginUrlAuthenticationEntryPoint" class="chn.bhmc.dms.security.web.authentication.LoginUrlAuthenticationEntryPoint">
+		<beans:constructor-arg index="0" ref="loginFormUrlFactoryBean" />
+    	<beans:constructor-arg index="1" ref="loginFormUrlParameterFactoryBean" />
+        <beans:constructor-arg index="2" ref="loginFormProcessUrlFactoryBean" />
+	</beans:bean>
+	<beans:bean id="loginFormUrlFactoryBean" class="chn.bhmc.dms.security.config.internal.LoginFormUrlFactoryBean" />
+	<beans:bean id="loginFormUrlParameterFactoryBean" class="chn.bhmc.dms.security.config.internal.LoginFormUrlParameterFactoryBean" />
+    <beans:bean id="loginFormProcessUrlFactoryBean" class="chn.bhmc.dms.security.config.internal.LoginFormProcessUrlFactoryBean" />
+    <!-- 로그아웃 이후 로그인 페이지 이동처리 -->
+    <beans:bean id="customLogoutHandler" class="chn.bhmc.dms.security.web.authentication.CustomLogoutHandler" />
+    <beans:bean id="customLogoutSuccessHandler" class="chn.bhmc.dms.security.core.CustomLogoutSuccessHandler" />
+
+    <!-- 로그인 실패시 처리할 핸들러 지정 -->
+	<beans:bean id="simpleUrlAuthenticationFailureHandler" class="chn.bhmc.dms.security.web.authentication.SimpleUrlAuthenticationFailureHandler">
+		<beans:constructor-arg index="0" ref="loginFailureUrlFactoryBean" />
+    	<beans:constructor-arg index="1" ref="loginFailureUrlParameterFactoryBean" />
+	</beans:bean>
+	<beans:bean id="loginFailureUrlFactoryBean" class="chn.bhmc.dms.security.config.internal.LoginFailureUrlFactoryBean" />
+	<beans:bean id="loginFailureUrlParameterFactoryBean" class="chn.bhmc.dms.security.config.internal.LoginFailureUrlParameterFactoryBean" />
+
+    <!-- 로그인  성공시 처리할 핸들러 지정 -->
+    <beans:bean id="simpleUrlAuthenticationSuccessHandler" class="chn.bhmc.dms.security.web.authentication.SimpleUrlAuthenticationSuccessHandler" />
+
+    <beans:bean id="customInvalidSessionStrategy" class="chn.bhmc.dms.security.web.session.CustomInvalidSessionStrategy">
+        <beans:constructor-arg index="0" name="expiredUrl" ref="expiredUrlFactoryBean" />
+    </beans:bean>
+	<beans:bean id="sessionManagementFilterBeanPostProcessor" class="chn.bhmc.dms.security.web.session.SessionManagementFilterBeanPostProcessor">
+        <beans:constructor-arg index="0" name="invalidSessionStrategy" ref="customInvalidSessionStrategy" />
+    </beans:bean>
+    <beans:bean id="sas" class="org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy">
+		<beans:constructor-arg>
+			<beans:list>
+				<beans:bean class="org.springframework.security.web.authentication.session.ConcurrentSessionControlAuthenticationStrategy">
+					<beans:constructor-arg ref="sessionRegistry" />
+					<beans:property name="maximumSessions" ref="maximumSessionsFactoryBean" />
+					<beans:property name="exceptionIfMaximumExceeded" value="false" />
+				</beans:bean>
+				<beans:bean class="org.springframework.security.web.authentication.session.SessionFixationProtectionStrategy"/>
+				<beans:bean class="org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy">
+					<beans:constructor-arg ref="sessionRegistry" />
+				</beans:bean>
+			</beans:list>
+		</beans:constructor-arg>
+	</beans:bean>
+	<beans:bean id="sessionRegistry" class="org.springframework.security.core.session.SessionRegistryImpl" />
+
+	<beans:bean id="concurrencyFilter" class="org.springframework.security.web.session.ConcurrentSessionFilter">
+		<beans:constructor-arg index="0" name="sessionRegistry" ref="sessionRegistry" />
+		<beans:constructor-arg index="1" name="expiredUrl" ref="expiredUrlFactoryBean" />
+        <beans:property name="redirectStrategy" ref="concurrentSessionExpiredRedirectStrategy" />
+	</beans:bean>
+    <beans:bean id="concurrentSessionExpiredRedirectStrategy" class="chn.bhmc.dms.security.web.authentication.ConcurrentSessionExpiredRedirectStrategy">
+        <beans:constructor-arg index="0" name="expiredUrl" ref="expiredUrlFactoryBean" />
+    </beans:bean>
+	<beans:bean id="expiredUrlFactoryBean" class="chn.bhmc.dms.security.config.internal.ExpiredUrlFactoryBean"/>
+
+    <beans:bean id="logoutFilter" class="org.springframework.security.web.authentication.logout.LogoutFilter">
+        <beans:constructor-arg index="0" name="logoutSuccessHandler" ref="customLogoutSuccessHandler" />
+        <beans:constructor-arg index="1" name="handlers" ref="customLogoutHandler" />
+        <beans:property name="filterProcessesUrl" value="/cmm/ath/login/selectLogoutAction.do" />
+    </beans:bean>
+
+	<beans:bean id="maximumSessionsFactoryBean" class="chn.bhmc.dms.security.config.internal.MaximumSessionsFactoryBean"/>
+
+	<!--
+	authentication-manager 기본 생성 bean id :  org.springframework.security.authenticationManager
+		(alias로 변경할 수 있음)
+	-->
+	<authentication-manager>
+		<authentication-provider user-service-ref="jdbcUserService">
+			<password-encoder hash="sha-256" base64="true"/>
+		</authentication-provider>
+	</authentication-manager>
+
+	<!--
+	<jdbc-user-service id="jdbcUserService" data-source-ref="dataSource"
+		users-by-username-query="SELECT USER_ID, PASSWORD, ENABLED, BIRTHDAY FROM USERS WHERE USER_ID = ?"
+		authorities-by-username-query="SELECT USER_ID, AUTHORITY FROM AUTHORITIES WHERE USER_ID = ?" />
+	-->
+
+	<!-- customizing user table, authorities table -->
+	<beans:bean id="jdbcUserService" class="chn.bhmc.dms.security.userdetails.jdbc.CustomJdbcUserDetailsManager" >
+		<beans:property name="roleHierarchy" ref="roleHierarchy" />
+		<beans:property name="dataSource" ref="dataSourceFactoryBean" />
+		<beans:property name="usersByUsernameQuery" ref="usersQueryFactoryBean" />
+		<beans:property name="authoritiesByUsernameQuery" ref="authoritiesQueryFactoryBean" />
+
+		<beans:property name="mapClass" ref="mapClassFactoryBean" />
+	</beans:bean>
+
+	<!-- FactorBeans -->
+	<beans:bean id="dataSourceFactoryBean" class="chn.bhmc.dms.security.config.internal.DataSourceFactoryBean" />
+
+	<beans:bean id="usersQueryFactoryBean" class="chn.bhmc.dms.security.config.internal.UsersQueryFactoryBean">
+		<beans:property name="defaultQuery" value="SELECT USR_ID AS USER_ID, USR_PW AS PASSWORD, ENABLED_YN AS ENABLED FROM CM_0801T WHERE USR_ID = ?" />
+	</beans:bean>
+
+	<beans:bean id="authoritiesQueryFactoryBean" class="chn.bhmc.dms.security.config.internal.AuthoritiesQueryFactoryBean">
+		<beans:property name="defaultQuery" value="SELECT REF_ID AS USER_ID, ROLE_ID  AS AUTHORITY FROM CM_0803T WHERE REF_ID  = ?" />
+	</beans:bean>
+
+	<beans:bean id="mapClassFactoryBean" class="chn.bhmc.dms.security.config.internal.MapClassFactoryBean">
+		<beans:property name="defaultMapClass" value="chn.bhmc.dms.security.userdetails.DefaultMapUserDetailsMapping" />
+	</beans:bean>
+
+	<beans:bean id="requestMatcherTypeFactoryBean" class="chn.bhmc.dms.security.config.internal.RequestMatcherTypeFactoryBean"/>
+	<!--  FactorBeans -->
+
+	<beans:bean id="securedObjectService" class="chn.bhmc.dms.security.securedobject.impl.SecuredObjectServiceImpl">
+		<beans:property name="securedObjectDAO" ref="securedObjectDAO"/>
+		<!-- beans:property name="requestMatcherType" value="ant"/-->	<!-- get requestMatcherType string from SecurityConfig bean -->
+	</beans:bean>
+
+	<beans:bean id="securedObjectDAO" class="chn.bhmc.dms.security.securedobject.impl.SecuredObjectDAO" >
+		<beans:property name="dataSource" ref="dataSourceFactoryBean"/>
+	</beans:bean>
+	<!-- 新增App后台访问统计bean 20180703 create by sunzhiqiang -->
+	<beans:bean id="mobStatisticsService" class="chn.bhmc.dms.security.service.impl.MobStatisticsServiceImpl">
+		<beans:property name="mobStatisticsDAO" ref="mobStatisticsDAO"/>
+	</beans:bean>
+
+	<beans:bean id="mobStatisticsDAO" class="chn.bhmc.dms.security.service.impl.MobStatisticsDAO" >
+		<beans:property name="dataSource" ref="dataSourceFactoryBean"/>
+	</beans:bean>
+	<!-- 新增App后台访问统计bean 20180703 create by sunzhiqiang -->
+	
+	<beans:bean id="roleHierarchy"  class="org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl" >
+		<!-- XML 사용
+		<beans:property name="hierarchy">
+			<beans:value>
+				ROLE_ADMIN > ROLE_USER
+				ROLE_USER > ROLE_RESTRICTED
+				ROLE_RESTRICTED > IS_AUTHENTICATED_FULLY
+				IS_AUTHENTICATED_REMEMBERED > IS_AUTHENTICATED_ANONYMOUSLY
+			</beans:value>
+		</beans:property>
+		-->
+		<!-- DB 사용 -->
+		<beans:property name="hierarchy" ref="hierarchyStrings"/>
+	</beans:bean>
+
+	<beans:bean id="hierarchyStrings" class="chn.bhmc.dms.security.userdetails.hierarchicalroles.HierarchyStringsFactoryBean" init-method="init">
+		<beans:property name="securedObjectService" ref="securedObjectService"/>
+	</beans:bean>
+
+	<beans:bean id="filterSecurityInterceptor" class="org.springframework.security.web.access.intercept.FilterSecurityInterceptor">
+		<beans:property name="authenticationManager" ref="org.springframework.security.authenticationManager" />
+		<beans:property name="accessDecisionManager" ref="org.springframework.security.access.vote.AffirmativeBased#0" />
+		<beans:property name="securityMetadataSource" ref="databaseSecurityMetadataSource" />
+	</beans:bean>
+
+	<beans:bean id="databaseSecurityMetadataSource" class="chn.bhmc.dms.security.intercept.ReloadableFilterInvocationSecurityMetadataSource">
+		<beans:constructor-arg ref="requestMap" />
+		<beans:property name="securedObjectService" ref="securedObjectService"/>
+	</beans:bean>
+
+	<!--  url  -->
+	<beans:bean id="requestMap" class="chn.bhmc.dms.security.intercept.UrlResourcesMapFactoryBean" init-method="init">
+		<beans:property name="securedObjectService" ref="securedObjectService"/>
+	</beans:bean>
+
+	<!-- 지정 불필요 : request-matcher 참조 -->
+	<!--
+	<beans:bean id="regexUrlPathMatcher" class="org.springframework.security.web.util.matcher.RegexRequestMatcher" />
+ 	-->
+
+ 	<!--
+ 	<beans:bean id="viewResourceAccessService" class="chn.bhmc.dms.security.service.impl.ViewResourceAccessServiceImpl">
+		<beans:property name="securedObjectService" ref="securedObjectService"/>
+		<beans:property name="registeredPermissions">
+			<beans:list>
+				<beans:ref local="chn.bhmc.dms.security.config.ExtBasePermission.READ" />
+				<beans:ref local="chn.bhmc.dms.security.config.ExtBasePermission.WRITE" />
+				<beans:ref local="chn.bhmc.dms.security.config.ExtBasePermission.CREATE" />
+				<beans:ref local="chn.bhmc.dms.security.config.ExtBasePermission.DELETE" />
+				<beans:ref local="chn.bhmc.dms.security.config.ExtBasePermission.DOWNLOAD" />
+				<beans:ref local="chn.bhmc.dms.security.config.ExtBasePermission.PRINT" />
+
+
+				<beans:ref local="chn.bhmc.dms.security.config.ExtBasePermission.ADMINISTRATION" />
+				<beans:ref local="chn.bhmc.dms.security.config.ExtBasePermission.LIST" />
+				<beans:ref local="chn.bhmc.dms.security.config.ExtBasePermission.REPORT" />
+				<beans:ref local="chn.bhmc.dms.security.config.ExtBasePermission.POPUP" />
+				<beans:ref local="chn.bhmc.dms.security.config.ExtBasePermission.UPLOAD" />
+				<beans:ref local="chn.bhmc.dms.security.config.ExtBasePermission.HELP" />
+
+			</beans:list>
+		</beans:property>
+	</beans:bean>
+
+	<beans:bean id="chn.bhmc.dms.security.config.ExtBasePermission.READ"
+		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<beans:property name="staticField"
+			value="chn.bhmc.dms.security.config.ExtBasePermission.READ" />
+	</beans:bean>
+	<beans:bean id="chn.bhmc.dms.security.config.ExtBasePermission.WRITE"
+		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<beans:property name="staticField"
+			value="chn.bhmc.dms.security.config.ExtBasePermission.WRITE" />
+	</beans:bean>
+	<beans:bean id="chn.bhmc.dms.security.config.ExtBasePermission.CREATE"
+		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<beans:property name="staticField"
+			value="chn.bhmc.dms.security.config.ExtBasePermission.CREATE" />
+	</beans:bean>
+	<beans:bean id="chn.bhmc.dms.security.config.ExtBasePermission.DELETE"
+		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<beans:property name="staticField"
+			value="chn.bhmc.dms.security.config.ExtBasePermission.DELETE" />
+	</beans:bean>
+	<beans:bean id="chn.bhmc.dms.security.config.ExtBasePermission.DOWNLOAD"
+		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<beans:property name="staticField"
+			value="chn.bhmc.dms.security.config.ExtBasePermission.DOWNLOAD" />
+	</beans:bean>
+	<beans:bean id="chn.bhmc.dms.security.config.ExtBasePermission.PRINT"
+		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<beans:property name="staticField"
+			value="chn.bhmc.dms.security.config.ExtBasePermission.PRINT" />
+	</beans:bean>
+
+
+	<beans:bean id="chn.bhmc.dms.security.config.ExtBasePermission.ADMINISTRATION"
+		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<beans:property name="staticField"
+			value="chn.bhmc.dms.security.config.ExtBasePermission.ADMINISTRATION" />
+	</beans:bean>
+	<beans:bean id="chn.bhmc.dms.security.config.ExtBasePermission.LIST"
+		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<beans:property name="staticField"
+			value="chn.bhmc.dms.security.config.ExtBasePermission.LIST" />
+	</beans:bean>
+	<beans:bean id="chn.bhmc.dms.security.config.ExtBasePermission.REPORT"
+		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<beans:property name="staticField"
+			value="chn.bhmc.dms.security.config.ExtBasePermission.REPORT" />
+	</beans:bean>
+	<beans:bean id="chn.bhmc.dms.security.config.ExtBasePermission.POPUP"
+		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<beans:property name="staticField"
+			value="chn.bhmc.dms.security.config.ExtBasePermission.POPUP" />
+	</beans:bean>
+	<beans:bean id="chn.bhmc.dms.security.config.ExtBasePermission.UPLOAD"
+		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<beans:property name="staticField"
+			value="chn.bhmc.dms.security.config.ExtBasePermission.UPLOAD" />
+	</beans:bean>
+	<beans:bean id="chn.bhmc.dms.security.config.ExtBasePermission.HELP"
+		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<beans:property name="staticField"
+			value="chn.bhmc.dms.security.config.ExtBasePermission.HELP" />
+	</beans:bean>
+	-->
+
+</beans:beans>

@@ -1,0 +1,677 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WorkBook xmlVersion="20151125" releaseVersion="8.0.0">
+<TableDataMap>
+<TableData name="ds1" class="com.fr.data.impl.DBTableData">
+<Parameters>
+<Parameter>
+<Attributes name="sCarSaleDtFrom"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDlrCd"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sDateFormat"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCustCalcDtFrom"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCustCalcDtTo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sCarSaleDtTo"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+<Parameter>
+<Attributes name="sMembershipStan"/>
+<O>
+<![CDATA[]]></O>
+</Parameter>
+</Parameters>
+<Attributes share="true" maxMemRowCount="-1"/>
+<Connection class="com.fr.data.impl.NameDatabaseConnection">
+<DatabaseName>
+<![CDATA[BHDMS]]></DatabaseName>
+</Connection>
+<Query>
+<![CDATA[	  SELECT RO.DLR_CD,
+           RO.RO_DOC_NO,
+           MAX(RO.RO_END_DT) AS RO_END_DT,
+           MAX(VM.CARLINE_CD) AS CARLINE_CD,
+           FN_GET_CARLINE_NM_NC(MAX(VM.CARLINE_CD)) AS CARLINE_NM,
+           MAX(VM.VIN_NO) AS VIN_NO,
+           MAX(VM.CUST_SALE_DT) AS CUST_SALE_DT,
+           NVL(SUM(CALCM.PAYM_AMT),0) AS PAYM_AMT,
+           MAX(CALC.CALC_DT) AS CALC_DT,
+           MAX(CM.CUST_NM) AS CAR_OWNER_NM,
+           MAX(CM.HP_NO) AS HP_NO,
+           MAX(MBG.GRADE_NM) AS GRADE_NM,
+           FN_CMM_CD_NM('CRM806', MAX(CM.BLUE_GRADE_NM), 'zh', 'N') AS BLUE_GRADE_NM
+      FROM SE_0300T RO
+     INNER JOIN SE_0500T CALC ON RO.DLR_CD = CALC.DLR_CD AND RO.RO_DOC_NO = CALC.RO_DOC_NO
+     INNER JOIN SE_0530T CALCM ON CALC.CALC_DOC_NO = CALCM.CALC_DOC_NO
+     INNER JOIN SA_0121T VM ON RO.VIN_NO = VM.VIN_NO
+     INNER JOIN CR_0101T CM ON RO.DLR_CD = CM.DLR_CD AND RO.CAR_OWNER_ID = CM.CUST_NO
+      LEFT OUTER JOIN CR_0801T MB ON
+${IF(AND(sMembershipStan == "C"), " CM.DLR_CD = MB.DLR_CD AND CM.CUST_NO = MB.CUST_NO"," RO.DLR_CD = MB.DLR_CD AND RO.VIN_NO = MB.VIN_NO")}
+      LEFT OUTER JOIN CR_0805T MBG ON MB.DLR_CD = MBG.DLR_CD AND MB.GRADE_CD = MBG.GRADE_SEQ
+     WHERE RO.DLR_CD = '${sDlrCd}'
+       AND CALC.CALC_STAT_CD = '00'
+       AND CALC.CALC_CANC_YN = 'N'
+       AND RO.RO_STAT_CD IN('00','05')
+       AND (RO.GOODWILL_YN != 'Y' OR RO.GOODWILL_YN IS NULL )
+       AND RO.RO_DT >= VM.CUST_SALE_DT
+       AND VM.NCAR_DSTIN_CD = 'N'
+       AND CM.CUST_TP = '01' -- 차량출고도 개인고객만 뽑아야한다.
+${IF(AND(LEN(sCustCalcDtFrom) == 0), ""," AND CALC.CALC_DT >= TO_DATE('"+sCustCalcDtFrom+"','"+sDateFormat+"')")}
+${IF(AND(LEN(sCustCalcDtTo) == 0), ""," AND CALC.CALC_DT < TO_DATE('"+sCustCalcDtTo+"','"+sDateFormat+"')+1")}
+${IF(AND(LEN(sCarSaleDtFrom) == 0), ""," AND VM.CUST_SALE_DT >= TO_DATE('"+sCarSaleDtFrom+"','"+sDateFormat+"')")}
+${IF(AND(LEN(sCarSaleDtTo) == 0), ""," AND VM.CUST_SALE_DT < TO_DATE('"+sCarSaleDtTo+"','"+sDateFormat+"')+1")}
+     GROUP BY RO.DLR_CD, RO.RO_DOC_NO
+     ORDER BY RO.DLR_CD, RO.RO_DOC_NO DESC]]></Query>
+</TableData>
+</TableDataMap>
+<ReportWebAttr>
+<ServerPrinter/>
+</ReportWebAttr>
+<Report class="com.fr.report.worksheet.WorkSheet" name="sheet1">
+<ReportPageAttr>
+<HR F="1" T="1"/>
+<FR/>
+<HC/>
+<FC/>
+</ReportPageAttr>
+<ColumnPrivilegeControl/>
+<RowPrivilegeControl/>
+<RowHeight defaultValue="723900">
+<![CDATA[723900,1524000,1296000,723900,723900,723900,723900,723900,723900,723900,723900]]></RowHeight>
+<ColumnWidth defaultValue="2743200">
+<![CDATA[720000,6477000,3314700,3581400,4876800,4152900,3810000,3810000,3848100,3124200,720000,2743200]]></ColumnWidth>
+<CellElementList>
+<C c="0" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="0" s="1">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="0" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="0" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="0" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="10" r="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="1" s="4">
+<O>
+<![CDATA[车架号]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="1" s="4">
+<O>
+<![CDATA[车种]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="1" s="4">
+<O>
+<![CDATA[车辆出库日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="4" r="1" s="4">
+<O>
+<![CDATA[客户姓名]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="5" r="1" s="5">
+<O>
+<![CDATA[电话]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="6" r="1" s="4">
+<O>
+<![CDATA[BM会员级别]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="1" s="4">
+<O>
+<![CDATA[自店会员级别]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="1" s="6">
+<O>
+<![CDATA[返厂日期]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="1" s="5">
+<O>
+<![CDATA[产值]]></O>
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="1" r="2" s="7">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="VIN_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<CellPageAttr/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="2" r="2" s="7">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CARLINE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<CellPageAttr/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="3" r="2" s="8">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CUST_SALE_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<CellPageAttr/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="4" r="2" s="7">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CAR_OWNER_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<CellPageAttr/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="5" r="2" s="7">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="HP_NO"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<CellPageAttr/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="6" r="2" s="7">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="BLUE_GRADE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<CellPageAttr/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="7" r="2" s="7">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="GRADE_NM"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<CellPageAttr/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="8" r="2" s="8">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="CALC_DT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<CellPageAttr/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="9" r="2" s="9">
+<O t="DSColumn">
+<Attributes dsName="ds1" columnName="PAYM_AMT"/>
+<Complex/>
+<RG class="com.fr.report.cell.cellattr.core.group.FunctionGrouper">
+<Attr divideMode="1"/>
+</RG>
+<Parameters/>
+</O>
+<PrivilegeControl/>
+<CellPageAttr/>
+<HighlightList>
+<Highlight class="com.fr.report.cell.cellattr.highlight.DefaultHighlight">
+<Name>
+<![CDATA[조건속성1]]></Name>
+<Condition class="com.fr.data.condition.FormulaCondition">
+<Formula>
+<![CDATA[row() % 2 = 0]]></Formula>
+</Condition>
+<HighlightAction class="com.fr.report.cell.cellattr.highlight.BackgroundHighlightAction">
+<Background name="ColorBackground" color="-1"/>
+</HighlightAction>
+</Highlight>
+</HighlightList>
+<Expand dir="0"/>
+</C>
+<C c="3" r="3" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="3" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="3" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="3" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="4" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="4" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="4" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="4" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="5" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="5" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="5" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="5" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="6" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="6" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="6" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="6" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="7" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="7" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="7" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="7" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="8" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="8" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="8" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="8" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="9" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="9" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="9" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="9" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="2" r="10">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="3" r="10" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="7" r="10" s="0">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="8" r="10" s="2">
+<PrivilegeControl/>
+<Expand/>
+</C>
+<C c="9" r="10" s="3">
+<PrivilegeControl/>
+<Expand/>
+</C>
+</CellElementList>
+<ReportAttrSet>
+<ReportSettings isHorizontalCenterOnPage="true" headerHeight="1440000" footerHeight="720000">
+<PaperSetting orientation="1">
+<PaperSize width="33912000" height="46411200"/>
+<Margin top="432000" left="432000" bottom="432000" right="432000"/>
+</PaperSetting>
+</ReportSettings>
+<Header reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Header>
+<Footer reportPageType="0">
+<Background name="NullBackground"/>
+<LeftList/>
+<CenterList/>
+<RightList/>
+</Footer>
+</ReportAttrSet>
+<PrivilegeControl/>
+</Report>
+<ReportParameterAttr>
+<Attributes showWindow="true" delayPlaying="true" windowPosition="1" align="0"/>
+<PWTitle>
+<![CDATA[매개변수]]></PWTitle>
+</ReportParameterAttr>
+<StyleList>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="SimSun" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0]]></Format>
+<FRFont name="SimSun" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style imageLayout="1">
+<Format class="java.text.SimpleDateFormat">
+<![CDATA[yyyy-MM-dd]]></Format>
+<FRFont name="SimSun" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="2" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0]]></Format>
+<FRFont name="SimSun" style="0" size="72"/>
+<Background name="NullBackground"/>
+<Border/>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#0]]></Format>
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1">
+<Format class="java.text.SimpleDateFormat">
+<![CDATA[yyyy-MM-dd]]></Format>
+<FRFont name="Microsoft YaHei UI" style="0" size="88" foreground="-1"/>
+<Background name="ColorBackground" color="-11561760"/>
+<Border>
+<Top style="1" color="-3352093"/>
+<Bottom style="1" color="-3352093"/>
+<Left style="1" color="-3352093"/>
+<Right style="1" color="-3352093"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="0" imageLayout="1" paddingLeft="1" paddingRight="1">
+<Format class="java.text.SimpleDateFormat">
+<![CDATA[yyyy-MM-dd]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+<Style horizontal_alignment="4" imageLayout="1" paddingLeft="1" paddingRight="5">
+<Format class="com.fr.base.CoreDecimalFormat">
+<![CDATA[#,##0.00]]></Format>
+<FRFont name="Verdana" style="0" size="80" foreground="-10855846"/>
+<Background name="ColorBackground" color="-986896"/>
+<Border>
+<Top style="5" color="-1"/>
+<Bottom style="5" color="-1"/>
+<Left style="5" color="-1"/>
+<Right style="5" color="-1"/>
+</Border>
+</Style>
+</StyleList>
+<DesignerVersion DesignerVersion="IAA"/>
+<PreviewType PreviewType="0"/>
+<TemplateID TemplateID="a738d3f7-95ce-405d-813a-b3df6065bd38"/>
+</WorkBook>

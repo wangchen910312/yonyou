@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : BatMarkingCampaignDAO_SqlMap.xml
+    Description : 배치작업에 관한 데이터처리
+    author Hyoung Jun An
+    since 2016. 07. 20.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 07. 20.  Hyoung Jun An     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.bat.crm.mcm.service.dao.BatMarkingCampaignDAO">
+
+    <select id="selectSysOwnerDlrCdCnt" resultType="int">
+    /* [chn.bhmc.dms.bat.crm.mcm.service.dao.BatMarkingCampaignDAO.selectSysOwnerDlrCdCnt] */
+        SELECT COUNT(*)
+          FROM CM_0101T
+         WHERE SYS_OWNER_YN = 'Y'
+    </select>
+
+    <!-- 자동으로 Batch 를 수행할 목록이 있는지 조회한다(캠페인 대상자 추출목록). -->
+    <select id="selectMarkingCampaignScheduleCondition" parameterType="BatMarkingCampaignSearchVO" resultType="BatMarkingCampaignVO">
+    /* [chn.bhmc.dms.bat.crm.mcm.service.dao.BatMarkingCampaignDAO.selectMarkingCampaignScheduleCondition] */
+        SELECT CR_0703T.DLR_CD
+               ,CR_0703T.MAK_CD
+               ,CR_0703T.EXTR_DGRE_CNT
+               ,CR_0703T.CUST_EXTR_TERM_NO
+               ,CR_0703T.CUST_EXTR_TITLE_NM
+               ,CR_0703T.CUST_EXTR_CYCLE_CONT
+               ,CR_0703T.DUP_YN
+               ,CR_0703T.BAT_OPER_ID
+               ,CR_0703T.CUST_EXTR_CYCLE_TP
+          FROM CR_0701T CR_0701T
+         INNER JOIN CR_0703T CR_0703T ON CR_0701T.DLR_CD = CR_0703T.DLR_CD AND CR_0701T.MAK_CD = CR_0703T.MAK_CD
+         WHERE CR_0701T.DLR_CD IN ( SELECT DLR_CD
+                                      FROM CM_0101T
+        <if test='sSysOwnDlrYn == "Y"'>
+                                     WHERE SYS_OWNER_YN = 'Y'
+        </if>
+        <if test='sSysOwnDlrYn == "N"'>
+                                     WHERE USE_CENTER_DMS_YN = 'Y'
+        </if>
+                                   )
+           AND CR_0701T.STAT_CD = '03'
+           AND CR_0701T.END_DT <![CDATA[>=]]> TRUNC(#{sCurruntDt},'DD')
+           AND CR_0701T.START_DT <![CDATA[<=]]> TRUNC(#{sCurruntDt},'DD')
+           AND CR_0701T.CR_END_TP = 'N'
+           AND CR_0703T.CUST_EXTR_AUTO_YN = 'Y'
+           AND CR_0703T.USE_YN = 'Y'
+           AND CR_0703T.EXTR_STAT_CD = 'N'
+           AND CR_0703T.EXTR_DT IS NULL
+           AND (
+                   (
+                    CR_0703T.CUST_EXTR_CYCLE_TP = 'W' AND CR_0703T.CUST_EXTR_CYCLE_CONT LIKE '%'||UPPER(to_char(#{sCurruntDt}, 'dy','NLS_DATE_LANGUAGE=AMERICAN'))||'%'
+                   ) OR (
+                    CR_0703T.CUST_EXTR_CYCLE_TP = 'S' AND CR_0703T.CUST_EXTR_CYCLE_CONT LIKE '%'||to_char(#{sCurruntDt}, 'YYYY-MM-DD')||'%'
+                   ) OR (
+                    CR_0703T.CUST_EXTR_CYCLE_TP = 'D'
+                   )
+               )
+    </select>
+
+    <!-- Batch 를 수행하여 추출한 대상자를 등록 한다. -->
+    <insert id="insertBatTargetExtractSave" parameterType="BatMarkingCampaignVO">
+    /* [chn.bhmc.dms.bat.crm.mcm.service.dao.BatMarkingCampaignDAO.insertBatTargetExtractSave] */
+        INSERT INTO CR_0710T    --캠페인추출고객
+        (
+        DLR_CD                    --딜러코드
+        ,MAK_CD                    --마케팅코드
+        ,EXTR_DGRE_CNT             --추출차수
+        ,TARG_CUST_SEQ             --대상고객일련번호
+        ,CUST_NO                   --고객번호
+        ,CUST_NM                   --고객명
+        ,CUST_EXTR_TERM_NO         --고객추출조건번호
+        ,TEL_NO                    --전화번호
+        ,HP_NO                     --휴대폰번호
+        ,WECHAT_ID                 --위챗ID
+        ,EMAIL_NM                  --이메일명
+        ,SUNG_NM                   --성명
+        ,CITY_NM                   --도시명
+        ,DIST_NM                   --지역명
+        ,ZIP_CD                    --우편번호
+        ,EXT_ZIP_CD                --확장우편번호
+        ,ADDR_NM                   --주소명
+        ,ADDR_DETL_CONT            --주소상세내용
+        ,REG_USR_ID                --등록자ID
+        ,REG_DT                    --등록일자
+        )
+        SELECT #{dlrCd}              --딜러코드
+               ,#{makCd}             --마케팅코드
+               ,#{extrDgreCnt}       --추출차수
+               ,SEQ_CR_0710T.NEXTVAL --대상고객일련번호
+               ,T1.CUST_NO
+               ,T2.CUST_NM
+               ,#{custExtrTermNo}    --추출조건번호
+               ,T2.TEL_NO
+               ,T2.HP_NO
+               ,T2.WECHAT_ID
+               ,T2.EMAIL_NM
+               ,T3.SUNG_NM
+               ,T3.CITY_NM
+               ,T3.DIST_NM
+               ,T3.ZIP_CD
+               ,T3.EXT_ZIP_CD
+               ,T3.ADDR_NM
+               ,T3.ADDR_DETL_CONT
+               ,#{regUsrId}
+               ,SYSDATE
+          FROM CR_1003T T1,
+               CR_0101T T2,
+               (SELECT *
+                  FROM CR_0116T
+                 WHERE REF_TABLE_NM = 'CR_0101T'
+                   AND FLAG_YN = 'Y'
+               ) T3
+         WHERE T1.DLR_CD  = T2.DLR_CD
+           AND T2.DLR_CD  = T3.DLR_CD(+)
+           AND T1.CUST_NO = T2.CUST_NO
+           AND T2.CUST_NO = T3.REF_KEY_NM(+)
+           AND T2.DEL_YN  = 'N'
+           AND T1.DLR_CD  = #{dlrCd}
+           AND T1.SEQ     = #{seq}
+        <if test='dupYn == "N"'>
+           AND T1.CUST_NO NOT IN (SELECT CUST_NO
+                                    FROM CR_0710T
+                                   WHERE DLR_CD = #{dlrCd}
+                                     AND MAK_CD = #{makCd}
+                                 )
+        </if>
+    </insert>
+
+    <!-- Batch 를 수행한 이후에 마케팅 캠페인(대상자) 정보를 수정한다.(대상자 마스터 업데이트) -->
+    <update id="updateBatTargetExtractMaster" parameterType="BatMarkingCampaignVO" >
+        /* [chn.bhmc.dms.bat.crm.mcm.service.dao.BatMarkingCampaignDAO.updateBatTargetExtractMaster] */
+        UPDATE DMSDB.CR_0703T    --마케팅캠페인대상고객
+        SET
+         EXTR_STAT_CD         = 'Y'                           --추출상태코드
+        ,EXTR_DT              = SYSDATE                       --추출일자
+        ,UPDT_USR_ID          = #{updtUsrId}                  --수정자ID
+        ,UPDT_DT              = SYSDATE                       --수정일자
+        WHERE 1 = 1
+        AND DLR_CD            = #{dlrCd}                      --딜러코드
+        AND MAK_CD            = #{makCd}                      --마케팅코드
+        AND EXTR_DGRE_CNT     = #{extrDgreCnt}                --추출차수
+    </update>
+
+    <!-- Batch 를 수행한 이후에 새롭게 Batch를 수행할 마케팅 캠페인(대상자) 정보를 등록한다. -->
+    <insert id="insertBatTarget" parameterType="BatMarkingCampaignVO" >
+        /* [chn.bhmc.dms.bat.crm.mcm.service.dao.BatMarkingCampaignDAO.insertBatTarget] */
+        INSERT INTO DMSDB.CR_0703T    --마케팅캠페인대상고객
+        (
+        DLR_CD                      --딜러코드
+        ,MAK_CD                      --마케팅코드
+        ,EXTR_DGRE_CNT               --추출차수
+        ,CUST_EXTR_TERM_NO           --고객추출조건번호
+        ,CUST_EXTR_TITLE_NM          --고객추출제목명
+        ,EXTR_STAT_CD                --추출상태코드
+        ,USE_YN                      --사용여부
+        ,REG_USR_ID                  --등록자ID
+        ,REG_DT                      --등록일자
+        ,CUST_EXTR_AUTO_YN           --고객추출자동여부
+        ,CUST_EXTR_CYCLE_CONT        --고객추출주기내용
+        ,CUST_EXTR_CYCLE_TP          --고객추출주기유형
+        ,DUP_YN                      --중복여부
+        )
+        VALUES
+        (
+        #{dlrCd}                      --딜러코드
+        ,#{makCd}                      --마케팅코드
+        ,SEQ_CR_0703T.NEXTVAL          --추출차수
+        ,#{custExtrTermNo}             --고객추출조건번호
+        ,#{custExtrTitleNm}            --고객추출제목명
+        ,'N'                           --추출상태코드
+        ,'Y'                           --사용여부
+        ,#{regUsrId}                   --등록자ID
+        ,SYSDATE                       --등록일자
+        ,'Y'                           --고객추출자동여부
+        ,#{custExtrCycleCont}          --고객추출주기내용
+        ,#{custExtrCycleTp}            --고객추출주기유형
+        ,#{dupYn}                      --중복여부
+        )
+    </insert>
+
+    <!-- 인터페이스를 통해 DCS에서 DMS로 가져온 데이터를 본 테이블에 이관처리 한다.(캠페인 마스터) -->
+     <select id="selectMarktingCampaignDmsIfCopyMaster" statementType="CALLABLE" parameterType="BatMarkingCampaignVO">
+     /* [chn.bhmc.dms.bat.crm.mcm.service.dao.BatMarkingCampaignDAO.selectMarktingCampaignDmsIfCopyMaster] */
+         { call SP_CRM_CAMPAIGN_DMS_IF_0701T (
+            #{result, mode=OUT, jdbcType=VARCHAR}
+         ) }
+    </select>
+
+    <!-- 인터페이스를 통해 DCS에서 DMS로 가져온 데이터를 본 테이블에 이관처리 한다.(추출고객) -->
+     <select id="selectMarktingCampaignDmsIfCopyCust" statementType="CALLABLE" parameterType="BatMarkingCampaignVO">
+     /* [chn.bhmc.dms.bat.crm.mcm.service.dao.BatMarkingCampaignDAO.selectMarktingCampaignDmsIfCopyCust] */
+         { call SP_CRM_CAMPAIGN_DMS_IF_0710T (
+            #{result, mode=OUT, jdbcType=VARCHAR}
+         ) }
+    </select>
+
+    <!-- 인터페이스를 통해 DCS에서 DMS로 가져온 데이터를 본 테이블에 이관처리 한다.(목표) -->
+     <select id="selectMarktingCampaignDmsIfCopyGoal" statementType="CALLABLE" parameterType="BatMarkingCampaignVO">
+     /* [chn.bhmc.dms.bat.crm.mcm.service.dao.BatMarkingCampaignDAO.selectMarktingCampaignDmsIfCopyGoal] */
+         { call SP_CRM_CAMPAIGN_DMS_IF_0711T (
+            #{result, mode=OUT, jdbcType=VARCHAR}
+         ) }
+    </select>
+
+    <!-- 인터페이스를 통해 DCS에서 DMS로 가져온 데이터를 본 테이블에 이관처리 한다.(부품정보) -->
+     <select id="selectMarktingCampaignDmsIfCopyItem" statementType="CALLABLE" parameterType="BatMarkingCampaignVO">
+     /* [chn.bhmc.dms.bat.crm.mcm.service.dao.BatMarkingCampaignDAO.selectMarktingCampaignDmsIfCopyItem] */
+         { call SP_CRM_CAMPAIGN_DMS_IF_1071T (
+            #{result, mode=OUT, jdbcType=VARCHAR}
+         ) }
+    </select>
+
+    <!-- 인터페이스를 통해 DCS에서 DMS로 가져온 데이터를 본 테이블에 이관처리 한다.(공임정보) -->
+     <select id="selectMarktingCampaignDmsIfCopyPay" statementType="CALLABLE" parameterType="BatMarkingCampaignVO">
+     /* [chn.bhmc.dms.bat.crm.mcm.service.dao.BatMarkingCampaignDAO.selectMarktingCampaignDmsIfCopyPay] */
+         { call SP_CRM_CAMPAIGN_DMS_IF_1072T (
+            #{result, mode=OUT, jdbcType=VARCHAR}
+         ) }
+    </select>
+
+    <!-- 인터페이스를 통해 DCS에서 DMS로 가져온 데이터를 본 테이블에 이관처리 한다.(대상차량정보) -->
+     <select id="selectMarktingCampaignDmsIfCopyTargCar" statementType="CALLABLE" parameterType="BatMarkingCampaignVO">
+     /* [chn.bhmc.dms.bat.crm.mcm.service.dao.BatMarkingCampaignDAO.selectMarktingCampaignDmsIfCopyTargCar] */
+         { call SP_CRM_CAMPAIGN_DMS_IF_1073T (
+            #{result, mode=OUT, jdbcType=VARCHAR}
+         ) }
+    </select>
+
+    <!-- 인터페이스를 통해 DCS에서 DMS로 가져온 데이터를 본 테이블에 이관처리 한다.(리콜대상차종) -->
+     <select id="selectMarktingCampaignDmsIfCopyRecellCar" statementType="CALLABLE" parameterType="BatMarkingCampaignVO">
+     /* [chn.bhmc.dms.bat.crm.mcm.service.dao.BatMarkingCampaignDAO.selectMarktingCampaignDmsIfCopyRecellCar] */
+         { call SP_CRM_CAMPAIGN_DMS_IF_1074T (
+            #{result, mode=OUT, jdbcType=VARCHAR}
+         ) }
+    </select>
+
+</mapper>

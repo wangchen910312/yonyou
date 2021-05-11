@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : TestDriveClineDAO_SqlMap.xml
+    Description : 시승노선관리에 관한 데이터처리
+    author in moon Lee
+    since 2016.05.12
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016.05.12     in moon Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cso.service.dao.TestDriveClineDAO">
+
+    <!-- 시승노선관리 검색조건 -->
+    <sql id="searchTestDriveCline">
+        INNER JOIN CM_0901T CM0901T ON CR0403T.CLINE_DOC_NO = CM0901T.FILE_DOC_NO
+        INNER JOIN CM_0902T CM0902T ON CM0901T.FILE_DOC_NO = CM0902T.FILE_DOC_NO
+        WHERE CR0403T.DLR_CD = #{sDlrCd}
+        AND CR0403T.PLT_CD = #{sPltCd}
+
+        <if test='sUseYn != null and sUseYn != ""'>
+            AND CR0403T.USE_YN = #{sUseYn}
+        </if>
+
+
+    </sql>
+
+    <!-- 시승노선관리 목록수를 조회한다. -->
+    <select id="selectTestDriveClinesByConditionCnt" parameterType="TestDriveClineSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveClineDAO.selectTestDriveClinesByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM CR_0403T CR0403T
+        <include refid="searchTestDriveCline" />
+    </select>
+
+    <!-- 시승노선 정보 목록을 조회한다. -->
+    <select id="selectTestDriveClinesByCondition" parameterType="TestDriveClineSearchVO" resultType="TestDriveClineVO">
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveClineDAO.selectTestDriveClinesByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    CR0403T.DLR_CD              --딜러코드
+                   ,CR0403T.PLT_CD              --센터코드
+                   ,CR0403T.CLINE_SEQ           --노선일련번호
+                   ,CR0403T.CLINE_NM            --노선명
+                   ,CR0403T.CLINE_DOC_NO        --노선문서번호
+                   ,CR0403T.REG_USR_ID          --등록자ID
+                   ,CR0403T.REG_DT              --등록일자
+                   ,CR0403T.UPDT_USR_ID         --수정자ID
+                   ,CR0403T.UPDT_DT             --수정일자
+                   ,CR0403T.USE_YN              --사용여부
+
+                   ,CM0902T.FILE_DOC_NO
+                   ,CM0902T.FILE_NO
+                   ,CM0902T.FILE_TP
+                   ,CM0902T.FILE_NM
+
+                FROM CR_0403T CR0403T
+                <include refid="searchTestDriveCline" />
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+
+                                <when test='item.field == "dlrCd"'>       CR0403T.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "pltCd"'>       CR0403T.PLT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "clineSeq"'>    CR0403T.CLINE_SEQ <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>   </when>
+                                <when test='item.field == "clineNm"'>     CR0403T.CLINE_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                <when test='item.field == "clineDocNo"'>  CR0403T.CLINE_DOC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regUsrId"'>    CR0403T.REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                <when test='item.field == "regDt"'>       CR0403T.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                <when test='item.field == "updtUsrId"'>   CR0403T.UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                <when test='item.field == "updtDt"'>      CR0403T.UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>     </when>
+                                <when test='item.field == "useYn"'>       CR0403T.USE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+
+                                <otherwise>
+                                    CR0403T.CLINE_SEQ DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        CR0403T.CLINE_SEQ DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 시승노선관리 정보를 수정한다. -->
+    <update id="updateTestDriveClineMgmt" parameterType="TestDriveClineVO" >
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveClineDAO.updateTestDriveClineMgmt] */
+        UPDATE CR_0403T SET                 --시승노선
+             UPDT_DT      = SYSDATE               --수정일자
+            ,UPDT_USR_ID  = #{updtUsrId}          --수정자ID
+            ,CLINE_NM     = #{clineNm}            --노선명
+            ,USE_YN       = #{useYn}              --사용여부
+        WHERE CLINE_SEQ    = #{clineSeq}           --노선일련번호
+        AND DLR_CD = #{dlrCd}
+        AND PLT_CD = #{pltCd}
+    </update>
+
+    <!-- 시승노선관리 정보를 삭제한다. -->
+    <delete id="deleteTestDriveClineMgmt" parameterType="TestDriveClineVO" >
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveClineDAO.deleteTestDriveClineMgmt] */
+        DELETE FROM CR_0403T
+        WHERE CLINE_SEQ    = #{clineSeq}           --노선일련번호
+        AND DLR_CD = #{dlrCd}
+        AND PLT_CD = #{pltCd}
+    </delete>
+
+    <!-- 시승노선관리 정보를 등록한다. -->
+    <insert id="insertTestDriveClineMgmt" parameterType="TestDriveClineVO" >
+        /* [chn.bhmc.dms.crm.cso.service.dao.TestDriveClineDAO.insertTestDriveClineMgmt] */
+        INSERT INTO CR_0403T (   --시승노선
+             DLR_CD              --딜러코드
+            ,PLT_CD              --센터코드
+            ,CLINE_SEQ           --노선일련번호
+            ,CLINE_NM            --노선명
+            ,CLINE_DOC_NO        --노선문서번호
+            ,USE_YN              --사용여부
+            ,REG_USR_ID          --등록자ID
+            ,REG_DT              --등록일자
+        ) VALUES (
+             #{dlrCd}              --딜러코드
+            ,#{pltCd}              --센터코드
+            ,SEQ_CR_0403T.NEXTVAL  --노선일련번호
+            ,#{clineNm}            --노선명
+            ,#{clineDocNo}         --노선문서번호
+            ,#{useYn}              --사용여부
+            ,#{regUsrId}           --등록자ID
+            ,SYSDATE               --등록일자
+        )
+    </insert>
+
+
+    <!-- 시승 노선 사용여부 확인한다. -->
+    <select id="selectTdrvClineByKeyCnt" parameterType="TestDriveResvSearchVO" resultType="int">
+        SELECT
+            COUNT(*) AS VALUE
+        FROM CR_0401T CR0401T
+        INNER JOIN CR_0402T CR0402T ON CR0401T.TDRV_VIN_NO = CR0402T.TDRV_VIN_NO
+        INNER JOIN SA_0121T SA0121T ON CR0402T.TDRV_VIN_NO = SA0121T.VIN_NO
+        WHERE CR0401T.TDRV_STAT_CD != '02'
+        AND CR0401T.DLR_CD = #{sDlrCd}
+        AND CR0401T.PLT_CD = #{sPltCd}
+        AND CR0401T.TDRV_CLINE_CD = #{sTdrvClineCd}
+        AND CR0401T.RESV_DT+TO_NUMBER(TDRV_HM_CD)/24/60 > #{sStartDt}
+    </select>
+
+
+</mapper>

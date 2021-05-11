@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CallInfoDAO_SqlMap.xml
+    Description : 관심차종 관한 데이터처리
+    author Kyo Jin Lee
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kyo Jin Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.crm.cmm.service.dao.CallInfoDAO">
+
+    <!-- 검색조건 -->
+    <sql id="searchCallInfoWhere">
+        <where>
+                <if test='sDlrCd != null and sDlrCd != "" '>
+                    AND T1.DLR_CD = #{sDlrCd}
+                </if>
+                <if test='sCallListCd != null and sCallListCd != "" '>
+                    AND T1.CALL_LIST_CD = #{sCallListCd}
+                </if>
+                <if test='sCallListReqNo != null and sCallListReqNo != "" '>
+                    AND T1.CALL_LIST_REQ_NO = #{sCallListReqNo}
+                </if>
+        </where>
+    </sql>
+
+    <!-- 콜수를 조회한다. -->
+    <select id="selectCallInfoByConditionCnt" parameterType="CallInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CallInfoDAO.selectCallInfoByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+          FROM CR_0605T T1
+          <include refid="searchCallInfoWhere" />
+    </select>
+
+    <!-- 콜수를 조회한다. -->
+    <select id="selectCallInfoByCondition" parameterType="CallInfoSearchVO" resultType="CallInfoVO">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CallInfoDAO.selectCallInfoByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT T1.*
+                FROM CR_0605T T1
+                <include refid="searchCallInfoWhere" />
+                ORDER BY REG_DT DESC
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    AND ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 콜수를 채번한다. -->
+    <select id="selectNextCallListNo" resultType="string">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CallInfoDAO.selectNextCallListNo] */
+        SELECT FU_GET_CARLINE_NO() AS SEQ
+        FROM   DUAL
+    </select>
+
+    <!-- 콜수를 업데이트 한다. -->
+    <update id="updateCallInfo" parameterType="CallInfoVO">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CallInfoDAO.updateCallInfo] */
+        UPDATE CR_0605T    --콜리스트
+          SET
+               DLR_CD           = #{dlrCd}                  --DLR_CD
+              ,CALL_LIST_NO     = #{callListNo}             --콜리스트번호
+              ,CUST_NO          = #{custNo}                 --고객번호
+              ,VIN_NO1          = #{vinNo1}                 --차대번호1
+              ,VIN_NO2          = #{vinNo2}                 --차대번호2
+              ,TEL_NO           = #{telNo}                  --연락처
+              ,CALL_LIST_CD     = #{callListCd}             --콜리스트코드 정비(SERVICE), 만족도조사(SURVEY), 캠페인(CAMPAIGN), IDCC리드(IDCCLEAD)
+              ,CALL_LIST_REQ_NO = #{callListReqNo}          --콜리스트요청번호
+              ,REQ_DEPT_CD      = #{reqDeptCd}              --요청부서코드
+              ,REQ_USR_ID       = #{reqUsrId}               --요청사용자ID
+              ,REMARK           = #{remark}                 --비고
+              ,REG_URL          = #{regUrl}                 --녹취URL
+              ,STAT_CD          = #{statCd}                 --상태코드 CRM608
+              <if test='nextCallDt != null '>
+              ,NEXT_CALL_DT     = #{nextCallDt}             --다음콜일자
+              </if>
+              ,UPDT_USR_ID      = #{updtUsrId}              --수정자ID
+              ,UPDT_DT          = SYSDATE
+         WHERE 1 = 1
+           AND DLR_CD           = #{dlrCd}                  --DLR_CD
+           AND CALL_LIST_NO     = #{callListNo}             --콜리스트번호
+    </update>
+
+    <!-- 콜수를 업데이트 한다. -->
+    <update id="deleteCallInfo" parameterType="CallInfoVO">
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CallInfoDAO.deleteCallInfo] */
+        DELETE FROM CR_0605T    --콜리스트
+         WHERE 1 = 1
+           AND DLR_CD           = #{dlrCd}                  --DLR_CD
+           AND CALL_LIST_NO     = #{callListNo}             --콜리스트번호
+    </update>
+
+    <!--  콜수를 등록한다. -->
+    <insert id="insertCallInfo" parameterType="CallInfoVO" >
+        /* [chn.bhmc.dms.crm.cmm.service.dao.CallInfoDAO.insertCallInfo] */
+        INSERT INTO CR_0605T    --콜리스트
+        (
+          DLR_CD                  --DLR_CD
+         ,CALL_LIST_NO            --콜리스트번호
+         ,CUST_NO                 --고객번호
+         ,VIN_NO1                 --차대번호1
+         ,VIN_NO2                 --차대번호2
+         ,TEL_NO                  --연락처
+         ,CALL_LIST_CD            --콜리스트코드 정비(SERVICE), 만족도조사(SURVEY), 캠페인(CAMPAIGN), IDCC리드(IDCCLEAD)
+         ,CALL_LIST_REQ_NO        --콜리스트요청번호
+         ,REQ_DEPT_CD             --요청부서코드
+         ,REQ_USR_ID              --요청사용자ID
+         ,REMARK                  --비고
+         ,REG_URL                 --녹취URL
+         ,STAT_CD                 --상태코드 CRM608
+         ,NEXT_CALL_DT            --다음콜일자
+         ,REG_USR_ID              --등록자ID
+         ,REG_DT                  --등록일자
+        )
+        VALUES
+        (
+          #{dlrCd}                  --DLR_CD
+         ,SEQ_CR_0605T.NEXTVAL             --콜리스트번호
+         ,#{custNo}                 --고객번호
+         ,#{vinNo1}                 --차대번호1
+         ,#{vinNo2}                 --차대번호2
+         ,#{telNo}                  --연락처
+         ,#{callListCd}             --콜리스트코드 정비(SERVICE), 만족도조사(SURVEY), 캠페인(CAMPAIGN), IDCC리드(IDCCLEAD)
+         ,#{callListReqNo}          --콜리스트요청번호
+         ,#{reqDeptCd}              --요청부서코드
+         ,#{reqUsrId}               --요청사용자ID
+         ,#{remark}                 --비고
+         ,#{regUrl}                 --녹취URL
+         ,#{statCd}                 --상태코드 CRM608
+         ,#{nextCallDt}             --다음콜일자
+         ,#{regUsrId}               --등록자ID
+         ,SYSDATE
+        )
+    </insert>
+
+</mapper>

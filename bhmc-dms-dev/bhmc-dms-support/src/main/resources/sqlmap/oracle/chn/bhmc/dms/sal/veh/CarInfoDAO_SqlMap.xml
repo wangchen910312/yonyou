@@ -1,0 +1,645 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.veh.service.dao.CarInfoDAO">
+
+    <!-- 차종 리스트를 조회한다 -->
+    <select id="selectCarListsByConditionCnt" parameterType="CarInfoSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM (
+                SELECT A.CARLINE_CD         -- 차종코드
+                     , A.CARLINE_NM         -- 차종명
+                     , A.CARLINE_EN_NM      -- 차종영문명
+                  FROM SA_0101T A           -- 차종마스터
+                 WHERE 1 = 1
+                 <if test='useYn != null and useYn != ""'>
+                   AND A.USE_YN = #{useYn}  -- 사용여부
+                   AND A.START_DT <![CDATA[ <= ]]> SYSDATE      -- 시작일
+                   AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1   -- 종료일
+                 </if>
+                 <if test='carlineCd != null and carlineCd != ""'>
+                   AND A.CARLINE_CD = #{carlineCd}
+                 </if>
+
+                 GROUP BY A.CARLINE_CD
+                        , A.CARLINE_NM
+                        , A.CARLINE_EN_NM
+                 ORDER BY A.CARLINE_CD, A.CARLINE_NM
+                )
+    </select>
+    <select id="selectCarListsByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT A.CARLINE_CD         -- 차종코드
+             , FN_GET_CARLINE_NM(A.CARLINE_CD) AS CARLINE_NM
+             , FN_GET_CARLINE_NM_NC(A.CARLINE_CD) AS CARLINE_NM_NC
+             , A.CARLINE_EN_NM      -- 차종영문명
+          FROM SA_0101T A           -- 차종마스터
+         WHERE 1 = 1
+         <if test='useYn != null and useYn != ""'>
+           AND A.USE_YN = #{useYn}  -- 사용여부
+           AND A.START_DT <![CDATA[ <= ]]> SYSDATE      -- 시작일
+           AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+         </if>
+         <if test='carlineCd != null and carlineCd != ""'>
+           AND A.CARLINE_CD = #{carlineCd}
+         </if>
+         GROUP BY A.CARLINE_CD
+                , A.CARLINE_NM
+                , A.CARLINE_EN_NM
+         ORDER BY A.CARLINE_CD, A.CARLINE_NM
+    </select>
+
+    <!-- 모델 리스트를 조회한다 -->
+    <select id="selectModelListsByConditionCnt" parameterType="CarInfoSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM (
+        SELECT SUBSTR(A.MODEL_CD, 1, 2) AS CARLINE_CD
+             , A.MODEL_CD
+             , '['||A.MODEL_CD||']'||(DECODE(MAX(A.FSCP_CHM_MMM), NULL, MAX(B.MODEL_NM), MAX(A.FSCP_CHM_MMM))) AS MODEL_NM
+             , DECODE(MAX(A.FSCP_CHM_MMM), NULL, MAX(B.MODEL_NM), MAX(A.FSCP_CHM_MMM)) AS MODEL_NM_NC
+             , MAX(B.MODEL_EN_NM) AS MODEL_EN_NM
+          FROM SA_0105T A, SA_0102T B
+         WHERE 1 = 1
+           AND A.MODEL_CD = B.MODEL_CD
+         <if test='useYn != null and useYn != ""'>
+           AND A.USE_YN = #{useYn}  -- 사용여부
+         </if>
+         <if test='carlineCd != null and carlineCd != ""'>
+           AND B.CARLINE_CD = #{carlineCd}
+         </if>
+          GROUP BY A.MODEL_CD
+         ORDER BY MODEL_CD ASC
+               )
+    </select>
+
+    <select id="selectModelListsByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+    /*차관가져오기로 변경. 2016.09.11 Lee.K*/
+        SELECT SUBSTR(A.MODEL_CD, 1, 2) AS CARLINE_CD
+             , A.MODEL_CD
+             , '['||A.MODEL_CD||']'||(DECODE(MAX(A.FSCP_CHM_MMM), NULL, MAX(B.MODEL_NM), MAX(A.FSCP_CHM_MMM))) AS MODEL_NM
+             , DECODE(MAX(A.FSCP_CHM_MMM), NULL, MAX(B.MODEL_NM), MAX(A.FSCP_CHM_MMM)) AS MODEL_NM_NC
+             , MAX(B.MODEL_EN_NM) AS MODEL_EN_NM
+          FROM SA_0105T A, SA_0102T B
+         WHERE 1 = 1
+           AND A.MODEL_CD = B.MODEL_CD
+         <if test='useYn != null and useYn != ""'>
+           AND A.USE_YN = #{useYn}  -- 사용여부
+           AND B.USE_YN = #{useYn}
+           AND A.START_DT <![CDATA[ <= ]]> SYSDATE
+           AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1
+         </if>
+         <if test='carlineCd != null and carlineCd != ""'>
+           AND B.CARLINE_CD = #{carlineCd}
+         </if>
+          GROUP BY A.MODEL_CD
+         ORDER BY MODEL_CD ASC
+    </select>
+
+    <select id="selectModelListsByCondition2" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+    /*차관가져오기로 변경. 2016.09.11 Lee.K*/
+        SELECT AA.MODEL_NM, AA.MODEL_CD
+          FROM  (
+                SELECT SUBSTR(A.MODEL_CD, 1, 2) AS CARLINE_CD
+                     , DECODE(MAX(A.FSCP_CHM_MMM), NULL, MAX(B.MODEL_NM), MAX(A.FSCP_CHM_MMM)) AS MODEL_CD
+                     --, '['||A.MODEL_CD||']'||(DECODE(MAX(A.FSCP_CHM_MMM), NULL, MAX(B.MODEL_NM), MAX(A.FSCP_CHM_MMM))) AS MODEL_NM
+                     , DECODE(MAX(A.FSCP_CHM_MMM), NULL, MAX(B.MODEL_NM), MAX(A.FSCP_CHM_MMM)) AS MODEL_NM
+                     , DECODE(MAX(A.FSCP_CHM_MMM), NULL, MAX(B.MODEL_NM), MAX(A.FSCP_CHM_MMM)) AS MODEL_NM_NC
+                     , MAX(B.MODEL_EN_NM) AS MODEL_EN_NM
+                  FROM SA_0105T A, SA_0102T B
+                 WHERE 1 = 1
+                   AND A.MODEL_CD = B.MODEL_CD
+                 <if test='useYn != null and useYn != ""'>
+                   AND A.USE_YN = #{useYn}  -- 사용여부
+                   AND B.USE_YN = #{useYn}
+                   AND A.START_DT <![CDATA[ <= ]]> SYSDATE
+                   AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1
+                 </if>
+                 <if test='carlineCd != null and carlineCd != ""'>
+                   AND B.CARLINE_CD = #{carlineCd}
+                 </if>
+                  GROUP BY A.MODEL_CD ) AA
+        GROUP BY AA.MODEL_NM, AA.MODEL_CD
+        ORDER BY AA.MODEL_NM ASC
+        </select>
+
+    <!-- OCN 리스트를 조회한다 -->
+    <select id="selectOcnListsByConditionCnt" parameterType="CarInfoSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM (
+                SELECT A.OCN_CD
+                     , A.OCN_NM
+                     , A.OCN_EN_NM
+                     , C.WH_PRC
+                     , C.MS_PRC
+                  FROM SA_0105T A
+                  INNER JOIN SA_0102T B
+                    ON A.MODEL_CD = B.MODEL_CD
+                 INNER JOIN SA_0110T C         -- 가격
+                    ON A.MODEL_CD = C.MODEL_CD
+                   AND A.OCN_CD = C.OCN_CD
+                 WHERE 1 = 1
+                 <if test='useYn != null and useYn != ""'>
+                   AND A.USE_YN = #{useYn}    -- 사용여부
+                   AND C.USE_YN = #{useYn}
+
+                   AND A.START_DT <![CDATA[ <= ]]> SYSDATE      -- 시작일
+                   AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1   -- 종료일
+                   AND C.START_DT <![CDATA[ <= ]]> SYSDATE      -- 시작일
+                   AND C.END_DT   <![CDATA[ >= ]]> SYSDATE -1   -- 종료일
+                 </if>
+                   <if test='carlineCd != null and carlineCd != ""'>
+                   AND B.CARLINE_CD = #{carlineCd}    -- 차종코드
+                   </if>
+                   <if test='modelCd != null and modelCd != ""'>
+                   AND B.MODEL_CD = #{modelCd}        -- 모델코드
+                   </if>
+                 GROUP BY A.OCN_CD
+                        , A.OCN_NM
+                        , A.OCN_EN_NM
+                        , C.WH_PRC
+                        , C.MS_PRC
+                 ORDER BY A.OCN_CD, A.OCN_NM
+               )
+    </select>
+
+    <select id="selectOcnListsByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT A.OCN_CD
+             --, A.OCN_NM
+             , FN_GET_OCN_NM(B.MODEL_CD, A.OCN_CD) AS OCN_NM
+             , FN_GET_OCN_NM_NC(B.MODEL_CD, A.OCN_CD) AS OCN_NM_NC
+             , A.OCN_EN_NM
+             , C.WH_PRC
+             , C.MS_PRC
+             , B.MODEL_CD
+          FROM SA_0105T A
+          INNER JOIN SA_0102T B
+            ON A.MODEL_CD = B.MODEL_CD
+         INNER JOIN SA_0110T C         -- 가격
+            ON A.MODEL_CD = C.MODEL_CD
+           AND A.OCN_CD = C.OCN_CD
+         WHERE 1 = 1
+         <if test='useYn != null and useYn != ""'>
+           AND A.USE_YN = #{useYn}    -- 사용여부
+           AND C.USE_YN = #{useYn}
+
+           AND A.START_DT <![CDATA[ <= ]]> SYSDATE     -- 시작일
+           AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+           AND C.START_DT <![CDATA[ <= ]]> SYSDATE     -- 시작일
+           AND C.END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+         </if>
+           <if test='carlineCd != null and carlineCd != ""'>
+           AND B.CARLINE_CD = #{carlineCd}    -- 차종코드
+           </if>
+           <if test='modelCd != null and modelCd != ""'>
+           AND B.MODEL_CD = #{modelCd}        -- 모델코드
+           </if>
+         GROUP BY A.OCN_CD
+                , A.OCN_NM
+                , A.OCN_EN_NM
+                , C.WH_PRC
+                , C.MS_PRC
+                , B.MODEL_CD
+         ORDER BY A.OCN_CD, A.OCN_NM
+    </select>
+
+    <select id="selectOcnListsByCondition2" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT A.OCN_CD
+             --, A.OCN_NM
+             , FN_GET_OCN_NM(B.MODEL_CD, A.OCN_CD) AS OCN_NM
+             , FN_GET_OCN_NM_NC(B.MODEL_CD, A.OCN_CD) AS OCN_NM_NC
+             , A.OCN_EN_NM
+             , C.WH_PRC
+             , C.MS_PRC
+          FROM SA_0105T A
+          INNER JOIN SA_0102T B
+            ON A.MODEL_CD = B.MODEL_CD
+         INNER JOIN SA_0110T C         -- 가격
+            ON A.MODEL_CD = C.MODEL_CD
+           AND A.OCN_CD = C.OCN_CD
+         WHERE 1 = 1
+         <if test='useYn != null and useYn != ""'>
+           AND A.USE_YN = #{useYn}    -- 사용여부
+           AND C.USE_YN = #{useYn}
+
+           AND A.START_DT <![CDATA[ <= ]]> SYSDATE     -- 시작일
+           AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+           AND C.START_DT <![CDATA[ <= ]]> SYSDATE     -- 시작일
+           AND C.END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+         </if>
+           <if test='carlineCd != null and carlineCd != ""'>
+           AND B.CARLINE_CD = #{carlineCd}    -- 차종코드
+           </if>
+           <if test='modelCd != null and modelCd != ""'>
+           AND B.MODEL_CD = #{modelCd}        -- 모델코드
+           </if>
+         GROUP BY A.OCN_CD
+                , A.OCN_NM
+                , A.OCN_EN_NM
+                , C.WH_PRC
+                , C.MS_PRC
+                , B.MODEL_CD
+         ORDER BY A.OCN_CD, A.OCN_NM
+    </select>
+
+   <select id="selectModelCdToOcnLists" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT AA.model_nm, AA.model_cd
+          FROM (
+               SELECT A.model_cd
+                      , DECODE(MAX(A.FSCP_CHM_MMM), NULL, MAX(B.MODEL_NM), MAX(A.FSCP_CHM_MMM)) AS MODEL_NM
+                 FROM SA_0105T A, SA_0102T B, SA_0110T C
+                WHERE 1=1
+                   AND A.MODEL_CD = B.MODEL_CD
+                   AND A.MODEL_CD = C.MODEL_CD
+                  <if test='useYn != null and useYn != ""'>
+                  AND A.USE_YN = #{useYn}    -- 사용여부
+                  AND C.USE_YN = #{useYn}    -- 사용여부
+
+                  AND A.START_DT <![CDATA[ <= ]]> SYSDATE     -- 시작일
+                  AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+                  AND C.START_DT <![CDATA[ <= ]]> SYSDATE     -- 시작일
+                  AND C.END_DT   <![CDATA[ >= ]]> SYSDATE -1  -- 종료일
+                  </if>
+                  AND B.CARLINE_CD = #{carlineCd}
+                GROUP BY A.MODEL_CD
+               ) AA
+         WHERE AA.model_nm = #{modelCd}
+
+    </select>
+
+     <!-- 외장색 리스트를 조회한다 -->
+     <select id="selectExtColorListsByConditionCnt" parameterType="CarInfoSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM (
+                SELECT A.EXT_COLOR_CD
+                     , B.EXT_COLOR_NM
+                     , B.EXT_COLOR_EN_NM
+                  FROM SA_0109T A       /* 모델컬러맵핑 */
+                  LEFT OUTER JOIN  SA_0107T B  /* 외장컬러 */
+                    ON A.EXT_COLOR_CD = B.EXT_COLOR_CD
+                 WHERE 1 = 1
+                 <if test='useYn != null and useYn != ""'>
+                   AND A.USE_YN = #{useYn}    -- 사용여부
+
+                   AND A.START_DT <![CDATA[ <= ]]> SYSDATE      -- 시작일
+                   AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1   -- 종료일
+                 </if>
+                 <if test='modelCd != null and modelCd != ""'>
+                   AND A.MODEL_CD = #{modelCd} -- 모델코드
+                 </if>
+                 GROUP BY A.EXT_COLOR_CD
+                        , B.EXT_COLOR_NM
+                        , B.EXT_COLOR_EN_NM
+                 ORDER BY A.EXT_COLOR_CD, B.EXT_COLOR_NM
+               )
+    </select>
+    <select id="selectExtColorListsByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT A.EXT_COLOR_CD
+             --, B.EXT_COLOR_NM
+             , FN_GET_EXT_COLOR_NM(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+             , FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD) AS EXT_COLOR_NM_NC
+             , B.EXT_COLOR_EN_NM
+          FROM SA_0109T A       /* 모델컬러맵핑 */
+          LEFT OUTER JOIN  SA_0107T B  /* 외장컬러 */
+            ON A.EXT_COLOR_CD = B.EXT_COLOR_CD
+         WHERE 1 = 1
+         <if test='useYn != null and useYn != ""'>
+           AND A.USE_YN = #{useYn}    -- 사용여부
+
+           AND A.START_DT <![CDATA[ <= ]]> SYSDATE      -- 시작일
+           AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1   -- 종료일
+         </if>
+         <if test='modelCd != null and modelCd != ""'>
+           AND A.MODEL_CD = #{modelCd} -- 모델코드
+         </if>
+         GROUP BY A.EXT_COLOR_CD
+                , B.EXT_COLOR_NM
+                , B.EXT_COLOR_EN_NM
+         ORDER BY A.EXT_COLOR_CD, B.EXT_COLOR_NM
+    </select>
+    <select id="selectModelCdByCondition" parameterType="CarInfoSearchVO" resultType="string">
+        SELECT MODEL_CD FROM SA_0105T
+        WHERE MODEL_CD LIKE #{carlineCd} || '%'
+          AND OCN_CD =#{ocnCd};
+    </select>
+
+     <!-- 내장색 리스트를 조회한다 -->
+     <select id="selectIntColorListsByConditionCnt" parameterType="CarInfoSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM (
+                SELECT A.INT_COLOR_CD
+                     , B.INT_COLOR_NM
+                     , B.INT_COLOR_EN_NM
+                  FROM SA_0109T A              /* 모델컬러맵핑 */
+                  LEFT OUTER JOIN  SA_0108T B  /* 내장컬러 */
+                    ON A.INT_COLOR_CD = B.INT_COLOR_CD
+                 WHERE 1 = 1
+                 <if test='useYn != null and useYn != ""'>
+                   AND A.USE_YN = #{useYn}    -- 사용여부
+
+                   AND A.START_DT <![CDATA[ <= ]]> SYSDATE      -- 시작일
+                   AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1   -- 종료일
+                 </if>
+                 <if test='modelCd != null and modelCd != ""'>
+                   AND A.MODEL_CD = #{modelCd} -- 모델코드
+                 </if>
+                 GROUP BY A.INT_COLOR_CD
+                        , B.INT_COLOR_NM
+                        , B.INT_COLOR_EN_NM
+                 ORDER BY A.INT_COLOR_CD, B.INT_COLOR_NM
+               )
+    </select>
+    <select id="selectIntColorListsByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT A.INT_COLOR_CD
+             --, B.INT_COLOR_NM
+             , FN_GET_INT_COLOR_NM(A.INT_COLOR_CD) AS INT_COLOR_NM
+             , FN_GET_INT_COLOR_NM_NC(A.INT_COLOR_CD) AS INT_COLOR_NM_NC
+             , B.INT_COLOR_EN_NM
+          FROM SA_0109T A              /* 모델컬러맵핑 */
+          LEFT OUTER JOIN  SA_0108T B  /* 내장컬러 */
+            ON A.INT_COLOR_CD = B.INT_COLOR_CD
+         WHERE 1 = 1
+         <if test='useYn != null and useYn != ""'>
+           AND A.USE_YN = #{useYn}    -- 사용여부
+
+           AND A.START_DT <![CDATA[ <= ]]> SYSDATE      -- 시작일
+           AND A.END_DT   <![CDATA[ >= ]]> SYSDATE -1   -- 종료일
+         </if>
+         <if test='modelCd != null and modelCd != ""'>
+           AND A.MODEL_CD = #{modelCd} -- 모델코드
+         </if>
+         GROUP BY A.INT_COLOR_CD
+                , B.INT_COLOR_NM
+                , B.INT_COLOR_EN_NM
+         ORDER BY A.INT_COLOR_CD, B.INT_COLOR_NM
+    </select>
+
+    <!-- 바코드별 차종리스트  -->
+    <select id="selectBarCodeCarListsByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT A.BARS_CD AS BAR_CODE
+             , A.CARLINE_CD AS CARLINE_CD
+             , MAX(B.CARLINE_NM) AS CARLINE_NM
+          FROM SA_0119T A
+             , SA_0101T B
+          WHERE A.CARLINE_CD = B.CARLINE_CD
+            <if test='barCode != null and barCode != ""'>
+             AND A.BARS_CD = #{barCode}
+            </if>
+         GROUP BY A.BARS_CD, A.CARLINE_CD
+    </select>
+
+    <!-- 로컬옵션 리스트를 조회한다 -->
+    <select id="selectOptionListsByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT A.OPTION_CD              -- 옵션코드
+             , A.OPTION_NM              -- 옵션명
+             , A.OPTION_EN_NM           -- 옵션영문명
+          FROM SA_0118T A               -- 옵션
+         WHERE 1 = 1
+         <if test='dlrCd != null and dlrCd != ""'>
+           AND A.DLR_CD    = #{dlrCd}
+         </if>
+         <if test='modelCd != null and modelCd != ""'>
+           AND A.MODEL_CD  = #{modelCd}
+         </if>
+    </select>
+
+
+    <!-- 로컬옵션과 맵핑된 차종을 조회한다  -->
+    <select id="selectLocalMappingCarListsByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT C.CARLINE_CD             -- 차종코드
+             --, C.CARLINE_NM             -- 차종명
+             , FN_GET_CARLINE_NM(C.CARLINE_CD) AS CARLINE_NM
+             , C.CARLINE_EN_NM          -- 차종영문명
+          FROM SA_0111T A                /* 모델옵션 맵핑 */
+             , SA_0102T B                /* 모델 */
+             , SA_0101T C                /* 차량 */
+         WHERE A.MODEL_CD   = B.MODEL_CD
+           AND B.CARLINE_CD = C.CARLINE_CD
+           AND A.DLR_CD = #{dlrCd}  -- 딜러코드
+           AND A.USE_YN = #{useYn}  -- 사용여부
+         GROUP BY C.CARLINE_CD
+             , C.CARLINE_NM
+             , C.CARLINE_EN_NM
+    </select>
+
+
+    <!-- 로컬옵션과 맵핑된 차종을 받아 해당 모델을 조회한다 -->
+    <select id="selectLocalMappingModelListsByConditionCnt" parameterType="CarInfoSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM (
+                SELECT B.MODEL_CD
+                     , B.MODEL_NM
+                     , B.MODEL_EN_NM
+                 FROM SA_0111T A   /* 모델옵션 맵핑 */
+                    , SA_0102T B   /* 모델 */
+                    , SA_0101T C   /* 차량 */
+                WHERE A.MODEL_CD   = B.MODEL_CD
+                  AND B.CARLINE_CD = C.CARLINE_CD
+
+                  AND C.CARLINE_CD = #{carlineCd}
+                  AND A.DLR_CD     = #{dlrCd}  -- 딜러코드
+                  AND A.USE_YN     = #{useYn}  -- 사용여부
+                GROUP BY B.MODEL_CD
+                   , B.MODEL_NM
+                   , B.MODEL_EN_NM
+                )
+    </select>
+
+    <!-- 로컬옵션과 맵핑된 차종을 받아 해당 모델을 조회한다 -->
+    <select id="selectLocalMappingModelListsByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT B.MODEL_CD
+             --, B.MODEL_NM
+             , FN_GET_MODEL_NM(B.MODEL_CD) AS MODEL_NM
+             , B.MODEL_EN_NM
+         FROM SA_0111T A   /* 모델옵션 맵핑 */
+            , SA_0102T B   /* 모델 */
+            , SA_0101T C   /* 차량 */
+        WHERE A.MODEL_CD   = B.MODEL_CD
+          AND B.CARLINE_CD = C.CARLINE_CD
+
+          AND C.CARLINE_CD = #{carlineCd}
+          AND A.DLR_CD     = #{dlrCd}  -- 딜러코드
+          AND A.USE_YN     = #{useYn}  -- 사용여부
+        GROUP BY B.MODEL_CD
+           , B.MODEL_NM
+           , B.MODEL_EN_NM
+    </select>
+
+    <!-- 로컬옵션과 맵핑된 모델을 받아 해당 옵션을 조회한다 -->
+    <select id="selectLocalMappingOptionListsByConditionCnt" parameterType="CarInfoSearchVO" resultType="int">
+        SELECT COUNT(*)
+         FROM SA_0111T A   /* 모델옵션 맵핑 */
+            , SA_0102T B   /* 모델 */
+            , SA_0101T C   /* 차량 */
+            , sa_0118T D   /* 옵션 */
+        WHERE A.MODEL_CD   = B.MODEL_CD
+          AND B.CARLINE_CD = C.CARLINE_CD
+          AND A.OPTION_CD  = d.OPTION_CD
+        <if test='dlrCd != null and dlrCd != ""'>
+          AND A.DLR_CD    = #{dlrCd}
+        </if>
+        <if test='modelCd != null and modelCd != ""'>
+          AND A.MODEL_CD  = #{modelCd}
+        </if>
+    </select>
+
+    <!-- 로컬옵션과 맵핑된 모델을 받아 해당 옵션을 조회한다 -->
+    <select id="selectLocalMappingOptionListsByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT D.OPTION_CD
+             , D.OPTION_NM
+             , D.OPTION_EN_NM
+         FROM SA_0111T A   /* 모델옵션 맵핑 */
+            , SA_0102T B   /* 모델 */
+            , SA_0101T C   /* 차량 */
+            , sa_0118T D   /* 옵션 */
+        WHERE A.MODEL_CD   = B.MODEL_CD
+          AND B.CARLINE_CD = C.CARLINE_CD
+          AND A.OPTION_CD  = d.OPTION_CD
+        <if test='dlrCd != null and dlrCd != ""'>
+          AND A.DLR_CD    = #{dlrCd}
+        </if>
+        <if test='modelCd != null and modelCd != ""'>
+          AND A.MODEL_CD  = #{modelCd}
+        </if>
+    </select>
+
+    <!-- 옵션을 조회한다. (모델과 OCN으로 옵션 리스트조회) -->
+    <select id="selectMapOptionListsByConditionCnt" parameterType="CarInfoSearchVO" resultType="int">
+        SELECT COUNT(*)
+          FROM SA_0103T A
+         INNER JOIN SA_0106T B
+            ON A.OPTION_CD = B.OPTION_CD
+         WHERE 1 = 1
+        <if test='modelCd != null and modelCd != ""'>
+          AND B.MODEL_CD = #{modelCd}
+        </if>
+        <if test='ocnCd != null and ocnCd != ""'>
+          AND  B.OCN_CD  = #{ocnCd}
+        </if>
+    </select>
+
+    <select id="selectMapOptionListsByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT A.OPTION_CD
+             , A.OPTION_NM
+             , A.OPTION_EN_NM
+          FROM SA_0103T A
+         INNER JOIN SA_0106T B
+            ON A.OPTION_CD = B.OPTION_CD
+         WHERE 1 = 1
+        <if test='modelCd != null and modelCd != ""'>
+          AND B.MODEL_CD = #{modelCd}
+        </if>
+        <if test='ocnCd != null and ocnCd != ""'>
+          AND  B.OCN_CD  = #{ocnCd}
+        </if>
+    </select>
+
+    <!-- 바코드-VIN_NO을 조회한다  -->
+    <select id="selectBarcodeCarVinsByConditionCnt" parameterType="CarInfoSearchVO" resultType="int">
+        SELECT COUNT(1)
+          FROM (
+                SELECT VIN_NO
+                 FROM SA_0121T
+                WHERE ORD_DLR_CD = #{dlrCd}
+                  AND VIN_NO2 = SUBSTR(#{barCode}, 3, 8)
+                  AND CARLINE_CD = ( SELECT CARLINE_CD
+                                       FROM SA_0119T
+                                      WHERE BARS_CD = SUBSTR(#{barCode}, 1, 2)
+                                      GROUP BY BARS_CD, CARLINE_CD
+                                    )
+                GROUP BY VIN_NO
+              )
+    </select>
+    <select id="selectBarcodeCarVinsByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT *
+          FROM (
+                SELECT A.*
+                     , (SELECT SIGNOFF_DT FROM SA_0121T WHERE ORD_DLR_CD = A.ORD_DLR_CD AND VIN_NO = A.VIN_NO) AS SIGNOFF_DT
+                  FROM (
+                        SELECT VIN_NO
+                             , VIN_NO1
+                             , VIN_NO2
+                             , #{barCode} AS BAR_CODE
+                             , CAR_STAT_CD
+                             , MAX(ORD_DLR_CD) AS ORD_DLR_CD
+                          FROM SA_0121T
+                         WHERE ORD_DLR_CD = #{dlrCd}
+                           AND VIN_NO2 = SUBSTR(#{barCode}, 3, 8)
+                           AND CARLINE_CD = ( SELECT CARLINE_CD
+                                               FROM SA_0119T
+                                              WHERE BARS_CD = SUBSTR(#{barCode}, 1, 2)
+                                              GROUP BY BARS_CD, CARLINE_CD
+                                            )
+                         GROUP BY VIN_NO, VIN_NO1, VIN_NO2, CAR_STAT_CD
+                       ) A
+                 ORDER BY SIGNOFF_DT DESC
+                ) A
+           WHERE ROWNUM = '1'
+    </select>
+
+    <!-- 바코드로 차량코드와 차량명 조회 -->
+    <select id="selectBarcodeCarNmByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT CARLINE_CD
+             , FN_GET_CARLINE_NM(CARLINE_CD) AS CARLINE_NM
+             , FN_GET_CARLINE_NM_NC(CARLINE_CD) AS CARLINE_NM_NC
+          FROM SA_0119T
+         WHERE BARS_CD = SUBSTR(#{barCode}, 1, 2)
+         GROUP BY BARS_CD, CARLINE_CD
+    </select>
+
+    <select id="selectNewCarLooksFscListByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT DECODE(B.FSCP_CHM_MMM,'','N/A', B.FSCP_CHM_MMM) AS FSC_NM
+             , DECODE(B.FSCP_MODTP_CD, '', 'None', B.FSCP_MODTP_CD) AS FSC_CD
+          FROM SA_0102T A, SA_0105T B
+         WHERE A.MODEL_CD = B.MODEL_CD
+           AND SUBSTR(A.MODEL_CD, 1, 2) = #{carlineCd}
+        GROUP BY B.FSCP_CHM_MMM, B.FSCP_MODTP_CD
+        ORDER BY B.FSCP_CHM_MMM ASC NULLS FIRST
+    </select>
+
+    <select id="selectNewCarLooksOcnListByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT OCN_CD, '['||OCN_CD||']'||OCN_NM AS OCN_NM, MODEL_CD, MODEL_CD||OCN_CD AS FSC_CD
+          FROM SA_0105T X
+         WHERE SUBSTR(X.MODEL_CD,1,2) = #{carlineCd}
+         <if test='fscCd != null and fscCd != "" and fscCd != "None" '>
+           AND X.FSCP_CHM_MMM IN (
+           SELECT A.FSCP_CHM_MMM
+                  FROM SA_0105T A, SA_0102T B
+                 WHERE A.MODEL_CD = B.MODEL_CD
+                   AND SUBSTR(A.MODEL_CD, 1, 2) = #{carlineCd}
+                   AND FSCP_MODTP_CD = #{fscCd}
+             GROUP BY A.FSCP_CHM_MMM)
+         </if>
+            ORDER BY OCN_CD ASC
+    </select>
+
+    <select id="selectNewCarLooksExtClrListByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT A.EXT_COLOR_CD
+             , FN_GET_EXT_COLOR_NM(A.EXT_COLOR_CD) AS EXT_COLOR_NM
+             , FN_GET_EXT_COLOR_NM_NC(A.EXT_COLOR_CD) AS EXT_COLOR_NM_NC
+             , B.EXT_COLOR_EN_NM
+          FROM SA_0109T A
+          LEFT OUTER JOIN  SA_0107T B
+            ON A.EXT_COLOR_CD = B.EXT_COLOR_CD
+         WHERE A.MODEL_CD = #{modelCd}
+         GROUP BY A.EXT_COLOR_CD
+                , B.EXT_COLOR_NM
+                , B.EXT_COLOR_EN_NM
+         ORDER BY A.EXT_COLOR_CD, B.EXT_COLOR_NM
+    </select>
+
+    <select id="selectNewCarLooksIntClrListByCondition" parameterType="CarInfoSearchVO" resultType="CarInfoVO">
+        SELECT A.INT_COLOR_CD
+             , FN_GET_INT_COLOR_NM(A.INT_COLOR_CD) AS INT_COLOR_NM
+             , FN_GET_INT_COLOR_NM_NC(A.INT_COLOR_CD) AS INT_COLOR_NM_NC
+             , B.INT_COLOR_EN_NM
+          FROM SA_0109T A
+          LEFT OUTER JOIN  SA_0108T B
+            ON A.INT_COLOR_CD = B.INT_COLOR_CD
+         WHERE A.MODEL_CD = #{modelCd}
+         GROUP BY A.INT_COLOR_CD
+                , B.INT_COLOR_NM
+                , B.INT_COLOR_EN_NM
+         ORDER BY A.INT_COLOR_CD, B.INT_COLOR_NM
+    </select>
+
+</mapper>

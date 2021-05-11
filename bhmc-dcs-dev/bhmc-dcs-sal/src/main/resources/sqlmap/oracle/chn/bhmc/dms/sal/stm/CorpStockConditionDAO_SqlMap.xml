@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.stm.service.dao.CorpStockConditionDAO">
+
+    <!-- 법인재고현황(전략오더) 목록 갯수  -->
+    <select id="selectCorpStockConditionsByConditionCnt" parameterType="CorpStockConditionSearchVO" resultType="int">
+    /* chn.bhmc.dms.sal.stm.service.dao.CorpStockConditionDAO.selectCorpStockConditionsByConditionCnt */
+        SELECT COUNT(*)
+          FROM SA_0136T A    --법인재고현황전략오더
+         <where>
+         <if test='sCarlineCd     != null and sCarlineCd     != ""'>
+           AND A.CARLINE_CD     = #{sCarlineCd}
+         </if>
+         <if test='sModelCd       != null and sModelCd       != ""'>
+           AND A.MODEL_CD       = #{sModelCd}
+         </if>
+         <if test='sOcnCd         != null and sOcnCd         != ""'>
+           AND A.OCN_CD         = #{sOcnCd}
+         </if>
+         </where>
+    </select>
+    <!-- 법인재고현황(전략오더) 조회 목록  -->
+    <select id="selectCorpStockConditionsByCondition" parameterType="CorpStockConditionSearchVO" resultType="CorpStockConditionVO">
+    /* chn.bhmc.dms.sal.stm.service.dao.CorpStockConditionDAO.selectCorpStockConditionsByCondition */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM
+                 , FN_GET_CARLINE_NM(T1.CARLINE_CD) AS CARLINE_NM
+                 , FN_GET_MODEL_NM(T1.MODEL_CD) AS MODEL_NM
+                 , FN_GET_OCN_NM(T1.MODEL_CD, T1.OCN_CD) AS OCN_NM
+                 , FN_GET_EXT_COLOR_NM(T1.EXT_COLOR_CD) AS EXT_COLOR_NM
+                 , FN_GET_INT_COLOR_NM(T1.INT_COLOR_CD) AS INT_COLOR_NM
+                 , T1.* FROM (
+                SELECT A.CARLINE_CD            --차종코드
+                     , A.MODEL_CD              --모델코드
+                     , A.OCN_CD                --OCN코드
+                     , A.DISP_GRADE_CD         --배기등급코드
+                     , A.RETL_PRC              --소매가격
+                     , A.TOT_STOCK_QTY         --총재고수량
+                     , A.ORD_QTY               --주문수량
+                     , A.PSNT_STOCK_QTY        --현재고수량
+                     , A.EXT_COLOR_CD
+                     , A.INT_COLOR_CD
+                  FROM SA_0136T A    --법인재고현황전략오더
+                 <where>
+                 <if test='sCarlineCd     != null and sCarlineCd     != ""'>
+                   AND A.CARLINE_CD     = #{sCarlineCd}
+                 </if>
+                 <if test='sModelCd       != null and sModelCd       != ""'>
+                   AND A.MODEL_CD       = #{sModelCd}
+                 </if>
+                 <if test='sOcnCd         != null and sOcnCd         != ""'>
+                   AND A.OCN_CD         = #{sOcnCd}
+                 </if>
+                 <if test='sExtColorCd    != null and sExtColorCd    != ""'>
+                   AND A.EXT_COLOR_CD   = #{sExtColorCd}
+                 </if>
+                 <if test='sIntColorCd    != null and sIntColorCd    != ""'>
+                   AND A.INT_COLOR_CD   = #{sIntColorCd}
+                 </if>
+                 </where>
+                 ORDER BY
+                 <choose>
+                     <when test='sort != null'>
+                         <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                             <choose>
+                                 <when test='item.field == "carlineCd"'>     A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                 <when test='item.field == "carlineNm"'>     A.CARLINE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>    </when>
+                                 <when test='item.field == "modelCd"'>       A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                 <when test='item.field == "modelNm"'>       A.MODEL_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                 <when test='item.field == "ocnCd"'>         A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                 <when test='item.field == "ocnNm"'>         A.OCN_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>        </when>
+                                 <when test='item.field == "sExtColorCd"'>   A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                 <when test='item.field == "sExtColorNm"'>   A.EXT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                 <when test='item.field == "sIntColorCd"'>   A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                 <when test='item.field == "sIntColorNm"'>   A.INT_COLOR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>  </when>
+                                 <when test='item.field == "dispGradeCd"'>   A.DISP_GRADE_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "retlPrc"'>       A.RETL_PRC <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>      </when>
+                                 <when test='item.field == "totStockQty"'>   A.TOT_STOCK_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "ordQty"'>        A.ORD_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose>       </when>
+                                 <when test='item.field == "psntStockQty"'>  A.PSNT_STOCK_QTY <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <otherwise>
+                                   A.CARLINE_CD ASC, A.MODEL_CD ASC, A.OCN_CD ASC
+                                 </otherwise>
+                             </choose>
+                         </foreach>
+                     </when>
+                     <otherwise>
+                        A.CARLINE_CD ASC, A.MODEL_CD ASC, A.OCN_CD ASC
+                     </otherwise>
+                 </choose>
+            ) T1
+                <where>
+                    <if test='firstIndex != -1 and lastIndex != -1'>
+                        ROWNUM <![CDATA[<=]]> #{lastIndex}
+                    </if>
+                </where>
+            )
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    RNUM > #{firstIndex}
+                </if>
+            </where>
+    </select>
+
+
+    <!-- 엑셀업로드한 data로 모델, 지도가격, 배기등급을 불러온다. -->
+    <select id="selectCorpStockConditionModelPrice" parameterType="CorpStockConditionVO" resultType="CorpStockConditionVO">
+    /* chn.bhmc.dms.sal.stm.service.dao.CorpStockConditionDAO.selectCorpStockConditionModelPrice */
+        SELECT A.MODEL_CD
+             , A.OCN_CD
+             , #{extColorCd} AS EXT_COLOR_CD
+             , #{intColorCd} AS INT_COLOR_CD
+             , NVL(( SELECT MS_PRC FROM SA_0110T Z WHERE Z.MODEL_CD = A.MODEL_CD AND Z.OCN_CD = A.OCN_CD AND Z.END_DT = A.END_DT ), 0) AS RETL_PRC
+             , NVL(( SELECT DISP_GRADE_CD FROM SA_0110T Z WHERE Z.MODEL_CD = A.MODEL_CD AND Z.OCN_CD = A.OCN_CD AND Z.END_DT = A.END_DT ), 'A') AS DISP_GRADE_CD
+          FROM SA_0105T A
+         WHERE SUBSTR(A.MODEL_CD,1,2) = UPPER(#{carlineCd})   -- 차종코드
+            AND A.OCN_CD = #{ocnCd}     -- OCN코드
+            AND ROWNUM = 1
+          GROUP BY A.MODEL_CD, A.OCN_CD, A.END_DT
+          ORDER BY A.END_DT DESC
+    </select>
+
+    <!-- 법인재고현황(전략오더) 저장 -->
+    <insert id="insertCorpStockCondition" parameterType="CorpStockConditionVO">
+        INSERT INTO SA_0136T    --법인재고현황전략오더
+        (
+          CARLINE_CD            --차종코드
+         ,MODEL_CD              --모델코드
+         ,OCN_CD                --OCN코드
+         ,DISP_GRADE_CD         --배기등급코드
+         ,RETL_PRC              --소매가격
+         ,TOT_STOCK_QTY         --총재고수량
+         ,ORD_QTY               --주문수량
+         ,PSNT_STOCK_QTY        --현재고수량
+         ,REG_USR_ID            --등록자ID
+         ,REG_DT                --등록일자
+         ,UPDT_USR_ID           --수정자ID
+         ,UPDT_DT               --수정일자
+         ,EXT_COLOR_CD
+         ,INT_COLOR_CD
+        )
+        VALUES
+        (
+          #{carlineCd}            --차종코드
+         ,#{modelCd}              --모델코드
+         ,#{ocnCd}                --OCN코드
+         ,#{dispGradeCd}          --배기등급코드
+         ,#{retlPrc}              --소매가격
+         ,#{totStockQty}          --총재고수량
+         ,#{ordQty}               --주문수량
+         ,#{psntStockQty}         --현재고수량
+         ,#{regUsrId}             --등록자ID
+         ,SYSDATE
+         ,#{updtUsrId}            --수정자ID
+         ,SYSDATE
+         ,#{extColorCd}
+         ,#{intColorCd}
+        )
+    </insert>
+
+    <!-- 법인재고현황(전략오더) 수정 -->
+    <update id="updateCorpStockCondition" parameterType="CorpStockConditionVO">
+        UPDATE SA_0136T    --법인재고현황전략오더
+           SET CARLINE_CD     = #{carlineCd}            --차종코드
+             , MODEL_CD       = #{modelCd}              --모델코드
+             , OCN_CD         = #{ocnCd}                --OCN코드
+             , EXT_COLOR_CD   = #{extColorCd}
+             , INT_COLOR_CD   = #{intColorCd}
+             , DISP_GRADE_CD  = #{dispGradeCd}          --배기등급코드
+             , RETL_PRC       = #{retlPrc}              --소매가격
+             , TOT_STOCK_QTY  = #{totStockQty}          --총재고수량
+             , ORD_QTY        = #{ordQty}               --주문수량
+             , PSNT_STOCK_QTY = #{psntStockQty}         --현재고수량
+             , UPDT_USR_ID    = #{updtUsrId}            --수정자ID
+             , UPDT_DT        = SYSDATE
+         WHERE CARLINE_CD     = #{carlineCd}            --차종코드
+           AND MODEL_CD       = #{modelCd}              --모델코드
+           AND OCN_CD         = #{ocnCd}                --OCN코드
+    </update>
+
+    <!-- 법인재고현황(전략오더) 삭제 -->
+    <update id="deleteCorpStockCondition">
+        DELETE SA_0136T
+    </update>
+
+    <!-- 인터페이스 테이블에 저장하여 DMS로 해당 Data를 보낸다. -->
+    <insert id="callCorpStockConditionSync" statementType="CALLABLE">
+        { CALL SP_SAL_DCS_P_0136T_IF('SAL113') }
+    </insert>
+
+</mapper>

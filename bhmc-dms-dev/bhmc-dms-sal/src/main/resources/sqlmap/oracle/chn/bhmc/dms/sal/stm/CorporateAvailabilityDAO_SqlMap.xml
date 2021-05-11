@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.stm.service.dao.CorporateAvailabilityDAO">
+
+	<!-- 차정보 명칭 조회 -->
+	<select id="selectCorporateAvailabilityCarNmSearch" parameterType="CorporateAvailabilityVO" resultType="CorporateAvailabilityVO">
+    /* chn.bhmc.dms.sal.stm.service.dao.CorporateAvailabilityDAO.selectCorporateAvailabilityCarNmSearch */
+        SELECT FN_GET_CARLINE_NM(#{carlineCd})     AS CARLINE_NM
+             , FN_GET_MODEL_NM(#{modelCd})         AS MODEL_NM
+             , FN_GET_OCN_NM(#{modelCd}, #{ocnCd}) AS OCN_NM
+             , FN_GET_EXT_COLOR_NM(#{extColorCd})  AS EXT_COLOR_NM
+             , FN_GET_INT_COLOR_NM(#{intColorCd})  AS INT_COLOR_NM
+             , ( SELECT MAX(MS_PRC)
+                   FROM SA_0110T
+                  WHERE MODEL_CD = #{modelCd}
+                    AND OCN_CD = #{ocnCd}
+                    AND START_DT <![CDATA[ <= ]]> SYSDATE
+                    AND END_DT   <![CDATA[ >= ]]> SYSDATE
+                )  AS MS_PRC
+             , (SELECT MAX(FSCP_REG_GRADE)
+                  FROM SA_0105T
+                WHERE MODEL_CD = #{modelCd}
+                  AND OCN_CD = #{ocnCd}
+                ) AS FSCP_REG_GRADE
+             ,(SELECT CASE WHEN ORD_GRADE_CD IS NULL THEN 'A'
+                      ELSE ORD_GRADE_CD END
+                 FROM SA_0172T
+                WHERE CARLINE_CD = #{carlineCd}
+                  AND MODEL_CD = #{modelCd}
+                  AND OCN_CD = #{ocnCd}
+                  AND EXT_COLOR_CD = #{extColorCd}
+                  AND INT_COLOR_CD = #{intColorCd}) AS ORD_GRADE_CD
+          FROM DUAL
+	</select>
+
+</mapper>

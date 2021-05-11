@@ -1,0 +1,543 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="chn.bhmc.dms.sal.dlv.service.dao.DeliveryMngDAO">
+
+	<!-- 배정목록  -->
+	<select id="selectDeliveryByCondition" parameterType="DeliverySearchVO" resultType="DeliveryVO">
+         SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT SA0201.DLR_CD,SA0201.CONTRACT_NO,SA0201.CONTRACT_STAT_CD,SA0201.CONTRACT_CUST_NO
+                      ,SA0201.CONTRACT_TP,SA0201.SALE_EMP_NO,SA0201.CONTRACT_DT,SA0201.DL_REQ_DT
+                      ,SA0201.DSTB_CHN_CD,SA0201.RETL_TP,SA0201.CANC_REASON_CD,SA0201.REAL_DL_DT
+                      ,SA0201.CARLINE_CD,FN_GET_CARLINE_NM(SA0201.CARLINE_CD) AS CARLINE_NM
+                      ,SA0201.MODEL_CD,FN_GET_MODEL_NM(SA0201.MODEL_CD) AS MODEL_NM
+                      ,SA0201.OCN_CD,FN_GET_OCN_NM(SA0201.MODEL_CD, SA0201.OCN_CD) AS OCN_NM
+                      ,SA0201.EXT_COLOR_CD,FN_GET_EXT_COLOR_NM(SA0201.EXT_COLOR_CD) AS EXT_COLOR_NM
+                      ,SA0201.INT_COLOR_CD,FN_GET_INT_COLOR_NM(SA0201.INT_COLOR_CD) AS INT_COLOR_NM
+                      ,SA0201.CANC_DT,SA0201.CONTRACT_RCPT_ID,SA0201.CONTRACT_PDPST_NM
+                      ,SA0201.CONTRACT_RCPT_NO,SA0201.CONTRACT_RCPT_AMT,SA0201.CONTRACT_RCPT_DT,SA0201.FILE_DOC_ID
+                      ,CR0101.CUST_NO,CR0101.CUST_NM,CR0101.CUST_TP,CR0101.HP_NO,CR0101.MATH_DOC_TP,CR0101.SSN_CRN_NO
+                      ,SA0201.VIN_NO AS CONTRACT_VIN_NO,SA0201.SALE_OPPT_NO,SA0121.TEC_ID
+                      ,SUBSTR(SA0201.VIN_NO,0,11) AS CONTRACT_VIN_NO1
+                      ,SUBSTR(SA0201.VIN_NO,12,7) AS CONTRACT_VIN_NO2
+                      ,(SELECT ORD_TP FROM SA_0121T WHERE VIN_NO = SA0201.VIN_NO) AS CONTRACT_ORD_TP
+                      <choose>
+                          <when test='sContractStatCd == "50" or sContractStatCd == "91"'>
+                          ,SA0201.VIN_NO AS DELIVERY_VIN_NO
+                          </when>
+                          <otherwise>
+                          ,SA0421.VIN_NO1 || SA0421.VIN_NO2 AS DELIVERY_VIN_NO
+                          </otherwise>
+                      </choose>
+                      ,(SELECT ORD_TP FROM SA_0121T WHERE VIN_NO1 = SA0421.VIN_NO1 AND VIN_NO2 = SA0421.VIN_NO2) AS DELIVERY_ORD_TP
+                      ,(SELECT CASE WHEN REQ_STAT_CD = 'R' AND APPROVE_YN = 'N' THEN 'R'
+                                    WHEN REQ_STAT_CD = 'N' AND APPROVE_YN = 'Y' THEN 'Y'
+                                    WHEN REQ_STAT_CD = 'Y' AND APPROVE_YN = 'Y' THEN 'N'
+                               ELSE '' END AS APPROVE_YN
+                          FROM SA_0437T
+                         WHERE CONTRACT_NO = SA0201.CONTRACT_NO
+                           AND DLR_CD = SA0201.DLR_CD ) AS APPROVE_YN
+                      ,(SELECT RFID_NO FROM SA_0121T WHERE VIN_NO = SA0201.VIN_NO AND ORD_DLR_CD = SA0201.DLR_CD) AS RFID_NO
+                      ,SA0421.FCE_SALE_REQ_REASON_CD
+                      ,SA0421.REQ_STAT_CD
+                      ,SA0421.VIN_NO1
+                      ,SA0421.VIN_NO2
+                      ,SA0421.SEQ
+                      ,SA0421.FILE_DOC_NO
+                      ,SA0421.DELIVERY_RFID_NO
+                  FROM SA_0201T SA0201,CR_0101T CR0101,SA_0121T SA0121
+                     , ( SELECT DLR_CD,CONTRACT_NO,VIN_NO1,VIN_NO2,MAX(FCE_SALE_REQ_REASON_CD) AS FCE_SALE_REQ_REASON_CD,MAX(FILE_DOC_NO) AS FILE_DOC_NO
+                               ,MAX(SEQ) AS SEQ,MAX(REQ_STAT_CD) AS REQ_STAT_CD,MAX(APPROVE_YN) AS APPROVE_YN,MAX(RFID_NO) AS DELIVERY_RFID_NO
+                          FROM SA_0421T
+                         WHERE 1=1
+                         <if test='sContractStatCd == "50" or sContractStatCd == "91"'>
+                           AND REQ_STAT_CD = 'Y'
+                         </if>
+                         GROUP BY DLR_CD,CONTRACT_NO,VIN_NO1,VIN_NO2
+                       ) SA0421
+                 WHERE 1=1
+                   AND SA0201.CONTRACT_NO = SA0121.CONTRACT_NO(+)
+                   AND SA0201.DLR_CD = SA0121.DLR_CD(+)
+                   AND SA0201.CONTRACT_CUST_NO = CR0101.CUST_NO(+)
+                   AND SA0201.DLR_CD = SA0421.DLR_CD(+)
+                   AND SA0201.CONTRACT_NO = SA0421.CONTRACT_NO(+)
+                   AND SA0201.GRP_CONTRACT_NO IS NULL
+                   AND SA0201.CONTRACT_CUST_NO IS NOT NULL
+                 <if test='sDlrCd != null and sDlrCd != ""'>
+                    AND SA0201.DLR_CD = #{sDlrCd}
+                 </if>
+                 <if test='sContractCustNo != null and sContractCustNo != ""'>
+                   AND SA0201.CONTRACT_CUST_NO = #{sContractCustNo}
+                 </if>
+                 <if test='sVinNo != null and sVinNo != ""'>
+                   AND SA0201.VIN_NO LIKE '%' || #{sVinNo} || '%'
+                 </if>
+                 <if test='sContractTp != null and sContractTp != ""'>
+                   AND SA0201.CONTRACT_TP = #{sContractTp}
+                 </if>
+                 <if test='sContractStatCd != null and sContractStatCd != ""'>
+                   AND SA0201.CONTRACT_STAT_CD = #{sContractStatCd}
+                 </if>
+                 <if test='sStartDt != null and sEndDt != null'>
+                   AND SA0201.REAL_DL_DT <![CDATA[>=]]> TRUNC(#{sStartDt},'DD')
+                   AND SA0201.REAL_DL_DT <![CDATA[<]]> TRUNC(#{sEndDt},'DD')+1
+                 </if>
+             ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+        ORDER BY
+         <choose>
+            <when test='sort != null'>
+                <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                    <choose>
+                        <when test='item.field == "contractNo"'>CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "contractStatCd"'>CONTRACT_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "contractDt"'>CONTRACT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "vinNo"'>VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "realDlDt"'>REAL_DL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "approveYn"'>APPROVE_YN <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <when test='item.field == "reqStatCd"'>REQ_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                        <otherwise>
+                            CONTRACT_NO DESC
+                        </otherwise>
+                    </choose>
+                </foreach>
+            </when>
+            <otherwise>
+                CONTRACT_NO DESC
+            </otherwise>
+        </choose>
+	</select>
+
+
+	<!-- 배정목록 갯수  -->
+	<select id="selectDeliveryByConditionCnt" parameterType="DeliverySearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0201T SA0201,CR_0101T CR0101,SA_0121T SA0121
+             , ( SELECT DLR_CD,CONTRACT_NO,VIN_NO1,VIN_NO2,MAX(FCE_SALE_REQ_REASON_CD) AS FCE_SALE_REQ_REASON_CD
+                       ,MAX(SEQ) AS SEQ,MAX(REQ_STAT_CD) AS REQ_STAT_CD,MAX(APPROVE_YN) AS APPROVE_YN
+                  FROM SA_0421T
+                 GROUP BY DLR_CD,CONTRACT_NO,VIN_NO1,VIN_NO2
+               ) SA0421
+         WHERE 1=1
+           AND SA0201.CONTRACT_NO = SA0121.CONTRACT_NO(+)
+           AND SA0201.DLR_CD = SA0121.DLR_CD(+)
+           AND SA0201.CONTRACT_CUST_NO = CR0101.CUST_NO(+)
+           AND SA0201.DLR_CD = SA0421.DLR_CD(+)
+           AND SA0201.CONTRACT_NO = SA0421.CONTRACT_NO(+)
+           AND SA0201.GRP_CONTRACT_NO IS NULL
+           AND SA0201.CONTRACT_CUST_NO IS NOT NULL
+         <if test='sDlrCd != null and sDlrCd != ""'>
+            AND SA0201.DLR_CD = #{sDlrCd}
+         </if>
+         <if test='sContractCustNo != null and sContractCustNo != ""'>
+           AND SA0201.CONTRACT_CUST_NO = #{sContractCustNo}
+         </if>
+         <if test='sVinNo != null and sVinNo != ""'>
+           AND SA0201.VIN_NO LIKE '%' || #{sVinNo} || '%'
+         </if>
+         <if test='sContractTp != null and sContractTp != ""'>
+           AND SA0201.CONTRACT_TP = #{sContractTp}
+         </if>
+         <if test='sContractStatCd != null and sContractStatCd != ""'>
+           AND SA0201.CONTRACT_STAT_CD = #{sContractStatCd}
+         </if>
+         <if test='sStartDt != null and sEndDt != null'>
+           AND SA0201.REAL_DL_DT <![CDATA[>=]]> TRUNC(#{sStartDt},'DD')
+           AND SA0201.REAL_DL_DT <![CDATA[<]]> TRUNC(#{sEndDt},'DD')+1
+         </if>
+    </select>
+
+
+
+    <!-- VIN 소매유형코드 조회  -->
+    <!-- 설명:
+    RETL_TP_CD    //소매유형코드
+      P1:"AD,N1,N8,N9,AS"; D1:"C1"; D2:"N5,NS"; D4:"C3,N6";
+      F1:"C4"; F2:"C6,C9,N3,NB"; F4:"N4"; F5:"C2,C7,C8,N2";
+    -->
+    <select id="selectRetlTpCd" parameterType="DeliveryVO" resultType="DeliveryVO">
+    /* [chn.bhmc.dms.sal.dlv.service.dao.DeliveryMngDAO.selectRetlTpCd] */
+        SELECT ORD_TP,VIN_NO
+             , CASE WHEN ORD_TP IN ('N1','AD','N8','N9','AS') THEN 'P1'
+                    WHEN ORD_TP IN ('C1') THEN  'D1'
+                    WHEN ORD_TP IN ('N5','NS') THEN 'D2'
+                    WHEN ORD_TP IN ('C3','N6') THEN 'D4'
+                    WHEN ORD_TP IN ('C4') THEN 'F1'
+                    WHEN ORD_TP IN ('C6','C9','N3','NB') THEN 'F2'
+                    WHEN ORD_TP IN ('N4') THEN 'F4'
+                    WHEN ORD_TP IN ('C2','C7','C8','N2') THEN 'F5'
+               END AS RETL_TP_CD
+          FROM SA_0121T
+         WHERE 1=1
+           AND VIN_NO = #{vinNo}
+    </select>
+
+
+
+    <!-- 고객인도처리 - 차량정보 update  -->
+    <!-- 설명:
+      TEC_ID            //테크맨션ID
+      SALE_TP           //판매유형(SAL003: 집단판매 'G',일반판매'N')
+      GRTE_START_DT     //보증시작일(일반판매: 영수일자, 집단판매: 오늘일자)
+      INVC_PUBL_DT      //인보이스발행일자(일반판매: 영수일자, 집단판매: 오늘일자)
+      CUST_SALE_DT      //고객판매일자
+      SALE_EMP_NO       //판매사원
+    -->
+    <update id="updateVehicleDelivery" parameterType="DeliveryVO" >
+    /* [chn.bhmc.dms.sal.dlv.service.dao.DeliveryMngDAO.updateVehicleDelivery] */
+        UPDATE SA_0121T
+           SET
+               CAR_STAT_CD = #{carStatCd}
+              ,TEC_ID = #{tecId}
+              ,CONTRACT_NO = #{contractNo}
+              ,SALE_TP = #{saleTp}
+              <if test='saleTp == "G"'>
+              ,GRTE_START_DT = SYSDATE
+              ,INVC_PUBL_DT = SYSDATE
+              </if>
+              <if test='saleTp == "N"'>
+              ,GRTE_START_DT = #{contractRcptDt}
+              ,INVC_PUBL_DT = #{contractRcptDt}
+              </if>
+              ,PRE_GI_YN = 'N'
+              ,CUST_SALE_DT = SYSDATE
+              ,SALE_EMP_NO = #{saleEmpNo}
+              ,UPDT_USR_ID = #{updtUsrId}
+              ,UPDT_DT = SYSDATE
+         WHERE 1=1
+           AND VIN_NO = #{vinNo}
+    </update>
+
+
+    <!-- 고객인도처리 - 주문정보 update  -->
+    <update id="updateContractDelivery" parameterType="DeliveryVO" >
+    /* [chn.bhmc.dms.sal.dlv.service.dao.DeliveryMngDAO.updateContractDelivery] */
+        UPDATE SA_0201T
+           SET CONTRACT_STAT_CD = #{contractStatCd}
+           <if test='gubun == "D"'>
+              ,REAL_DL_DT = SYSDATE
+              ,RETL_TP = #{retlTpCd}
+              ,DSTB_CHN_CD = #{dstbChnCd}
+              ,VIN_NO = #{vinNo}
+              ,CONTRACT_PDPST_NM = #{contractPdpstNm}
+              ,CONTRACT_RCPT_NO = #{contractRcptNo}
+              ,CONTRACT_RCPT_AMT = #{contractRcptAmt}
+              ,CONTRACT_RCPT_DT = #{contractRcptDt}
+           </if>
+           <if test='gubun == "C"'>
+              ,CANC_DT = #{reqDt}
+              ,CANC_REASON_CD = #{cancReasonCd}
+           </if>
+              ,UPDT_USR_ID = #{updtUsrId}
+              ,UPDT_DT = SYSDATE
+         WHERE 1=1
+           AND DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </update>
+
+
+
+    <!-- 강제판매처리신청  -->
+    <insert id="insertExceptionDelivery" parameterType="DeliveryVO" >
+        INSERT INTO SA_0421T
+        ( DLR_CD
+         ,VIN_NO1
+         ,VIN_NO2
+         ,SEQ
+         ,REQ_STAT_CD
+         ,REQ_DT
+         ,FCE_SALE_REQ_REASON_CD
+         ,REASON_TP
+         ,RFID_NO
+         ,CONTRACT_NO
+         ,APPROVE_DT
+         ,APPROVE_ID
+         ,APPROVE_YN
+         ,REG_USR_ID
+         ,REG_DT
+         ,FILE_DOC_NO
+        ) VALUES
+        ( #{dlrCd}
+         ,#{vinNo1}
+         ,#{vinNo2}
+         ,(SELECT NVL(MAX(SEQ)+1,1) FROM SA_0421T WHERE DLR_CD = #{dlrCd} AND VIN_NO1 = #{vinNo1} AND VIN_NO2 = #{vinNo2})
+         ,#{reqStatCd}
+         ,SYSDATE
+         ,#{fceSaleReqReasonCd}
+         ,''
+         ,#{rfidNo}
+         ,#{contractNo}
+         ,''
+         ,''
+         ,'N'
+         ,#{regUsrId}
+         ,SYSDATE
+         ,#{fileDocNo}
+         )
+         <selectKey resultType="int" keyProperty="seq" order="AFTER">
+            SELECT MAX(SEQ) AS seq FROM SA_0421T WHERE DLR_CD = #{dlrCd} AND VIN_NO1 = #{vinNo1} AND VIN_NO2 = #{vinNo2}
+         </selectKey>
+    </insert>
+
+
+    <!-- 이상출고테이블 승인여부  -->
+    <select id="selectExcptApproveYn" parameterType="DeliveryVO" resultType="DeliveryVO">
+        SELECT DLR_CD,VIN_NO1,VIN_NO2,SEQ,REQ_STAT_CD,REQ_DT,FCE_SALE_REQ_REASON_CD
+              ,REASON_TP,RFID_NO,CONTRACT_NO,APPROVE_YN,FILE_DOC_NO
+          FROM SA_0421T
+         WHERE SEQ = (SELECT MAX(SEQ)
+                        FROM SA_0421T
+                       WHERE DLR_CD = #{dlrCd}
+                         AND VIN_NO1 = #{vinNo1}
+                         AND VIN_NO2 = #{vinNo2})
+    </select>
+
+
+
+
+    <!-- 이상출고정보 조회  -->
+    <select id="selectExcpDeliveryByCondition" parameterType="DeliverySearchVO" resultType="DeliveryVO">
+        SELECT VIN_NO1 || VIN_NO2 AS VIN_NO,REQ_STAT_CD,FCE_SALE_REQ_REASON_CD,RFID_NO,CONTRACT_NO,APPROVE_YN,FILE_DOC_NO
+          FROM SA_0421T
+         WHERE VIN_NO1 || VIN_NO2 = #{sVinNo}
+    </select>
+
+    <!-- 이상출고정보 목록 갯수  -->
+    <select id="selectExcpDeliveryByConditionCnt" parameterType="DeliverySearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0421T
+         WHERE VIN_NO1 || VIN_NO2 = #{sVinNo}
+    </select>
+
+    <!-- 승상구분 조회  -->
+    <select id="selectCarDstinCdCondition" parameterType="DeliveryVO" resultType="String">
+        SELECT DECODE(CAR_DSTIN_CD,NULL,'P',CAR_DSTIN_CD) AS CAR_DSTIN_CD
+          FROM SA_0121T
+         WHERE VIN_NO = #{vinNo}
+    </select>
+
+    <!-- 판매사원id조회  -->
+    <select id="selectSalesEmpNoCondition" parameterType="DeliveryVO" resultType="String">
+        SELECT SALE_EMP_NO
+          FROM SA_0201T
+         WHERE DLR_CD = #{dlrCd}
+           AND CONTRACT_NO = #{contractNo}
+    </select>
+
+    <!-- 인터페이스seq채번  -->
+    <select id="selectSeqCondition" parameterType="DeliveryVO" resultType="int">
+        SELECT NVL(MAX(KMSEQ),0)+1 KMSEQ
+          FROM SA_0301T
+         WHERE KMDELR = #{dlrCd}
+           AND KMTRDY = (TO_CHAR(SYSDATE, 'YYYYMMDD'))
+    </select>
+
+    <!-- 인도취소  -->
+    <insert id="cancelDelivery" parameterType="DeliveryVO" >
+        INSERT INTO SA_0437T
+        ( DLR_CD
+         ,CONTRACT_NO
+         ,REQ_DT
+         ,REQ_STAT_CD
+         ,APPROVE_DT
+         ,APPROVE_YN
+         ,REAL_DL_DT
+         ,CONTRACT_TP
+         ,CONTRACT_CUST_NO
+         ,CARLINE_CD
+         ,MODEL_CD
+         ,OCN_CD
+         ,EXT_COLOR_CD
+         ,INT_COLOR_CD
+         ,VIN_NO1
+         ,VIN_NO2
+         ,CANC_REASON_CD
+         ,REG_USR_ID
+         ,REG_DT
+         ,UPDT_USR_ID
+         ,UPDT_DT
+        ) VALUES
+        (
+          #{dlrCd}
+         ,#{contractNo}
+         ,SYSDATE
+         ,'R'
+         ,''
+         ,'N'
+         ,SYSDATE
+         ,#{contractTp}
+         ,#{contractCustNo}
+         ,#{carlineCd}
+         ,#{modelCd}
+         ,#{ocnCd}
+         ,#{extColorCd}
+         ,#{intColorCd}
+         ,#{vinNo1}
+         ,#{vinNo2}
+         ,#{cancReasonCd}
+         ,#{regUsrId}
+         ,SYSDATE
+         ,#{regUsrId}
+         ,SYSDATE
+         )
+    </insert>
+
+
+    <!-- 집단판매 - 고객인도 목록조회  -->
+    <select id="selectGroupSalesDelivery" parameterType="DeliverySearchVO" resultType="GroupSalesDeliveryVO">
+         SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT SA0201.DLR_CD,SA0201.GRP_CONTRACT_NO,SA0201.CONTRACT_CUST_NO,SA0201.CONTRACT_STAT_CD,SA0201.CONTRACT_DT,SA0201.CONTRACT_NO
+                     , SA0201.CARLINE_CD,FN_GET_CARLINE_NM(SA0201.CARLINE_CD) AS CARLINE_NM
+                     , SA0201.MODEL_CD,FN_GET_MODEL_NM(SA0201.MODEL_CD) AS MODEL_NM
+                     , SA0201.OCN_CD,FN_GET_OCN_NM(SA0201.MODEL_CD, SA0201.OCN_CD) AS OCN_NM
+                     , SA0201.EXT_COLOR_CD,FN_GET_EXT_COLOR_NM(SA0201.EXT_COLOR_CD) AS EXT_COLOR_NM
+                     , SA0201.INT_COLOR_CD,FN_GET_INT_COLOR_NM(SA0201.INT_COLOR_CD) AS INT_COLOR_NM
+                     , SA0201.VIN_NO,DECODE(SA0201.CONTRACT_STAT_CD,'20',SYSDATE,SA0201.REAL_DL_DT) AS REAL_DL_DT
+                     , CR0101.SSN_CRN_NO,SA0201.SALE_OPPT_NO
+                     , SA0201.CONTRACT_CUST_NO AS CUST_NO,CR0101.CUST_NM,SA0201.SALE_EMP_NO
+                     , SA0231.CONTRACT_STAT_CD AS RETAIL_CONTRACT_STAT_CD
+<!--                      , CASE WHEN SA0201.VIN_NO IS NULL THEN ''
+                            WHEN SA0201.VIN_NO IS NOT NULL THEN  SA0121.ORD_TP
+                       END AS ORD_TP -->
+                     <!-- ,SA0121T.ORD_TP AS ORD_TP -->
+                  FROM SA_0201T SA0201,SA_0231T SA0231,CR_0101T CR0101,SA_0121T SA0121
+                 WHERE 1=1
+                   AND SA0201.GRP_CONTRACT_NO = SA0231.GRP_CONTRACT_NO
+                   AND SA0201.DLR_CD = SA0231.DLR_CD
+                   AND SA0201.CONTRACT_CUST_NO = CR0101.CUST_NO(+)
+                   AND SA0201.DLR_CD = SA0121.ORD_DLR_CD(+)
+                   AND SA0201.VIN_NO = SA0121.VIN_NO(+)
+                   AND SA0201.DLR_CD = #{sDlrCd}
+                   AND SA0201.CONTRACT_STAT_CD = '20'
+                 <if test='sGrpContractNo != null and sGrpContractNo != ""'>
+                   AND SA0201.GRP_CONTRACT_NO = #{sGrpContractNo}
+                 </if>
+                 <if test='sCustNo != null and sCustNo != ""'>
+                   AND SA0201.CONTRACT_CUST_NO = #{sCustNo}
+                 </if>
+                 <if test='sGrpContractStatCd != null and sGrpContractStatCd != ""'>
+                   AND SA0231.CONTRACT_STAT_CD = #{sGrpContractStatCd}
+                 </if>
+                 <if test='sContractStartDt != null and sContractEndDt != null'>
+                   AND SA0201.CONTRACT_DT <![CDATA[>=]]> TRUNC(#{sContractStartDt},'DD')
+                   AND SA0201.CONTRACT_DT <![CDATA[<]]> TRUNC(#{sContractEndDt},'DD')+1
+                 </if>
+
+              ORDER BY
+             <choose>
+                <when test='sort != null'>
+                    <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                        <choose>
+                            <when test='item.field == "contractNo"'>SA0201.GRP_CONTRACT_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                            <otherwise>
+                                SA0201.GRP_CONTRACT_NO DESC
+                            </otherwise>
+                        </choose>
+                    </foreach>
+                </when>
+                <otherwise>
+                    SA0201.GRP_CONTRACT_NO DESC
+                </otherwise>
+            </choose>
+             ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+
+    <!-- 배정목록 갯수  -->
+    <select id="selectGroupSalesDeliveryCnt" parameterType="DeliverySearchVO" resultType="int">
+        SELECT COUNT(*) AS VALUE
+          FROM SA_0201T SA0201,SA_0231T SA0231,CR_0101T CR0101
+         WHERE 1=1
+           AND SA0201.GRP_CONTRACT_NO = SA0231.GRP_CONTRACT_NO
+           AND SA0201.DLR_CD = SA0231.DLR_CD
+           AND SA0201.CONTRACT_CUST_NO = CR0101.CUST_NO(+)
+           AND SA0201.DLR_CD = #{sDlrCd}
+           AND SA0201.CONTRACT_STAT_CD = '20'
+         <if test='sGrpContractNo != null and sGrpContractNo != ""'>
+           AND SA0201.GRP_CONTRACT_NO = #{sGrpContractNo}
+         </if>
+         <if test='sGrpContractStatCd != null and sGrpContractStatCd != ""'>
+           AND SA0231.CONTRACT_STAT_CD = #{sGrpContractStatCd}
+         </if>
+         <if test='sCustNo != null and sCustNo != ""'>
+           AND SA0201.CONTRACT_CUST_NO = #{sCustNo}
+         </if>
+         <if test='sContractStartDt != null and sContractEndDt != null'>
+           AND SA0201.CONTRACT_DT <![CDATA[>=]]> TRUNC(#{sContractStartDt},'DD')
+           AND SA0201.CONTRACT_DT <![CDATA[<]]> TRUNC(#{sContractEndDt},'DD')+1
+         </if>
+    </select>
+
+
+    <!-- 첨부파일 추가 -->
+    <update id="updateAddFile" parameterType="DeliveryVO">
+        UPDATE SA_0421T
+           SET FILE_DOC_NO = #{fileDocNo}
+             , UPDT_USR_ID = #{updtUsrId}
+             , UPDT_DT = SYSDATE
+         WHERE DLR_CD  = #{dlrCd}
+           AND VIN_NO1 = #{vinNo1}
+           AND VIN_NO2 = #{vinNo2}
+           AND SEQ     = #{seq}
+    </update>
+
+
+<!-- /***************************************프로시저 호출 영역************************************************/  -->
+
+    <!-- 강제판매처리신청 : 강제판매처리신청수신 프로시져  -->
+    <insert id="procRfidExcepReq" parameterType="DeliveryVO" statementType="CALLABLE">
+        {CALL SP_SAL_DMS_P_0421T_IF(
+              'SAL073'
+            , #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{vinNo1, mode=IN, jdbcType=VARCHAR}
+            , #{vinNo2, mode=IN, jdbcType=VARCHAR}
+            , #{seq, mode=IN, jdbcType=NUMERIC}
+        )}
+    </insert>
+
+    <!-- 이월소매취소신청. : 딜러이월소매취소신청수신 프로시져  -->
+    <insert id="procRetailCancelReq" parameterType="DeliveryVO" statementType="CALLABLE">
+        {CALL SP_SAL_DMS_P_0201T_IF(
+              'SAL075'
+            , #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{contractNo, mode=IN, jdbcType=VARCHAR}
+            , ''
+            , ''
+        )}
+    </insert>
+
+    <!-- 고객인도 : 딜러소매실적수신_데이터생성 프로시져  -->
+    <insert id="procDdlRetail" parameterType="DeliveryVO" statementType="CALLABLE">
+        {CALL SP_SAL_DMS_P_0201T_IF(
+              'SAL064'
+            , #{dlrCd, mode=IN, jdbcType=VARCHAR}
+            , #{contractNo, mode=IN, jdbcType=VARCHAR}
+            , #{spFlag, mode=IN, jdbcType=VARCHAR}
+            , #{cancReasonCd, mode=IN, jdbcType=VARCHAR}
+        )}
+    </insert>
+</mapper>

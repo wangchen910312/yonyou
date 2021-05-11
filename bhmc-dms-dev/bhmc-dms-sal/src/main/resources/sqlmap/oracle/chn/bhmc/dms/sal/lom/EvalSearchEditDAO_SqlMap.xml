@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : EvalSearchEditDAO_SqlMap.xml
+    Description : 평가조회 및 수정
+    author Bong
+    since 2016. 5. 02.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 5. 02.       Bong              최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.sal.lom.service.dao.EvalSearchEditDAO">
+
+    <select id="selectEvalSearchEditConditionCnt" parameterType="EvalSearchEditSearchVO" resultType="int">
+    <!-- selectEvalInfoDownloadCnt -->
+        SELECT COUNT(SA121.ORD_DLR_CD) AS VALUE
+          FROM SA_0121T SA121
+             , SA_0426T SA426      /* TP차량평가내역 */
+             <!--更改物流公司、板车号 检出方式 贾明  2018-8-31 start -->
+             , (
+                SELECT VIN_NO
+                     , DSTB_CMP_NM
+                FROM (
+                    SELECT
+                        RANK() OVER(PARTITION BY VIN_NO ORDER BY UPLOAD_SEQ DESC, UPLOAD_TIMESTAMP DESC) AS TPMS_RANK,
+                        VIN_NO, DSTB_CMP_NM
+                    FROM SA_0425T
+                )
+                WHERE TPMS_RANK = 1
+            ) SA425 
+            <!-- 更改物流公司、板车号 检出方式 贾明  2018-8-31 end -->
+         WHERE SA121.VIN_NO = SA426.VIN_NO
+           AND SA121.VIN_NO = SA425.VIN_NO (+)
+           AND SA426.DLR_EVAL_DT = (SELECT MAX(X.DLR_EVAL_DT) FROM SA_0426T X WHERE X.VIN_NO = SA121.VIN_NO)
+           AND SA121.CAR_STAT_CD IN ('60', '70')
+        <if test='sDlrFlag == "Y"'>
+           AND SA121.DLR_CD = #{sDlrCd}
+        </if>
+        <if test='sVinNo != null and sVinNo != ""'>
+            AND SA121.VIN_NO LIKE '%' || #{sVinNo} || '%'
+        </if>
+        <if test='sCarStatCd != null and sCarStatCd != ""'>
+           AND SA121.CAR_STAT_CD = #{sCarStatCd}
+        </if>
+        <if test='sPltGiDtS != null and sPltGiDtE != null'>
+           AND SA121.PLT_GI_DT <![CDATA[>=]]> TRUNC(#{sPltGiDtS},'DD')
+           AND SA121.PLT_GI_DT <![CDATA[<]]> TRUNC(#{sPltGiDtE},'DD')+1
+        </if>
+        <if test='sGrDtS != null and sGrDtE != null'>
+           AND SA121.DLR_GR_DT <![CDATA[>=]]> TRUNC(#{sGrDtS},'DD')
+           AND SA121.DLR_GR_DT <![CDATA[<]]> TRUNC(#{sGrDtE},'DD')+1
+        </if>
+        <if test='sGrDtSstr != null and sGrDtEstr != null'>
+           AND TO_CHAR(SA121.DLR_GR_DT,'YYYYMMDD') BETWEEN #{sGrDtSstr} AND #{sGrDtEstr}+1
+        </if>
+        <if test='sCarVinAllocDtS != null and sCarVinAllocDtE != null'>
+           AND SA121.CAR_VIN_ALLOC_DT <![CDATA[>=]]> TRUNC(#{sCarVinAllocDtS},'DD')
+           AND SA121.CAR_VIN_ALLOC_DT <![CDATA[<]]> TRUNC(#{sCarVinAllocDtE},'DD')+1
+        </if>
+        <if test='sCustSaleDtS != null and sCustSaleDtE != null'>
+           AND SA121.CUST_SALE_DT <![CDATA[>=]]> TRUNC(#{sCustSaleDtS},'DD')
+           AND SA121.CUST_SALE_DT <![CDATA[<]]> TRUNC(#{sCustSaleDtE},'DD')+1
+        </if>
+        <if test='sDlrEvalDtS != null and sDlrEvalDtE != null'>
+           AND SA426.DLR_EVAL_DT <![CDATA[>=]]> TRUNC(#{sDlrEvalDtS},'DD')
+           AND SA426.DLR_EVAL_DT <![CDATA[<]]> TRUNC(#{sDlrEvalDtE},'DD')+1
+        </if>
+    </select>
+
+    <select id="selectEvalSearchEditCondition" parameterType="EvalSearchEditSearchVO" resultType="EvalInfoVO">
+    <!-- selectEvalInfoDownload -->
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT SA121.ORD_DLR_CD AS DLR_CD
+                     ,FN_CMM_CD_NM('SAL057',SA121.TRSF_CMP_CD,#{sLangCd},'N') AS DSTB_CMP_NM -- 物流公司只显示sap传过来的 贾明 2018-9-3
+                     , SA425.TRSF_CAR_NO   --板车号 
+                     , SA121.VIN_NO
+                     , SA121.CAR_STAT_CD
+                     , ( SELECT Z2.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL001'   /*차량상태*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z2
+                         WHERE SA121.CAR_STAT_CD = Z2.CMM_CD
+                       ) AS CAR_STAT_NM             -- 차량상태
+                     , ( SELECT Z2.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL030'   /*물류 서비스 평가*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z2
+                         WHERE SA426.DSTB_SER_EVAL_VAL = Z2.CMM_CD
+                       ) AS DSTB_SER_EVAL_VA_NM             -- 물류 서비스 평가
+                     , ( SELECT Z2.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL031'   /*기사만족도*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z2
+                         WHERE SA426.DRIVER_STSF_VAL = Z2.CMM_CD
+                       ) AS DRIVER_STSF_VAL_NM             -- 기사만족도
+                     , ( SELECT Z2.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL032'   /*차량교부시간*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z2
+                         WHERE SA426.CAR_ISSUE_HM_VAL = Z2.CMM_CD
+                       ) AS CAR_ISSUE_HM_VAL_NM             -- 차량교부시간
+                     , ( SELECT Z2.CMM_CD_NM
+                           FROM (SELECT A.CMM_CD
+                                      , NVL(B.CMM_CD_TXT, A.CMM_CD_NM) AS CMM_CD_NM
+                                  FROM CM_0303T A
+                                  LEFT OUTER JOIN CM_0304T B
+                                        ON A.CMM_GRP_CD = B.CMM_GRP_CD
+                                       AND A.CMM_CD = B.CMM_CD
+                                       AND B.LANG_CD = #{sLangCd}
+                                 WHERE A.CMM_GRP_CD = 'SAL033'   /*차량교부질량*/
+                                   AND A.USE_YN = 'Y'
+                                 ) Z2
+                         WHERE SA426.CAR_ISSUE_MASS_VAL = Z2.CMM_CD
+                       ) AS CAR_ISSUE_MASS_VAL_NM             -- 차량교부질량
+                     , SA121.DLR_GR_DT AS GR_DT
+                     , SA121.PLT_GI_DT
+                     , SA426.DLR_EVAL_DT
+                     , SA426.DSTB_SER_EVAL_VAL
+                     , SA426.DRIVER_STSF_VAL
+                     , SA426.CAR_ISSUE_HM_VAL
+                     , SA426.CAR_ISSUE_MASS_VAL
+                     , SA426.OTHER_CONT
+                     , NVL(SA425.PRE_ALRT_NTCE_CONT, '') AS PRE_ALRT_NTCE_CONT
+                     , SA121.CAR_VIN_ALLOC_DT
+                  FROM SA_0121T SA121
+                     , SA_0426T SA426      /* TP차량평가내역 */
+                     , (
+                    SELECT
+                         TPMS_RANK
+                        ,VIN_NO
+                        ,DSTB_CMP_NM
+                        ,TRSF_CAR_NO
+                        ,TRSF_LOC_CD
+                        ,TRSF_STAT_CD
+                        ,DRIVER_NM
+                        ,DRIVER_TEL_NO
+                        ,PRE_ALRT_NTCE_CONT
+                        ,CAR_REG_NO
+                        ,DSTB_CMP_DL_DT
+                    FROM (
+                        SELECT
+                            --RANK() OVER(PARTITION BY VIN_NO ORDER BY UPLOAD_SEQ DESC, UPLOAD_TIMESTAMP DESC) AS TPMS_RANK
+                            RANK() OVER(PARTITION BY VIN_NO ORDER BY UPDT_DT DESC) AS TPMS_RANK -- 更改查询方式为板车号 贾明 2018-9-4 
+                            ,VIN_NO
+                            ,DSTB_CMP_NM
+                            ,TRSF_CAR_NO
+                            ,TRSF_LOC_CD
+                            ,TRSF_STAT_CD
+                            ,DRIVER_NM
+                            ,DRIVER_TEL_NO
+                            ,PRE_ALRT_NTCE_CONT
+                            ,CAR_REG_NO
+                            ,DSTB_CMP_DL_DT
+                        FROM SA_0425T
+                    )
+                    WHERE TPMS_RANK = 1
+                ) SA425            /* TP차량운송중내역 */
+                 WHERE SA121.VIN_NO = SA426.VIN_NO
+                   AND SA121.VIN_NO = SA425.VIN_NO (+)
+                   AND SA426.DLR_EVAL_DT = (SELECT MAX(X.DLR_EVAL_DT) FROM SA_0426T X WHERE X.VIN_NO = SA121.VIN_NO)
+                   AND SA121.CAR_STAT_CD IN ('60', '70')
+                <if test='sDlrFlag == "Y"'>
+                   AND SA121.DLR_CD = #{sDlrCd}
+                </if>
+                <if test='sVinNo != null and sVinNo != ""'>
+		            AND SA121.VIN_NO LIKE '%' || #{sVinNo} || '%'
+		        </if>
+                <if test='sCarStatCd != null and sCarStatCd != ""'>
+                   AND SA121.CAR_STAT_CD = #{sCarStatCd}
+                </if>
+                <if test='sPltGiDtS != null and sPltGiDtE != null'>
+                   AND SA121.PLT_GI_DT <![CDATA[>=]]> TRUNC(#{sPltGiDtS},'DD')
+                   AND SA121.PLT_GI_DT <![CDATA[<]]> TRUNC(#{sPltGiDtE},'DD')+1
+                </if>
+                <if test='sGrDtS != null and sGrDtE != null'>
+                   AND SA121.DLR_GR_DT <![CDATA[>=]]> TRUNC(#{sGrDtS},'DD')
+                   AND SA121.DLR_GR_DT <![CDATA[<]]> TRUNC(#{sGrDtE},'DD')+1
+                </if>
+                <if test='sGrDtSstr != null and sGrDtEstr != null'>
+                   AND TO_CHAR(SA121.DLR_GR_DT,'YYYYMMDD') BETWEEN #{sGrDtSstr} AND #{sGrDtEstr}+1
+                </if>
+                <if test='sCarVinAllocDtS != null and sCarVinAllocDtE != null'>
+                   AND SA121.CAR_VIN_ALLOC_DT <![CDATA[>=]]> TRUNC(#{sCarVinAllocDtS},'DD')
+                   AND SA121.CAR_VIN_ALLOC_DT <![CDATA[<]]> TRUNC(#{sCarVinAllocDtE},'DD')+1
+                </if>
+                <if test='sCustSaleDtS != null and sCustSaleDtE != null'>
+                   AND SA121.CUST_SALE_DT <![CDATA[>=]]> TRUNC(#{sCustSaleDtS},'DD')
+                   AND SA121.CUST_SALE_DT <![CDATA[<]]> TRUNC(#{sCustSaleDtE},'DD')+1
+                </if>
+                <if test='sDlrEvalDtS != null and sDlrEvalDtE != null'>
+                   AND SA426.DLR_EVAL_DT <![CDATA[>=]]> TRUNC(#{sDlrEvalDtS},'DD')
+                   AND SA426.DLR_EVAL_DT <![CDATA[<]]> TRUNC(#{sDlrEvalDtE},'DD')+1
+                </if>
+                 ORDER BY
+                 <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>SA121.DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dstbCmpNm"'>SA425.DSTB_CMP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "trsfCarNo"'>SA425.TRSF_CAR_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "vinNo"'>SA121.VIN_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carStatCd"'>SA121.CAR_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "grDt"'>SA121.DLR_GR_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "pltGiDt"'>SA121.PLT_GI_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dlrEvalDt"'>SA426.DLR_EVAL_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "dstbSerEvalVal"'>SA426.DSTB_SER_EVAL_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "driverStsfVal"'>SA426.DRIVER_STSF_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carIssueHmVal"'>SA426.CAR_ISSUE_HM_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "carIssueMassVal"'>SA426.CAR_ISSUE_MASS_VAL <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "otherCont"'>SA426.OTHER_CONT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    SA121.GR_DT DESC, SA121.DLR_CD, SA121.VIN_NO
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        SA121.GR_DT DESC, SA121.DLR_CD, SA121.VIN_NO
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM <![CDATA[>]]> #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 평가정보 수정  -->
+    <update id="updateEvalSearchEdit" parameterType="ConfirmWearingVehiclePopupVO">
+        MERGE INTO SA_0426T A
+                USING(SELECT #{vinNo} AS VIN_NO
+                            ,#{dlrEvalDt} AS DLR_EVAL_DT
+                            ,#{dstbSerEvalVal} AS DSTB_SER_EVAL_VAL
+                            ,#{driverStsfVal} AS DRIVER_STSF_VAL
+                            ,#{carIssueHmVal} AS CAR_ISSUE_HM_VAL
+                            ,#{carIssueMassVal} AS CAR_ISSUE_MASS_VAL
+                            ,#{otherCont} AS OTHER_CONT
+                            ,#{regUsrId} AS REG_USR_ID
+                            ,SYSDATE AS REG_DT
+                            ,#{updtUsrId} AS UPDT_USR_ID
+                            ,SYSDATE AS UPDT_DT
+                            ,#{dlrCd} AS DLR_CD
+                        FROM DUAL) B
+                        ON (A.VIN_NO = B.VIN_NO
+                        AND A.DLR_EVAL_DT = SYSDATE)
+        WHEN MATCHED THEN
+            UPDATE SET A.DSTB_SER_EVAL_VAL  = B.DSTB_SER_EVAL_VAL
+                      ,A.DRIVER_STSF_VAL    = B.DRIVER_STSF_VAL
+                      ,A.CAR_ISSUE_HM_VAL   = B.CAR_ISSUE_HM_VAL
+                      ,A.CAR_ISSUE_MASS_VAL = B.CAR_ISSUE_MASS_VAL
+                      ,A.OTHER_CONT         = B.OTHER_CONT
+                      ,A.UPDT_USR_ID        = B.UPDT_USR_ID
+                      ,A.UPDT_DT            = B.UPDT_DT
+                      ,A.DLR_CD             = B.DLR_CD
+        WHEN NOT MATCHED THEN
+            INSERT(A.VIN_NO
+                  ,A.DLR_EVAL_DT
+                  ,A.DSTB_SER_EVAL_VAL
+                  ,A.DRIVER_STSF_VAL
+                  ,A.CAR_ISSUE_HM_VAL
+                  ,A.CAR_ISSUE_MASS_VAL
+                  ,A.OTHER_CONT
+                  ,A.REG_USR_ID
+                  ,A.REG_DT
+                  ,A.UPDT_USR_ID
+                  ,A.UPDT_DT
+                  ,A.DLR_CD
+                  )VALUES(
+                   B.VIN_NO
+                  ,B.DLR_EVAL_DT
+                  ,B.DSTB_SER_EVAL_VAL
+                  ,B.DRIVER_STSF_VAL
+                  ,B.CAR_ISSUE_HM_VAL
+                  ,B.CAR_ISSUE_MASS_VAL
+                  ,B.OTHER_CONT
+                  ,B.REG_USR_ID
+                  ,B.REG_DT
+                  ,B.UPDT_USR_ID
+                  ,B.UPDT_DT
+                  ,B.DLR_CD
+                  )
+    </update>
+
+    <select id="selectEvalHistorySrchConditionCnt" parameterType="EvalSearchEditSearchVO" resultType="int">
+        SELECT COUNT(VIN_NO) AS VALUE
+          FROM SA_0426T
+         WHERE VIN_NO = #{sVinNo}
+    </select>
+
+    <select id="selectEvalHistorySrchCondition" parameterType="EvalSearchEditSearchVO" resultType="EvalInfoVO">
+        SELECT A.*, ROWNUM AS RNUM
+           FROM (SELECT VIN_NO
+                       ,DLR_EVAL_DT
+                       ,DSTB_SER_EVAL_VAL
+                       ,DRIVER_STSF_VAL
+                       ,CAR_ISSUE_HM_VAL
+                       ,CAR_ISSUE_MASS_VAL
+                       ,OTHER_CONT
+                   FROM SA_0426T
+                  WHERE VIN_NO = #{sVinNo}
+                  ORDER BY DLR_EVAL_DT DESC) A
+    </select>
+
+</mapper>

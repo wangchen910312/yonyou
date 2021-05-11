@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : RateManageDAO_SqlMap.xml
+    Description : 임률코드 마스터에 관한 데이터처리
+    author Kwon Ki Hyun
+    since 2016. 5. 27.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 5. 27.  Kwon Ki Hyun      최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.svi.service.dao.RateManageDAO">
+
+    <!-- 임률코드 등록-->
+    <insert id="insertRateManage" parameterType="RateManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateManageDAO.insertRateManage] */
+
+        INSERT INTO SE_1065T    --임률마스터
+        (
+          DSTIN_CD              --구분코드
+         ,DLR_CD                --딜러코드
+         ,RTE_DOC_NO                --임률코드
+         ,RPIR_TP               --수리유형
+         ,GNL_RTE_RATE          --일반임률비율
+         ,WART_RTE_RATE         --보증임률비율
+         ,INC_RTE_RATE          --보험임률비율
+         ,INT_RTE_RATE          --내부임률비율
+         ,RWRK_RTE_RATE         --재작업임률비율
+         ,BRAND_CD              --브랜드코드
+         ,APPLY_START_DT        --적용시작일자
+         ,APPLY_END_DT          --적용종료일자
+         ,USE_YN                --사용여부
+         ,REG_USR_ID            --등록자ID
+         ,REG_DT                --등록일자
+        )
+        VALUES
+        (
+          #{dstinCd}              --구분코드
+         ,#{dlrCd}                --딜러코드
+         ,LPAD((SELECT NVL(MAX(RTE_DOC_NO),1) + 1
+             FROM SE_1065T
+            WHERE DSTIN_CD = #{dstinCd}
+              AND DLR_CD = #{dlrCd}
+          ),2,'0')              --임률코드
+         ,#{rpirTp}               --수리유형
+         ,#{gnlRteRate}           --일반임률비율
+         ,#{wartRteRate}          --보증임률비율
+         ,#{incRteRate}           --보험임률비율
+         ,#{intRteRate}           --내부임률비율
+         ,#{rwrkRteRate}          --재작업임률비율
+         ,#{brandCd}              --브랜드코드
+         ,#{applyStartDt}         --적용시작일자
+         ,#{applyEndDt}           --적용종료일자
+         ,'Y'                     --사용여부
+         ,#{regUsrId}             --등록자ID
+         ,sysdate                 --등록일자
+        )
+    </insert>
+
+    <update id="updateRateManage" parameterType="RateManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateManageDAO.updateRateManage] */
+
+        UPDATE SE_1065T      --임률마스터
+         SET
+              RPIR_TP          =  #{rpirTp}          --수리유형
+             ,GNL_RTE_RATE     =  #{gnlRteRate}      --일반임률비율
+             ,WART_RTE_RATE    =  #{wartRteRate}     --보증임률비율
+             ,INC_RTE_RATE     =  #{incRteRate}      --보험임률비율
+             ,INT_RTE_RATE     =  #{intRteRate}      --내부임률비율
+             ,RWRK_RTE_RATE    =  #{rwrkRteRate}     --재작업임률비율
+             ,BRAND_CD         =  #{brandCd}         --브랜드코드
+             ,APPLY_START_DT   =  #{applyStartDt}    --적용시작일자
+             ,APPLY_END_DT     =  #{applyEndDt}      --적용종료일자
+             ,USE_YN           =  'Y'                --사용여부
+             ,UPDT_USR_ID      =  #{regUsrId}        --등록자ID
+             ,UPDT_DT          =  sysdate            --등록일자
+        WHERE DSTIN_CD         =  #{dstinCd}         --구분코드
+          AND DLR_CD           =  #{dlrCd}           --딜러코드
+          AND RTE_DOC_NO       =  #{rteDocNo}        --임률코드
+    </update>
+
+    <!-- 임률코드 전체 삭제 -->
+    <delete id="deleteAllRateManage" parameterType="RateManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateManageDAO.deleteAllRateManage] */
+        DELETE FROM SE_1065T
+         WHERE DSTIN_CD         = #{dstinCd}        --임률코드
+           AND DLR_CD           = #{dlrCd}          --딜러코드
+    </delete>
+
+
+    <!-- 임률코드 삭제 -->
+    <delete id="deleteRateManage" parameterType="RateManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateManageDAO.deleteRateManage] */
+        DELETE FROM SE_1065T
+         WHERE DSTIN_CD         = #{dstinCd}        --임률코드
+           AND DLR_CD           = #{dlrCd}          --딜러코드
+           AND RTE_DOC_NO       = #{rteDocNo}
+    </delete>
+
+
+
+    <!-- 임률코드  조회 -->
+    <select id="selectRateManageByCondition" parameterType="RateManageSearchVO" resultType="RateManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateManageDAO.selectRateManageByCondition] */
+          SELECT ROWNUM AS RNUM , T1.*
+            FROM (
+           SELECT ROWNUM AS RNUM
+                 ,DSTIN_CD              --구분코드
+                 ,DLR_CD                --딜러코드
+                 ,RTE_DOC_NO            --임률코드
+                 ,RPIR_TP               --수리유형
+                 ,GNL_RTE_RATE          --일반임률비율
+                 ,WART_RTE_RATE         --보증임률비율
+                 ,INC_RTE_RATE          --보험임률비율
+                 ,INT_RTE_RATE          --내부임률비율
+                 ,RWRK_RTE_RATE         --재작업임률비율
+                 ,BRAND_CD              --브랜드코드
+                 ,APPLY_START_DT        --적용시작일자
+                 ,APPLY_END_DT          --적용종료일자
+                 ,USE_YN
+              FROM SE_1065T
+             WHERE DSTIN_CD   = #{sDstinCd}
+              <if test=' sDlrCd != null and sDlrCd != ""'>
+                AND DLR_CD     = #{sDlrCd}   --딜러코드
+              </if>
+              <if test=' sBrandCd != null and sBrandCd != ""'>
+                AND BRAND_CD   = #{sBrandCd} --브랜드코드
+              </if>
+              <if test=' sRpirTp != null and sRpirTp != ""'>
+                AND RPIR_TP    = #{sRpirTp}   --수리유형
+              </if>
+              ORDER BY RPIR_TP
+           )T1
+    </select>
+
+    <!-- 임률코드 키조회 -->
+    <select id="selectRateManageByKey" parameterType="RateManageSearchVO" resultType="RateManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateManageDAO.selectRateManageByKey] */
+           SELECT ROWNUM AS RNUM
+                 ,DSTIN_CD              --구분코드
+                 ,DLR_CD                --딜러코드
+                 ,RTE_DOC_NO            --임률코드
+                 ,RPIR_TP               --수리유형
+                 ,GNL_RTE_RATE          --일반임률비율
+                 ,WART_RTE_RATE         --보증임률비율
+                 ,INC_RTE_RATE          --보험임률비율
+                 ,INT_RTE_RATE          --내부임률비율
+                 ,RWRK_RTE_RATE         --재작업임률비율
+                 ,BRAND_CD              --브랜드코드
+                 ,APPLY_START_DT        --적용시작일자
+                 ,APPLY_END_DT          --적용종료일자
+                 ,USE_YN
+              FROM SE_1065T
+             WHERE 1=1
+               <if test=' sDstinCd != null and sDstinCd !="" '>
+               AND DSTIN_CD   = #{sDstinCd}
+               </if>
+               <if test=' sDlrCd != null and sDlrCd !="" '>
+               AND DLR_CD     = #{sDlrCd}   --딜러코드
+               </if>
+               <if test=' sBrandCd != null and sBrandCd !="" '>
+               AND BRAND_CD   = #{sBrandCd} --브랜드코드
+               </if>
+               <if test=' sRpirTp != null and sRpirTp !="" '>
+               AND RPIR_TP    = #{sRpirTp}   --수리유형
+               </if>
+               AND USE_YN  = 'Y'
+               <if test=' sRteDocNo != null and sRteDocNo !="" '>
+               AND RTE_DOC_NO != #{sRteDocNo}
+               </if>
+               <if test=' sApplyStartDt != null '>
+               AND APPLY_START_DT <![CDATA[<=]]> #{sApplyStartDt}
+               </if>
+               <if test=' sApplyEndDt != null '>
+               AND APPLY_END_DT  <![CDATA[<=]]>   #{sApplyEndDt}+1
+               </if>
+    </select>
+
+    <!-- 딜러별 임률 금액 조회 -->
+    <select id="selectDlrRateByKey" parameterType="RateManageSearchVO" resultType="RateManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateManageDAO.selectDlrRateByKey] */
+
+            SELECT  #{sDstinCd} DSTIN_CD            --구분코드
+                   ,#{sDlrCd} DLR_CD         --딜러코드
+                   ,B.RTE_DOC_NO               --임률코드
+                   ,A.CMM_CD AS RPIR_TP    --수리유형
+                   ,A.CMM_CD_TXT
+                   ,B.GNL_RTE_RATE          --일반임률비율
+                   ,B.WART_RTE_RATE         --보증임률비율
+                   ,B.INC_RTE_RATE          --보험임률비율
+                   ,B.INT_RTE_RATE          --내부임률비율
+                   ,B.RWRK_RTE_RATE         --재작업임률비율
+                   ,B.BRAND_CD              --브랜드코드
+                   ,B.APPLY_START_DT        --적용시작일자
+                   ,B.APPLY_END_DT          --적용종료일자
+                 FROM (
+                 SELECT B.CMM_CD , B.CMM_CD_TXT
+                    FROM CM_0303T A , CM_0304T B
+                   WHERE B.CMM_GRP_CD = 'SER036'
+                     AND B.LANG_CD = 'ko'
+                     AND A.USE_YN ='Y'
+                     AND A.CMM_CD = #{sRpirTp}
+                     AND B.CMM_GRP_CD = A.CMM_GRP_CD
+                     AND B.CMM_CD = A.CMM_CD
+                     ORDER BY A.SORT_ORDER
+                 )A LEFT OUTER JOIN SE_1065T B
+                 ON A.CMM_CD = B.RPIR_TP
+                  AND B.DSTIN_CD = #{sDstinCd}
+                  AND B.DLR_CD = #{sDlrCd}
+
+    </select>
+
+    <!-- 임률 금액 조회 -->
+    <select id="selectRates" parameterType="RateManageSearchVO" resultType="RateManageVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.RateManageDAO.selectRates] */
+
+          SELECT RPIR_TP
+                ,GNL_RTE_RATE
+                ,WART_RTE_RATE
+                ,INC_RTE_RATE
+                ,INT_RTE_RATE
+                ,RWRK_RTE_RATE
+            FROM SE_1065T
+           WHERE DSTIN_CD = 'H'
+             AND DLR_CD = 'A07AA'
+             AND BRAND_CD = 'HD'
+             AND USE_YN ='Y'
+             AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+             AND RPIR_TP NOT IN (
+               SELECT RPIR_TP
+                FROM SE_1065T
+               WHERE DSTIN_CD = 'D'
+                 AND DLR_CD = #{sDlrCd}
+                 AND BRAND_CD = #{sBrandCd}
+                 AND USE_YN ='Y'
+                 AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+             ) UNION
+            SELECT RPIR_TP
+                  ,GNL_RTE_RATE
+                  ,WART_RTE_RATE
+                  ,INC_RTE_RATE
+                  ,INT_RTE_RATE
+                  ,RWRK_RTE_RATE
+              FROM SE_1065T
+             WHERE DSTIN_CD = 'D'
+               AND DLR_CD = #{sDlrCd}
+               AND BRAND_CD = #{sBrandCd}
+               AND USE_YN ='Y'
+               AND TO_DATE(TO_CHAR(SYSDATE,'YYYYMMDD'),'YYYYMMDD') BETWEEN APPLY_START_DT AND APPLY_END_DT
+
+    </select>
+
+</mapper>

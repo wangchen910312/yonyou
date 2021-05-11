@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    SQL File Name : CustomerRelInfoDAO_SqlMap.xml
+    Description : 고객 연계인 관련 데이터처리
+    author Kyo Jin Lee
+    since 2015. 12. 30.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 01. 05.     Kyo Jin Lee     최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.mob.api.crm.dao.CrmCustomerRelInfoDAO">
+	
+	<!-- 고객의 연계인 조회 검색조건 -->
+    <sql id="searchWhere">
+        <where>
+            T1.DLR_CD        = #{sDlrCd}
+            AND T1.UPPER_CUST_NO = #{sUpperCustNo}
+            <if test='sPconCustNo != null '>
+                AND T1.PCON_CUST_NO = #{sPconCustNo}
+            </if>
+            <if test='sPconTp != null '>
+               AND T1.PCON_TP = #{sPconTp}
+            </if>
+            AND T1.PCON_CUST_NO = T2.CUST_NO(+)
+
+        </where>
+    </sql>
+	
+	
+    <!-- 고객의 연계인 목록 카운트를 조회한다. 판매사원용-->
+    <select id="selectCustomerRelInfoByConditionCnt" parameterType="CustomerRelInfoSearchVO" resultType="int">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerRelInfoDAO.selectCustomerRelInfoByConditionCnt] */
+        SELECT COUNT(*) AS VALUE
+        FROM    CR_0111T T1, CR_0101T T2
+        <include refid="searchWhere" />
+    </select>
+
+    <!-- 고객의 연계인 목록을 조회한다. 판매사원용-->
+    <select id="selectCustomerRelInfoByCondition" parameterType="CustomerRelInfoSearchVO" resultType="chn.bhmc.dms.mob.api.crm.vo.CustomerRelInfoVO">
+        /* [chn.bhmc.dms.crm.cif.service.dao.CustomerRelInfoDAO.selectCustomerRelInfoByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    T1.SEQ
+                    , T1.FLAG_YN
+                    , T1.PCON_TP
+                    , T1.PCON_CUST_NO
+                    , T1.UPPER_CUST_NO
+                    , DECODE(T1.PCON_CUST_NO,'',T1.REL_NM, T2.CUST_NM) AS REL_NM
+                    , DECODE(T1.PCON_CUST_NO,'',T1.TEL_NO, T2.TEL_NO) AS TEL_NO
+                    , DECODE(T1.PCON_CUST_NO,'',T1.HP_NO, T2.HP_NO) AS HP_NO
+                    , DECODE(T1.PCON_CUST_NO,'',T1.WECHAT_ID, T2.WECHAT_ID) AS WECHAT_ID
+                    , T1.REG_DT
+                FROM    CR_0111T T1, CR_0101T T2
+                <include refid="searchWhere" />
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "relNm"'>REL_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "telNo"'>TEL_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "hpNo"'>HP_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDt"'>T1.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    T1.REG_DT DESC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        T1.REG_DT DESC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+</mapper>

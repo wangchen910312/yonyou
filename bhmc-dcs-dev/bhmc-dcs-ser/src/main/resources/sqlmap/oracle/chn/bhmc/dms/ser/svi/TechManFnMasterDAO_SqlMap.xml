@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    SQL File Name : techManFnMasterDAO_SqlMap.xml
+    Description : 테크멘 기능관리 마스터에 관한 데이터처리
+    author Yin Xueyuan
+    since 2016. 02. 11.
+    version 1.0
+    Modification Information
+       since          author              description
+    ===========    =============    ===========================
+    2016. 02. 11.  Yin Xueyuan      최초 생성
+-->
+
+<mapper namespace="chn.bhmc.dms.ser.svi.service.dao.TechManFnMasterDAO">
+
+    <!-- 테크멘 기능관리 등록-->
+    <insert id="insertTechManFnMaster" parameterType="TechManFnMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.TechManFnMasterDAO.insertTechManFnMaster] */
+        INSERT INTO SE_1026T    --테크멘 기능관리 마스터
+        (
+          DLR_CD                --딜러코드
+         ,TEC_ID                --테크멘 ID
+         ,TEC_NM                --테크멘 명
+         ,TEC_MFN_NM            --테크멘 주기능명
+         ,TEC_SFN_NM1           --테크멘 부기능명1
+         ,TEC_SFN_NM2           --테크멘 부기능명2
+         ,TEC_SFN_NM3           --테크멘 부기능명3
+         ,REG_USR_ID            --등록자ID
+         ,REG_DT                --등록일자
+         ,UPDT_USR_ID           --수정자ID
+         ,UPDT_DT               --수정일자
+        )
+        VALUES
+        (
+          #{dlrCd}                --딜러코드
+         ,#{tecId}                --테크멘 ID
+         ,#{tecNm}                --테크멘 명
+         ,#{tecMfnNm}             --테크멘 주기능명
+         ,#{tecSfnNm1}            --테크멘 부기능명1
+         ,#{tecSfnNm2}            --테크멘 부기능명2
+         ,#{tecSfnNm3}            --테크멘 부기능명3
+         ,#{regUsrId}             --등록자ID
+         ,SYSDATE                 --등록일자
+         ,#{updtUsrId}            --수정자ID
+         ,SYSDATE                 --수정일자
+        )
+    </insert>
+
+    <!-- 테크멘 기능관리 수정 -->
+    <update id="updateTechManFnMaster" parameterType="TechManFnMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.TechManFnMasterDAO.updateTechManFnMaster] */
+        UPDATE SE_1026T    --테크멘 기능관리 마스터
+          SET
+               TEC_MFN_NM     = #{tecMfnNm}             --테크멘 주기능명
+              ,TEC_SFN_NM1    = #{tecSfnNm1}            --테크멘 부기능명1
+              ,TEC_SFN_NM2    = #{tecSfnNm2}            --테크멘 부기능명2
+              ,TEC_SFN_NM3    = #{tecSfnNm3}            --테크멘 부기능명3
+              ,UPDT_USR_ID    = #{updtUsrId}            --수정자ID
+              ,UPDT_DT        = SYSDATE                 --수정일자
+             WHERE 1 = 1
+               AND TEC_ID     = #{tecId}                --테크멘 ID
+               AND DLR_CD     = #{dlrCd}                --딜러코드
+    </update>
+
+    <!-- 테크멘 기능관리 삭제 -->
+    <delete id="deleteTechManFnMaster" parameterType="TechManFnMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.TechManFnMasterDAO.deleteTechManFnMaster] */
+        DELETE FROM SE_1026T
+        WHERE DLR_CD     = #{dlrCd}     --딜러코드
+        AND   TEC_ID     = #{tecId}     --테크멘 ID
+    </delete>
+
+    <!-- 테크멘 기능관리 리스트 -->
+    <select id="selectTechManFnMasterByCondition" parameterType="TechManFnMasterSearchVO" resultType="TechManFnMasterVO">
+        /* [chn.bhmc.dms.ser.svi.service.dao.TechManFnMasterDAO.selectTechManFnMasterByCondition] */
+        SELECT * FROM (
+            SELECT ROWNUM AS RNUM, T1.* FROM (
+                SELECT
+                    DLR_CD
+                    ,TEC_ID
+                    ,TEC_NM
+                    ,TEC_MFN_NM
+                    ,TEC_SFN_NM1
+                    ,TEC_SFN_NM2
+                    ,TEC_SFN_NM3
+                    ,'01' AS BAY_GRP_TP
+                    ,REG_USR_ID
+                    ,REG_DT
+                    ,UPDT_USR_ID
+                    ,UPDT_DT
+                FROM  SE_1026T
+                <where>
+                    <if test='sDlrCd != null and sDlrCd != ""'>
+                        AND DLR_CD = #{sDlrCd}
+                    </if>
+
+                    <if test='sTecId != null and sTecId != ""'>
+                        AND TEC_ID = #{sTecId}
+                    </if>
+
+                    <if test='sTecNm != null and sTecNm != ""'>
+                        <choose>
+                            <when test='@org.apache.commons.lang3.StringUtils@contains(sTecNm,"*")'>
+                                <bind name='sTecNm' value='@org.apache.commons.lang3.StringUtils@replace(sTecNm, "*", "%")' />
+                                 AND TEC_NM LIKE #{sTecNm}
+                            </when>
+                            <otherwise>
+                                 AND TEC_NM = #{sTecNm}
+                            </otherwise>
+                        </choose>
+                    </if>
+                </where>
+                ORDER BY
+                <choose>
+                    <when test='sort != null'>
+                        <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                            <choose>
+                                <when test='item.field == "dlrCd"'>DLR_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "tecId"'>TEC_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "tecNm"'>TEC_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "tecMfnNm"'>TEC_MFN_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "tecSfnNm1"'>TEC_SFN_NM1 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "tecSfnNm2"'>TEC_SFN_NM2 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "tecSfnNm3"'>TEC_SFN_NM3 <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regUsrId"'>REG_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "regDt"'>REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtUsrId"'>UPDT_USR_ID <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <when test='item.field == "updtDt"'>UPDT_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                <otherwise>
+                                    DLR_CD,TEC_ID ASC
+                                </otherwise>
+                            </choose>
+                        </foreach>
+                    </when>
+                    <otherwise>
+                        DLR_CD,TEC_ID ASC
+                    </otherwise>
+                </choose>
+            ) T1
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    ROWNUM <![CDATA[<=]]> #{lastIndex}
+                </if>
+            </where>
+        )
+        <where>
+            <if test='firstIndex != -1 and lastIndex != -1'>
+                RNUM > #{firstIndex}
+            </if>
+        </where>
+    </select>
+
+    <!-- 테크멘 기능관리 목록수 -->
+    <select id="selectTechManFnMasterByConditionCnt" parameterType="TechManFnMasterSearchVO" resultType="int">
+        /* [chn.bhmc.dms.ser.svi.service.dao.TechManFnMasterDAO.selectTechManFnMasterByConditionCnt] */
+        SELECT
+            COUNT(*) AS VALUE
+        FROM SE_1026T
+        <where>
+            <if test='sDlrCd != null and sDlrCd != ""'>
+                AND DLR_CD = #{sDlrCd}
+            </if>
+
+            <if test='sTecId != null and sTecId != ""'>
+                AND TEC_ID = #{sTecId}
+            </if>
+
+            <if test='sTecNm != null and sTecNm != ""'>
+                <choose>
+                    <when test='@org.apache.commons.lang3.StringUtils@contains(sTecNm,"*")'>
+                        <bind name='sTecNm' value='@org.apache.commons.lang3.StringUtils@replace(sTecNm, "*", "%")' />
+                         AND TEC_NM LIKE #{sTecNm}
+                    </when>
+                    <otherwise>
+                         AND TEC_NM = #{sTecNm}
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+    </select>
+
+</mapper>
