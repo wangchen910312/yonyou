@@ -1019,10 +1019,7 @@ $(document).ready(function() {
             dms.ajax.excelExport({
                 "beanName":"venderMasterService"
                 ,"templateFile":"PartSupplierInfoTarget_Tpl.xlsx"
-                //,"fileName":"PartSupplierInfoDownload_Tpl.xlsx"
-                //CSR 171  下载文件英文名 更改成中文 供应商管理  2021-1-22 sart
-                ,"fileName":"<spring:message code='par.menu.partVenderMaster' />.xlsx"
-                //CSR 171  下载文件英文名 更改成中文 供应商管理   2021-1-22 end
+                ,"fileName":"PartSupplierInfoDownload_Tpl.xlsx"
                 ,"sBpTp":$("#sBpTp").val()
                 ,"sBpCd":$("#sBpCd").val()
                 ,"sBpNm":$("#sBpNm").val()
