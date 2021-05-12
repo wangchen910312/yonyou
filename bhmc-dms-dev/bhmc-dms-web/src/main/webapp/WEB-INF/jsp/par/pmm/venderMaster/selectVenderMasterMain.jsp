@@ -1019,7 +1019,10 @@ $(document).ready(function() {
             dms.ajax.excelExport({
                 "beanName":"venderMasterService"
                 ,"templateFile":"PartSupplierInfoTarget_Tpl.xlsx"
-                ,"fileName":"PartSupplierInfoDownload_Tpl.xlsx"
+                //,"fileName":"PartSupplierInfoDownload_Tpl.xlsx"
+                //CSR 171  下载文件英文名 更改成中文 供应商管理  2021-1-22 sart
+                ,"fileName":"<spring:message code='par.menu.partVenderMaster' />.xlsx"
+                //CSR 171  下载文件英文名 更改成中文 供应商管理   2021-1-22 end
                 ,"sBpTp":$("#sBpTp").val()
                 ,"sBpCd":$("#sBpCd").val()
                 ,"sBpNm":$("#sBpNm").val()
@@ -1180,7 +1183,7 @@ $(document).ready(function() {
     });
     //crnNo
     $("#crnNo").kendoMaskedTextBox({
-        mask:"00000000000000"
+        mask:"0000000000000000000"
         ,promptChar:" "
     });
     //tab

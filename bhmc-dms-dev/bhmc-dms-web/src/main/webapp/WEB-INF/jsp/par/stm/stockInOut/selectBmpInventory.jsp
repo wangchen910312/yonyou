@@ -693,7 +693,10 @@
                 ,{field:"spyrCd" ,title:"<spring:message code='par.lbl.spyrCd' />" ,attributes:{ "class":"ac"} ,width:100
                     ,template:'#= changeSpyrCd(spyrCd)#'
                  }//공급상유형
-                ,{field:"bmpPurcPrc" ,title:"<spring:message code='par.lbl.purcIncTaxPrc' />",attributes :{"class":"ar"},format:"{0:n2}",width:80}//bmp구매단가
+                ,{field:"sucCd" ,title:"<spring:message code='par.lbl.sucCd' />",attributes :{"class":"ac"},format:"{0:n2}",width:50}//SUC
+                ,{field:"bmpPurcPrc" ,title:"BMP<spring:message code='par.lbl.purcPriceAddTax' />",attributes :{"class":"ar"},format:"{0:n2}",width:110}//bmp구매단가    BMP采购单价(含税)
+                ,{field:"recomRtprcAmt" ,title:"指导价(含税)",attributes :{"class":"ar"},format:"{0:n2}",width:80}//指导价(含税)
+<%--    <spring:message code='par.lbl.recRetailPrcTaxInclude' />--%>
                 ,{field:"stockQty" ,title:"<spring:message code='par.lbl.strgeStockQty' />" ,attributes:{ "class":"ar"} ,format:"{0:n2}",width:80}//재고수량
                 ,{field:"avlbStockQty" ,title:"<spring:message code='par.lbl.avlbStockQty' />" ,attributes:{ "class":"ar"} ,format:"{0:n2}" ,width:80}//가용재고
                 ,{field:"resvQty" ,title:"<spring:message code='par.lbl.purcOrdResvQty' />" ,attributes:{"class":"ar"} ,format:"{0:n2}" ,width:80}//예류수량

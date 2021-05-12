@@ -14,6 +14,9 @@
 			</dms:access>
             </div>
             <div class="btn_right">
+                <button id="electronReceiptPlatform" class="btn_m" type="button" onclick='openNewTab()'>电子发票平台</button>    <!-- 电子发票平台 -->
+<%--    <spring:message code='par.btn.electronReceiptPlatform' />--%>
+                <button id="btnExcelExport" class="btn_m" type="button"><spring:message code='global.btn.excelDownload' /></button>    <!-- 下载Excel -->
 			<dms:access viewId="VIEW-D-11579" hasPermission="${dms:getPermissionMask('READ')}">
                 <button class="btn_m btn_search btn_m_min" id="btnSearch"><spring:message code="par.btn.search" /><!-- 조회 --></button>
 			</dms:access>
@@ -232,6 +235,12 @@
     <c:forEach var="obj" items="${dlPdcCdList}" varStatus="status">
         dlPdcCdObj["${obj.cmmCd}"] = "${obj.cmmCdNm}";
     </c:forEach>
+
+    //点击按钮打开新页签
+    function openNewTab() {
+        let newWindow = window.open("about:blank");
+        newWindow.location.href = 'http://114.251.151.108:8080/bmp/login.ered?reqCode=init';
+    }
 
     function initPage(){
 
@@ -675,6 +684,23 @@
             return returnVal;
         };
 
+        //下载excel
+        $("#btnExcelExport").kendoButton({
+            click:function(e) {
+                dms.ajax.excelExport({
+                    "beanName":"invcService"
+                    ,"templateFile":"ElectronReceiptList_Tpl.xls"
+                    ,"fileName":"ElectronReceiptList.xls"
+<%--    //<spring:message code='par.title.ElectronReceiptList' />--%>
+                    ,"sBpCd":$("#sBpCd").val()
+                    ,"sMobisInvcNo":$("#sMobisInvcNo").val()
+                    ,"sInvcDtFr":$("#sInvcDtFr").data("kendoExtMaskedDatePicker").value()
+                    ,"sInvcDtTo":$("#sInvcDtTo").data("kendoExtMaskedDatePicker").value()
+                    ,"sInvcStatCd":$("#sInvcStatCd").data("kendoExtDropDownList").value()
+                });
+            }
+        });
+
         // 송장 그리드
         $("#gridCnfmInvc").kendoExtGrid({
             gridId:"G-PAR-0519-190201"
@@ -727,18 +753,19 @@
                      ,template:'#= changePurcOrdTp(purcOrdTp)#'
                 }//오더유형
                 ,{field:"purcReqDt" ,title:"<spring:message code='par.lbl.ordReqDt' />" ,format:"{0:<dms:configValue code='dateFormat' />}" ,attributes:{ "class":"ac"} ,width:90}//처리일자
-                ,{field:"purcOrdNo" ,title:"<spring:message code='par.lbl.purcOrdNo' />" ,width:100}//구매오더번호
+                ,{field:"invcIfOrdNo", title:"BMP <spring:message code='par.lbl.purcOrdNo' />" ,width:100}//BMP구매오더번호   BMP订单编号
+                ,{field:"purcOrdNo" ,title:"<spring:message code='par.lbl.purcOrdNo' />" ,width:100}//구매오더번호    订单编号
                 ,{field:"bpNm" ,title:"<spring:message code='par.lbl.supplyNo' />" ,width:140}//공급업체
                 ,{field:"itemCd" ,title:"<spring:message code='par.lbl.itemCd' />" ,width:100}//부품번호
                 ,{field:"itemNm" ,title:"<spring:message code='par.lbl.itemNm' />" ,width:200}//부품명
-                ,{field:"invcPrc" ,title:"<spring:message code='par.lbl.purcBasePrc' />" ,width:90 ,attributes:{ "class":"ar"} ,format:"{0:n2}" ,decimals:2}//구매단가
-                ,{field:"taxDdctPrc" ,title:"<spring:message code='par.lbl.purcPriceTax' />" ,width:120 ,attributes:{ "class":"ar"} ,format:"{0:n2}" ,decimals:2}//구매단가(세금제외)
-                ,{field:"invcQty" ,title:"<spring:message code='par.lbl.sendQty' />" ,width:90 ,attributes:{ "class":"ar"} ,format:"{0:n2}" ,decimals:2}//발송수량
-                ,{field:"invcAmt" ,title:"<spring:message code='par.lbl.purcAmt' />" ,width:90 ,attributes:{ "class":"ar"} ,format:"{0:n2}" ,decimals:2}//구매금액(세금제외)
-                ,{field:"invcTotAmt" ,title:"<spring:message code='par.lbl.purcIncTaxAmt' />" ,width:120 ,attributes:{ "class":"ar"} ,format:"{0:n2}" ,decimals:2}//구매금액
+                ,{field:"invcPrc" ,title:"<spring:message code='par.lbl.purcBasePrc' />" ,width:90 ,attributes:{ "class":"ar"} ,format:"{0:n2}" ,decimals:2}//구매단가  采购单价
+                ,{field:"taxDdctPrc" ,title:"<spring:message code='par.lbl.purcPriceTax' />" ,width:120 ,attributes:{ "class":"ar"} ,format:"{0:n2}" ,decimals:2}//구매단가(세금제외)   采购单价（不含税）
+                ,{field:"invcQty" ,title:"<spring:message code='par.lbl.sendQty' />" ,width:90 ,attributes:{ "class":"ar"} ,format:"{0:n2}" ,decimals:2}//발송수량  发货数量
+                ,{field:"invcAmt" ,title:"<spring:message code='par.lbl.purcAmt' />" ,width:90 ,attributes:{ "class":"ar"} ,format:"{0:n2}" ,decimals:2}//구매금액(세금제외)    采购金额（不含税）
+                ,{field:"invcTotAmt" ,title:"<spring:message code='par.lbl.purcIncTaxAmt' />" ,width:120 ,attributes:{ "class":"ar"} ,format:"{0:n2}" ,decimals:2}//구매금액    采购金额
                 ,{field:"dlPdcCd" ,title:"<spring:message code='par.lbl.dlPdcCd' />" ,attributes:{ "class":"ac"} ,width:140
                     ,template:'#= changeDlPdcCd(dlPdcCd)#'
-                }//배송 PDC
+                }//배송 PDC   派送PDC
                 ,{_field:"elecRecp",title:"<spring:message code='par.lbl.elReceipt' />" ,width:100}//전자영수증电子发票编号
                 ,{_field:"elecRecpNewDt",title:"<spring:message code='par.lbl.elReceiptRegDt' />" ,width:100}//전자영수증생성일자电子发票日期
                 ,{title:"<spring:message code='par.lbl.strgeStockQty' />" ,field:"stockQty" ,width:60 ,attributes:{ "class":"ar"} ,format:"{0:n2}" ,decimal:2}//재고수량
