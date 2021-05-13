@@ -3,7 +3,7 @@ package chn.bhmc.dms.par.pcm.service.dao;
 import java.util.List;
 
 import able.com.mybatis.Mapper;
-
+import chn.bhmc.dms.par.pcm.vo.InvcExcelVO;
 import chn.bhmc.dms.par.pcm.vo.InvcItemVO;
 import chn.bhmc.dms.par.pcm.vo.InvcSearchVO;
 import chn.bhmc.dms.par.pcm.vo.InvcVO;
@@ -341,4 +341,16 @@ public interface InvcDAO {
     public int selectInvcItemByKeyForRgstCnt(InvcSearchVO searchVO);
 
 
+    /**
+     * 
+     * @MethodName: selectInvcsByConditionExcel
+     * <p>Title: 电子信息查询/待入库清单导出功能</p >
+     * @Description: TODO
+     * @author wangc
+     * @param searchVO
+     * @return List<InvcExcelVO>
+     * @date 2021-05-13 02:21:15 
+     * @param searchVO
+     */
+    public List<InvcExcelVO> selectInvcsByConditionExcel(InvcSearchVO searchVO);
 }

@@ -3518,4 +3518,311 @@
          WHERE  A.DLR_CD             = #{dlrCd}
            AND  A.ETC_GR_DOC_NO      = #{grDocNo}    --입고번호
     </select>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <!-- 电子发票/待入库清单的Excel导出  wangc 2021年5月12日20:15:51-->
+    <select id="selectInvcsByConditionExcel" parameterType="InvcSearchVO" resultType="InvcExcelVO">
+        select invc.*
+        ,(select t.CMM_CD_NM from CM_0303T t where t.CMM_GRP_CD = 'PAR213' and t.CMM_CD=invc.INVC_STAT_CD) as INVC_STAT_CD_NM
+        ,invcs.DLR_CD as SDLR_CD
+        ,invcs.INVC_DOC_LINE_NO as SINVC_DOC_LINE_NO
+        ,invcs.MOBIS_INVC_NO as SMOBIS_INVC_NO
+        ,invcs.MOBIS_INVC_LINE_NO as SMOBIS_INVC_LINE_NO
+        ,invcs.PURC_ORD_NO as SPURC_ORD_NO
+        ,invcs.INVC_IF_ORD_NO as SINVC_IF_ORD_NO
+        ,invcs.INVC_IF_ORD_LN as SINVC_IF_ORD_LN
+        ,invcs.PURC_ORD_LINE_NO as SPURC_ORD_LINE_NO
+        ,invcs.PURC_ORD_LINE_DETL_NO as SPURC_ORD_LINE_DETL_NO
+        ,invcs.ITEM_CD as SITEM_CD
+        ,invcs.ITEM_NM as SITEM_NM
+        ,invcs.INVC_QTY as SINVC_QTY
+        ,invcs.INVC_UNIT_CD as SINVC_UNIT_CD
+        ,invcs.INVC_PRC as SINVC_PRC
+        ,invcs.TAX_DDCT_PRC as STAX_DDCT_PRC
+        ,invcs.INVC_AMT as SINVC_AMT
+        ,invcs.VAT_AMT as SVAT_AMT
+        ,invcs.INVC_TOT_AMT as SINVC_TOT_AMT
+        ,invcs.PURC_REG_DT as SPURC_REG_DT
+        ,(select t.CMM_CD_NM from CM_0303T t where t.CMM_GRP_CD = 'PAR203' and t.CMM_CD=invcs.PURC_ORD_TP) as SPURC_ORD_TP
+        ,invcs.BP_CD as SBP_CD
+        ,invcs.BP_NM as SBP_NM
+        ,invcs.CLAIM_QTY as SCLAIM_QTY
+        ,invcs.DEBIT_CREDIT_DSTIN_CD as SDEBIT_CREDIT_DSTIN_CD
+        ,invcs.REF_INVC_DOC_NO as SREF_INVC_DOC_NO
+        ,invcs.REF_INVC_DOC_LINE_NO as SREF_INVC_DOC_LINE_NO
+        ,(select t.CMM_CD_NM from CM_0303T t where t.CMM_GRP_CD = 'PAR214' and t.CMM_CD=invcs.DL_PDC_CD) as SDL_PDC_CD
+        ,invcs.GR_STRGE_CD as SGR_STRGE_CD
+        ,invcs.GR_LOC_CD as SGR_LOC_CD
+        ,invcs.INVC_GR_DT as SINVC_GR_DT
+        ,invcs.REQ_CONT as SREQ_CONT
+        ,invcs.AVLB_STOCK_QTY as SAVLB_STOCK_QTY
+        ,invcs.BORROW_QTY as SBORROW_QTY
+        ,invcs.RENT_QTY as SRENT_QTY
+        ,invcs.RESV_STOCK_QTY as SRESV_STOCK_QTY
+        ,invcs.STOCK_QTY as SSTOCK_QTY
+        from (
+        SELECT A.*
+          FROM
+            (
+            SELECT   ROWNUM AS RNUM
+                   , T1.*
+              FROM (
+                SELECT
+                        A.DLR_CD               --딜러코드
+                       ,A.INVC_DOC_NO          --송장문서번호
+                       ,A.INVC_TP              --송장유형
+                       ,A.INVC_DSTIN_CD        --송장구분코드
+                       ,A.INVC_STAT_CD         --송장상태코드
+                       ,A.INVC_DT              --송장일자
+                       ,A.ARRV_DT              --도착일자
+                       ,TO_CHAR(A.ARRV_DT, 'YYYYMMDD')  AS ARRV_DT_CHAR              --등록일자
+                       ,TO_CHAR(A.ARRV_DT, 'HH24MISS')  AS ARRV_TM_CHAR              --등록일자
+                       ,A.CONFIRM_DT           --확정일자
+                       ,A.PLT_CD               --센터코드
+                       ,D.PLT_NM               --센터명
+                       ,A.BP_CD                --거래처코드
+                       ,C.BP_NM                --거래처명
+                       ,A.MOBIS_INVC_NO        --모비스송장번호
+                       ,A.CURR_CD              --통화코드
+                       ,E.INVC_TOT_AMT AS PURC_INC_TAX_AMT         --송장총금액
+                       ,E.INVC_TOT_AMT         --송장총금액
+                       ,A.VAT_CD               --부가세코드
+                       ,A.VAT_AMT              --부가세금액
+                       ,A.REMARK               --비고
+                       ,A.CANC_YN              --취소여부
+                       ,A.REG_USR_ID           --등록자ID
+                       ,A.REG_DT               --등록일자
+                       ,TO_CHAR(A.REG_DT, 'YYYYMMDD')  AS REG_DT_CHAR              --등록일자
+                       ,A.UPDT_USR_ID          --수정자ID
+                       ,A.UPDT_DT              --수정일자
+                       ,A.IF_YN                --인터페이스여부
+                       ,NVL(A.INVC_TOTAL_LINE, B.ITEM_CNT) AS INVC_TOTAL_LINE
+                       ,NVL(A.INVC_SUM_QT, B.ITEM_QTY) AS INVC_SUM_QT
+                       ,A.INVC_AMT_CUR
+                       ,A.INVC_TSP_CODE
+                       ,A.INVC_CSE_CNT
+                       ,TO_CHAR(NVL(A.UPDT_DT,A.REG_DT), 'YYYYMMDDHH24MISS') AS UPDT_DT_STR
+                  FROM   DMSDB.PT_0431T A    --송장문서헤더정보
+                            INNER JOIN (
+                                    SELECT   A.DLR_CD
+                                            ,A.INVC_DOC_NO
+                                            ,COUNT(*) AS ITEM_CNT
+                                            ,SUM(A.INVC_QTY) AS ITEM_QTY
+                                            ,SUM(B.PURC_AMT + ROUND(B.PURC_AMT * FN_GET_VAT(TO_CHAR(NVL(A.INVC_GR_DT, A.REG_DT),'YYYYMMDD'),'ALL'),2) ) AS PURC_INC_TAX_AMT
+                                            ,SUM(B.PURC_AMT) AS PURC_AMT
+                                     FROM   DMSDB.PT_0432T A
+                                              INNER JOIN DMSDB.PT_0422T B
+                                                 ON A.DLR_CD           = B.DLR_CD
+                                                AND A.PURC_ORD_NO      = B.PURC_ORD_NO
+                                                AND A.PURC_ORD_LINE_NO = B.PURC_ORD_LINE_NO
+                                                AND A.PURC_ORD_LINE_DETL_NO = B.PURC_ORD_LINE_DETL_NO
+                                              INNER JOIN  DMSDB.PT_0201T C              --품목정보
+                                                 ON A.DLR_CD  = C.DLR_CD
+                                                AND A.ITEM_CD = C.ITEM_CD
+                                    WHERE    (1 = 1)
+                                    <if test='sItemCd != null and sItemCd != ""'>
+                                        AND A.ITEM_CD = #{sItemCd}
+                                    </if>        --부품번호
+                                    <if test='sItemNm != null and sItemNm != ""'>
+                                        AND C.ITEM_NM LIKE '%'|| #{sItemNm} ||'%'
+                                    </if>
+                                    <if test='sItemDstinCd != null and sItemDstinCd != ""'>
+                                        AND C.ITEM_DSTIN_CD = #{sItemDstinCd}
+                                    </if>
+                                 GROUP BY   A.DLR_CD
+                                           ,A.INVC_DOC_NO
+                                 ) B
+                               ON A.DLR_CD       = B.DLR_CD
+                              AND A.INVC_DOC_NO  = B.INVC_DOC_NO
+                           INNER JOIN DMSDB.PT_0211T C
+                              ON A.DLR_CD = C.DLR_CD
+                             AND A.BP_CD  = C.BP_CD
+                           INNER JOIN DMSDB.CM_0103T D
+                              ON A.DLR_CD  = D.DLR_CD
+                             AND A.PLT_CD  = D.PLT_CD
+                           INNER JOIN (
+                                    SELECT   A.DLR_CD
+                                            ,A.INVC_DOC_NO
+                                            ,SUM(A.INVC_TOT_AMT) AS INVC_TOT_AMT
+                                     FROM   DMSDB.PT_0432T A
+                                    WHERE   A.DLR_CD   = #{sDlrCd}
+                                    <if test='sMobisInvcNo != null and sMobisInvcNo != ""'>
+                                       AND A.MOBIS_INVC_NO LIKE '%'||#{sMobisInvcNo}||'%'
+                                   </if>        --모비스송장번호
+                                 GROUP BY   A.DLR_CD
+                                           ,A.INVC_DOC_NO
+                                 ) E
+                               ON A.DLR_CD       = E.DLR_CD
+                              AND A.INVC_DOC_NO  = E.INVC_DOC_NO
+                           INNER JOIN (
+                                SELECT INR_DLR_CD
+                                       ,INR_INV_NO
+                                       ,MAX(INR_TOT_LN) AS INR_TOT_LN
+                                  FROM PT_0433I
+                              GROUP BY INR_DLR_CD, INR_INV_NO
+                                   ) F
+                                   ON A.DLR_CD = F.INR_DLR_CD
+                                  AND A.MOBIS_INVC_NO = F.INR_INV_NO
+                 WHERE   A.DLR_CD        = #{sDlrCd}
+                   <if test='sInvcTp != null and sInvcTp != ""'>
+                       AND A.INVC_TP       = #{sInvcTp}
+                   </if>        --송장유형
+                   <if test='sInvcStatCd != null and sInvcStatCd != ""'>
+                       AND A.INVC_STAT_CD  = #{sInvcStatCd}
+                   </if>        --송장상태코드
+                   <if test='sInvcDtFr != null'>
+                        <choose>
+                            <otherwise>
+                                 AND A.INVC_DT <![CDATA[>=]]> #{sInvcDtFr}
+                            </otherwise>
+                        </choose>
+                    </if>
+                    <if test='sInvcDtTo != null'>
+                        <choose>
+                            <otherwise>
+                                 AND A.INVC_DT <![CDATA[<]]> #{sInvcDtTo} + 1
+                            </otherwise>
+                        </choose>
+                    </if>
+                   <if test='sConfirmDtFr != null'>
+                        <choose>
+                            <otherwise>
+                                 AND A.CONFIRM_DT <![CDATA[>=]]> #{sConfirmDtFr}
+                            </otherwise>
+                        </choose>
+                    </if>
+                    <if test='sConfirmDtTo != null'>
+                        <choose>
+                            <otherwise>
+                                 AND A.CONFIRM_DT <![CDATA[<=]]> #{sConfirmDtTo} + 1
+                            </otherwise>
+                        </choose>
+                    </if>
+                   <if test='sBpCd != null and sBpCd != ""'>
+                       AND A.BP_CD = #{sBpCd}
+                   </if>        --거래처코드
+                   <if test='sMobisInvcNo != null and sMobisInvcNo != ""'>
+                       AND A.MOBIS_INVC_NO LIKE '%'||#{sMobisInvcNo}||'%'
+                   </if>        --모비스송장번호
+                   <if test='sRegDtFr != null'>
+                        <choose>
+                            <otherwise>
+                                 AND A.REG_DT <![CDATA[>=]]> #{sRegDtFr}
+                            </otherwise>
+                        </choose>
+                    </if>
+                    <if test='sRegDtTo != null'>
+                        <choose>
+                            <otherwise>
+                                 AND A.REG_DT <![CDATA[<=]]> #{sRegDtTo} + 1
+                            </otherwise>
+                        </choose>
+                    </if>
+                    AND A.CANC_YN != 'Y'
+                    AND (F.INR_TOT_LN IS NULL OR (B.ITEM_CNT <![CDATA[>=]]> F.INR_TOT_LN))
+                 ORDER BY
+                 <choose>
+                     <when test='sort != null'>
+                         <foreach item="item" index="index" collection="sort" open="" separator="," close="">
+                             <choose>
+                                 <when test='item.field == "invcTp"'> A.INVC_TP <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "invcStatCd"'> A.INVC_STAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "invcDt"'> A.INVC_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "arrvDt"'> A.ARRV_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "pltCd"'> A.PLT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "pltNm"'> D.PLT_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "bpNm"'> C.BP_NM <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "mobisInvcNo"'> A.MOBIS_INVC_NO <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose></when>
+                                 <when test='item.field == "invcTotAmt"'> A.INVC_TOT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "vatCd"'> A.VAT_CD <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "vatAmt"'> A.VAT_AMT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "remark"'> A.REMARK <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <when test='item.field == "regDt"'> A.REG_DT <choose><when test='item.dir == "asc"'>ASC</when><otherwise>DESC</otherwise></choose> </when>
+                                 <otherwise>
+                                   A.DLR_CD ASC
+                                 ,A.INVC_DT DESC
+                                 </otherwise>
+                             </choose>
+                         </foreach>
+                     </when>
+                     <otherwise>
+                      A.DLR_CD ASC
+                     ,A.INVC_DT DESC
+                     </otherwise>
+                 </choose>
+                 ) T1
+              ) A
+            <where>
+                <if test='firstIndex != -1 and lastIndex != -1'>
+                    RNUM <![CDATA[<=]]> #{lastIndex}
+                AND RNUM <![CDATA[>]]> #{firstIndex}
+                </if>
+            </where>
+            ) invc left join (
+            SELECT   B.DLR_CD                          --딜러코드
+                ,B.INVC_DOC_NO                     --송장문서번호
+                ,B.INVC_DOC_LINE_NO                --송장문서라인번호
+                ,B.MOBIS_INVC_NO                   --모비스송장번호
+                ,B.MOBIS_INVC_LINE_NO              --모비스송장라인번호
+                ,B.PURC_ORD_NO                     --구매오더번호
+                ,B.INVC_IF_ORD_NO                  --I/F 구매오더번호
+                ,B.INVC_IF_ORD_LN                  --I/F 구매오더라인번호
+                ,B.PURC_ORD_LINE_NO                --구매오더라인번호
+                ,B.PURC_ORD_LINE_DETL_NO          --구매오더라인구분자
+                ,B.ITEM_CD                         --품목코드
+                ,D.ITEM_NM                         --품목명
+                ,B.INVC_QTY                        --송장수량
+                ,B.INVC_UNIT_CD                    --송장단위코드
+                ,B.INVC_PRC                        --송장단가
+                ,B.TAX_DDCT_PRC                    --세금공제단가
+                ,B.INVC_AMT                        --송장금액
+                ,B.VAT_AMT                         --부가세금액
+                ,B.INVC_TOT_AMT                    --송장총금액
+                ,to_date(to_char(C.PURC_REG_DT,'yyyymmdd'),'yyyymmdd') AS PURC_REG_DT
+                ,C.PURC_ORD_TP
+                ,C.BP_CD
+                ,E.BP_NM
+                ,B.CLAIM_QTY                       --클레임 수량
+                ,B.DEBIT_CREDIT_DSTIN_CD           --차변대변구분코드
+                ,B.REF_INVC_DOC_NO                 --참조송장문서번호
+                ,B.REF_INVC_DOC_LINE_NO            --참조송장문서라인번호
+                ,B.DL_PDC_CD                       --배송PDC코드
+                ,B.GR_STRGE_CD                     --입고창고코드
+                ,B.GR_LOC_CD                       --입고위치코드
+                ,B.INVC_GR_DT                      --송장입고일자
+                ,B.REQ_CONT                        --차이사유
+                ,NVL(F.AVLB_STOCK_QTY,0) AS AVLB_STOCK_QTY           --가용재고
+                ,NVL(F.BORROW_QTY,0) AS BORROW_QTY               --차입
+                ,NVL(F.RENT_QTY,0) AS RENT_QTY                 --대여수량
+                ,NVL(F.RESV_STOCK_QTY,0) AS RESV_STOCK_QTY                 --예류수량
+                ,NVL(F.AVLB_STOCK_QTY,0) + NVL(F.RESV_STOCK_QTY,0) - NVL(F.BORROW_QTY,0) + NVL(F.RENT_QTY,0) AS STOCK_QTY
+          FROM  DMSDB.PT_0431T A                  --송장헤더정보
+                  INNER JOIN  DMSDB.PT_0432T B    --송장품목정보
+                     ON A.DLR_CD      = B.DLR_CD
+                    AND A.INVC_DOC_NO = B.INVC_DOC_NO
+                  INNER JOIN  DMSDB.PT_0421T C    --구매정보
+                     ON B.DLR_CD           = C.DLR_CD
+                    AND B.PURC_ORD_NO      = C.PURC_ORD_NO
+                  INNER JOIN  DMSDB.PT_0201T D    --품목정보
+                     ON B.DLR_CD  = D.DLR_CD
+                    AND B.ITEM_CD = D.ITEM_CD
+                   LEFT OUTER JOIN DMSDB.PT_0211T E
+                     ON C.DLR_CD = E.DLR_CD
+                    AND C.BP_CD  = E.BP_CD
+                   LEFT OUTER JOIN PT_0301T F
+                     ON D.DLR_CD        = F.DLR_CD
+                    AND D.ITEM_CD       = F.ITEM_CD
+                    AND D.GR_STRGE_CD   = F.STRGE_CD
+            ) as invcs on invcs.DLR_CD = invc.DLR_CD and invcs.INVC_DOC_NO   = invc.INVC_DOC_NO
+    </select>
 </mapper>

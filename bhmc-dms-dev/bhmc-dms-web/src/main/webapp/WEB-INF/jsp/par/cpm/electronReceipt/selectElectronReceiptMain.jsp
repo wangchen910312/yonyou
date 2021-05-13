@@ -10,16 +10,16 @@
             <%-- <h1 class="title_basic"><spring:message code="par.title.invcRegStatus" /></h1> --%>
             <div class="btn_left">
 			<dms:access viewId="VIEW-D-11580" hasPermission="${dms:getPermissionMask('READ')}">
-                <button class="btn_m btn_reset btn_m_min" id="btnInit"><spring:message    code="par.btn.init" /><!-- 초기화 --></button>
+                <button class="btn_m btn_reset btn_m_min" id="btnInit"><spring:message    code="par.btn.init" /><!-- 初始化--></button>
 			</dms:access>
             </div>
             <div class="btn_right">
-                <button id="electronReceiptPlatform" class="btn_m" type="button" onclick='openNewTab()'>电子发票平台</button>    <!-- 电子发票平台 -->
-<%--    <spring:message code='par.btn.electronReceiptPlatform' />--%>
-                <button id="btnExcelExport" class="btn_m" type="button"><spring:message code='global.btn.excelDownload' /></button>    <!-- 下载Excel -->
-			<dms:access viewId="VIEW-D-11579" hasPermission="${dms:getPermissionMask('READ')}">
-                <button class="btn_m btn_search btn_m_min" id="btnSearch"><spring:message code="par.btn.search" /><!-- 조회 --></button>
-			</dms:access>
+            <button id="electronReceiptPlatform" class="btn_m" type="button" onclick='openNewTab()'>电子发票平台</button>    <!-- 电子发票平台 -->
+
+            <button type="button" id="btnDownloadList" name="btnDownloadList" class="btn_m btn_m_min" ><spring:message code="par.btn.excelDownload" /></button><!--wangc 2021年5月12日17:38:59 增加导出按钮 -->
+	    <dms:access viewId="VIEW-D-11579" hasPermission="${dms:getPermissionMask('READ')}">
+                <button class="btn_m btn_search btn_m_min" id="btnSearch"><spring:message code="par.btn.search" /><!-- 查询--></button>
+	     </dms:access>
             </div>
         </div>
 
@@ -39,15 +39,15 @@
                 </colgroup>
                 <tbody>
                     <tr>
-                        <th scope="row"><spring:message code="par.lbl.invcStatCd" /><!-- 송장상태 --></th>
+                        <th scope="row"><spring:message code="par.lbl.invcStatCd" /><!-- 装箱单状态  wangc 2021年5月12日18:00:02--></th>
                         <td>
                             <input id="sInvcStatCd" class="form_comboBox" type="text" data-type="combo" />
                         </td>
-                        <th scope="row"><spring:message code="par.lbl.invcDocNo" /><!-- 송장번호 --></th>
+                        <th scope="row"><spring:message code="par.lbl.invcDocNo" /><!-- 装箱单编号 wangc 2021年5月12日18:00:02 --></th>
                         <td>
                             <input id="sMobisInvcNo" class="form_input" />
                         </td>
-                        <th scope="row"><spring:message code="par.lbl.confirmDt" /><!-- 확정일자 --></th>
+                        <th scope="row"><spring:message code="par.lbl.confirmDt" /><!-- 确认日期 wangc 2021年5月12日18:01:29 --></th>
                         <td>
                             <div class="form_float">
                                 <div class="date_left">
@@ -59,7 +59,7 @@
                                 </div>
                             </div>
                         </td>
-                        <th scope="row"><spring:message code="par.lbl.bpCd" /><!-- 거래처코드 --></th>
+                        <th scope="row"><spring:message code="par.lbl.bpCd" /><!-- 供应商代码 --></th>
                         <td>
                             <div class="form_search">
                                 <input type="text" id="sBpCd" name="sBpCd" class="form_input hidden" required data-name="<spring:message code="par.lbl.bpCd" />" />
@@ -684,23 +684,6 @@
             return returnVal;
         };
 
-        //下载excel
-        $("#btnExcelExport").kendoButton({
-            click:function(e) {
-                dms.ajax.excelExport({
-                    "beanName":"invcService"
-                    ,"templateFile":"ElectronReceiptList_Tpl.xls"
-                    ,"fileName":"ElectronReceiptList.xls"
-<%--    //<spring:message code='par.title.ElectronReceiptList' />--%>
-                    ,"sBpCd":$("#sBpCd").val()
-                    ,"sMobisInvcNo":$("#sMobisInvcNo").val()
-                    ,"sInvcDtFr":$("#sInvcDtFr").data("kendoExtMaskedDatePicker").value()
-                    ,"sInvcDtTo":$("#sInvcDtTo").data("kendoExtMaskedDatePicker").value()
-                    ,"sInvcStatCd":$("#sInvcStatCd").data("kendoExtDropDownList").value()
-                });
-            }
-        });
-
         // 송장 그리드
         $("#gridCnfmInvc").kendoExtGrid({
             gridId:"G-PAR-0519-190201"
@@ -794,6 +777,26 @@
             return returnVal;
         };
         initPage();
+        
+        
+        //excel的模板下载 wangc 2021年5月12日17:43:01
+        $("#btnDownloadList").kendoButton({
+            click:function(e){
+            	dms.ajax.excelExport({
+                    "beanName"         :"invcService"
+                    ,"templateFile"    :"ElectronReceiptList_Tpl.xlsx"
+                    ,"fileName"        :"电子发票信息列表.xlsx"
+                    ,"sBpCd"             : $("#sBpCd").val()//供应商代码
+                	,"sMobisInvcNo"      : $("#sMobisInvcNo").val()//装箱单编号
+                	//,"sInvcDtFr"         : $("#sInvcDtFr").data("kendoExtMaskedDatePicker").value()//确认日期
+                	//,"sInvcDtTo"         : $("#sInvcDtTo").data("kendoExtMaskedDatePicker").value()//确认日期
+                	,"sInvcDtFr"         : $("#sInvcDtFr").val()//确认日期
+                	,"sInvcDtTo"         : $("#sInvcDtTo").val()//确认日期
+               		,"sInvcStatCd"       : $("#sInvcStatCd").data("kendoExtDropDownList").value()//装箱单状态
+               		,"sServiceName"      :"invc"//电子发票信息和待入库清单
+                });
+            }
+        });
     });
 </script>
 <!-- //script -->

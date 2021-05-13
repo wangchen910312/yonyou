@@ -18,6 +18,7 @@
             <dms:access viewId="VIEW-D-11612" hasPermission="${dms:getPermissionMask('READ')}">
                 <button class="btn_m btn_save btn_s_min" id="btnSave"><spring:message code="par.btn.receiveRedy" /></button>
             </dms:access>
+            <button type="button" id="btnDownloadList" name="btnDownloadList" class="btn_m btn_m_min" ><spring:message code="par.btn.excelDownload" /></button><!--wangc 2021年5月12日17:38:59 增加导出按钮 -->
             <dms:access viewId="VIEW-D-11611" hasPermission="${dms:getPermissionMask('READ')}">
                 <button class="btn_m btn_search btn_m_min" id="btnSearch"><spring:message code="par.btn.search" /><!-- 조회 --></button>
             </dms:access>
@@ -1220,6 +1221,25 @@
             return returnVal;
         };
         initPage();
+        
+      //excel的模板下载 wangc 2021年5月12日17:43:01
+        $("#btnDownloadList").kendoButton({
+            click:function(e){
+            	dms.ajax.excelExport({
+                    "beanName"         :"invcService"
+                    ,"templateFile"    :"ElectronReceiptList_Tpl.xlsx"
+                    ,"fileName"        :"电子发票信息列表.xlsx"
+                    ,"sBpCd"             : $("#sBpCd").val()//供应商代码
+                	,"sMobisInvcNo"      : $("#sMobisInvcNo").val()//装箱单编号
+                	//,"sInvcDtFr"         : $("#sInvcDtFr").data("kendoExtMaskedDatePicker").value()//确认日期
+                	//,"sInvcDtTo"         : $("#sInvcDtTo").data("kendoExtMaskedDatePicker").value()//确认日期
+                	,"sInvcDtFr"         : $("#sInvcDtFr").val()//确认日期
+                	,"sInvcDtTo"         : $("#sInvcDtTo").val()//确认日期
+               		,"sInvcStatCd"       : $("#sInvcStatCd").data("kendoExtDropDownList").value()//装箱单状态
+               		,"sServiceName"      :"invc"//电子发票信息和待入库清单
+                });
+            }
+        });
     });
 </script>
 <!-- //script -->
