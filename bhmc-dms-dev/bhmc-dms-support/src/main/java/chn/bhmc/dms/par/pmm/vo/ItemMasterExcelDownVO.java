@@ -73,6 +73,16 @@ public class ItemMasterExcelDownVO extends BaseVO {
      * 재고단위코드
      **/
     private String stockUnitCd;
+    
+    /**
+     * 供应商代码
+     */
+    private String bpCd;
+    
+    /**
+     * 供应商类型
+     */
+    private String bpTpNm;
 
     /**
      * 구형대체품목코드
@@ -98,6 +108,7 @@ public class ItemMasterExcelDownVO extends BaseVO {
      * 수정일시(UPDATE시 가능여부 체크용)
      **/
     private  String          updtDtStr;
+
 
     /**
      * @return the dlrCd
@@ -293,5 +304,33 @@ public class ItemMasterExcelDownVO extends BaseVO {
      */
     public void setUpdtDtStr(String updtDtStr) {
         this.updtDtStr = updtDtStr;
+    }
+
+    /**
+     * @return the bpCd
+     */
+    public String getBpCd() {
+        return bpCd;
+    }
+
+    /**
+     * @param bpCd the bpCd to set
+     */
+    public void setBpCd(String bpCd) {
+        this.bpCd = bpCd;
+    }
+
+    /**
+     * @return the bpTp
+     */
+    public String getBpTpNm() {
+        return bpTpNm;
+    }
+
+    /**
+     * @param bpTp the bpTp to set
+     */
+    public void setBpTp(String bpTpNm) {
+        this.bpTpNm = bpTpNm;
     }
 }

@@ -1199,13 +1199,16 @@ $(document).ready(function() {
             ,{field:"stockUnitCd", title:"<spring:message code='par.lbl.unitNm' />", attributes:{"class":"ac"}, template:'#= changeUnitCd(stockUnitCd)#', width:80}
             ,{field:"bpTp", title:"<spring:message code='par.lbl.itemMasterBpTp' />", width:100
                 ,template:'#= changeBpTp(bpTp)#'
-            }//bpTp
+            }//bpTp     供应商类型
             ,{field:"spyrCd", title:"<spring:message code='par.lbl.bpCd' />", width:100, hidden:true}//spyrCd
-            ,{field:"bpCd", title:"<spring:message code='par.lbl.bpCd' />", width:100}//bpCd
+            ,{field:"bpCd", title:"<spring:message code='par.lbl.bpCd' />", width:100}//bpCd    供应商代码
             ,{field:"bpNm", title:"<spring:message code='par.lbl.sBpNm' />", width:140 }//bpNm
             ,{field:"bpFullNm", title:"<spring:message code='par.lbl.sBpFullNm' />", width:140 }//bpNm
-            ,{field:"bmpPurcPrc", title:"<spring:message code='par.lbl.purcIncTaxPrc' />" ,width:120 ,attributes:{ "class":"ar"} ,format:"{0:n2}",decimals:2}
-            ,{field:"recomRtprcAmt", title:"<spring:message code='global.lbl.recRetailPrc' />",width:120 ,attributes:{ "class":"ar"} ,format:"{0:n2}",decimals:2}//recomRtprcAmt
+            ,{field:"bmpPurcPrc", title:"BMP采购单价(含税)" ,width:120 ,attributes:{ "class":"ar"} ,format:"{0:n2}",decimals:2}//BMP采购单价(含税)
+<%--<spring:message code='par.lbl.purcIncTaxPrcTaxInclude' />--%>
+            ,{field:"recomRtprcAmt", title:"指导价(含税)",width:120 ,attributes:{ "class":"ar"} ,format:"{0:n2}",decimals:2}//recomRtprcAmt    指导价(含税)
+<%-- <spring:message code='par.lbl.purcIncTaxPrc' />--%>
+
             ,{field:"sucCd", title:"<spring:message code='par.lbl.sucCd' />", width:100}//sucCd
             ,{field:"brandCd", title:"<spring:message code='par.lbl.brand' />", width:80
                 ,template:'#= changeBrandCd(brandCd)#'
