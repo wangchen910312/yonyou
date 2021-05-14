@@ -1228,7 +1228,7 @@
             	dms.ajax.excelExport({
                     "beanName"         :"invcService"
                     ,"templateFile"    :"ElectronReceiptList_Tpl.xlsx"
-                    ,"fileName"        :"电子发票信息列表.xlsx"
+                    ,"fileName"        :"待入库清单列表.xlsx"
                     ,"sBpCd"             : $("#sBpCd").val()//供应商代码
                 	,"sMobisInvcNo"      : $("#sMobisInvcNo").val()//装箱单编号
                 	//,"sInvcDtFr"         : $("#sInvcDtFr").data("kendoExtMaskedDatePicker").value()//确认日期
