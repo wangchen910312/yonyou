@@ -50,6 +50,7 @@
                 <button id="btnInit" name="btnInit" class="btn_m btn_m_min btn_reset"><spring:message code="par.btn.init" /></button>
             </div>
             <div class="btn_right">
+                <button type="button" id="btnEPC" class="btn_m" >EPC</button><!-- lixinfei：EPC按钮 -->
             <dms:access viewId="VIEW-D-11446" hasPermission="${dms:getPermissionMask('READ')}">
                 <button type="button" id="btnNew" name="btnNew" class="btn_m btn_m_min"><spring:message code="par.btn.new" /><!-- 신규 --></button>
             </dms:access>
@@ -820,6 +821,13 @@
             });
         }
 
+    //lixinfei: 点击按钮打开新页签
+    $("#btnEPC").kendoButton({
+        click:function(e){
+            let newWindow = window.open("about:blank");
+            newWindow.location.href = 'https://china.snaponepc.com/epc/#/';
+        }
+    });
 
     $(document).ready(function() {
         //조회조건 - 품목구분선택
