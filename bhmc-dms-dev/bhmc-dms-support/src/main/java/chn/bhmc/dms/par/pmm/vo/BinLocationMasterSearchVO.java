@@ -41,6 +41,12 @@ public class BinLocationMasterSearchVO extends SearchVO {
      **/
     @NotEmpty
     private String sLocId;
+    
+    /**
+     * lixinfei: 仓库货位2
+     **/
+    @NotEmpty
+    private String slocCdMig;
 
     /**
      * 센터코드
@@ -197,6 +203,22 @@ public class BinLocationMasterSearchVO extends SearchVO {
      */
     public void setsLocId(String sLocId) {
         this.sLocId = sLocId;
+    }
+
+    /**
+     * @author lixinfei
+     * @param slocCdMig the slocCdMig to set
+     */
+    public String getslocCdMig() {
+        return slocCdMig;
+    }
+
+    /**
+     * @author lixinfei
+     * @param slocCdMig the slocCdMig to set
+     */
+    public void setslocCdMig(String slocCdMig) {
+        this.slocCdMig = slocCdMig;
     }
 
     /**

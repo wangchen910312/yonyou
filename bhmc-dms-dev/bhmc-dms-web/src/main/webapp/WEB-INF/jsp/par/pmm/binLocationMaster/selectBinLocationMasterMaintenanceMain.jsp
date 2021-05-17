@@ -34,6 +34,8 @@
                 <col style="width:10%;">
                 <col style="width:15%;">
                 <col style="width:10%;">
+                <col style="width:15%;">
+                <col style="width:10%;">
                 <col>
             </colgroup>
             <tbody>
@@ -42,7 +44,7 @@
                     <td>
                         <input type="text" id="sStrgeCd" type="text" data-type="multicombo" class="form_comboBox">
                     </td>
-                    <th scope="row"><spring:message code="par.lbl.sLocationCd" /><!-- locId --></th>
+                    <th scope="row"><spring:message code="par.lbl.sLocationCd" /> <!-- locId  lixinfei: 仓库货位 --></th>
                     <td>
                         <input id="sLocCd" class="form_input" />
                     </td>
@@ -74,6 +76,12 @@
                     <th scope="row"><spring:message code='global.lbl.strgeTp' /><!-- 창고유형 --></th>
                     <td>
                         <input id="sStrgeTp" type="text" class="form_comboBox">
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><spring:message code="par.lbl.sLocationCd" /> 2 <!-- locId2  lixinfei: 仓库货位2 --></th>
+                    <td>
+                        <input id="slocCdMig" class="form_input" />
                     </td>
                 </tr>
             </tbody>
@@ -200,6 +208,7 @@ $(document).ready(function() {
             $("#sStrgeCd").data("kendoExtMultiSelectDropDownList").refresh();
             $("#sStrgeCd").data("kendoExtMultiSelectDropDownList").value([]);
             $("#sLocCd").val("");
+            $("#slocCdMig").val("");    //lixinfei: 仓库货位2
             $("#sCarlineCd").data("kendoExtDropDownList").select(0);
             $("#sModelCd").data("kendoExtDropDownList").setDataSource([]);
             $("#sItemCd").val("");
@@ -398,6 +407,7 @@ $(document).ready(function() {
 
                         params["sStrgeCdList"] = sStrgeCdLst;
                         params["sLocCd"] = $("#sLocCd").val();
+                        params["slocCdMig"] = $("#slocCdMig").val();    //lixinfei: 仓库货位2
                         params["sStrgeTp"] = $("#sStrgeTp").val();
                         params["sItemCd"] = $("#sItemCd").val();
                         params["sItemNm"] = $("#sItemNm").val();
