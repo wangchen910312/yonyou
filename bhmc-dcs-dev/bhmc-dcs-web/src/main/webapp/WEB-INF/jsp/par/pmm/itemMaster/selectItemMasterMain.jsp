@@ -1204,9 +1204,9 @@ $(document).ready(function() {
             ,{field:"bpCd", title:"<spring:message code='par.lbl.bpCd' />", width:100}//bpCd    供应商代码
             ,{field:"bpNm", title:"<spring:message code='par.lbl.sBpNm' />", width:140 }//bpNm
             ,{field:"bpFullNm", title:"<spring:message code='par.lbl.sBpFullNm' />", width:140 }//bpNm
-            ,{field:"bmpPurcPrc", title:"BMP采购单价(含税)" ,width:120 ,attributes:{ "class":"ar"} ,format:"{0:n2}",decimals:2}//BMP采购单价(含税)
+            ,{field:"bmpPurcPrc", title:"BMP采购单价(含税)" ,width:120 ,attributes:{ "class":"ar"} ,format:"{0:n2}",decimals:2}//lixinfei: BMP采购单价(含税)
 <%--<spring:message code='par.lbl.purcIncTaxPrcTaxInclude' />--%>
-            ,{field:"recomRtprcAmt", title:"指导价(含税)",width:120 ,attributes:{ "class":"ar"} ,format:"{0:n2}",decimals:2}//recomRtprcAmt    指导价(含税)
+            ,{field:"recomRtprcAmt", title:"指导价(含税)",width:120 ,attributes:{ "class":"ar"} ,format:"{0:n2}",decimals:2}//lixinfei: recomRtprcAmt    指导价(含税)
 <%-- <spring:message code='par.lbl.purcIncTaxPrc' />--%>
 
             ,{field:"sucCd", title:"<spring:message code='par.lbl.sucCd' />", width:100}//sucCd

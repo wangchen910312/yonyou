@@ -621,7 +621,7 @@ public class ItemMasterServiceImpl extends HService implements ItemMasterService
     public void initJxlsContext(Context context, HMap params) throws Exception {
 
         ItemMasterSearchVO searchVO = new ItemMasterSearchVO();
-        searchVO.setsLangCd(LocaleContextHolder.getLocale().getLanguage()); //设置语言
+        searchVO.setsLangCd(LocaleContextHolder.getLocale().getLanguage()); //lixinfei: 设置语言
         searchVO.setsDlrCd(LoginUtil.getDlrCd());
         searchVO.setsItemCd(params.get("sItemCd").toString());
         searchVO.setsItemNm(params.get("sItemNm").toString());

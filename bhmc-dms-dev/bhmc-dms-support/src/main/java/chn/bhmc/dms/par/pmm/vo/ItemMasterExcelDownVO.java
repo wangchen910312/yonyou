@@ -75,12 +75,12 @@ public class ItemMasterExcelDownVO extends BaseVO {
     private String stockUnitCd;
     
     /**
-     * 供应商代码
+     * lixinfei: 供应商代码
      */
     private String bpCd;
     
     /**
-     * 供应商类型
+     * lixinfei: 供应商类型
      */
     private String bpTpNm;
 
@@ -307,6 +307,7 @@ public class ItemMasterExcelDownVO extends BaseVO {
     }
 
     /**
+     * @author lixinfei
      * @return the bpCd
      */
     public String getBpCd() {
@@ -314,6 +315,7 @@ public class ItemMasterExcelDownVO extends BaseVO {
     }
 
     /**
+     * @author lixinfei
      * @param bpCd the bpCd to set
      */
     public void setBpCd(String bpCd) {
@@ -321,6 +323,7 @@ public class ItemMasterExcelDownVO extends BaseVO {
     }
 
     /**
+     * @author lixinfei
      * @return the bpTp
      */
     public String getBpTpNm() {
@@ -328,6 +331,7 @@ public class ItemMasterExcelDownVO extends BaseVO {
     }
 
     /**
+     * @author lixinfei 
      * @param bpTp the bpTp to set
      */
     public void setBpTp(String bpTpNm) {
