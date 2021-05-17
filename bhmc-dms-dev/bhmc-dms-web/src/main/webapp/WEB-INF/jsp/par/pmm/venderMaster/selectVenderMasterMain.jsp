@@ -1180,8 +1180,30 @@ $(document).ready(function() {
     });
     //crnNo
     $("#crnNo").kendoMaskedTextBox({
+        //author：lixinfei   date：2021-05-12
+        //修改组织机构代码长度限制，原先是14位，现修改为19位
         mask:"0000000000000000000"
         ,promptChar:" "
+    });
+    //author：lixinfei   date：2021-05-12
+    //添加按键输入校验，若当前输入值不为数字，则将所有不是数字的字符进行删除
+    $("#crnNo").blur(function (){
+        let val = this.value.trim();
+        let validate = /^[0-9]*$/.test(val);
+        if(!validate){
+            //如果校验不能通过，则将所有不是数字的字符进行删除
+            let newStr = "";
+            for(let i = 0; i < val.length; i++){
+                if(/\d/.test(val[i])){
+                    newStr = newStr + val[i];
+                }
+            }
+            dms.notification.warning("请限制组织机构代码长度最大为19位，只能输入数字");
+<%--    <spring:message code='par.info.crnNoLengthIn19'/>--%>
+            $(this).val(newStr);
+        }else{
+            $(this).val(val);
+        }
     });
     //tab
     $("#tabstrip").kendoExtTabStrip({
