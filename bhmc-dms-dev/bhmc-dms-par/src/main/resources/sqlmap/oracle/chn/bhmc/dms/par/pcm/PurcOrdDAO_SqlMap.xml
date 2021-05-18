@@ -1687,7 +1687,7 @@
                     ,F.RESV_STOCK_QTY                      <!-- 예류수량 -->
                     ,F.STOCK_QTY
                     ,F.DEL_YN
-                    ,F.DL_DIST_CD
+                    ,F.DL_DIST_CD                          <!-- lixinfei：仓库 筛选字段 -->
                     ,F.CANC_REQ_QTY
                     ,CASE WHEN F.PURC_PGSS_CD IN ('C','D','Y') THEN
                         CASE WHEN F.CONFIRM_QTY > 0 THEN F.CONFIRM_QTY - F.CANC_QTY ELSE 0 END
@@ -1697,6 +1697,7 @@
                     ,F.CONFIRM_DT
                     ,F.GI_EXPC_DT
                     ,F.BMP_PURC_PRC
+                    ,F.CO_PACK        <!-- lixinfei: 新加字段CO-PACK -->
                     FROM (
                         SELECT
                             B.DLR_CD
@@ -1751,7 +1752,7 @@
                             ,NVL(I.RESV_STOCK_QTY,0) AS RESV_STOCK_QTY
                             ,NVL(I.AVLB_STOCK_QTY,0) + NVL(I.RESV_STOCK_QTY,0) - NVL(I.BORROW_QTY,0) + NVL(I.RENT_QTY,0) AS STOCK_QTY
                             ,B.DEL_YN
-                            ,CASE WHEN NVL(B.BMP_ORD_NO,'-999') = '-999' THEN ' ' WHEN SUBSTR(B.BMP_ORD_NO,6,1) NOT IN ('1','2','3','4','5','6','7','8','9') THEN J.DL_DIST_CD ELSE 'PD'||SUBSTR(B.BMP_ORD_NO,6,1) END DL_DIST_CD
+                            ,CASE WHEN NVL(B.BMP_ORD_NO,'-999') = '-999' THEN ' ' WHEN SUBSTR(B.BMP_ORD_NO,6,1) NOT IN ('1','2','3','4','5','6','7','8','9') THEN J.DL_DIST_CD ELSE 'PD'||SUBSTR(B.BMP_ORD_NO,6,1) END DL_DIST_CD       <!-- lixinfei：仓库 筛选字段 -->
                             ,CASE WHEN B.PURC_ITEM_STAT_CD = '05' AND B.DEL_YN = 'Y' AND B.BMP_ORD_NO IS NOT NULL
                                     THEN NVL(B.CANC_QTY,0)
                                   ELSE NVL(B.CANC_REQ_QTY,0)
@@ -1780,6 +1781,7 @@
                                                      WHERE TRIM(T3.LPR_PNO) = B.ITEM_CD
                                                   GROUP BY LPR_PNO))
                               ) END  BMP_PURC_PRC
+                              ,A.CO_PACK        --lixinfei: 新加字段CO-PACK
                         FROM DMSDB.PT_0421T A              <!-- 구매오더헤더정보 -->
                         INNER JOIN DMSDB.PT_0422T B        <!-- 구매오더품목정보 -->
                             ON A.DLR_CD = B.DLR_CD
@@ -1917,6 +1919,9 @@
                 WHERE 1=1
                     <if test='sRegUsrNm != null and sRegUsrNm != ""'>
                         AND F.REG_USR_NM LIKE '%'||#{sRegUsrNm}||'%'
+                    </if>
+                    <if test='sDlDistCd != null and sDlDistCd != ""'>   <!-- lixinfei：仓库 筛选字段 -->
+                        AND F.DL_DIST_CD = #{sDlDistCd}
                     </if>
                     <if test='sConfirmFr != null'>
                          AND TO_DATE(F.CONFIRM_DT) <![CDATA[>=]]> TO_DATE(TO_CHAR(#{sConfirmFr},'YYYYMMDD'))
@@ -2244,6 +2249,12 @@
         SELECT
             A.*
             ,(SELECT USR_NM FROM CM_0801T WHERE USR_ID = A.REG_USR_ID) AS REG_USR_NM   --등록자명
+            ,CASE WHEN NVL(B.BMP_ORD_NO,'-999') = '-999' 
+				THEN ' ' 
+				WHEN SUBSTR(B.BMP_ORD_NO,6,1) NOT IN ('1','2','3','4','5','6','7','8','9') 
+				THEN H.DL_DIST_CD 
+				ELSE 'PD'||SUBSTR(B.BMP_ORD_NO,6,1) 
+				END DL_DIST_CD       <!-- lixinfei：仓库 筛选字段 -->
         FROM DMSDB.PT_0421T A                      --구매오더헤더정보
         INNER JOIN DMSDB.PT_0422T B    --구매오더품목정보
            ON A.DLR_CD      = B.DLR_CD
@@ -2362,6 +2373,9 @@
         WHERE 1=1
         <if test='sRegUsrNm != null and sRegUsrNm != ""'>
             AND F.REG_USR_NM LIKE '%'||#{sRegUsrNm}||'%'
+        </if>
+        <if test='sDlDistCd != null and sDlDistCd != ""'>   <!-- lixinfei：仓库 筛选字段 -->
+            AND F.DL_DIST_CD = #{sDlDistCd}
         </if>
         <if test='sConfirmFr != null'>  <!-- 구매오더상태 전송일자 : 0421T의 ARRV_DT , 20170713  -->
             AND TO_DATE(F.ARRV_DT) <![CDATA[>=]]> TO_DATE(TO_CHAR(#{sConfirmFr},'YYYYMMDD'))

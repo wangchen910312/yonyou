@@ -382,7 +382,7 @@ public class PurcOrdSearchVO extends SearchVO {
      **/
     @JsonDeserialize(using=JsonDateDeserializer.class)
     private Date sConfirmTo;
-
+    
     /**
      * BMP 오더 일자 (시작)
      */
@@ -392,6 +392,27 @@ public class PurcOrdSearchVO extends SearchVO {
      * BMP 오더 일자 (종료)
      */
     private String sBmpOrdDtTo;
+
+    /**
+     * lixinfei: 仓库 筛选字段
+     **/
+    private String sDlDistCd;
+    
+    /**
+     * @author lixinfei
+     * @return the sDlDistCd
+     */
+    public String getsDlDistCd() {
+        return sDlDistCd;
+    }
+
+    /**
+     * @author lixinfei
+     * @param sDlDistCd the sDlDistCd to set
+     */
+    public void setsDlDistCd(String sDlDistCd) {
+        this.sDlDistCd = sDlDistCd;
+    }
 
     /**
      * @return the sDlrCd

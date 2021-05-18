@@ -15,6 +15,8 @@
             </dms:access>
             </div>
             <div class="btn_right">
+                <button class="btn_m btn_m_min" id="btnSwitchInfo">转库信息<!-- lixinfei: 转库信息 按钮 --></button>
+<%--    <spring:message code="par.btn.switchInfo" />--%>
             <dms:access viewId="VIEW-D-11563" hasPermission="${dms:getPermissionMask('READ')}">
                 <button type="button" id="btnExcelExport" name="btnExcelExport" class="btn_m btn_m_min" ><spring:message code="par.btn.excelDownload" /></button>
                 <button class="btn_m btn_search btn_m_min" id="btnSearch"><spring:message code="par.btn.search" /><!-- 조회 --></button>
@@ -34,7 +36,6 @@
                     <col style="width:15%;">
                     <col style="width:10%;">
                     <col style="width:15%;">
-                    <col>
                 </colgroup>
                 <tbody>
                     <tr>
@@ -93,6 +94,12 @@
                         <th scope="row"><spring:message code="par.lbl.itemNm" /><!-- 품목명 --></th>
                         <td>
                             <input type="text" id="sItemNm" class="form_input" value="${itemNm}">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><spring:message code="par.lbl.pdcCd" />(<spring:message code='par.lbl.strgeNm' />)<!-- lixinfei: 仓库 筛选字段 --></th>
+                        <td>
+                            <input id="sDlDistCd" class="form_comboBox">
                         </td>
                     </tr>
                 </tbody>
@@ -373,6 +380,13 @@ $(document).ready(function() {
         ,optionLabel:" "
     });
 
+    //lixinfei：仓库 筛选字段下拉选
+    $("#sDlDistCd").kendoExtDropDownList({
+        dataTextField:"cmmCdNm"
+        ,dataValueField:"cmmCd"
+        ,dataSource:dlPdcCdList
+    });
+
     //오더일자(구매등록일)
     $("#purcRegDt").kendoExtMaskedDatePicker({
         format:"<dms:configValue code='dateFormat' />"
@@ -636,6 +650,7 @@ $(document).ready(function() {
                 ,"sPurcOrdTp":$("#sPurcOrdTp").data("kendoExtDropDownList").value()
                 ,"sItemCd":$("#sItemCd").val()
                 ,"sItemNm":$("#sItemNm").val()
+                ,"sDlDistCd":$("#sDlDistCd").data("kendoExtDropDownList").value()
                 ,"sRegUsrNm":$("#sRegUsrNm").val()
                 ,"sPurcRegDtFr":$("#sPurcRegDtFr").val()
                 ,"sPurcRegDtTo":$("#sPurcRegDtTo").val()
@@ -688,6 +703,7 @@ $(document).ready(function() {
                         params["sItemCd"]         = $("#sItemCd").val();
                         params["sItemNm"]         = $("#sItemNm").val();
                         params["sRegUsrId"]       = $("#sRegUsrId").val();
+                        params["sDlDistCd"]         = $("#sDlDistCd").data("kendoExtDropDownList").value();
                         params["sPurcOrdTp"]      = $("#sPurcOrdTp").data("kendoExtDropDownList").value();
                         params["sPurcRegDtFr"]    = $("#sPurcRegDtFr").data("kendoExtMaskedDatePicker").value();
                         params["sPurcRegDtTo"]    = $("#sPurcRegDtTo").data("kendoExtMaskedDatePicker").value();
@@ -749,6 +765,7 @@ $(document).ready(function() {
                       , boxNo          :{ type:"string", editable:false } //BOX번호
                       , editCd         :{ type:"string", editable:false } //편수코드
                       , trsfTp         :{ type:"string", editable:false } //운송유형
+                      , coPack         :{ type:"string", editable:false } //lixinfei: 新增字段CO-PACK
                       , trsfUsrId      :{ type:"string", editable:false } //운송인
                       , delYn          :{ type:"string", editable:false } //삭제여부(아모스)
                       , dlDistCd       :{ type:"string", editable:false } //삭제여부(아모스)
@@ -945,6 +962,12 @@ $(document).ready(function() {
                 ,field     :"trsfTp"
                 ,width     :140
                 ,template  :'#= changeTrsfTp(trsfTp)#'
+            }
+            ,{//lixinfei: CO-PACK字段
+                title      :"<spring:message code='par.lbl.coPack' />"
+                ,attributes:{"class":"ac"}
+                ,field     :"coPack"
+                ,width     :88
             }
             ,{//운송인
                 title      :"<spring:message code='par.lbl.trsfPrsn' />"
@@ -1447,6 +1470,7 @@ function fnSearchSummary(){
     params["sItemCd"]         = $("#sItemCd").val();
     params["sItemNm"]         = $("#sItemNm").val();
     params["sRegUsrId"]       = $("#sRegUsrId").val();
+    params["sDlDistCd"]       = $("#sDlDistCd").data("kendoExtDropDownList").value();
     params["sPurcOrdTp"]      = $("#sPurcOrdTp").data("kendoExtDropDownList").value();
     params["sPurcRegDtFr"]    = $("#sPurcRegDtFr").data("kendoExtMaskedDatePicker").value();
     params["sPurcRegDtTo"]    = $("#sPurcRegDtTo").data("kendoExtMaskedDatePicker").value();

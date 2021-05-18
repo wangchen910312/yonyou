@@ -680,6 +680,10 @@ public class PurcOrdItemVO extends AbstractExcelDataBinder {
          **/
         private Double odrDlrBoAmt;
 
+        /**
+         * lixinfei: 新增字段 CO-PACK
+         */
+        private String coPack;
 
         /**
          * @return the dlrCd
@@ -2362,6 +2366,22 @@ public class PurcOrdItemVO extends AbstractExcelDataBinder {
          */
         public void setOdrDlrBoAmt(Double odrDlrBoAmt) {
             this.odrDlrBoAmt = odrDlrBoAmt;
+        }
+        
+        /**
+         * @author lixinfei
+         * @return the coPack
+         */
+        public String getCoPack() {
+            return coPack;
+        }
+        
+        /**
+         * @author lixinfei
+         * @param coPack the coPack to set
+         */
+        public void setCoPack(String coPack) {
+            this.coPack = coPack;
         }
 
         /**
