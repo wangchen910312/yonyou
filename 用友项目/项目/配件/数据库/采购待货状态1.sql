@@ -1,10 +1,3 @@
- SELECT
-        T2.*
-        FROM (
-            SELECT
-            ROWNUM AS RNUM
-            ,T1.*
-            FROM (
                 SELECT
                 D.OHR_DLR_CD AS DLR_CD
                 ,D.DLR_NM AS DLR_NM
@@ -86,11 +79,3 @@
                          ,D.OHR_ORD_RCVE_DT DESC
                          ,D.OHR_DLR_ORD_NO DESC
                          ,C.ODR_ODR_LN ASC
-            ) T1 
-        ) T2
-        <where>
-            <if test='firstIndex != -1 and lastIndex != -1'>
-                RNUM <![CDATA[<=]]> #{lastIndex}
-                AND RNUM <![CDATA[>]]> #{firstIndex}
-            </if>
-        </where>
