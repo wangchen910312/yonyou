@@ -1,0 +1,102 @@
+批量收票--<spring:message code="global.lbl.wsomereceive" />
+ <button type="button" class="btn_m" id="btReceives" >批量收票</button><!-- 批量收票 -->
+ 
+ 
+ 
+//6、下发DMS
+//claimInvoiceReceptionDAO.updateInvoiceService(claimInvoiceVO);//下发DMS
+//7、实时上传给DCS系统  wangc 2021年5月27日16:23:02
+//DCS-DMS EAI InterFace Header Info
+ClaimInvoiceVO claimInvoiceOneVO = claimInvoiceReceptionDAO.selectClaimInvoiceReceptionForInvoiceByInvoicelOne(invcNo);//修改收票状态后下发给DMS
+Map<String, Object> message = new HashMap<String, Object>();
+ message.put("DLR_CD", claimInvoiceOneVO.getDlrCd());//经销商ID
+ message.put("INVC_NO",claimInvoiceOneVO.getInvcNo());//索赔结算单信息
+ message.put("RECEIPT_TP", claimInvoiceOneVO.getReceiptTp());//开票状态 01：未开票  02：已开票 03：已退票
+ message.put("TRSF_TP", claimInvoiceOneVO.getTrsfTp());//快递状态   01：未邮寄 02：已邮寄 03：车厂接收  04：退票接收  05：未接收 
+ message.put("FAIL_MSG", claimInvoiceOneVO.getFailMsg());//退票原因  01:金额错误 02: 税号错误 03: 税率错误 04: 没盖章 05: 发票破损 06: 三包凭证错误 07:其他
+ message.put("FAIL_REMARK", claimInvoiceOneVO.getFailRemark());//退票备注
+ message.put("TRSF_NO", claimInvoiceOneVO.getTrsfNo());//快递单号
+ message.put("EXPS_CMP_NM", claimInvoiceOneVO.getExpsCmpNm());//快递公司
+ message.put("SENDER_NM", claimInvoiceOneVO.getSenderNm());//寄件人姓名
+ message.put("SENDER_TELNO", claimInvoiceOneVO.getSenderTelno());//寄件人联系电话
+ message.put("PAYM_TP", claimInvoiceOneVO.getPaymTp());//汇(收)款状态  01：未汇款 02：已汇款 03：已收款
+ message.put("PAYM_DT", DateUtil.convertToDateTimeString(claimInvoiceOneVO.getPaymDt()));//汇款日期
+ message.put("CANCEL_YN", claimInvoiceOneVO.getCancelYn());//是否取消 Y是 N否
+ message.put("UPDT_DT",DateUtil.convertToDateTimeString(claimInvoiceOneVO.getUpdtDt()));//修改日期
+ message.put("UPDT_USR_ID", claimInvoiceOneVO.getUpdtUsrId());//修改人
+
+ //DateUtil.convertToDateTimeString(pwaVO.getHqApproveDt()));
+ serviceCommonService.executeEaiCall(claimInvoiceOneVO.getDlrCd(),"SER144",message,"Y");
+ 
+ 
+ 
+ 
+ 
+ @Override
+	public String batchUpdateClaimInvoiceReception() {
+		List<ClaimInvoiceVO> batchClaimInvoiceVOList =  new ArrayList<ClaimInvoiceVO>();//初始化批量要接收的结算单
+		batchClaimInvoiceVOList = claimInvoiceReceptionDAO.selectBatchUpdateClaimInvoiceReception();//查询批量要接收的结算单
+		String result = "success";//返回收票结果
+		for(ClaimInvoiceVO wclaimInvoiceVO:batchClaimInvoiceVOList){
+			String invcNo = wclaimInvoiceVO.getInvcNo();
+			//1、根据结算报表编号查询结算单信息
+			List<ClaimInvoiceVO> claimInvoiceVOList = new ArrayList<ClaimInvoiceVO>();//接收根据结算单编号查询的结算单信息,怕一个结算单编号对应多个结算单，导致异常现象
+			claimInvoiceVOList = claimInvoiceReceptionDAO.selectClaimInvoiceReceptionByInvcNo(invcNo);//根据结算报表编号查询结算单信息
+			//2、判断结算单号是否存在多条
+			if(claimInvoiceVOList.size()>1){
+				 result = "根据结算单号查询出多条结算单信息！";
+			}else{
+				ClaimInvoiceVO claimInvoiceVO = claimInvoiceVOList.get(0);//正常就应该是一条索赔结算单信息
+				//3、判断是否已经取消了，取消了不可以再收票
+				if("Y".equals(claimInvoiceVO.getCancelYn())||"01".equals(claimInvoiceVO.getReceiptTp())){
+					result = "当前结算单特约店已经取消提报，不能收票！";
+				}else{
+					//4、判断当前的开票状态是否是已退票状态，如果是，则不可以再退票，如果不是，才可以退票
+					if("03".equals(claimInvoiceVO.getReceiptTp())){
+						result = "当前结算单开票状态已退票，不能收票！";
+					//4、判断当前的开票状态是否是已收票状态，如果是，则不可以再收票，如果不是，才可以收票
+					}else if("02".equals(claimInvoiceVO.getReceiptTp())&&"03".equals(claimInvoiceVO.getTrsfTp())){
+						result = "当前结算单开票状态已收票，不能再收票！";
+					}else{
+						//5、开票状态为“已开票”/快递状态为“车厂接收”
+					    claimInvoiceReceptionDAO.updateClaimInvoiceTaker(invcNo);//收票存储
+						//6、下发DMS
+					    //claimInvoiceReceptionDAO.updateInvoiceService(claimInvoiceVO);//下发DMS
+					    //7、实时上传给DCS系统  wangc 2021年5月27日16:23:02
+					    //DCS-DMS EAI InterFace Header Info
+					    ClaimInvoiceVO claimInvoiceOneVO = claimInvoiceReceptionDAO.selectClaimInvoiceReceptionForInvoiceByInvoicelOne(invcNo);//修改收票状态后下发给DMS
+			            Map<String, Object> message = new HashMap<String, Object>();
+			             message.put("DLR_CD", claimInvoiceOneVO.getDlrCd());//经销商ID
+			             message.put("INVC_NO",claimInvoiceOneVO.getInvcNo());//索赔结算单信息
+			             message.put("RECEIPT_TP", claimInvoiceOneVO.getReceiptTp());//开票状态 01：未开票  02：已开票 03：已退票
+			             message.put("TRSF_TP", claimInvoiceOneVO.getTrsfTp());//快递状态   01：未邮寄 02：已邮寄 03：车厂接收  04：退票接收  05：未接收 
+			             message.put("FAIL_MSG", claimInvoiceOneVO.getFailMsg());//退票原因  01:金额错误 02: 税号错误 03: 税率错误 04: 没盖章 05: 发票破损 06: 三包凭证错误 07:其他
+			             message.put("FAIL_REMARK", claimInvoiceOneVO.getFailRemark());//退票备注
+			             message.put("TRSF_NO", claimInvoiceOneVO.getTrsfNo());//快递单号
+			             message.put("EXPS_CMP_NM", claimInvoiceOneVO.getExpsCmpNm());//快递公司
+			             message.put("SENDER_NM", claimInvoiceOneVO.getSenderNm());//寄件人姓名
+			             message.put("SENDER_TELNO", claimInvoiceOneVO.getSenderTelno());//寄件人联系电话
+			             message.put("PAYM_TP", claimInvoiceOneVO.getPaymTp());//汇(收)款状态  01：未汇款 02：已汇款 03：已收款
+			             message.put("PAYM_DT", DateUtil.convertToDateTimeString(claimInvoiceOneVO.getPaymDt()));//汇款日期
+			             message.put("CANCEL_YN", claimInvoiceOneVO.getCancelYn());//是否取消 Y是 N否
+			             message.put("UPDT_DT",DateUtil.convertToDateTimeString(claimInvoiceOneVO.getUpdtDt()));//修改日期
+			             message.put("UPDT_USR_ID", claimInvoiceOneVO.getUpdtUsrId());//修改人
+			             //DateUtil.convertToDateTimeString(pwaVO.getHqApproveDt()));
+			             try {
+						  boolean r = serviceCommonService.executeEaiCall(claimInvoiceOneVO.getDlrCd(),"SER144",message,"Y");
+						 } catch (Exception e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						 }
+					}
+					
+				}
+			}
+		}
+		return result;
+	}
+	
+	
+	
+	--DMS队列里面
+	存到队列里面---采取刘雪莹的方式
