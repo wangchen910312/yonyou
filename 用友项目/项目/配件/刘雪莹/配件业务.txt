@@ -1,0 +1,93 @@
+配件采购：采购订单状态展示订单中配件情况以及装箱情况
+
+PT_0421T采购订单主信息
+PT_0422T采购订单配件信息
+PT_0201T配件主信息
+PT_0431T装箱主信息 
+【INVC_DOC_NO凭证号 PURC_ORD_NO订单号  PURC_ORD_LINE_NO采购订单行编号 MOBIS_INVC_NO装箱号  INVC_DOC_LINE_NO凭证行号】
+PT_0432T装箱配件信息
+PT_0433I装箱单接口表
+
+
+
+
+ 一个装箱单会对应多个订单号，装箱单明细中存的订单号，一个装箱单对应多个入库单号？
+                            一个订单会对应多个装箱单
+                            ---装箱单中有入库单号,装箱单明细中存的订单号
+                            select * from PT_0431T where MOBIS_INVC_NO  = 'GD120190400406'
+                            ---装箱单明细中有订单号
+                            select sum(invc_qty)  from PT_0432T  where  1=1
+                            --MOBIS_INVC_NO  = 'GD120190400406'
+                            and PURC_ORD_NO = '1904020002'  
+                            
+                            
+                           select distinct MOBIS_INVC_NO  from PT_0432T  where 1=1
+                            and PURC_ORD_NO = '1904020002'
+                            
+                            明细里装箱单对应的多个凭证号
+                             select *  from PT_0432T  where  1=1 and 
+                            MOBIS_INVC_NO  = 'GD120190400406'
+                            and PURC_ORD_NO = '1904020002'  
+
+
+采购入库确认入库单价和出入库查询中不一致
+采购入库确认中查询的是PT_0622T
+出入库查询取得是PT_0312T
+
+
+dcs装箱单接口数据情况表pt_0435I
+select * from  pt_0435I@bhdcsop where inr_ORD_NO = 'D115429DDS' and inr_dlr_cd = 'D1154'
+
+
+
+PT_0521T配件销售主表
+PT_0522T配件销售配件信息
+PT_0702T配件资金表
+PT_0701I配件资金接口表
+
+
+
+配件进销存是经销商的财务，库存管理使用的，为了知道库存流转情况，了解目前库存金额，即库存成本金额*数量
+期初金额 + 入库金额  - 出库成本金额 = 期末金额
+出库成本金额计算方式
+期初金额计算方式
+每个月的月初执行
+PT_0902T
+PT_0312T:出入库记录的配件信息
+PT_0512T:销售主表
+PT_0311T:出入库记录主信息
+
+对比进销存明细
+select * from (
+select item_cd,sum(gr_amt)---7月入库金额  
+,sum(pre_mm_ddln_stock_amt) gr -- 6月截止库存金额 7月期初    
+,sum(gi_base_amt)  ---7月出库成本金额     
++sum(psnt_mm_ddln_stock_amt) gi   ----7月截止库存金额   
+from pt_0901t 
+where yy_mm='201907'
+and item_cd = '1879005262'
+group by item_cd
+)t
+where gr<>gi;
+
+进销存查询：期初取的是本月期初数据
+进销存汇总：期初取的是本月期末数据
+
+
+如果店端inf项目异常，装箱单数据未接收到，查询dcs备份表是否接收到，如果有根据dcs备份表pt_0435ii备份表生成装箱单接口表，然后执行pts401跑批即可
+1、pt_0433i装箱单接口表 
+2、pt_0435i备份表
+3、DCS 平台pts401跑批处理
+
+
+pts301 amos->dcs
+pts401 dcs->dms
+装箱单的入库单号是dcs下发dms pts401接口时dms端的存储过程生成的。
+pts311 amos->dcs下发经销商信息
+
+1012
+1、进销存的讨论
+2、cc问题
+3、AMOS开会（1、装箱单c的问题（接口表需要增加一个字段，记录c，然后这种数据）
+2、验证提示信息3、缺件数应该是没传）
+
