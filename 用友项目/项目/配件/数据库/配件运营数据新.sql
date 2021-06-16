@@ -105,7 +105,7 @@
                     ) H GROUP BY OHR_ORD_RCVE_DT,OHR_DLR_ORD_NO
                     ) J GROUP BY OHR_ORD_RCVE_DT
                     ) K ON X.PURC_REG_DT = K.OHR_ORD_RCVE_DT
-                LEFT JOIN PT_0910T T ON K.OHR_ORD_RCVE_DT = T.YEARMONTH
+                LEFT JOIN PT_0910T T ON X.PURC_REG_DT = T.YEARMONTH
                 ORDER BY X.PURC_REG_DT DESC;
               
                     

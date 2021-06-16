@@ -1,0 +1,1 @@
+	select * from  SE_0960T invoice where invoice.RECEIPT_TP='02' and invoice.TRSF_TP = '02';
